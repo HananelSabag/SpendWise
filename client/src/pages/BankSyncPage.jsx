@@ -9,11 +9,11 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Building2, RefreshCw, AlertCircle, Plus, Landmark, CreditCard, CalendarClock, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Building2, RefreshCw, AlertCircle, Plus, Landmark, CreditCard, CalendarClock, ChevronDown } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation, useAuth } from '../stores';
+import { useToast } from '../hooks/useToast';
 import { cn } from '../utils/helpers';
 import apiClient from '../api/client';
 import bankConnectionsApi from '../api/bankConnections';
@@ -42,10 +42,33 @@ const fetchBankStats = () => apiClient.get('/bank-sync/stats').then(r => r.data.
 
 export default function BankSyncPage() {
   const { t, currentLanguage } = useTranslation('bankSync');
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
+  const toast = useToast();
   const cycleDay = Number(user?.billing_cycle_day) || 1;
   const queryClient = useQueryClient();
   const [showConnect, setShowConnect] = useState(false);
+  const [showCyclePicker, setShowCyclePicker] = useState(false);
+  const [savingCycle, setSavingCycle] = useState(false);
+
+  // Change the financial-cycle day inline (same billing_cycle_day the Profile
+  // editor writes) and refresh the dashboard so its periods recompute.
+  const handleCycleDay = async (day) => {
+    if (day === cycleDay || savingCycle) return;
+    setSavingCycle(true);
+    try {
+      const res = await updateProfile({ billing_cycle_day: day });
+      if (res?.success) {
+        toast.success('bankSync.financialCycleSaved');
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      } else {
+        toast.error('bankSync.loadError');
+      }
+    } catch {
+      toast.error('bankSync.loadError');
+    } finally {
+      setSavingCycle(false);
+    }
+  };
 
   const { data: sources = [], error: statsError, refetch, isFetching } = useQuery({
     queryKey: ['bankSyncStats'],
@@ -140,24 +163,58 @@ export default function BankSyncPage() {
       <div className="max-w-2xl mx-auto px-4 py-5 space-y-6">
 
         {/* Financial cycle — the period that drives every dashboard summary.
-            Editable in Profile → Preferences; surfaced here so it's reachable
-            from the money-management hub, not only the dashboard. */}
-        <Link
-          to="/profile"
-          className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-700/70 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
-        >
-          <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
-            <CalendarClock className="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-300" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('financialCycleTitle')}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t('financialCycleValue', { day: cycleDay })}</p>
-          </div>
-          <span className="flex items-center gap-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 shrink-0">
-            {t('financialCycleChange')}
-            <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
-          </span>
-        </Link>
+            Same billing_cycle_day the Profile editor writes; surfaced here as a
+            collapsible inline picker so it's controllable from the money hub.
+            Closed by default — tap the header to open. */}
+        <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-700/70 overflow-hidden">
+          <button
+            onClick={() => setShowCyclePicker(v => !v)}
+            className="w-full flex items-center gap-3 p-3 text-start hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+              <CalendarClock className="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-300" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{t('financialCycleTitle')}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{t('financialCycleValue', { day: cycleDay })}</p>
+            </div>
+            <ChevronDown className={cn('w-4 h-4 text-gray-400 shrink-0 transition-transform', showCyclePicker && 'rotate-180')} />
+          </button>
+
+          <AnimatePresence initial={false}>
+            {showCyclePicker && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="px-3 pb-3">
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-2 leading-snug">{t('financialCycleHint')}</p>
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        disabled={savingCycle}
+                        onClick={() => handleCycleDay(day)}
+                        className={cn(
+                          'aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center disabled:opacity-50',
+                          day === cycleDay
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
+                        )}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* My connections */}
         <section className="space-y-3">

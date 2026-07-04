@@ -14,6 +14,7 @@ export default {
   accountBalance: 'יתרת חשבון',
   unavailable: 'לא זמין',
   unavailableNote: '{{bank}} עדיין לא חושף יתרת חשבון',
+  balanceNeedsBank: 'חבר חשבון בנק כדי לראות יתרה — חברות אשראי מציגות חיובים בלבד',
   mainAccount: 'חשבון ראשי',
   balanceUnavailableNote: 'הבנק עדיין לא חושף יתרה — בדוק ישירות באתר הבנק',
 
@@ -59,7 +60,8 @@ export default {
   // מחזור פיננסי — ההגדרה שמניעה כל סיכום תקופתי בדשבורד
   financialCycleTitle: 'מחזור פיננסי',
   financialCycleValue: 'החודש הפיננסי שלך מתחיל ביום {{day}}',
-  financialCycleChange: 'שינוי',
+  financialCycleHint: 'כל הסיכומים בדשבורד מבוססים על התקופה הזו — בנפרד מיתרת הבנק בזמן אמת. הקש על יום כדי לשנות.',
+  financialCycleSaved: 'המחזור הפיננסי עודכן',
 
   // שלבי אשף
   stepPickBank: 'בחר את הבנק שלך',

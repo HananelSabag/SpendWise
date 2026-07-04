@@ -14,6 +14,7 @@ export default {
   accountBalance: 'Account Balance',
   unavailable: 'Not available',
   unavailableNote: '{{bank}} does not expose account balance yet',
+  balanceNeedsBank: 'Connect a bank account to see your balance — credit companies show charges only',
   mainAccount: 'Main account',
   balanceUnavailableNote: 'This bank does not expose account balance yet — check your bank\'s website directly',
 
@@ -59,7 +60,8 @@ export default {
   // Financial cycle — the setting that drives every dashboard period summary
   financialCycleTitle: 'Financial cycle',
   financialCycleValue: 'Your financial month starts on day {{day}}',
-  financialCycleChange: 'Change',
+  financialCycleHint: 'All dashboard summaries use this period — separate from your live bank balance. Tap a day to change it.',
+  financialCycleSaved: 'Financial cycle updated',
 
   // Wizard steps
   stepPickBank: 'Choose your bank',

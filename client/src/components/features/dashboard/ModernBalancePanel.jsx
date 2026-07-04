@@ -89,10 +89,14 @@ const ModernBalancePanel = ({ className = '' }) => {
     return !latest || (d && d > latest) ? d : latest;
   }, null);
 
-  // Accounts that expose a REAL balance (not null)
-  const accountsWithBalance = (sources || []).flatMap(src =>
+  // Balance = real money in a real bank account. A credit company (max/
+  // isracard/cal) NEVER has a balance — only charges — so it must never count
+  // toward the total. User-disabled accounts are excluded too.
+  const bankSources = (sources || []).filter(src => src.kind !== 'credit_card');
+  const hasBankSource = bankSources.length > 0;
+  const accountsWithBalance = bankSources.flatMap(src =>
     (src.accounts || [])
-      .filter(a => a.balance !== null && a.balance !== undefined)
+      .filter(a => a.enabled !== false && a.balance !== null && a.balance !== undefined)
       .map(a => ({ ...a, source: src.source }))
   );
   const hasRealBalance   = accountsWithBalance.length > 0;
@@ -182,7 +186,9 @@ const ModernBalancePanel = ({ className = '' }) => {
           <div>
             <p className="text-2xl font-bold opacity-50">{t('unavailable')}</p>
             <p className="text-[11px] opacity-50 mt-0.5">
-              {t('unavailableNote', { bank: institutionLabel(sources[0]?.source) })}
+              {hasBankSource
+                ? t('unavailableNote', { bank: institutionLabel(bankSources[0]?.source) })
+                : t('balanceNeedsBank')}
             </p>
           </div>
         )}
