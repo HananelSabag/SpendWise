@@ -8,6 +8,10 @@ export default {
     title: "פרופיל",
     subtitle: "נהל את החשבון וההעדפות שלך"
   },
+  shoppingEntry: {
+    title: "קניות",
+    subtitle: "רשימות הקניות המשותפות שלך"
+  },
   tabs: {
     personal: "מידע אישי",
     personalDesc: "שם, תמונה, פרטי קשר",

@@ -7,6 +7,10 @@ export default {
     title: "Profile",
     subtitle: "Manage your account and preferences"
   },
+  shoppingEntry: {
+    title: "Shopping",
+    subtitle: "Your shared shopping lists"
+  },
   tabs: {
     personal: "Personal Info",
     personalDesc: "Name, avatar, contact info",

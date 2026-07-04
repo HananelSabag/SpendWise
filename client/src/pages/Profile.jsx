@@ -10,7 +10,7 @@ import {
   User, Settings, Shield, Download, Camera,
   Eye, EyeOff, FileSpreadsheet, Braces, FileText,
   X, Check, Loader2, AlertTriangle, ChevronDown, LogOut,
-  ChevronRight, ChevronLeft, CalendarClock
+  ChevronRight, ChevronLeft, CalendarClock, ShoppingCart
 } from 'lucide-react';
 
 import {
@@ -653,7 +653,7 @@ const ExportTab = ({ t }) => {
 
 // ── Desktop sidebar tabs ──────────────────────────────────────────────────────
 
-const SidebarTabs = ({ active, onChange, t, onLogout, tc }) => (
+const SidebarTabs = ({ active, onChange, t, onLogout, onShopping, tc }) => (
   <div className="w-48 shrink-0 space-y-0.5">
     {TABS.map(tab => {
       const Icon     = tab.icon;
@@ -674,6 +674,14 @@ const SidebarTabs = ({ active, onChange, t, onLogout, tc }) => (
         </button>
       );
     })}
+    {/* Shopping — profile-gated mini-app (not in the main nav) */}
+    <button
+      onClick={onShopping}
+      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-left cursor-pointer text-gray-600 dark:text-gray-400 hover:bg-white dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white hover:shadow-sm"
+    >
+      <ShoppingCart className="w-4 h-4 shrink-0" />
+      <span>{t('shoppingEntry.title') || 'Shopping'}</span>
+    </button>
     <div className="pt-3 mt-1 border-t border-gray-200 dark:border-gray-700">
       <button
         onClick={onLogout}
@@ -704,7 +712,7 @@ const MENU_FALLBACKS = {
   export:      'CSV, JSON, PDF',
 };
 
-const ProfileMenuList = ({ user, onSelect, onLogout, t, tc, isRTL }) => (
+const ProfileMenuList = ({ user, onSelect, onLogout, onShopping, t, tc, isRTL }) => (
   <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
     {/* Hero card */}
     <div className="bg-white dark:bg-gray-900 px-5 pt-6 pb-5 border-b border-gray-100 dark:border-gray-800">
@@ -761,6 +769,33 @@ const ProfileMenuList = ({ user, onSelect, onLogout, t, tc, isRTL }) => (
           </button>
         );
       })}
+
+      {/* Shopping — profile-gated mini-app (not in the main nav) */}
+      <button
+        onClick={onShopping}
+        className={cn(
+          'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl',
+          'bg-white dark:bg-gray-900',
+          'border border-gray-100 dark:border-gray-800',
+          'shadow-sm active:scale-[0.98] transition-all duration-150',
+          'text-start cursor-pointer'
+        )}
+      >
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm">
+          <ShoppingCart className="w-5 h-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {t('shoppingEntry.title') || 'Shopping'}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">
+            {t('shoppingEntry.subtitle') || 'Your shared shopping lists'}
+          </p>
+        </div>
+        {isRTL
+          ? <ChevronLeft  className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />
+          : <ChevronRight className="w-4 h-4 text-gray-300 dark:text-gray-600 shrink-0" />}
+      </button>
     </div>
 
     {/* Logout */}
@@ -915,6 +950,7 @@ const Profile = () => {
         user={user}
         onSelect={handleSelect}
         onLogout={() => logout(true)}
+        onShopping={() => navigate('/shopping')}
         t={t}
         tc={tc}
         isRTL={isRTL}
@@ -938,7 +974,7 @@ const Profile = () => {
         </div>
 
         <div className="flex gap-8 items-start">
-          <SidebarTabs active={activeTab} onChange={handleSelect} t={t} onLogout={() => logout(true)} tc={tc} />
+          <SidebarTabs active={activeTab} onChange={handleSelect} t={t} onLogout={() => logout(true)} onShopping={() => navigate('/shopping')} tc={tc} />
           <div className="flex-1 min-w-0">{tabContent}</div>
         </div>
       </div>

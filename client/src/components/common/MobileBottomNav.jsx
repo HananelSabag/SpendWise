@@ -26,7 +26,6 @@ import { cn } from '../../utils/helpers';
 import { useTranslation, useIsAdmin, useTheme, useTranslationStore, useAuth } from '../../stores';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useToast } from '../../hooks/useToast';
-import { useShoppingShare } from '../../hooks/useShoppingShare';
 import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
 
@@ -93,13 +92,14 @@ const FullNav = () => {
   const isAdmin  = useIsAdmin();
 
   const { notifications, unreadCount, markAllRead } = useNotifications();
-  const { pendingInvitationsCount }  = useShoppingShare();
 
   // Re-run memos when translations finish loading
   const loadedModulesCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
 
-  const nonInviteUnread = notifications.filter(n => n.type !== 'shopping_invite' && !n.is_read).length;
-  const totalBadge = nonInviteUnread + pendingInvitationsCount;
+  // Shopping is a profile-gated mini-app — its invitations live in the shopping
+  // page, not the main nav. The FAB badge reflects only non-shopping unread.
+  const nonInviteUnread = notifications.filter(n => !String(n.type || '').startsWith('shopping') && !n.is_read).length;
+  const totalBadge = nonInviteUnread;
   const [menuOpen, setMenuOpen] = useState(false);
 
   // ── Settings helpers ──────────────────────────────────────────────────────
@@ -344,36 +344,6 @@ const FullNav = () => {
               </button>
             </div>
           </div>
-
-          {/* ── Shopping — featured card (quiet surface, one accent chip) ── */}
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.03, type: 'spring', stiffness: 400, damping: 30 }}
-            onClick={() => closeAndGo('/shopping')}
-            className={cn(
-              'w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl text-start',
-              'bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700',
-              'active:scale-[0.98] transition-all duration-150',
-            )}
-          >
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0 shadow-sm">
-              <ShoppingCart className="w-6 h-6 text-white" strokeWidth={1.75} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">
-                {t('shopping.title') || 'Shopping List'}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                {t('shopping.manageList') || 'Manage your shared lists'}
-              </p>
-            </div>
-            {pendingInvitationsCount > 0 && (
-              <span className="shrink-0 min-w-[22px] h-6 px-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center">
-                {pendingInvitationsCount}
-              </span>
-            )}
-          </motion.button>
 
           {/* ── Finance — 2 col (neutral cards, colored icon chips) ──── */}
           <div className="grid grid-cols-2 gap-3">
