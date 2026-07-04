@@ -268,7 +268,7 @@ export default function BankSyncPage() {
             <div className="space-y-2">
               <KindHeader
                 icon={CreditCard}
-                title={t('creditCards', { fallback: 'Credit Cards' })}
+                title={t('creditCards', { fallback: 'Credit companies' })}
                 provides={t('cardsProvide')}
               />
               {cardConnections.length > 0
@@ -311,7 +311,7 @@ export default function BankSyncPage() {
 
             {cardStats.length > 0 && (
               <div className="space-y-3">
-                <KindHeader icon={CreditCard} title={t('creditCards', { fallback: 'Credit Cards' })} provides={t('cardsProvide')} />
+                <KindHeader icon={CreditCard} title={t('creditCards', { fallback: 'Credit companies' })} provides={t('cardsProvide')} />
                 {cardStats.map(stat => (
                   <BankStatsCard
                     key={stat.source}

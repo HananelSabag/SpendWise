@@ -48,7 +48,7 @@ export default {
     },
     connectSources: {
       title: "Connect Sources",
-      subtitle: "Bank accounts vs credit cards — and how to connect them"
+      subtitle: "Bank accounts vs credit companies — and how to connect them"
     }
   },
   connectSources: {
@@ -57,7 +57,7 @@ export default {
     banksTitle: "Bank accounts",
     banksBlurb: "Where your salary lands and your direct debits leave from.",
     banksProvides: "Real account balance + full transaction history",
-    cardsTitle: "Credit card companies",
+    cardsTitle: "Credit companies",
     cardsBlurb: "Where each purchase is itemized before the monthly bill.",
     cardsProvides: "Itemized charges — they post later as one summarized charge in your bank",
     relationship: "Example: 20 card purchases this month show up individually from your credit card company, then appear as one combined charge in your bank account. Connecting both gives you the detail and the bottom line.",

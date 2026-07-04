@@ -122,7 +122,7 @@ export const useModernOnboardingState = (options = {}) => {
       id: 'connectSources',
       component: ConnectSourcesStep,
       title: t('steps.connectSources.title') || 'Connect Sources',
-      subtitle: t('steps.connectSources.subtitle') || 'Bank accounts vs credit cards — and how to connect them',
+      subtitle: t('steps.connectSources.subtitle') || 'Bank accounts vs credit companies — and how to connect them',
       icon: Landmark,
       canSkip: true,
       required: false,

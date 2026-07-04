@@ -255,7 +255,7 @@ const SourcesOverview = ({ sources, formatCurrency, t, navigate }) => {
 
       <Section title={t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} list={banks} icon={Landmark} />
       <Section
-        title={t('sourcesOverview.cardsTitle', { fallback: 'Credit cards' })}
+        title={t('sourcesOverview.cardsTitle', { fallback: 'Credit companies' })}
         list={cards}
         icon={CreditCard}
         explainer={cards.length > 0 ? t('sourcesOverview.cardExplainer', { fallback: 'Card charges appear here per purchase, then as one summarized charge in your bank account' }) : null}

@@ -86,7 +86,7 @@ const ConnectSourcesStep = ({ data = {}, onDataUpdate }) => {
         />
         <KindCard
           icon={CreditCard}
-          title={t('connectSources.cardsTitle') || 'Credit card companies'}
+          title={t('connectSources.cardsTitle') || 'Credit companies'}
           blurb={t('connectSources.cardsBlurb') || 'Where each purchase is itemized before the monthly bill.'}
           list={cards}
           provides={t('connectSources.cardsProvides') || 'Itemized charges — they post later as one summarized charge in your bank'}
