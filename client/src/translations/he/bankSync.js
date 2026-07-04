@@ -43,6 +43,16 @@ export default {
   noConnections: 'לא חובר אף בנק עדיין',
   noConnectionsHint: 'חבר את הבנק שלך והעסקאות יופיעו כאן אוטומטית',
 
+  // מה כל מקור מספק + תזמון סנכרון אוטומטי (E3)
+  banksProvide: 'יתרת חשבון אמיתית והיסטוריית עסקאות מלאה',
+  cardsProvide: 'חיובי כרטיס מפורטים — אלה מופיעים מאוחר יותר כחיוב מרוכז אחד בחשבון הבנק',
+  nextAutoSync: 'הסנכרון האוטומטי הבא בסביבות {{time}}',
+  nextAutoSyncTomorrow: 'הסנכרון האוטומטי הבא בסביבות {{time}} מחר',
+  bankSectionEmpty: 'לא חובר חשבון בנק עדיין',
+  cardSectionEmpty: 'לא חובר כרטיס אשראי עדיין',
+  addBank: 'הוספת בנק',
+  addCard: 'הוספת כרטיס',
+
   // שלבי אשף
   stepPickBank: 'בחר את הבנק שלך',
   stepCredentials: 'פרטי התחברות',

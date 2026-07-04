@@ -69,6 +69,23 @@ export const STATUS_STYLE = {
   },
 };
 
+// Next automatic sync — mirrors the server's enqueue targets (07:00 / 18:00
+// Asia/Jerusalem, see services/syncSchedulingService.js). Client-side hint
+// only; the server is the source of truth. Returns { time: 'HH:00', tomorrow }.
+export function nextAutoSync(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem', hour12: false, hour: '2-digit', minute: '2-digit',
+  }).formatToParts(now);
+  const hh = Number(parts.find((p) => p.type === 'hour').value) % 24;
+  const mm = Number(parts.find((p) => p.type === 'minute').value);
+  const nowMin = hh * 60 + mm;
+  const targets = [7 * 60, 18 * 60];
+  const idx = targets.findIndex((tm) => tm > nowMin);
+  const tomorrow = idx === -1;
+  const targetMin = tomorrow ? targets[0] : targets[idx];
+  return { time: `${String(Math.floor(targetMin / 60)).padStart(2, '0')}:00`, tomorrow };
+}
+
 export function formatDateTime(iso, lang) {
   if (!iso) return '—';
   return new Date(iso).toLocaleString(lang === 'he' ? 'he-IL' : 'en-GB', {

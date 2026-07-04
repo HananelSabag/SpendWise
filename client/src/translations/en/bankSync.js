@@ -43,6 +43,16 @@ export default {
   noConnections: 'No banks connected yet',
   noConnectionsHint: 'Connect your bank and your transactions will appear here automatically',
 
+  // What each source kind provides + auto-sync scheduling (E3)
+  banksProvide: 'Real account balance and full transaction history',
+  cardsProvide: 'Itemized card charges — these later post as one summarized charge in your bank account',
+  nextAutoSync: 'Next automatic sync ~{{time}}',
+  nextAutoSyncTomorrow: 'Next automatic sync ~{{time}} tomorrow',
+  bankSectionEmpty: 'No bank account connected yet',
+  cardSectionEmpty: 'No credit card connected yet',
+  addBank: 'Add bank',
+  addCard: 'Add card',
+
   // Wizard steps
   stepPickBank: 'Choose your bank',
   stepCredentials: 'Login details',
