@@ -409,7 +409,8 @@ class User {
           `SELECT id, email, username, role, email_verified,
                   first_name, last_name, avatar, phone, bio, location,
                   website, birthday, preferences, created_at, updated_at,
-                  onboarding_completed, language_preference, theme_preference, currency_preference
+                  onboarding_completed, language_preference, theme_preference, currency_preference,
+                  billing_cycle_day
            FROM users WHERE id = $1`,
           [userId]
         );
@@ -437,7 +438,8 @@ class User {
         RETURNING id, email, username, role, email_verified,
                  first_name, last_name, avatar, phone, bio, location,
                  website, birthday, preferences, created_at, updated_at,
-                 onboarding_completed, language_preference, theme_preference, currency_preference
+                 onboarding_completed, language_preference, theme_preference, currency_preference,
+                 billing_cycle_day
       `;
 
       values.push(userId);

@@ -81,6 +81,12 @@ export default {
     theme: "ערכת נושא",
     currency: "מטבע",
     savePreferences: "שמור העדפות",
+    financialCycle: {
+      title: "מחזור פיננסי",
+      subtitle: "היום שבו מתחיל החודש הפיננסי שלך — בדרך כלל יום המשכורת. סכומי הדשבורד מחושבים לתקופה קבועה זו, ולא ל-30 הימים האחרונים.",
+      dayLabel: "יום המחזור",
+      selected: "החודש שלך נמשך מיום {{day}} עד יום {{day}} בחודש הבא"
+    },
     shoppingDefaultPage: "פתח רשימת קניות בכניסה",
     defaultHome: "אפליקציית ברירת מחדל",
     homeOptions: {

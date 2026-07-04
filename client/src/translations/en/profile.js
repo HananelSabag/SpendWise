@@ -86,6 +86,12 @@ export default {
     theme: "Theme",
     currency: "Currency",
     savePreferences: "Save Preferences",
+    financialCycle: {
+      title: "Financial cycle",
+      subtitle: "The day your financial month starts — usually your salary day. Dashboard totals are calculated for this fixed period, not the last 30 days.",
+      dayLabel: "Cycle day",
+      selected: "Your month runs from day {{day}} to day {{day}} of the next month"
+    },
     shoppingDefaultPage: "Open Shopping List on Login",
     defaultHome: "Default App",
     homeOptions: {
