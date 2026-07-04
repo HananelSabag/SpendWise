@@ -9,6 +9,7 @@
  */
 
 const logger = require('../utils/logger');
+const { institutionKind } = require('../config/institutions');
 
 const MAX_TXNS = 2000;
 const MAX_AMOUNT = 10_000_000;
@@ -121,8 +122,13 @@ async function ingestAccounts(client, userId, source, accounts) {
   // visible and toggleable in the UI. balance = real money in the account
   // (distinct from SpendWise's calculated net). The `enabled` flag is never
   // overwritten here — only the user changes it.
+  //
+  // A credit company (isracard/max/cal) has NO bank balance — only a real bank
+  // account does. Even if the scraper reports a figure for a card source, we
+  // never store it as a balance, so it can't leak into the dashboard's total.
+  const isCreditCompany = institutionKind(source) === 'credit_card';
   for (const account of accounts) {
-    const balance = typeof account.balance === 'number' && Number.isFinite(account.balance)
+    const balance = (!isCreditCompany && typeof account.balance === 'number' && Number.isFinite(account.balance))
       ? account.balance
       : null;
     await client.query(

@@ -216,8 +216,9 @@ class User {
           website, birthday, preferences, login_attempts, locked_until,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
           onboarding_completed, verification_token,
-          language_preference, theme_preference, currency_preference
-        FROM users 
+          language_preference, theme_preference, currency_preference,
+          billing_cycle_day
+        FROM users
         WHERE email = $1
       `;
 

@@ -156,15 +156,20 @@ const transactionController = {
       const sources = [...sourceKeys].map(key => {
         const act = activityBySource[key] || {};
         const acct = acctBySource[key] || {};
+        const kind = institutionKind(key);
+        // Only real bank accounts have a balance. A credit company (max/
+        // isracard/cal) never does — it only has charges — so we never expose
+        // a balance for it, guarding against any stale/legacy data.
+        const isBank = kind === 'bank';
         return {
           bankSource: key,
-          kind: institutionKind(key),
+          kind,
           label: INSTITUTIONS[key]?.label || key,
           income: parseFloat(act.income || 0),
           expenses: parseFloat(act.expenses || 0),
           count: parseInt(act.count || 0),
-          balance: acct.hasBalance ? acct.balance : null,
-          hasBalance: acct.hasBalance || false,
+          balance: isBank && acct.hasBalance ? acct.balance : null,
+          hasBalance: isBank ? (acct.hasBalance || false) : false,
           lastSyncedAt: acct.lastSyncedAt || null,
         };
       }).sort((a, b) => b.expenses - a.expenses);
