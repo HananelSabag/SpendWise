@@ -283,13 +283,13 @@ export const useTranslationStore = create(
               // New modules
               'analytics', 'bankSync', 'bulk', 'buttons', 'account', 'activity',
               'completion', 'confirmations', 'dashboardPage', 'datePicker', 'delete',
-              'dialogs', 'export', 'features', 'fields', 'form', 'frequencies',
-              'grid', 'groups', 'health', 'iconSelector', 'labels', 'list',
+              'dialogs', 'export', 'features', 'fields', 'form',
+              'grid', 'groups', 'labels', 'list',
               'loading', 'maintenance', 'modal', 'modals', 'multiSelect',
               'notifications', 'password', 'personal', 'preview', 'privacy',
               'progress', 'prompt', 'quickActions', 'recentTransactions', 'recurring',
               'sections', 'selection', 'sort', 'statement', 'stats', 'steps',
-              'success', 'system', 'tabs', 'templates', 'terms', 'timeAgo',
+              'success', 'system', 'tabs', 'terms', 'timeAgo',
               'validation', 'viewModes'
             ];
             const { currentLanguage } = get();

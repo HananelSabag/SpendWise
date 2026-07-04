@@ -70,7 +70,7 @@ export const onboardingAPI = {
   async skip() {
     try {
       const response = await api.client.post('/onboarding/skip');
-      
+
       return {
         success: true,
         data: response.data
@@ -80,25 +80,6 @@ export const onboardingAPI = {
       return {
         success: true,
         data: { message: 'Onboarding skipped' }
-      };
-    }
-  },
-
-  /**
-   * Save a template during onboarding
-   */
-  async saveTemplate(templateData) {
-    try {
-      const response = await api.client.post('/transactions/templates', templateData);
-      
-      return {
-        success: true,
-        data: response.data
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: api.normalizeError ? api.normalizeError(error) : { message: error.message }
       };
     }
   }

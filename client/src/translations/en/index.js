@@ -47,11 +47,8 @@ import exportTranslations from './export.js';
 import features from './features.js';
 import fields from './fields.js';
 import form from './form.js';
-import frequencies from './frequencies.js';
 import grid from './grid.js';
 import groups from './groups.js';
-import health from './health.js';
-import iconSelector from './iconSelector.js';
 import labels from './labels.js';
 import list from './list.js';
 import loading from './loading.js';
@@ -76,7 +73,6 @@ import steps from './steps.js';
 import success from './success.js';
 import system from './system.js';
 import tabs from './tabs.js';
-import templates from './templates.js';
 import terms from './terms.js';
 import timeAgo from './timeAgo.js';
 import validation from './validation.js';
@@ -127,11 +123,8 @@ export default {
   features,
   fields,
   form,
-  frequencies,
   grid,
   groups,
-  health,
-  iconSelector,
   labels,
   list,
   loading,
@@ -156,7 +149,6 @@ export default {
   success,
   system,
   tabs,
-  templates,
   terms,
   timeAgo,
   validation,
