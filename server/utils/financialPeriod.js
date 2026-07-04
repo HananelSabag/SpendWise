@@ -1,42 +1,58 @@
 /**
- * Financial period helper — computes the user's real financial month from
- * their `billing_cycle_day` (e.g. the 10th, matching salary day) instead of
- * a rolling `CURRENT_DATE - INTERVAL 'N days'` window. A rolling window
- * drifts a little further every time it's queried and has no relationship
- * to when the user actually gets paid or when major charges land — this
- * gives a fixed, stable period boundary instead.
+ * Financial period helper — the user's real financial month derived from their
+ * `billing_cycle_day` (e.g. the 11th, matching salary day) instead of a rolling
+ * `CURRENT_DATE - INTERVAL 'N days'` window. Returns a half-open range
+ * [start, end) where end is the next occurrence of cycleDay (exclusive).
+ *
+ * Dates are computed and returned as plain 'YYYY-MM-DD' strings in the app's
+ * timezone. The previous version built JS Dates with the LOCAL constructor and
+ * then `toISOString()`'d them — which shifted every boundary back a day on any
+ * server whose clock isn't UTC (e.g. cycleDay 11 → "June 10"). Working purely
+ * in calendar-component/string space removes that whole class of tz bug.
  *
  * @module utils/financialPeriod
  */
 
-function lastDayOfMonth(year, monthIndex) {
-  return new Date(year, monthIndex + 1, 0).getDate();
+const PERIOD_TZ = process.env.PERIOD_TIMEZONE || process.env.SYNC_TIMEZONE || 'Asia/Jerusalem';
+
+// Last calendar day (28–31) of a given month. month1 is 1-based (1 = Jan).
+function lastDayOfMonth(year, month1) {
+  return new Date(Date.UTC(year, month1, 0)).getUTCDate();
 }
 
-// Builds a Date for (year, monthIndex, day), clamping day to the last real
-// day of that month — e.g. cycleDay=31 in a February period → Feb 28/29.
-function clampDate(year, monthIndex, day) {
-  const last = lastDayOfMonth(year, monthIndex);
-  return new Date(year, monthIndex, Math.min(day, last));
+// 'YYYY-MM-DD' for (year, month1, day), clamping day to the last real day of
+// that month — e.g. cycleDay 31 in February → the 28th/29th.
+function ymd(year, month1, day) {
+  const dd = Math.min(day, lastDayOfMonth(year, month1));
+  return `${year}-${String(month1).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+}
+
+// Calendar year/month/day of `date` in the app timezone (not the server's).
+function partsInTz(date) {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: PERIOD_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date).reduce((acc, x) => { acc[x.type] = x.value; return acc; }, {});
+  return { y: Number(p.year), m: Number(p.month), d: Number(p.day) };
 }
 
 /**
  * The financial period containing `date`, for a user whose month starts on
- * `cycleDay`. Returns a half-open range [start, end) — end is the next
- * occurrence of cycleDay, exclusive.
+ * `cycleDay`. Returns { start, end } as 'YYYY-MM-DD' strings; end is exclusive.
  */
 function getPeriodContaining(cycleDay, date) {
-  const y = date.getFullYear();
-  const m = date.getMonth();
-  const d = date.getDate();
+  const { y, m, d } = partsInTz(date);
 
-  const start = d >= cycleDay
-    ? clampDate(y, m, cycleDay)
-    : clampDate(y, m - 1, cycleDay);
+  // If we're before this month's cycle day, the current period started last month.
+  let sy = y, sm = m;
+  if (d < cycleDay) {
+    sm = m - 1;
+    if (sm < 1) { sm = 12; sy = y - 1; }
+  }
 
-  const end = clampDate(start.getFullYear(), start.getMonth() + 1, cycleDay);
+  let ey = sy, em = sm + 1;
+  if (em > 12) { em = 1; ey = ey + 1; }
 
-  return { start, end };
+  return { start: ymd(sy, sm, cycleDay), end: ymd(ey, em, cycleDay) };
 }
 
 /** The current financial period for `today` (defaults to now). */
@@ -44,7 +60,10 @@ function getCurrentPeriod(cycleDay, today = new Date()) {
   return getPeriodContaining(cycleDay, today);
 }
 
+// Accepts an already-formatted 'YYYY-MM-DD' string (new path) or a Date (legacy
+// callers, e.g. the calendar-month summary) and normalises to a SQL date string.
 function toSqlDate(date) {
+  if (typeof date === 'string') return date;
   return date.toISOString().split('T')[0];
 }
 

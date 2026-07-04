@@ -44,7 +44,10 @@ const transactionController = {
    */
   getDashboardData: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    const cycleDay = req.user.billing_cycle_day || 1;
+    // rawCycleDay is null when the user never configured one — surfaced to the
+    // client (cycleDaySet) so it can prompt them, distinct from a real day 1.
+    const rawCycleDay = req.user.billing_cycle_day;
+    const cycleDay = rawCycleDay || 1;
     const { start, end } = getCurrentPeriod(cycleDay);
     const periodStart = toSqlDate(start);
     const periodEnd = toSqlDate(end);
@@ -177,7 +180,7 @@ const transactionController = {
       res.json({
         success: true,
         data: {
-          period: { start: periodStart, end: periodEnd, cycleDay },
+          period: { start: periodStart, end: periodEnd, cycleDay, cycleDaySet: rawCycleDay != null },
           summary,
           categoryBreakdown,
           bankCosts,
