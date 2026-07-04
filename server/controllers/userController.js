@@ -6,7 +6,7 @@
 
 const { User } = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
-const { generateTokens, verifyToken } = require('../middleware/auth');
+const { generateTokens, verifyToken, clearUserCache } = require('../middleware/auth');
 const { normalizeUserData } = require('../utils/userNormalizer');
 const errorCodes = require('../utils/errorCodes');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -704,6 +704,11 @@ const userController = {
 
     try {
       const user = await User.update(userId, updates);
+
+      // Invalidate the auth cache so changed preferences (e.g.
+      // billing_cycle_day, which drives the dashboard financial period) take
+      // effect on the very next request instead of after the 10-min TTL.
+      clearUserCache(userId);
 
       const duration = Date.now() - start;
       logger.info('✅ User profile updated', {
