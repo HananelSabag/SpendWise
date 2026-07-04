@@ -222,14 +222,23 @@ router.post('/:id/sync', async (req, res) => {
       return res.status(409).json({ error: 'Connection is paused', code: 'CONNECTION_PAUSED' });
     }
 
-    // Expire stale pending jobs (agent machine was off and never claimed
-    // them). Without this, one stuck job blocked "Sync Now" forever.
+    // Expire stale jobs so one dead job can't block "Sync Now" forever:
+    //  • pending >2h  — the agent machine was off and never claimed it.
+    //  • running >15m — the agent claimed it then died/was closed mid-scrape
+    //    (e.g. the user quit the stuck agent). A real sync finishes in minutes,
+    //    so a "running" job this old is a zombie. This is what lets the user
+    //    re-sync a connection that got stuck instead of waiting hours.
     await db.query(
       `UPDATE bank_sync_jobs
        SET status='failed', finished_at=NOW(),
-           result='{"error":"expired — sync agent did not pick this up in time"}'::jsonb
-       WHERE connection_id = $1 AND status = 'pending'
-         AND requested_at < NOW() - INTERVAL '2 hours'`,
+           result = CASE
+             WHEN status='pending'
+               THEN '{"error":"expired — sync agent did not pick this up in time","transient":true}'::jsonb
+             ELSE '{"error":"expired — sync agent stopped before reporting a result","transient":true}'::jsonb
+           END
+       WHERE connection_id = $1
+         AND ( (status='pending' AND requested_at < NOW() - INTERVAL '2 hours')
+            OR (status='running' AND COALESCE(started_at, requested_at) < NOW() - INTERVAL '15 minutes') )`,
       [id],
     );
 

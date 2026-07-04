@@ -87,10 +87,12 @@ async function enqueueDueJobs(now = new Date()) {
   try {
     // Fail stale jobs so they don't block new syncs forever. Two cases:
     //  • pending >6h  — the agent never picked it up (machine off for hours).
-    //  • running  >2h — a worker claimed it but died before posting a result.
-    //    A real sync finishes in minutes, and the enqueue below skips any
-    //    connection with a pending/running job — so a zombie 'running' job
-    //    would otherwise permanently block that connection's scheduled syncs.
+    //  • running >15m — a worker claimed it but died before posting a result.
+    //    A real sync finishes in minutes (the agent hard-caps each scrape), and
+    //    the enqueue below skips any connection with a pending/running job — so
+    //    a zombie 'running' job would otherwise block that connection's syncs.
+    //    The agent never re-polls mid-run (single-instance lock), so a 'running'
+    //    job seen at claim time is always from a previous, dead run.
     const expired = await db.query(`
       UPDATE bank_sync_jobs
       SET status='failed', finished_at=NOW(),
@@ -100,7 +102,7 @@ async function enqueueDueJobs(now = new Date()) {
             ELSE '{"error":"expired — worker claimed the job but never reported a result","transient":true}'::jsonb
           END
       WHERE (status='pending' AND requested_at < NOW() - INTERVAL '6 hours')
-         OR (status='running' AND COALESCE(started_at, requested_at) < NOW() - INTERVAL '2 hours')
+         OR (status='running' AND COALESCE(started_at, requested_at) < NOW() - INTERVAL '15 minutes')
       RETURNING id
     `, [], 'bank_sync_expire_stale');
 
