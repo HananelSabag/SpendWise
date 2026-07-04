@@ -82,9 +82,15 @@ const ModernOnboardingManager = () => {
         
         // ✅ Close modal
         setShowOnboarding(false);
-        
-        // ✅ Navigate to dashboard after successful onboarding
-        navigate('/', { replace: true });
+
+        // ✅ Honor the Connect Sources step: if the user opted to connect a
+        // bank/card now, drop them on the Bank Sync page; otherwise dashboard.
+        let connectNow = false;
+        try {
+          connectNow = sessionStorage.getItem('sw_onboarding_connect') === '1';
+          sessionStorage.removeItem('sw_onboarding_connect');
+        } catch (_) {}
+        navigate(connectNow ? '/bank-sync' : '/', { replace: true });
         
         // ✅ Show success notification
         addNotification({

@@ -6,8 +6,8 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
-import { 
-  User, GraduationCap, Zap, Check
+import {
+  User, GraduationCap, Zap, Check, Landmark
 } from 'lucide-react';
 
 // ✅ Import stores and components
@@ -17,6 +17,7 @@ import { useTranslation, useAuth } from '../stores';
 import ModernProfileStep from '../components/features/onboarding/steps/ModernProfileStep';
 import ModernEducationStep from '../components/features/onboarding/steps/ModernEducationStep';
 import BillingCycleStep from '../components/features/onboarding/steps/BillingCycleStep';
+import ConnectSourcesStep from '../components/features/onboarding/steps/ConnectSourcesStep';
 
 /**
  * 🎯 Modern 3-Step Onboarding State Hook
@@ -78,6 +79,10 @@ export const useModernOnboardingState = (options = {}) => {
     // Step 3: Financial cycle (billing/salary day)
     billingCycle: {
       billingCycleDay: 1
+    },
+    // Step 4: Connect bank/card sources
+    connectSources: {
+      wantsToConnect: true
     }
   });
 
@@ -111,6 +116,16 @@ export const useModernOnboardingState = (options = {}) => {
       icon: Zap,
       canSkip: false,
       required: true,
+      estimatedTime: 1
+    },
+    {
+      id: 'connectSources',
+      component: ConnectSourcesStep,
+      title: t('steps.connectSources.title') || 'Connect Sources',
+      subtitle: t('steps.connectSources.subtitle') || 'Bank accounts vs credit cards — and how to connect them',
+      icon: Landmark,
+      canSkip: true,
+      required: false,
       estimatedTime: 1
     }
   ], [t]);
@@ -183,6 +198,10 @@ export const useModernOnboardingState = (options = {}) => {
         if (!data.billingCycleDay || data.billingCycleDay < 1 || data.billingCycleDay > 31) {
           errors.push('A valid financial cycle day (1-31) is required');
         }
+        break;
+
+      case 'connectSources':
+        // No validation — connecting is optional and deferred to Bank Sync.
         break;
 
       default:
@@ -270,6 +289,9 @@ export const useModernOnboardingState = (options = {}) => {
       },
       billingCycle: {
         billingCycleDay: 1
+      },
+      connectSources: {
+        wantsToConnect: true
       }
     });
     clearPersistedData();
@@ -309,6 +331,8 @@ export const useModernOnboardingState = (options = {}) => {
         return Boolean(data.understoodTransactionTypes || data.understoodBalancePanel);
       case 'billingCycle':
         return Boolean(data.billingCycleDay);
+      case 'connectSources':
+        return true;
       default:
         return Object.keys(data).length > 0;
     }

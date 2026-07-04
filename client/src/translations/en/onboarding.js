@@ -40,12 +40,31 @@ export default {
     },
     education: {
       title: "Learn the Basics",
-      subtitle: "Understand transactions and balance tracking"
+      subtitle: "How bank & card sync keeps your money up to date"
     },
-    templates: {
-      title: "Quick Setup",
-      subtitle: "Add recurring transactions in seconds"
+    billingCycle: {
+      title: "Financial Cycle",
+      subtitle: "Tell us when your financial month starts"
+    },
+    connectSources: {
+      title: "Connect Sources",
+      subtitle: "Bank accounts vs credit cards — and how to connect them"
     }
+  },
+  connectSources: {
+    title: "Connect your bank & cards",
+    subtitle: "SpendWise syncs your transactions automatically. First, the one thing worth knowing:",
+    banksTitle: "Bank accounts",
+    banksBlurb: "Where your salary lands and your direct debits leave from.",
+    banksProvides: "Real account balance + full transaction history",
+    cardsTitle: "Credit card companies",
+    cardsBlurb: "Where each purchase is itemized before the monthly bill.",
+    cardsProvides: "Itemized charges — they post later as one summarized charge in your bank",
+    relationship: "Example: 20 card purchases this month show up individually from your credit card company, then appear as one combined charge in your bank account. Connecting both gives you the detail and the bottom line.",
+    connectNow: "Connect a source now",
+    connectNowHint: "We'll take you to the Bank Sync page right after setup",
+    later: "I'll do it later",
+    laterHint: "Connect anytime from the Bank Sync page"
   },
   welcome: {
     title: "Welcome to SpendWise!",
