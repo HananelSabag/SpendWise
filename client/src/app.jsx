@@ -43,7 +43,6 @@ import PWAInstallPrompt from './components/common/PWAInstallPrompt';
 import UnifiedTransactionActions from './components/features/transactions/actions/UnifiedTransactionActions.jsx';
 
 // ✅ Balance Provider  
-import { BalanceProvider } from './contexts/BalanceContext';
 
 // ✅ App Initializer
 import AppInitializer from './components/common/AppInitializer';
@@ -684,17 +683,15 @@ function App() {
       }}
     >
       <StoreProvider>
-        <BalanceProvider>
-          <ToastProvider>
-            <AuthToastProvider>
-              <AuthRecoveryProvider>
-                <AppInitializer>
-                  <AppContent />
-                </AppInitializer>
-              </AuthRecoveryProvider>
-            </AuthToastProvider>
-          </ToastProvider>
-        </BalanceProvider>
+        <ToastProvider>
+          <AuthToastProvider>
+            <AuthRecoveryProvider>
+              <AppInitializer>
+                <AppContent />
+              </AppInitializer>
+            </AuthRecoveryProvider>
+          </AuthToastProvider>
+        </ToastProvider>
       </StoreProvider>
     </Router>
   );

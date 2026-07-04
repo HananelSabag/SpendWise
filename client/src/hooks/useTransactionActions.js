@@ -17,7 +17,6 @@ import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTransactions } from './useTransactions';
 import { useToast } from './useToast';
-import { useBalanceRefresh } from '../contexts/BalanceContext';
 import transactionAPI from '../api/transactions';
 
 /**
@@ -65,8 +64,7 @@ export const useTransactionActions = (context = 'transactions') => {
   const queryClient = useQueryClient();
   const contextConfig = CONTEXT_STRATEGIES[context] || CONTEXT_STRATEGIES.transactions;
   const toastService = useToast();
-  const { refreshAll } = useBalanceRefresh();
-  
+
   // ✅ SIMPLIFIED: Use the optimized useTransactions hook
   const {
     createTransaction: baseCreateTransaction,
@@ -92,8 +90,8 @@ export const useTransactionActions = (context = 'transactions') => {
     const priorityMap = {
       critical: ['transactions', 'dashboard'],
       high: ['transactions', 'dashboard', 'transactionsSummary'],
-      medium: ['transactions', 'dashboard', 'transactionsSummary', 'categories'],
-      low: ['transactions', 'dashboard', 'transactionsSummary', 'categories', 'templates', 'transactionsRecurring']
+      medium: ['transactions', 'dashboard', 'transactionsSummary'],
+      low: ['transactions', 'dashboard', 'transactionsSummary']
     };
     
     const queriesToInvalidate = priorityMap[priority] || priorityMap.high;
@@ -132,17 +130,14 @@ export const useTransactionActions = (context = 'transactions') => {
           refetchTransactions();
         }, 500);
       }
-      
-      // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
-      refreshAll();
-      
+
       logAction(`${transactionType} transaction created successfully`);
       return result;
     } catch (error) {
       logAction(`Failed to create transaction`, { error: error.message });
       throw error;
     }
-      }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refreshAll, refetchTransactions, logAction]);
+      }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refetchTransactions, logAction]);
 
   /**
    * Update Transaction - Context-aware immediate refresh
@@ -166,16 +161,13 @@ export const useTransactionActions = (context = 'transactions') => {
       }
       
       logAction(`Transaction ${id} updated successfully`);
-      
-      // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
-      refreshAll();
-      
+
       return result;
     } catch (error) {
       logAction(`Failed to update transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refreshAll, refetchTransactions, logAction]);
+  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refetchTransactions, logAction]);
 
   /**
    * Delete Transaction (soft delete, one-time transactions only)
@@ -195,16 +187,13 @@ export const useTransactionActions = (context = 'transactions') => {
         refetchTransactions();
       }, 200);
 
-      // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
-      refreshAll();
-
       logAction(`Transaction ${id} deleted successfully`);
       return result;
     } catch (error) {
       logAction(`Failed to delete transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseDeleteTransaction, invalidateRelevantQueries, refreshAll, refetchTransactions, logAction]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, refetchTransactions, logAction]);
 
   /**
    * 🔥 FRESH BULK DELETE - Simple and reliable implementation
@@ -221,19 +210,12 @@ export const useTransactionActions = (context = 'transactions') => {
       if (result.success) {
         // ✅ FULL REFRESH LIKE SINGLE DELETE: Complete query invalidation
         await invalidateRelevantQueries('critical');
-        
-        // ✅ REFRESH TEMPLATES AND RECURRING (in case any deleted transactions were templates)
-        await queryClient.invalidateQueries({ queryKey: ['templates'] });
-        await queryClient.invalidateQueries({ queryKey: ['transactionsRecurring'] });
-        
+
         // ✅ DELAYED REFETCH FOR SMOOTH ANIMATION (just like single delete)
         setTimeout(() => {
           refetchTransactions();
         }, 200);
-        
-        // ✅ REFRESH ALL: Trigger balance panel and transaction list refresh
-        refreshAll();
-        
+
         const deletedCount = result.data?.deleted_count || result.data?.summary?.successful || transactionIds.length;
         
         toastService.success('transactions.bulkDeleteSuccess', { 
@@ -250,7 +232,7 @@ export const useTransactionActions = (context = 'transactions') => {
       toastService.error('Fresh bulk delete failed. Please try again.');
       throw error;
     }
-  }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, refreshAll, logAction]);
+  }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, logAction]);
 
   /**
    * ✅ SIMPLIFIED: Bulk Operations optimized for infinite loading
@@ -295,12 +277,7 @@ export const useTransactionActions = (context = 'transactions') => {
       
       // Invalidate caches once after all operations
       await invalidateRelevantQueries('high');
-      
-      // Refresh data
-      setTimeout(() => {
-        refreshAll();
-      }, 500);
-      
+
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
       
@@ -324,7 +301,7 @@ export const useTransactionActions = (context = 'transactions') => {
         });
       throw error;
     }
-  }, [baseDeleteTransaction, baseUpdateTransaction, invalidateRelevantQueries, refreshAll]);
+  }, [baseDeleteTransaction, baseUpdateTransaction, invalidateRelevantQueries]);
 
   /**
    * ✅ ENHANCED: Force refresh with infinite query support
@@ -337,11 +314,8 @@ export const useTransactionActions = (context = 'transactions') => {
           const queryKey = query.queryKey[0];
           return [
             'dashboard',
-            'transactions', 
-            'transactionsSummary',
-            'templates',
-            'transactionsRecurring',
-            'categories'
+            'transactions',
+            'transactionsSummary'
           ].includes(queryKey);
         }
       });

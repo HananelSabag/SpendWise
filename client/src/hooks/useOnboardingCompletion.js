@@ -7,7 +7,6 @@
 import { useCallback } from 'react';
 import { useAuth, useNotifications, useTranslation } from '../stores';
 import { api } from '../api';
-import { useBalanceRefresh } from '../contexts/BalanceContext';
 
 /**
  * ✅ Simplified Onboarding Completion Hook
@@ -21,7 +20,6 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   const { user, actions: authActions } = useAuth();
   const { addNotification } = useNotifications();
   const { t } = useTranslation('onboarding');
-  const { refreshAll } = useBalanceRefresh();
 
   /**
    * Complete onboarding process: save the financial-cycle day, then mark
@@ -103,13 +101,6 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
       localStorage.setItem('onboarding_completed', 'true');
       localStorage.setItem('onboarding_completed_at', new Date().toISOString());
 
-      // ✅ FINAL REFRESH: Single refresh after all operations complete
-      try {
-        await refreshAll();
-      } catch (refreshError) {
-        // Refresh failure doesn't block onboarding completion
-      }
-
       addNotification({
         type: 'success',
         message: t('completion.success') || 'Setup completed successfully!',
@@ -144,8 +135,7 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
     addNotification,
     t,
     onSuccess,
-    onError,
-    refreshAll
+    onError
   ]);
 
   return {
