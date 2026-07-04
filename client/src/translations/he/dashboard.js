@@ -272,7 +272,24 @@ export default {
     title: "התקופה הפיננסית הנוכחית",
     income: "הכנסות",
     expenses: "הוצאות",
-    net: "נטו"
+    net: "נטו",
+    cycleDay: "יום מחזור {{day}}",
+    cycleHint: "מחזור החיוב שלך מתחיל ביום {{day}} בכל חודש"
+  },
+  sourcesOverview: {
+    banksTitle: "חשבונות בנק",
+    cardsTitle: "כרטיסי אשראי",
+    manage: "ניהול",
+    connectMore: "חיבור מקור",
+    balance: "יתרה זמינה",
+    balanceUnavailable: "יתרה לא זמינה",
+    balanceUnavailableHint: "הבנק לא משתף יתרה — הפעילות עדיין מסתנכרנת",
+    charges: "חיובים בתקופה",
+    txnCount: "{{count}} סונכרנו",
+    staleWarning: "לא סונכרן מעל יממה",
+    neverSynced: "עדיין לא סונכרן",
+    syncedAgo: "סונכרן {{time}}",
+    cardExplainer: "חיובי הכרטיס מופיעים כאן לפי עסקה, ואז כחיוב מרוכז אחד בחשבון הבנק"
   },
   bankCosts: {
     title: "עלויות בנקאיות בתקופה זו",

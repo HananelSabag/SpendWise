@@ -283,7 +283,24 @@ export default {
     title: "This financial period",
     income: "Income",
     expenses: "Expenses",
-    net: "Net"
+    net: "Net",
+    cycleDay: "Cycle day {{day}}",
+    cycleHint: "Your billing cycle starts on day {{day}} of each month"
+  },
+  sourcesOverview: {
+    banksTitle: "Bank accounts",
+    cardsTitle: "Credit cards",
+    manage: "Manage",
+    connectMore: "Connect a source",
+    balance: "Available balance",
+    balanceUnavailable: "Balance not available",
+    balanceUnavailableHint: "This bank doesn't share a balance — activity still syncs",
+    charges: "Charges this period",
+    txnCount: "{{count}} synced",
+    staleWarning: "Not synced in over a day",
+    neverSynced: "Not synced yet",
+    syncedAgo: "Synced {{time}}",
+    cardExplainer: "Card charges appear here per purchase, then as one summarized charge in your bank account"
   },
   bankCosts: {
     title: "Bank Costs This Period",

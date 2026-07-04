@@ -10,6 +10,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import {
   RefreshCw, Plus, Percent, Landmark, Banknote, PieChart as PieIcon, Info,
+  CreditCard, AlertTriangle, ChevronRight, CalendarClock,
 } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
@@ -17,7 +18,7 @@ import { useDashboard } from '../hooks/useDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
 import { Avatar, PageSkeleton } from '../components/ui';
-import { institutionLabel } from '../components/features/bankSync/bankSyncMeta';
+import { institutionLabel, bankBrand } from '../components/features/bankSync/bankSyncMeta';
 
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
@@ -109,13 +110,24 @@ const PeriodSummary = ({ dashboardData, formatCurrency, t }) => {
 
   return (
     <div className="glass-card rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white shrink-0">
           {t('period.title', { fallback: 'This financial period' })}
         </h3>
-        {period && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">{formatPeriodLabel(period)}</span>
-        )}
+        <div className="flex items-center gap-2 min-w-0">
+          {period?.cycleDay != null && (
+            <span
+              className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 shrink-0"
+              title={t('period.cycleHint', { day: period.cycleDay, fallback: `Billing cycle starts on day ${period.cycleDay}` })}
+            >
+              <CalendarClock className="w-3 h-3" />
+              {t('period.cycleDay', { day: period.cycleDay, fallback: `Cycle day ${period.cycleDay}` })}
+            </span>
+          )}
+          {period && (
+            <span className="text-xs text-gray-400 dark:text-gray-500 truncate">{formatPeriodLabel(period)}</span>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>
@@ -140,6 +152,114 @@ const PeriodSummary = ({ dashboardData, formatCurrency, t }) => {
           </p>
         </div>
       </div>
+    </div>
+  );
+};
+
+// ─── Sources overview (banks vs credit cards) ─────────────────────────────────
+
+const STALE_MS = 26 * 3_600_000; // missed more than a full day of twice-daily syncs
+
+function syncFreshness(iso, t) {
+  if (!iso) return { text: t('sourcesOverview.neverSynced', { fallback: 'Not synced yet' }), stale: true };
+  const diff = Date.now() - new Date(iso).getTime();
+  const stale = diff > STALE_MS;
+  const h = Math.floor(diff / 3_600_000);
+  const d = Math.floor(diff / 86_400_000);
+  const token = h < 1 ? t('date.today', { fallback: 'today' }) : d >= 1 ? `${d}d` : `${h}h`;
+  return { text: t('sourcesOverview.syncedAgo', { time: token, fallback: `Synced ${token} ago` }), stale };
+}
+
+const SourceRow = ({ src, formatCurrency, t }) => {
+  const Icon = src.kind === 'credit_card' ? CreditCard : Landmark;
+  const brand = bankBrand(src.bankSource);
+  const fresh = syncFreshness(src.lastSyncedAt, t);
+
+  // Bank → available balance (real money); credit card → charges this period.
+  const isBank = src.kind === 'bank';
+  const value = isBank
+    ? (src.hasBalance ? formatCurrency(src.balance) : t('sourcesOverview.balanceUnavailable', { fallback: 'Balance not available' }))
+    : formatCurrency(src.expenses);
+
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white bg-gradient-to-br', brand.gradient)}>
+        <Icon className="w-4.5 h-[18px]" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{src.label}</p>
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1 truncate">
+          {fresh.stale && <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
+          <span className={cn('truncate', fresh.stale && 'text-amber-600 dark:text-amber-400')}>
+            {fresh.stale && src.lastSyncedAt
+              ? t('sourcesOverview.staleWarning', { fallback: 'Not synced in over a day' })
+              : fresh.text}
+          </span>
+          {src.count > 0 && (
+            <>
+              <span>·</span>
+              <span className="shrink-0">{t('sourcesOverview.txnCount', { count: src.count, fallback: `${src.count} synced` })}</span>
+            </>
+          )}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <p className={cn(
+          'text-sm font-bold tabular-nums',
+          isBank && !src.hasBalance ? 'text-gray-400 dark:text-gray-500 font-medium text-xs' : 'text-gray-900 dark:text-white',
+        )}>
+          {value}
+        </p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          {isBank ? t('sourcesOverview.balance', { fallback: 'Available balance' }) : t('sourcesOverview.charges', { fallback: 'Charges this period' })}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const SourcesOverview = ({ sources, formatCurrency, t, navigate }) => {
+  const banks = (sources || []).filter((s) => s.kind === 'bank');
+  const cards = (sources || []).filter((s) => s.kind === 'credit_card');
+  if (!banks.length && !cards.length) return null; // ModernBalancePanel shows the connect CTA
+
+  const Section = ({ title, list, icon: SecIcon, explainer }) => list.length > 0 && (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1 mt-1">
+        <SecIcon className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+        <h4 className="text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">{title}</h4>
+      </div>
+      <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
+        {list.map((s) => <SourceRow key={s.bankSource} src={s} formatCurrency={formatCurrency} t={t} />)}
+      </div>
+      {explainer && (
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1.5 leading-snug">{explainer}</p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="glass-card rounded-2xl p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+          {t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} &amp; {t('sourcesOverview.cardsTitle', { fallback: 'Credit cards' })}
+        </h3>
+        <button
+          onClick={() => navigate('/bank-sync')}
+          className="flex items-center gap-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+        >
+          {t('sourcesOverview.manage', { fallback: 'Manage' })}
+          <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
+        </button>
+      </div>
+
+      <Section title={t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} list={banks} icon={Landmark} />
+      <Section
+        title={t('sourcesOverview.cardsTitle', { fallback: 'Credit cards' })}
+        list={cards}
+        icon={CreditCard}
+        explainer={cards.length > 0 ? t('sourcesOverview.cardExplainer', { fallback: 'Card charges appear here per purchase, then as one summarized charge in your bank account' }) : null}
+      />
     </div>
   );
 };
@@ -385,6 +505,7 @@ const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh
       <div className="px-4 py-4 space-y-4 pb-28">
         <ModernBalancePanel />
         <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
+        <SourcesOverview sources={dashboardData.sources} formatCurrency={formatCurrency} t={t} navigate={navigate} />
         <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
         <SpendingBreakdown categoryBreakdown={dashboardData.categoryBreakdown} formatCurrency={formatCurrency} t={t} />
         <ModernRecentTransactionsWidget
@@ -423,6 +544,7 @@ const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate, formatCu
         </div>
 
         <div className="xl:col-span-1 space-y-6">
+          <SourcesOverview sources={dashboardData.sources} formatCurrency={formatCurrency} t={t} navigate={navigate} />
           <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
           <SpendingBreakdown categoryBreakdown={dashboardData.categoryBreakdown} formatCurrency={formatCurrency} t={t} />
         </div>
