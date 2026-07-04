@@ -49,16 +49,6 @@ function buildApiFilters({ filters = {}, search = '', activeTab = 'all' }) {
   return apiFilters;
 }
 
-// Normalize one server transaction: flat category columns → nested object.
-function normalizeTransaction(tx) {
-  return {
-    ...tx,
-    category: tx.category_name
-      ? { name: tx.category_name, icon: tx.category_icon, color: tx.category_color }
-      : tx.category,
-  };
-}
-
 export const useTransactions = (options = {}) => {
   const { isAuthenticated, user } = useAuth();
   const toastService = useToast();
@@ -101,7 +91,7 @@ export const useTransactions = (options = {}) => {
         : (raw.pagination?.total ?? list.length);
 
       return {
-        transactions: list.map(normalizeTransaction),
+        transactions: list,
         hasMore,
         total,
         page: pageParam,

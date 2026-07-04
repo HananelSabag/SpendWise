@@ -12,12 +12,10 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Landmark } from 'lucide-react';
 
 import { useTranslation, useCurrency } from '../../../stores';
-import { getIconComponent } from '../../../config/categoryIcons';
-import { cn, dateHelpers } from '../../../utils/helpers';
-import { institutionLabel } from '../bankSync/bankSyncMeta';
+import { cn } from '../../../utils/helpers';
+import { institutionLabel, institutionIcon, institutionKind, bankBrand } from '../bankSync/bankSyncMeta';
 import OneTimeTransactionActions from './actions/OneTimeTransactionActions';
 
 const ModernTransactionCard = ({
@@ -50,14 +48,18 @@ const ModernTransactionCard = ({
     return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   }, [date, t]);
 
-  const Icon = useMemo(() => {
-    try { return getIconComponent(transaction?.category_icon || transaction?.category?.icon || 'Receipt'); }
-    catch { return null; }
-  }, [transaction]);
+  // The icon speaks to the SOURCE KIND (bank vs credit-card vs manual), not a
+  // spending category — categories no longer exist in this model.
+  const Icon = institutionIcon(transaction?.bank_source);
+  const kind = institutionKind(transaction?.bank_source);
 
   const sourceLabel = isBankSynced
     ? institutionLabel(transaction.bank_source)
     : t('transactions.manualEntry', 'Manual entry');
+
+  // Bank-synced rows wear their institution's brand gradient (same language as
+  // the Bank Sync page); manual rows stay neutral gray.
+  const rawCategory = (transaction?.raw_category || '').trim();
 
   return (
     <motion.div
@@ -76,16 +78,16 @@ const ModernTransactionCard = ({
     >
       <div className="flex items-center gap-3 px-3 py-2.5">
 
-        {/* Category icon — neutral container, quiet tinted glyph */}
+        {/* Source-kind icon — branded gradient for synced sources (so a bank
+            always looks like itself), neutral for manual entries. */}
         <div className="relative shrink-0">
           <div className={cn(
             'w-9 h-9 rounded-lg flex items-center justify-center',
-            'bg-gray-100 dark:bg-gray-700/60',
-            isIncome
-              ? 'text-emerald-600 dark:text-emerald-400'
-              : 'text-red-500 dark:text-red-400/90'
+            isBankSynced
+              ? `bg-gradient-to-br ${bankBrand(transaction.bank_source).gradient} text-white`
+              : 'bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400'
           )}>
-            {Icon && <Icon className="w-4.5 h-4.5 w-[18px] h-[18px]" />}
+            <Icon className="w-[18px] h-[18px]" />
           </div>
         </div>
 
@@ -95,8 +97,18 @@ const ModernTransactionCard = ({
             {transaction?.description || t('transactions.noDescription', 'No description')}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 flex items-center gap-1">
-            {isBankSynced && <Landmark className="w-3 h-3 shrink-0" />}
             <span className="truncate">{sourceLabel}</span>
+            {kind === 'credit_card' && (
+              <span className="shrink-0 text-[10px] px-1 py-px rounded bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400">
+                {t('bankSync.creditCardShort', 'card')}
+              </span>
+            )}
+            {rawCategory && (
+              <>
+                <span>·</span>
+                <span className="truncate">{rawCategory}</span>
+              </>
+            )}
             <span>·</span>
             <span className="shrink-0">{dateLabel}</span>
           </p>

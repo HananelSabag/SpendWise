@@ -38,6 +38,7 @@ export default {
   myConnections: 'חיבורי הבנק שלי',
   bankAccounts: 'חשבונות בנק',
   creditCards: 'כרטיסי אשראי',
+  creditCardShort: 'אשראי',
   cardActivity: 'פעילות כרטיס',
   noConnections: 'לא חובר אף בנק עדיין',
   noConnectionsHint: 'חבר את הבנק שלך והעסקאות יופיעו כאן אוטומטית',

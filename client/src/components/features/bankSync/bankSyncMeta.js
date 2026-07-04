@@ -4,6 +4,8 @@
  * and stats cards so a bank always looks the same everywhere.
  */
 
+import { Landmark, CreditCard, PencilLine } from 'lucide-react';
+
 // Per-bank gradient (icon square) + soft tint (card) — matches the app's
 // gradient-icon language (see ModernTransactionCard, page headers).
 export const BANK_BRAND = {
@@ -36,6 +38,16 @@ export function institutionKind(source) {
 
 export function institutionLabel(source) {
   return INSTITUTIONS[source]?.label || source;
+}
+
+// Icon by institution kind — a bank account and a credit-card company are
+// different things and should never share a glyph. Manual/unknown rows get a
+// pencil (a human typed them). Returns a lucide component.
+export function institutionIcon(source) {
+  const kind = institutionKind(source);
+  if (kind === 'bank') return Landmark;
+  if (kind === 'credit_card') return CreditCard;
+  return PencilLine;
 }
 
 // Connection status → badge styling + translation key.

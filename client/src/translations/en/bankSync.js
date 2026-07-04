@@ -38,6 +38,7 @@ export default {
   myConnections: 'My Bank Connections',
   bankAccounts: 'Bank Accounts',
   creditCards: 'Credit Cards',
+  creditCardShort: 'card',
   cardActivity: 'Card Activity',
   noConnections: 'No banks connected yet',
   noConnectionsHint: 'Connect your bank and your transactions will appear here automatically',
