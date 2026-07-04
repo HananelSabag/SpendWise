@@ -70,6 +70,9 @@ async function ingestAccounts(client, userId, source, accounts) {
       const date = txnDate.toISOString().split('T')[0];
       const transactionDatetime = txnDate.toISOString();
       const description = (txn.description || '').trim().slice(0, 500);
+      // Source-provided category text (Max sends one; banks usually don't).
+      // null when absent — we never guess a category at ingest time.
+      const rawCategory = (txn.raw_category || '').toString().trim().slice(0, 200) || null;
       const bankSyncId = txn.identifier ? `${source}:${acctKey}:${txn.identifier}` : null;
 
       const acctNum = acctKey === 'default' ? null : acctKey;
@@ -79,13 +82,13 @@ async function ingestAccounts(client, userId, source, accounts) {
         const result = await client.query(
           `INSERT INTO transactions
              (user_id, amount, type, description, notes, date, transaction_datetime,
-              bank_sync_id, bank_source, bank_account_number, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,NOW(),NOW())
+              raw_category, bank_sync_id, bank_source, bank_account_number, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,$10,NOW(),NOW())
            ON CONFLICT (user_id, bank_sync_id)
              WHERE bank_sync_id IS NOT NULL
            DO NOTHING
            RETURNING id`,
-          [userId, amount, type, description, date, transactionDatetime, bankSyncId, source, acctNum],
+          [userId, amount, type, description, date, transactionDatetime, rawCategory, bankSyncId, source, acctNum],
         );
         result.rows.length > 0 ? inserted++ : skipped++;
       } else {
@@ -104,9 +107,9 @@ async function ingestAccounts(client, userId, source, accounts) {
           await client.query(
             `INSERT INTO transactions
                (user_id, amount, type, description, notes, date, transaction_datetime,
-                bank_source, bank_account_number, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,NOW(),NOW())`,
-            [userId, amount, type, description, date, transactionDatetime, source, acctNum],
+                raw_category, bank_source, bank_account_number, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,NOW(),NOW())`,
+            [userId, amount, type, description, date, transactionDatetime, rawCategory, source, acctNum],
           );
           inserted++;
         }
