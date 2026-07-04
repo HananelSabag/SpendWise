@@ -408,6 +408,7 @@ const ModernUsersTable = ({
               <Th column="role"               sortConfig={sortConfig} onSort={handleSort}>{t('table.role')}</Th>
               <Th column="status"             sortConfig={sortConfig} onSort={handleSort}>{t('table.status')}</Th>
               <Th column="total_transactions" sortConfig={sortConfig} onSort={handleSort}>{t('fields.transactionCount')}</Th>
+              <Th column="connections_count"  sortConfig={sortConfig} onSort={handleSort}>{t('fields.sources', { fallback: 'Sources' })}</Th>
               <Th column="created_at"         sortConfig={sortConfig} onSort={handleSort}>{t('table.joinDate')}</Th>
               <Th column="last_login"         sortConfig={sortConfig} onSort={handleSort}>{t('fields.lastLogin')}</Th>
               <th className="px-4 py-3.5 text-end text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -462,6 +463,15 @@ const ModernUsersTable = ({
 
                   <td className="px-4 py-3.5 text-sm font-semibold text-gray-800 dark:text-gray-200 tabular-nums">
                     {user.total_transactions || 0}
+                  </td>
+
+                  <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">
+                    <div className="font-semibold text-gray-800 dark:text-gray-200 tabular-nums">
+                      {user.connections_count || 0}
+                    </div>
+                    <div className="text-xs text-gray-400 whitespace-nowrap">
+                      {t('fields.cycleDay', { fallback: 'cycle' })} {user.billing_cycle_day ?? '—'}
+                    </div>
                   </td>
 
                   <td className="px-4 py-3.5 text-sm text-gray-500 dark:text-gray-400">

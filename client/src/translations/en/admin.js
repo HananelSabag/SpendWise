@@ -79,11 +79,26 @@ export default {
     systemSettingsDesc: "Configure system-wide settings",
     activityLog: "Activity Log",
     activityLogDesc: "Monitor system activity and logs",
+    bankSync: "Bank Sync",
+    bankSyncDesc: "Connection health & worker jobs",
     userBlocked: "User blocked successfully",
     userUnblocked: "User unblocked successfully",
     userDeleted: "User deleted successfully",
     systemControls: "System controls",
     liveMonitoring: "Live monitoring"
+  },
+  sync: {
+    title: "Bank Sync",
+    connections: "Connections",
+    connectionsTitle: "Connections",
+    active: "Active",
+    errors: "Errors",
+    jobs24h: "Jobs 24h",
+    failed24h: "Failed 24h",
+    jobsTitle: "Recent worker jobs",
+    noConnections: "No connections",
+    noJobs: "No jobs yet",
+    noBalance: "no balance"
   },
   users: {
     title: "User Management",
@@ -158,6 +173,8 @@ export default {
     joinDate: "Join Date",
     lastLogin: "Last Login",
     transactionCount: "Transactions",
+    sources: "Sources",
+    cycleDay: "cycle",
     totalSpent: "Total Spent"
   },
   common: {

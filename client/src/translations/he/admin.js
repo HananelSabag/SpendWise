@@ -78,11 +78,26 @@ export default {
     systemSettingsDesc: "הגדרת פרמטרי מערכת",
     activityLog: "יומן פעילות",
     activityLogDesc: "צפייה בהיסטוריית פעילות מנהל",
+    bankSync: "סנכרון בנק",
+    bankSyncDesc: "בריאות חיבורים ומשימות עובד",
     userBlocked: "המשתמש נחסם בהצלחה",
     userUnblocked: "חסימת המשתמש בוטלה בהצלחה",
     userDeleted: "המשתמש נמחק בהצלחה",
     systemControls: "בקרות מערכת",
     liveMonitoring: "ניטור חי"
+  },
+  sync: {
+    title: "סנכרון בנק",
+    connections: "חיבורים",
+    connectionsTitle: "חיבורים",
+    active: "פעילים",
+    errors: "שגיאות",
+    jobs24h: "משימות 24ש",
+    failed24h: "נכשלו 24ש",
+    jobsTitle: "משימות עובד אחרונות",
+    noConnections: "אין חיבורים",
+    noJobs: "אין משימות עדיין",
+    noBalance: "אין יתרה"
   },
   users: {
     title: "ניהול משתמשים",
@@ -157,6 +172,8 @@ export default {
     joinDate: "תאריך הצטרפות",
     lastLogin: "התחברות אחרונה",
     transactionCount: "מספר עסקאות",
+    sources: "מקורות",
+    cycleDay: "מחזור",
     totalSpent: "סה\"כ הוצאות"
   },
   common: {

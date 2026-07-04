@@ -560,6 +560,16 @@ const AppContent = () => {
               </RouteErrorBoundary>
             </ProtectedRoute>
           } />
+
+          <Route path="/admin/sync" element={
+            <ProtectedRoute adminOnly={true}>
+              <RouteErrorBoundary routeName="AdminSync">
+                <Suspense fallback={<RouteLoadingFallback route="bank sync" />}>
+                  <LazyComponents.AdminSync />
+                </Suspense>
+              </RouteErrorBoundary>
+            </ProtectedRoute>
+          } />
           
           {/* ✅ Maintenance Route */}
           <Route path="/maintenance" element={

@@ -22,6 +22,16 @@ export const adminAPI = {
     }
   },
 
+  // ✅ Bank-sync visibility — connection health + recent worker jobs
+  async getBankSync() {
+    try {
+      const response = await api.client.get('/admin/bank-sync');
+      return { success: true, data: response.data?.data || response.data };
+    } catch (error) {
+      return { success: false, error: api.normalizeError(error) };
+    }
+  },
+
   // ✅ Admin Settings API (unified)
   settings: {
     // Get current system settings (optionally by category)

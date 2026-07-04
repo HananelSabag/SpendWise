@@ -47,6 +47,11 @@ const AdminDashboard = () => {
     transactionsMonth:s.transactions_month|| 0,
     totalAmount:      s.total_amount      || 0,
     adminUsers:       s.admin_users       || 0,
+    connections:      s.total_connections || 0,
+    activeConnections:s.active_connections|| 0,
+    errorConnections: s.error_connections || 0,
+    failedJobs24h:    s.failed_jobs_24h   || 0,
+    inFlightJobs:     s.in_flight_jobs    || 0,
   };
   const recentActivity = actRes?.success ? (actRes.data || []) : [];
 
@@ -77,6 +82,17 @@ const AdminDashboard = () => {
       desc:  t('actions.activityLogDesc',{ fallback: 'Monitor admin actions' }),
       badge: stats.transactionsMonth,
       badgeLabel: t('timeAgo.thisMonth', { fallback: 'this month' }),
+    },
+    {
+      to: '/admin/sync',
+      icon: RefreshCw,
+      gradient: 'from-indigo-500 to-purple-600',
+      title: t('actions.bankSync',    { fallback: 'Bank Sync' }),
+      desc:  t('actions.bankSyncDesc',{ fallback: 'Connection health & worker jobs' }),
+      badge: stats.errorConnections > 0 ? stats.errorConnections : stats.connections,
+      badgeLabel: stats.errorConnections > 0
+        ? t('sync.errors', { fallback: 'errors' })
+        : t('sync.connections', { fallback: 'connections' }),
     },
     {
       to: '/admin/settings',
