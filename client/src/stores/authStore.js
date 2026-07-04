@@ -12,6 +12,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { useShallow } from 'zustand/react/shallow';
 import { authAPI } from '../api';
 import { useAppStore } from './appStore';
 import { useTranslationStore } from './translationStore';
@@ -687,26 +688,28 @@ export const useAuthError       = () => useAuthStore(authSelectors.error);
 // store state and never reassigned, so reference identity is stable).
 export const useAuthActions = () => useAuthStore((s) => s.actions);
 
-// ⚠️ LEGACY: subscribes to the entire store. Prefer the granular selectors
-// above for new code. Kept so existing call sites keep working.
-export const useAuth = () => {
-  const store = useAuthStore();
-  return {
-    // State
-    ...store,
+// ⚠️ LEGACY: exposes the whole store. Prefer the granular selectors above for
+// new code. Wrapped in useShallow so it returns a STABLE reference when the
+// auth state hasn't shallow-changed — previously it built a fresh object every
+// render, forcing re-renders and breaking any useEffect that listed it in deps.
+export const useAuth = () =>
+  useAuthStore(
+    useShallow((store) => ({
+      // State
+      ...store,
 
-    // Actions
-    login: store.actions.login,
-    googleLogin: store.actions.googleLogin,
-    register: store.actions.register,
-    logout: store.actions.logout,
-    updateProfile: store.actions.updateProfile,
-    getProfile: store.actions.getProfile,
-    verifyEmail: store.actions.verifyEmail,
+      // Actions
+      login: store.actions.login,
+      googleLogin: store.actions.googleLogin,
+      register: store.actions.register,
+      logout: store.actions.logout,
+      updateProfile: store.actions.updateProfile,
+      getProfile: store.actions.getProfile,
+      verifyEmail: store.actions.verifyEmail,
 
-    // Utilities
-    reset: store.actions.reset
-  };
-};
+      // Utilities
+      reset: store.actions.reset,
+    })),
+  );
 
 export default useAuthStore; 
