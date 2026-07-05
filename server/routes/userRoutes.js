@@ -1,13 +1,14 @@
 /**
- * OPTIMIZED User Routes - Enhanced Performance Version
- * Includes Google OAuth, smart rate limiting, and performance monitoring
- * @module routes/userRoutes_optimized
+ * User Routes — auth, password/verification, and profile
+ * @module routes/userRoutes
  */
 
 const express = require('express');
 const router = express.Router();
-const { auth, requireAdmin } = require('../middleware/auth');
-const userController = require('../controllers/userController');
+const { auth } = require('../middleware/auth');
+const authController = require('../controllers/auth/authController');
+const passwordController = require('../controllers/auth/passwordController');
+const profileController = require('../controllers/auth/profileController');
 const { uploadProfilePicture } = require('../middleware/upload');
 const validate = require('../middleware/validate');
 const { emailVerificationLimiter, authLimiter } = require('../middleware/rateLimiter');
@@ -27,15 +28,11 @@ const resendVerificationLimiter = rateLimit({
     }
   }
 });
-const {
-  authLogger,
-  userOperationLogger,
-  routeLogger
-} = require('../middleware/routeLogger');
+const { authLogger } = require('../middleware/routeLogger');
 const logger = require('../utils/logger');
 
 /**
- * 🚀 OPTIMIZED Public Auth Routes
+ * 🚀 Public Auth Routes
  */
 
 /**
@@ -47,7 +44,7 @@ router.post('/register',
   securityMiddleware.auth,
   validate.userRegistration,
   authLogger('REGISTER'),
-  userController.register
+  authController.register
 );
 
 /**
@@ -59,23 +56,23 @@ router.post('/login',
   securityMiddleware.auth,
   validate.userLogin,
   authLogger('LOGIN'),
-  userController.login
+  authController.login
 );
 /**
  * 🔑 Password Reset Flow
  */
-router.post('/password-reset', securityMiddleware.auth, userController.requestPasswordReset);
-router.get('/password-reset/validate/:token', authLimiter, userController.validatePasswordResetToken);
-router.post('/password-reset/confirm', securityMiddleware.auth, userController.confirmPasswordReset);
+router.post('/password-reset', securityMiddleware.auth, passwordController.requestPasswordReset);
+router.get('/password-reset/validate/:token', authLimiter, passwordController.validatePasswordResetToken);
+router.post('/password-reset/confirm', securityMiddleware.auth, passwordController.confirmPasswordReset);
 
 /**
  * ✉️ Resend Verification
  */
-router.post('/resend-verification', resendVerificationLimiter, userController.resendVerification);
+router.post('/resend-verification', resendVerificationLimiter, passwordController.resendVerification);
 
 
 /**
- * 🚀 NEW: Google OAuth Authentication
+ * 🚀 Google OAuth Authentication
  * @route   POST /api/v1/users/auth/google
  * @desc    Login/Register with Google OAuth
  * @access  Public
@@ -84,18 +81,18 @@ router.post('/auth/google',
   authLimiter,
   // Keep minimal validation (idToken length etc.) but do not require email (server extracts from token)
   validate.googleAuth,
-  userController.googleAuth
+  authController.googleAuth
 );
 
 /**
- * 🔄 NEW: Token Refresh
+ * 🔄 Token Refresh
  * @route   POST /api/v1/users/refresh-token
  * @desc    Refresh access token using refresh token
  * @access  Public
  */
 router.post('/refresh-token',
   authLimiter,
-  userController.refreshToken
+  authController.refreshToken
 );
 
 /**
@@ -105,8 +102,8 @@ router.post('/refresh-token',
  */
 router.post('/verify-email',
   emailVerificationLimiter,
-  validate.emailVerification, // ✅ NOW IMPLEMENTED
-  userController.verifyEmail
+  validate.emailVerification,
+  passwordController.verifyEmail
 );
 
 /**
@@ -114,17 +111,17 @@ router.post('/verify-email',
  * @desc    Alternative verification endpoint for email links
  * @access  Public
  */
-router.get('/verify-email/:token', 
+router.get('/verify-email/:token',
   emailVerificationLimiter,
   (req, res, next) => {
     req.body = { token: req.params.token };
     next();
   },
-  userController.verifyEmail
+  passwordController.verifyEmail
 );
 
 /**
- * 🚀 OPTIMIZED Protected Routes (with smart caching)
+ * 🚀 Protected Routes (with smart caching)
  */
 
 /**
@@ -144,7 +141,7 @@ router.post('/logout',
       next(); // Always continue to logout handler
     });
   },
-  userController.logout
+  authController.logout
 );
 
 /**
@@ -154,7 +151,7 @@ router.post('/logout',
  */
 router.get('/profile',
   auth,
-  userController.getProfile
+  profileController.getProfile
 );
 
 /**
@@ -164,8 +161,8 @@ router.get('/profile',
  */
 router.put('/profile',
   auth,
-  validate.profileUpdate, // ✅ NOW IMPLEMENTED
-  userController.updateProfile
+  validate.profileUpdate,
+  profileController.updateProfile
 );
 
 /**
@@ -237,7 +234,7 @@ router.post('/upload-profile-picture',
 router.post('/change-password',
   auth,
   validate.passwordChange,
-  userController.changePassword
+  passwordController.changePassword
 );
 
 /**
@@ -248,7 +245,7 @@ router.post('/change-password',
 router.post('/set-password',
   auth,
   validate.passwordSet,
-  userController.setPassword
+  passwordController.setPassword
 );
 
 module.exports = router;
