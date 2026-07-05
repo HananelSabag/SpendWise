@@ -1,0 +1,240 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Loader2, CalendarClock } from 'lucide-react';
+import { useAuth, useTranslation, useTranslationStore, useAppStore } from '../../../stores';
+import { cn } from '../../../utils/helpers';
+import queryClient from '../../../config/queryClient';
+
+const Row = ({ label, value, onChange, options }) => (
+  <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-700 last:border-0 gap-4">
+    <span className="text-sm font-medium text-gray-700 dark:text-gray-300 shrink-0">{label}</span>
+    <div className="relative">
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="text-sm pl-3 pr-8 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none cursor-pointer appearance-none transition-colors duration-150"
+      >
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+    </div>
+  </div>
+);
+
+export const PreferencesTab = ({ user, authToasts }) => {
+  const { updateProfile } = useAuth();
+  const { t }             = useTranslation('profile');
+  const navigate          = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const resolveDefaultHome = (u) => {
+    if (u?.preferences?.default_home) return u.preferences.default_home;
+    if (u?.preferences?.shopping_list_as_default_page) return 'shopping';
+    return 'dashboard';
+  };
+
+  const buildPrefs = (u) => ({
+    language_preference: u?.language_preference  || 'en',
+    theme_preference:    u?.theme_preference      || 'system',
+    currency_preference: u?.currency_preference  || 'ILS',
+    default_home:        resolveDefaultHome(u),
+    billing_cycle_day:   Number(u?.billing_cycle_day) || 1,
+  });
+
+  const [prefs, setPrefs]       = useState(() => buildPrefs(user));
+  const [original, setOriginal] = useState(() => buildPrefs(user));
+
+  useEffect(() => {
+    const p = buildPrefs(user);
+    setPrefs(p);
+    setOriginal(p);
+  }, [user?.language_preference, user?.theme_preference, user?.currency_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page, user?.billing_cycle_day]);
+
+  const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
+
+  const handleSave = async () => {
+    if (!isDirty) return;
+    setIsLoading(true);
+    try {
+      const { default_home, ...flatPrefs } = prefs;
+      const result = await updateProfile({
+        ...flatPrefs,
+        preferences: {
+          ...(user?.preferences || {}),
+          default_home,
+          home_preference_set: true,
+          shopping_list_as_default_page: default_home === 'shopping',
+        },
+      });
+      if (!result.success) throw new Error(result.error?.message);
+
+      if (prefs.theme_preference === 'dark')      document.documentElement.classList.add('dark');
+      else if (prefs.theme_preference === 'light') document.documentElement.classList.remove('dark');
+      else document.documentElement.classList.toggle('dark', window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+      if (prefs.language_preference !== user?.language_preference)
+        useTranslationStore.getState().actions?.setLanguage?.(prefs.language_preference);
+      if (prefs.currency_preference !== user?.currency_preference)
+        useAppStore.getState().actions?.setCurrency?.(prefs.currency_preference);
+
+      // Update session flags so nav/header switch immediately (React Query cache is still stale)
+      try {
+        sessionStorage.removeItem('sw_home_redirect');
+        sessionStorage.setItem('sw_picker_done', '1');
+        sessionStorage.setItem('sw_app_mode', default_home);
+      } catch (_) {}
+
+      await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setOriginal(prefs);
+      authToasts.preferencesUpdated?.();
+
+      // Navigate immediately when the home mode changed so the user sees
+      // the updated experience without having to manually go to "/".
+      if (prefs.default_home !== original.default_home) {
+        if (prefs.default_home === 'shopping') {
+          navigate('/shopping', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      }
+    } catch {
+      authToasts.profileUpdateFailed?.();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={cn(
+        'bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm px-5 py-2 transition-colors duration-200',
+        isDirty ? 'border-indigo-200 dark:border-indigo-700/60' : 'border-gray-100 dark:border-gray-700'
+      )}>
+        <Row
+          label={t('preferences.language.language') || 'Language'}
+          value={prefs.language_preference}
+          onChange={v => setPrefs(p => ({ ...p, language_preference: v }))}
+          options={[{ value: 'en', label: 'English' }, { value: 'he', label: 'עברית (Hebrew)' }]}
+        />
+        <Row
+          label={t('preferences.display.theme') || 'Theme'}
+          value={prefs.theme_preference}
+          onChange={v => setPrefs(p => ({ ...p, theme_preference: v }))}
+          options={[
+            { value: 'system', label: t('preferences.themeOptions.system') || 'System' },
+            { value: 'light',  label: t('preferences.themeOptions.light')  || 'Light'  },
+            { value: 'dark',   label: t('preferences.themeOptions.dark')   || 'Dark'   },
+          ]}
+        />
+        <Row
+          label={t('preferences.language.currency') || 'Currency'}
+          value={prefs.currency_preference}
+          onChange={v => setPrefs(p => ({ ...p, currency_preference: v }))}
+          options={[
+            { value: 'ILS', label: '₪ Israeli Shekel'   },
+            { value: 'USD', label: '$ US Dollar'         },
+            { value: 'EUR', label: '€ Euro'              },
+            { value: 'GBP', label: '£ British Pound'     },
+            { value: 'JPY', label: '¥ Japanese Yen'      },
+            { value: 'CAD', label: 'C$ Canadian Dollar'  },
+            { value: 'AUD', label: 'A$ Australian Dollar'},
+          ]}
+        />
+        {/* Default home picker */}
+        <div className="py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('preferences.defaultHome') || 'פתח באפליקציה'}
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { id: 'dashboard', emoji: '📊', label: t('preferences.homeOptions.dashboard') || 'SpendWise' },
+              { id: 'shopping',  emoji: '🛒', label: t('preferences.homeOptions.shopping')  || 'קניות'    },
+            ].map(opt => {
+              const active = prefs.default_home === opt.id || (opt.id === 'dashboard' && !['shopping'].includes(prefs.default_home));
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setPrefs(p => ({ ...p, default_home: opt.id }))}
+                  className={cn(
+                    'flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-xs font-bold transition-all duration-150',
+                    active
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                      : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                  )}
+                >
+                  <span className="text-xl">{opt.emoji}</span>
+                  <span>{opt.label}</span>
+                  {active && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Financial cycle — the fixed day the financial month starts on. This is
+          a top-level profile field (billing_cycle_day), saved with the button
+          below via the same dirty-tracking. Drives dashboard "this period". */}
+      <div className={cn(
+        'bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm px-5 py-4 transition-colors duration-200',
+        isDirty ? 'border-indigo-200 dark:border-indigo-700/60' : 'border-gray-100 dark:border-gray-700'
+      )}>
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+            <CalendarClock className="w-5 h-5 text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-gray-900 dark:text-white">
+              {t('preferences.financialCycle.title') || 'Financial cycle'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+              {t('preferences.financialCycle.subtitle') || 'The day your financial month starts.'}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
+          {t('preferences.financialCycle.dayLabel') || 'Cycle day'}
+        </p>
+        <div className="grid grid-cols-7 gap-1.5">
+          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setPrefs(p => ({ ...p, billing_cycle_day: day }))}
+              className={cn(
+                'aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center',
+                prefs.billing_cycle_day === day
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              )}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-3 py-2 mt-3">
+          {t('preferences.financialCycle.selected', { day: prefs.billing_cycle_day })
+            || `Your month runs from day ${prefs.billing_cycle_day} to day ${prefs.billing_cycle_day} of the next month`}
+        </p>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={isLoading || !isDirty}
+        className={cn(
+          'h-11 px-6 rounded-xl text-sm font-semibold text-white transition-all duration-150 flex items-center gap-2',
+          isDirty && !isLoading
+            ? 'bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/25 cursor-pointer'
+            : 'bg-indigo-300 dark:bg-indigo-800 cursor-not-allowed opacity-60'
+        )}
+      >
+        {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+        {t('preferences.savePreferences') || 'Save Preferences'}
+      </button>
+    </div>
+  );
+};
+
+export default PreferencesTab;
