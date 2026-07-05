@@ -14,7 +14,7 @@
 import { useCallback, useMemo } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
-import { useAuth } from './useAuth';
+import { useAuth } from '../stores';
 import { useToast } from './useToast';
 
 const DEFAULT_PAGE_SIZE = 50;

@@ -17,8 +17,7 @@ import ShoppingBottomSheet, { CATEGORIES } from '../components/features/shopping
 import ShoppingItemCard from '../components/features/shopping/ShoppingItemCard';
 import ShoppingShareSheet from '../components/features/shopping/ShoppingShareSheet';
 import { PageSkeleton } from '../components/ui';
-import { useTranslation } from '../stores';
-import { useAuth } from '../hooks/useAuth';
+import { useTranslation, useAuth } from '../stores';
 
 // ── Empty state ────────────────────────────────────────────
 const EmptyState = ({ onAdd, filtered, t }) => (

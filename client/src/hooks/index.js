@@ -4,8 +4,8 @@
  * ✅ FIXED: Only exports that actually exist
  */
 
-// Authentication - useAuth only has named export
-export { useAuth } from './useAuth';
+// Authentication - re-exported from the Zustand store (single source of truth)
+export { useAuth } from '../stores';
 
 // Transactions - Only actual exports
 export {
