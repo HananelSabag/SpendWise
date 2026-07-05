@@ -50,6 +50,8 @@ const normalizeUserData = (user) => {
     themePreference: user.theme_preference || 'system',
     currency_preference: user.currency_preference || 'ILS',
     currencyPreference: user.currency_preference || 'ILS',
+    billing_cycle_day: Number(user.billing_cycle_day) || 1,
+    billingCycleDay: Number(user.billing_cycle_day) || 1,
     preferences: user.preferences || {},
     
     // ✅ Timestamps (both formats)
