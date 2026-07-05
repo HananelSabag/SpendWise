@@ -8,7 +8,9 @@
 const express = require('express');
 const router = express.Router();
 const { auth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
-const adminController = require('../controllers/adminController');
+const adminUsersController = require('../controllers/admin/adminUsersController');
+const adminSettingsController = require('../controllers/admin/adminSettingsController');
+const adminOverviewController = require('../controllers/admin/adminOverviewController');
 const { securityMiddleware } = require('../middleware/security');
 const { apiLimiter } = require('../middleware/rateLimiter');
 const logger = require('../utils/logger');
@@ -29,70 +31,70 @@ router.use(securityMiddleware.api);
  * @desc    Get admin dashboard overview with users, activity, and settings
  * @access  Admin/Super Admin
  */
-router.get('/dashboard', adminController.getDashboard);
+router.get('/dashboard', adminOverviewController.getDashboard);
 
 /**
  * @route   GET /api/v1/admin/users
  * @desc    Get all users with admin details, pagination, and filters
  * @access  Admin/Super Admin
  */
-router.get('/users', adminController.getUsers);
+router.get('/users', adminUsersController.getUsers);
 
 /**
  * @route   POST /api/v1/admin/users/bulk-manage
  * @desc    Bulk manage users (block, unblock, delete multiple users)
  * @access  Admin/Super Admin (super admin required for admin users and delete)
  */
-router.post('/users/bulk-manage', adminController.bulkManageUsers);
+router.post('/users/bulk-manage', adminUsersController.bulkManageUsers);
 
 /**
  * @route   POST /api/v1/admin/users/:userId/manage
  * @desc    Manage user (block, unblock, delete, verify email)
  * @access  Admin/Super Admin (super admin required for admin users)
  */
-router.post('/users/:userId/manage', adminController.manageUser);
+router.post('/users/:userId/manage', adminUsersController.manageUser);
 
 /**
  * @route   GET /api/v1/admin/settings
  * @desc    Get system settings (all or filtered by category/key)
  * @access  Admin/Super Admin
  */
-router.get('/settings', adminController.getSettings);
+router.get('/settings', adminSettingsController.getSettings);
 
 /**
  * @route   PUT /api/v1/admin/settings
  * @desc    Update system setting
  * @access  Admin/Super Admin
  */
-router.put('/settings', adminController.updateSetting);
+router.put('/settings', adminSettingsController.updateSetting);
 
 /**
  * @route   DELETE /api/v1/admin/settings/:key
  * @desc    Delete system setting
  * @access  Super Admin only
  */
-router.delete('/settings/:key', requireSuperAdmin, adminController.deleteSetting);
+router.delete('/settings/:key', requireSuperAdmin, adminSettingsController.deleteSetting);
 
 /**
  * @route   GET /api/v1/admin/activity
  * @desc    Get admin activity log with pagination
  * @access  Admin/Super Admin
  */
-router.get('/activity', adminController.getActivityLog);
+router.get('/activity', adminOverviewController.getActivityLog);
 
 /**
  * @route   GET /api/v1/admin/statistics
  * @desc    Get comprehensive admin statistics
  * @access  Admin/Super Admin
  */
-router.get('/statistics', adminController.getStatistics);
+router.get('/statistics', adminOverviewController.getStatistics);
 
 /**
  * @route   GET /api/v1/admin/bank-sync
  * @desc    Bank-sync visibility: connection health + recent worker jobs
  * @access  Admin/Super Admin
  */
-router.get('/bank-sync', adminController.getBankSync);
+router.get('/bank-sync', adminOverviewController.getBankSync);
 
 /**
  * @route   GET /api/v1/admin/health
