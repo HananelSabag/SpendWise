@@ -62,6 +62,7 @@ export default function BankSyncPage() {
         // namespace and can't resolve a 'bankSync.*' key (would show it raw).
         toast.success(t('financialCycleSaved'));
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['financialCycle'] });
       } else {
         toast.error(t('loadError'));
       }

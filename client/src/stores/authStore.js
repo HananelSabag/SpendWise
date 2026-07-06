@@ -348,8 +348,10 @@ export const useAuthStore = create(
 
                 if (nextCycleDay !== previousCycleDay) {
                   queryClient.removeQueries({ queryKey: ['dashboard'] });
+                  queryClient.removeQueries({ queryKey: ['financialCycle'] });
                 } else {
                   queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+                  queryClient.invalidateQueries({ queryKey: ['financialCycle'] });
                 }
 
                 return { success: true, user: result.user };

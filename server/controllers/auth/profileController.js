@@ -9,8 +9,18 @@ const { normalizeUserData } = require('../../utils/userNormalizer');
 const errorCodes = require('../../utils/errorCodes');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const logger = require('../../utils/logger');
+const { getUserFinancialCycle } = require('../../services/financialCycleService');
 
 const profileController = {
+  getFinancialCycle: asyncHandler(async (req, res) => {
+    const period = await getUserFinancialCycle(req.user.id);
+    res.json({
+      success: true,
+      data: period,
+      timestamp: new Date().toISOString()
+    });
+  }),
+
   /**
    * 🚀 Get user profile with smart caching
    * @route GET /api/v1/users/profile

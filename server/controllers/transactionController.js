@@ -10,7 +10,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const db = require('../config/db');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
-const { getCurrentPeriod, toSqlDate } = require('../utils/financialPeriod');
+const { getUserFinancialCycle } = require('../services/financialCycleService');
 
 // Auto-classification for bank transactions with no source-provided
 // raw_category. Israeli banks report checking-account cash-flow EVENTS, not
@@ -49,18 +49,10 @@ const transactionController = {
     let periodEnd;
 
     try {
-      const cycleResult = await db.query(
-        'SELECT billing_cycle_day FROM users WHERE id = $1 AND is_active = true',
-        [userId],
-        'dashboard_billing_cycle_day'
-      );
-      const dbCycleDay = Number(cycleResult.rows[0]?.billing_cycle_day);
-      cycleDay = Number.isInteger(dbCycleDay) && dbCycleDay >= 1 && dbCycleDay <= 31
-        ? dbCycleDay
-        : 1;
-      const { start, end } = getCurrentPeriod(cycleDay);
-      periodStart = toSqlDate(start);
-      periodEnd = toSqlDate(end);
+      const period = await getUserFinancialCycle(userId);
+      cycleDay = period.cycleDay;
+      periodStart = period.start;
+      periodEnd = period.end;
 
       const [summary, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult] = await Promise.all([
         Transaction.getSummary(userId, { startDate: periodStart, endDate: periodEnd }),

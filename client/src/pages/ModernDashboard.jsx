@@ -15,6 +15,7 @@ import {
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
+import { useFinancialCycle } from '../hooks/useFinancialCycle';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
 import { Avatar, PageSkeleton } from '../components/ui';
@@ -104,8 +105,13 @@ function formatPeriodLabel(period) {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-const PeriodSummary = ({ dashboardData, formatCurrency, t }) => {
+const PeriodSummary = ({ dashboardData, financialCycle, formatCurrency, t }) => {
   const { summary, period } = dashboardData;
+  const displayPeriod = {
+    start: financialCycle?.start || period?.start,
+    end: financialCycle?.end || period?.end,
+    cycleDay: Number(financialCycle?.cycleDay ?? period?.cycleDay) || 1,
+  };
   const net = summary.net_balance;
 
   return (
@@ -115,17 +121,17 @@ const PeriodSummary = ({ dashboardData, formatCurrency, t }) => {
           {t('period.title', { fallback: 'This financial period' })}
         </h3>
         <div className="flex items-center gap-2 min-w-0">
-          {period?.cycleDay != null && (
+          {displayPeriod.cycleDay != null && (
             <span
               className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 shrink-0"
-              title={t('period.cycleHint', { day: period.cycleDay, fallback: `Billing cycle starts on day ${period.cycleDay}` })}
+              title={t('period.cycleHint', { day: displayPeriod.cycleDay, fallback: `Billing cycle starts on day ${displayPeriod.cycleDay}` })}
             >
               <CalendarClock className="w-3 h-3" />
-              {t('period.cycleDay', { day: period.cycleDay, fallback: `Cycle day ${period.cycleDay}` })}
+              {t('period.cycleDay', { day: displayPeriod.cycleDay, fallback: `Cycle day ${displayPeriod.cycleDay}` })}
             </span>
           )}
-          {period && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 truncate">{formatPeriodLabel(period)}</span>
+          {displayPeriod.start && displayPeriod.end && (
+            <span className="text-xs text-gray-400 dark:text-gray-500 truncate">{formatPeriodLabel(displayPeriod)}</span>
           )}
         </div>
       </div>
@@ -480,7 +486,7 @@ const GreetingHeader = ({ greeting, user, navigate, compact = false }) => (
 
 // ─── Mobile layout ────────────────────────────────────────────────────────────
 
-const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh, formatCurrency }) => {
+const MobileDashboard = ({ greeting, user, dashboardData, financialCycle, t, navigate, onRefresh, formatCurrency }) => {
   const { pull, refreshing } = usePullToRefresh(onRefresh, true);
 
   return (
@@ -504,7 +510,7 @@ const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh
 
       <div className="px-4 py-4 space-y-4 pb-28">
         <ModernBalancePanel />
-        <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
+        <PeriodSummary dashboardData={dashboardData} financialCycle={financialCycle} formatCurrency={formatCurrency} t={t} />
         <SourcesOverview sources={dashboardData.sources} formatCurrency={formatCurrency} t={t} navigate={navigate} />
         <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
         <SpendingBreakdown categoryBreakdown={dashboardData.categoryBreakdown} formatCurrency={formatCurrency} t={t} />
@@ -522,7 +528,7 @@ const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh
 
 // ─── Desktop layout ───────────────────────────────────────────────────────────
 
-const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate, formatCurrency }) => (
+const DesktopDashboard = ({ greeting, user, dashboardData, financialCycle, t, navigate, formatCurrency }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
     <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6">
       <GreetingHeader greeting={greeting} user={user} navigate={navigate} />
@@ -533,7 +539,7 @@ const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate, formatCu
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
-          <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
+          <PeriodSummary dashboardData={dashboardData} financialCycle={financialCycle} formatCurrency={formatCurrency} t={t} />
           <ModernRecentTransactionsWidget
             onViewAll={() => navigate('/transactions')}
             maxItems={8}
@@ -571,16 +577,21 @@ const ModernDashboard = () => {
     isError,
     refresh: refreshDashboard,
   } = useDashboard();
+  const {
+    data: financialCycle,
+    refetch: refetchFinancialCycle,
+  } = useFinancialCycle();
 
   const greeting = useGreeting(user, t);
 
   const handleRefresh = useCallback(async () => {
     try {
+      await refetchFinancialCycle();
       await refreshDashboard();
     } catch (_) {
       addNotification({ type: 'error', message: t('refreshError'), duration: 4000 });
     }
-  }, [refreshDashboard, addNotification, t]);
+  }, [refetchFinancialCycle, refreshDashboard, addNotification, t]);
 
   if (isLoading && !dashboardData) {
     return <PageSkeleton page="dashboard" />;
@@ -590,7 +601,7 @@ const ModernDashboard = () => {
     return <DashboardError onRetry={handleRefresh} t={t} />;
   }
 
-  const sharedProps = { greeting, user, dashboardData, formatCurrency, t, navigate };
+  const sharedProps = { greeting, user, dashboardData, financialCycle, formatCurrency, t, navigate };
 
   return (
     <>
