@@ -1,6 +1,6 @@
 /**
- * BankAccountRow — one account under a synced bank: its number, balance,
- * and a sync on/off switch (uses the shared Switch component).
+ * BankAccountRow - one account/card under a synced source, with an on/off
+ * switch. Real bank accounts show balance; credit-card accounts do not.
  */
 
 import React from 'react';
@@ -11,7 +11,7 @@ import { cn } from '../../../utils/helpers';
 import bankConnectionsApi from '../../../api/bankConnections';
 import { formatILS } from './bankSyncMeta';
 
-export default function BankAccountRow({ account, connectionId, t, lang }) {
+export default function BankAccountRow({ account, connectionId, t, lang, hideBalance = false }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const enabled = account.enabled !== false;
@@ -38,12 +38,14 @@ export default function BankAccountRow({ account, connectionId, t, lang }) {
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        <span className={cn(
-          'text-sm font-bold tabular-nums',
-          enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through',
-        )}>
-          {hasBalance ? formatILS(account.balance, lang) : '—'}
-        </span>
+        {!hideBalance && (
+          <span className={cn(
+            'text-sm font-bold tabular-nums',
+            enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through',
+          )}>
+            {hasBalance ? formatILS(account.balance, lang) : '-'}
+          </span>
+        )}
         {connectionId && (
           <Switch
             checked={enabled}

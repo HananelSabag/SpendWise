@@ -30,6 +30,7 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
 const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
+const { VALID_SOURCES } = require('../config/institutions');
 
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
@@ -92,6 +93,9 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
 
   if (typeof source !== 'string' || source.length > 50 || !/^[a-z0-9_-]+$/.test(source)) {
     return res.status(400).json({ error: 'Invalid source' });
+  }
+  if (!VALID_SOURCES.includes(source)) {
+    return res.status(400).json({ error: 'Unsupported source' });
   }
 
   // ── Household ID whitelist ──────────────────────────────────────────────────

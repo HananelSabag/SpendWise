@@ -12,6 +12,10 @@ const db = require('../config/db');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getUserFinancialCycle } = require('../services/financialCycleService');
 
+const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
+  .filter(([, meta]) => meta.kind === 'credit_card')
+  .map(([source]) => source);
+
 // Auto-classification for bank transactions with no source-provided
 // raw_category. Israeli banks report checking-account cash-flow EVENTS, not
 // itemized purchases — a "לאומי ויזה" line is one month's entire credit-card
@@ -65,12 +69,12 @@ const transactionController = {
               t.type,
               t.bank_source,
               CASE
-                WHEN t.bank_source IN ('max', 'isracard') THEN 'credit_card'
+                WHEN t.bank_source = ANY($5::text[]) THEN 'credit_card'
                 WHEN t.bank_source IS NULL THEN 'manual'
                 ELSE 'bank'
               END AS source_kind,
               (t.bank_source IS NOT NULL
-               AND t.bank_source NOT IN ('max', 'isracard')
+               AND NOT (t.bank_source = ANY($5::text[]))
                AND t.type = 'expense'
                AND t.description ~* $4) AS is_card_settlement
             FROM transactions t
@@ -102,7 +106,7 @@ const transactionController = {
             COALESCE(SUM(amount) FILTER (WHERE source_kind = 'manual' AND type = 'expense'), 0) AS manual_expenses,
             (SELECT has_card_detail FROM flags) AS has_card_detail
           FROM scoped
-        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN]),
+        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN, CREDIT_CARD_SOURCES]),
         Transaction.getRecent(userId, 10),
         db.query(`
           SELECT bucket AS name, source, SUM(amount) AS amount, COUNT(*) AS count
@@ -127,7 +131,8 @@ const transactionController = {
               AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
               AND t.date >= $2 AND t.date < $3
               AND NOT (
-                t.bank_source NOT IN ('max', 'isracard')
+                t.bank_source IS NOT NULL
+                AND NOT (t.bank_source = ANY($5::text[]))
                 AND t.description ~* $4
                 AND EXISTS (
                   SELECT 1
@@ -139,7 +144,7 @@ const transactionController = {
                   WHERE card_t.user_id = t.user_id
                     AND card_t.deleted_at IS NULL
                     AND card_t.type = 'expense'
-                    AND card_t.bank_source IN ('max', 'isracard')
+                    AND card_t.bank_source = ANY($5::text[])
                     AND COALESCE(card_ba_filter.enabled, true) = true
                     AND card_t.date >= $2 AND card_t.date < $3
                 )
@@ -148,7 +153,7 @@ const transactionController = {
           GROUP BY bucket, source
           ORDER BY amount DESC
           LIMIT 12
-        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN]),
+        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN, CREDIT_CARD_SOURCES]),
         db.query(`
           SELECT
             COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,

@@ -65,7 +65,14 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
         {accounts.length > 0 ? (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {accounts.map((a, i) => (
-              <BankAccountRow key={i} account={a} connectionId={connectionId} t={t} lang={lang} />
+              <BankAccountRow
+                key={i}
+                account={a}
+                connectionId={connectionId}
+                t={t}
+                lang={lang}
+                hideBalance={isCreditCard}
+              />
             ))}
           </div>
         ) : (
