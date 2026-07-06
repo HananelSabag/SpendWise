@@ -168,9 +168,14 @@ router.get('/stats', auth, async (req, res) => {
            '[]'::jsonb
          )                                                                    AS accounts
        FROM transactions t
+       LEFT JOIN bank_accounts ba_filter
+         ON ba_filter.user_id = t.user_id
+        AND ba_filter.bank_source = t.bank_source
+        AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
        WHERE t.user_id = $1
          AND t.bank_source IS NOT NULL
          AND t.deleted_at IS NULL
+         AND COALESCE(ba_filter.enabled, true) = true
        GROUP BY t.bank_source
        ORDER BY last_sync DESC`,
       [userId],

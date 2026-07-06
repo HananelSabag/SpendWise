@@ -72,7 +72,12 @@ const transactionController = {
               -- from the bank description via BANK_PATTERN_CASE.
               CASE WHEN t.raw_category IS NOT NULL AND t.raw_category <> '' THEN 'source' ELSE 'auto' END AS source
             FROM transactions t
+            LEFT JOIN bank_accounts ba_filter
+              ON ba_filter.user_id = t.user_id
+             AND ba_filter.bank_source = t.bank_source
+             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
             WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
+              AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
               AND t.date >= $2 AND t.date < $3
           ) classified
           GROUP BY bucket, source
@@ -95,21 +100,31 @@ const transactionController = {
                 ELSE 'other'
               END AS bucket
             FROM transactions t
+            LEFT JOIN bank_accounts ba_filter
+              ON ba_filter.user_id = t.user_id
+             AND ba_filter.bank_source = t.bank_source
+             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
             WHERE t.user_id = $1 AND t.deleted_at IS NULL
               AND t.type = 'expense' AND t.bank_source IS NOT NULL
+              AND COALESCE(ba_filter.enabled, true) = true
               AND t.date >= $2 AND t.date < $3
           ) classified
         `, [userId, periodStart, periodEnd]),
         db.query(`
           SELECT
-            bank_source,
-            COALESCE(SUM(CASE WHEN type = 'income'  THEN amount ELSE 0 END), 0) AS income,
-            COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) AS expenses,
+            t.bank_source,
+            COALESCE(SUM(CASE WHEN t.type = 'income'  THEN t.amount ELSE 0 END), 0) AS income,
+            COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) AS expenses,
             COUNT(*) AS count
-          FROM transactions
-          WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
-            AND date >= $2 AND date < $3
-          GROUP BY bank_source
+          FROM transactions t
+          LEFT JOIN bank_accounts ba_filter
+            ON ba_filter.user_id = t.user_id
+           AND ba_filter.bank_source = t.bank_source
+           AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+          WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.bank_source IS NOT NULL
+            AND COALESCE(ba_filter.enabled, true) = true
+            AND t.date >= $2 AND t.date < $3
+          GROUP BY t.bank_source
         `, [userId, periodStart, periodEnd]),
         db.query(`
           SELECT

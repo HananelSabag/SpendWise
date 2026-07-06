@@ -309,15 +309,20 @@ class Transaction {
     try {
       const query = `
         SELECT
-          type,
+          t.type,
           COUNT(*) as transaction_count,
           COALESCE(SUM(amount), 0) as total_amount,
           COALESCE(AVG(amount), 0) as avg_amount
-        FROM transactions
-        WHERE user_id = $1
-          AND date >= $2 AND date < $3
-          AND deleted_at IS NULL
-        GROUP BY type
+        FROM transactions t
+        LEFT JOIN bank_accounts ba_filter
+          ON ba_filter.user_id = t.user_id
+         AND ba_filter.bank_source = t.bank_source
+         AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+        WHERE t.user_id = $1
+          AND t.date >= $2 AND t.date < $3
+          AND t.deleted_at IS NULL
+          AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
+        GROUP BY t.type
       `;
 
       const result = await db.query(query, [userId, startDate, endDate]);
