@@ -28,7 +28,11 @@ const EMPTY_DASHBOARD = {
 export const useDashboard = () => {
   const { isAuthenticated, user } = useAuthStore();
   const queryClient = useQueryClient();
-  const queryKey = useMemo(() => ['dashboard', user?.id], [user?.id]);
+  const userCycleDay = Number(user?.billing_cycle_day) || 1;
+  const queryKey = useMemo(
+    () => ['dashboard', user?.id, userCycleDay],
+    [user?.id, userCycleDay]
+  );
 
   useEffect(() => {
     const events = ['transaction-added', 'dashboard-refresh-requested', 'server-woke'];
@@ -42,7 +46,7 @@ export const useDashboard = () => {
     enabled: isAuthenticated && !!getAccessToken(),
     queryFn: async () => {
       if (!getAccessToken()) return null;
-      const result = await api.transactions.getDashboardData();
+      const result = await api.transactions.getDashboardData({ cycleDay: userCycleDay });
       if (!result.success) throw new Error(result.error?.message || 'Failed to fetch dashboard data');
       return result.data?.data ?? result.data;
     },
