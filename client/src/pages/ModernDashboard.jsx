@@ -104,26 +104,12 @@ function formatPeriodLabel(period) {
   return `${fmt(start)} – ${fmt(end)}`;
 }
 
-const PeriodSummary = ({ dashboardData, formatCurrency, t, navigate }) => {
+const PeriodSummary = ({ dashboardData, formatCurrency, t }) => {
   const { summary, period } = dashboardData;
   const net = summary.net_balance;
 
   return (
     <div className="glass-card rounded-2xl p-4">
-      {/* No financial cycle configured yet → these totals fall back to a
-          calendar month. Prompt the user to set their real cycle day. */}
-      {period && period.cycleDaySet === false && (
-        <button
-          onClick={() => navigate('/bank-sync')}
-          className="w-full mb-3 flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-start"
-        >
-          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-          <span className="flex-1 text-xs text-amber-700 dark:text-amber-300 leading-snug">
-            {t('period.notSet', { fallback: 'Set your financial cycle day so these totals match your real month, not the 1st' })}
-          </span>
-          <ChevronRight className="w-4 h-4 text-amber-500 shrink-0 rtl:rotate-180" />
-        </button>
-      )}
       <div className="flex items-center justify-between mb-3 gap-2">
         <h3 className="text-sm font-bold text-gray-900 dark:text-white shrink-0">
           {t('period.title', { fallback: 'This financial period' })}
@@ -518,7 +504,7 @@ const MobileDashboard = ({ greeting, user, dashboardData, t, navigate, onRefresh
 
       <div className="px-4 py-4 space-y-4 pb-28">
         <ModernBalancePanel />
-        <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} navigate={navigate} />
+        <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
         <SourcesOverview sources={dashboardData.sources} formatCurrency={formatCurrency} t={t} navigate={navigate} />
         <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
         <SpendingBreakdown categoryBreakdown={dashboardData.categoryBreakdown} formatCurrency={formatCurrency} t={t} />
@@ -547,7 +533,7 @@ const DesktopDashboard = ({ greeting, user, dashboardData, t, navigate, formatCu
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
-          <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} navigate={navigate} />
+          <PeriodSummary dashboardData={dashboardData} formatCurrency={formatCurrency} t={t} />
           <ModernRecentTransactionsWidget
             onViewAll={() => navigate('/transactions')}
             maxItems={8}

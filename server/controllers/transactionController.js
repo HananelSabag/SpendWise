@@ -44,15 +44,24 @@ const transactionController = {
    */
   getDashboardData: asyncHandler(async (req, res) => {
     const userId = req.user.id;
-    // rawCycleDay is null when the user never configured one — surfaced to the
-    // client (cycleDaySet) so it can prompt them, distinct from a real day 1.
-    const rawCycleDay = req.user.billing_cycle_day;
-    const cycleDay = rawCycleDay || 1;
-    const { start, end } = getCurrentPeriod(cycleDay);
-    const periodStart = toSqlDate(start);
-    const periodEnd = toSqlDate(end);
+    let cycleDay = 1;
+    let periodStart;
+    let periodEnd;
 
     try {
+      const cycleResult = await db.query(
+        'SELECT billing_cycle_day FROM users WHERE id = $1 AND is_active = true',
+        [userId],
+        'dashboard_billing_cycle_day'
+      );
+      const dbCycleDay = Number(cycleResult.rows[0]?.billing_cycle_day);
+      cycleDay = Number.isInteger(dbCycleDay) && dbCycleDay >= 1 && dbCycleDay <= 31
+        ? dbCycleDay
+        : 1;
+      const { start, end } = getCurrentPeriod(cycleDay);
+      periodStart = toSqlDate(start);
+      periodEnd = toSqlDate(end);
+
       const [summary, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult] = await Promise.all([
         Transaction.getSummary(userId, { startDate: periodStart, endDate: periodEnd }),
         Transaction.getRecent(userId, 10),
@@ -180,7 +189,7 @@ const transactionController = {
       res.json({
         success: true,
         data: {
-          period: { start: periodStart, end: periodEnd, cycleDay, cycleDaySet: rawCycleDay != null },
+          period: { start: periodStart, end: periodEnd, cycleDay, cycleDaySet: true },
           summary,
           categoryBreakdown,
           bankCosts,
