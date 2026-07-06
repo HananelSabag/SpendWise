@@ -280,8 +280,6 @@ class Transaction {
     }
   }
 
-  /**
-   * Income/expense summary for a half-open date range [startDate, endDate).
 }
 
 module.exports = {
