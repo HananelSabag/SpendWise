@@ -25,8 +25,6 @@ const SYNC_ERROR_KEYS = {
 // Mirrors MANUAL_SYNC_GAP_HOURS in server/routes/bankConnectionsRoutes.js.
 // Used only to show the user WHEN they'll be able to sync again — the
 // server is the actual source of truth/enforcement.
-const MANUAL_SYNC_GAP_HOURS = 3;
-
 export default function BankConnectionCard({ conn, t, lang }) {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -45,9 +43,9 @@ export default function BankConnectionCard({ conn, t, lang }) {
   // Proactive cooldown: rather than let the user click "Sync Now" and
   // silently 429, show exactly when the next manual sync will be allowed.
   const nextSyncAt = useMemo(() => {
-    if (!conn.last_sync_at) return null;
-    return new Date(new Date(conn.last_sync_at).getTime() + MANUAL_SYNC_GAP_HOURS * 3600_000);
-  }, [conn.last_sync_at]);
+    if (!conn.next_manual_sync_at) return null;
+    return new Date(conn.next_manual_sync_at);
+  }, [conn.next_manual_sync_at]);
   const inCooldown = Boolean(nextSyncAt && nextSyncAt.getTime() > Date.now());
 
   const syncMutation = useMutation({

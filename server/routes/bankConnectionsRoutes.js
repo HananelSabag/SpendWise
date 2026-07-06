@@ -59,7 +59,13 @@ router.get('/', async (req, res) => {
               j.status       AS latest_job_status,
               j.trigger      AS latest_job_trigger,
               j.requested_at AS latest_job_requested_at,
-              j.result       AS latest_job_result
+              j.result       AS latest_job_result,
+              q.manual_today,
+              q.last_done_sync_at,
+              CASE
+                WHEN q.last_done_sync_at IS NULL THEN NULL
+                ELSE q.last_done_sync_at + ($2::int * INTERVAL '1 hour')
+              END AS next_manual_sync_at
        FROM bank_connections c
        LEFT JOIN LATERAL (
          SELECT status, trigger, requested_at, result
@@ -68,9 +74,20 @@ router.get('/', async (req, res) => {
          ORDER BY requested_at DESC
          LIMIT 1
        ) j ON true
+       LEFT JOIN LATERAL (
+         SELECT
+           COUNT(*) FILTER (
+             WHERE trigger = 'manual'
+               AND requested_at > NOW() - INTERVAL '24 hours'
+               AND started_at IS NOT NULL
+           )::int AS manual_today,
+           MAX(finished_at) FILTER (WHERE status = 'done') AS last_done_sync_at
+         FROM bank_sync_jobs
+         WHERE connection_id = c.id
+       ) q ON true
        WHERE c.user_id = $1
        ORDER BY c.created_at ASC`,
-      [req.user.id],
+      [req.user.id, MANUAL_SYNC_GAP_HOURS],
     );
     const connections = result.rows.map((c) => ({
       ...c,
