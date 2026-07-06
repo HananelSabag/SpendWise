@@ -286,11 +286,14 @@ export default {
     net: "Net",
     cycleDay: "Cycle day {{day}}",
     cycleHint: "Your billing cycle starts on day {{day}} of each month",
-    notSet: "Set your financial cycle day so these totals match your real month, not the 1st"
+    notSet: "Set your financial cycle day so these totals match your real month, not the 1st",
+    cardSettlementExcluded: "{{amount}} in bank card-payment withdrawals is shown separately and not counted twice because card purchase details are connected."
   },
   sourcesOverview: {
     banksTitle: "Bank accounts",
     cardsTitle: "Credit companies",
+    bankActivityTitle: "Current accounts",
+    cardActivityTitle: "Card activity",
     manage: "Manage",
     connectMore: "Connect a source",
     balance: "Available balance",

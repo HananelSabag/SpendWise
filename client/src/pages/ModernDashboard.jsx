@@ -158,6 +158,14 @@ const PeriodSummary = ({ dashboardData, financialCycle, formatCurrency, t }) => 
           </p>
         </div>
       </div>
+      {summary.excluded_bank_card_settlements > 0 && (
+        <div className="mt-3 rounded-lg bg-indigo-50/80 dark:bg-indigo-900/20 px-3 py-2 text-[11px] text-indigo-700 dark:text-indigo-200 leading-snug">
+          {t('period.cardSettlementExcluded', {
+            amount: formatCurrency(summary.excluded_bank_card_settlements),
+            fallback: `${formatCurrency(summary.excluded_bank_card_settlements)} in bank card-payment withdrawals is shown separately and not counted twice because card purchase details are connected.`,
+          })}
+        </div>
+      )}
     </div>
   );
 };
@@ -244,28 +252,39 @@ const SourcesOverview = ({ sources, formatCurrency, t, navigate }) => {
     </div>
   );
 
-  return (
-    <div className="glass-card rounded-2xl p-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-          {t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} &amp; {t('sourcesOverview.cardsTitle', { fallback: 'Credit companies' })}
-        </h3>
-        <button
-          onClick={() => navigate('/bank-sync')}
-          className="flex items-center gap-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-        >
-          {t('sourcesOverview.manage', { fallback: 'Manage' })}
-          <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
-        </button>
-      </div>
+  const Header = ({ title }) => (
+    <div className="flex items-center justify-between">
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>
+      <button
+        onClick={() => navigate('/bank-sync')}
+        className="flex items-center gap-0.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+      >
+        {t('sourcesOverview.manage', { fallback: 'Manage' })}
+        <ChevronRight className="w-3.5 h-3.5 rtl:rotate-180" />
+      </button>
+    </div>
+  );
 
-      <Section title={t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} list={banks} icon={Landmark} />
-      <Section
-        title={t('sourcesOverview.cardsTitle', { fallback: 'Credit companies' })}
-        list={cards}
-        icon={CreditCard}
-        explainer={cards.length > 0 ? t('sourcesOverview.cardExplainer', { fallback: 'Card charges appear here per purchase, then as one summarized charge in your bank account' }) : null}
-      />
+  return (
+    <div className="space-y-3">
+      {banks.length > 0 && (
+        <div className="glass-card rounded-2xl p-4 space-y-2">
+          <Header title={t('sourcesOverview.banksTitle', { fallback: 'Bank accounts' })} />
+          <Section title={t('sourcesOverview.bankActivityTitle', { fallback: 'Current accounts' })} list={banks} icon={Landmark} />
+        </div>
+      )}
+
+      {cards.length > 0 && (
+        <div className="glass-card rounded-2xl p-4 space-y-2">
+          <Header title={t('sourcesOverview.cardsTitle', { fallback: 'Credit companies' })} />
+          <Section
+            title={t('sourcesOverview.cardActivityTitle', { fallback: 'Card activity' })}
+            list={cards}
+            icon={CreditCard}
+            explainer={t('sourcesOverview.cardExplainer', { fallback: 'Card charges appear here per purchase, then as one summarized charge in your bank account' })}
+          />
+        </div>
+      )}
     </div>
   );
 };

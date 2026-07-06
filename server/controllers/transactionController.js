@@ -28,6 +28,9 @@ const BANK_PATTERN_CASE = `
   WHEN t.description ~* '(ביט|פייבוקס|העברה)' THEN 'Transfers'
 `.trim();
 
+const BANK_CARD_SETTLEMENT_PATTERN =
+  '(דביט|ויזה|מקס|ישראכרט|אשראי|max|visa|isracard|cal)';
+
 const transactionController = {
   /**
    * Get dashboard data: financial-period summary, category/pattern
@@ -54,8 +57,52 @@ const transactionController = {
       periodStart = period.start;
       periodEnd = period.end;
 
-      const [summary, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult] = await Promise.all([
-        Transaction.getSummary(userId, { startDate: periodStart, endDate: periodEnd }),
+      const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult] = await Promise.all([
+        db.query(`
+          WITH scoped AS (
+            SELECT
+              t.amount,
+              t.type,
+              t.bank_source,
+              CASE
+                WHEN t.bank_source IN ('max', 'isracard') THEN 'credit_card'
+                WHEN t.bank_source IS NULL THEN 'manual'
+                ELSE 'bank'
+              END AS source_kind,
+              (t.bank_source IS NOT NULL
+               AND t.bank_source NOT IN ('max', 'isracard')
+               AND t.type = 'expense'
+               AND t.description ~* $4) AS is_card_settlement
+            FROM transactions t
+            LEFT JOIN bank_accounts ba_filter
+              ON ba_filter.user_id = t.user_id
+             AND ba_filter.bank_source = t.bank_source
+             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+            WHERE t.user_id = $1
+              AND t.date >= $2 AND t.date < $3
+              AND t.deleted_at IS NULL
+              AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
+          ),
+          flags AS (
+            SELECT EXISTS (
+              SELECT 1 FROM scoped WHERE source_kind = 'credit_card' AND type = 'expense'
+            ) AS has_card_detail
+          )
+          SELECT
+            COUNT(*)::int AS total_transactions,
+            COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) AS total_income,
+            COALESCE(SUM(amount) FILTER (
+              WHERE type = 'expense'
+                AND NOT (source_kind = 'bank' AND is_card_settlement AND (SELECT has_card_detail FROM flags))
+            ), 0) AS total_expenses,
+            COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND type = 'income'), 0) AS bank_income,
+            COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND type = 'expense' AND NOT is_card_settlement), 0) AS bank_direct_expenses,
+            COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND is_card_settlement), 0) AS bank_card_settlements,
+            COALESCE(SUM(amount) FILTER (WHERE source_kind = 'credit_card' AND type = 'expense'), 0) AS card_charges,
+            COALESCE(SUM(amount) FILTER (WHERE source_kind = 'manual' AND type = 'expense'), 0) AS manual_expenses,
+            (SELECT has_card_detail FROM flags) AS has_card_detail
+          FROM scoped
+        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN]),
         Transaction.getRecent(userId, 10),
         db.query(`
           SELECT bucket AS name, source, SUM(amount) AS amount, COUNT(*) AS count
@@ -79,11 +126,29 @@ const transactionController = {
             WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
               AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
               AND t.date >= $2 AND t.date < $3
+              AND NOT (
+                t.bank_source NOT IN ('max', 'isracard')
+                AND t.description ~* $4
+                AND EXISTS (
+                  SELECT 1
+                  FROM transactions card_t
+                  LEFT JOIN bank_accounts card_ba_filter
+                    ON card_ba_filter.user_id = card_t.user_id
+                   AND card_ba_filter.bank_source = card_t.bank_source
+                   AND card_ba_filter.account_number = COALESCE(card_t.bank_account_number, '')
+                  WHERE card_t.user_id = t.user_id
+                    AND card_t.deleted_at IS NULL
+                    AND card_t.type = 'expense'
+                    AND card_t.bank_source IN ('max', 'isracard')
+                    AND COALESCE(card_ba_filter.enabled, true) = true
+                    AND card_t.date >= $2 AND card_t.date < $3
+                )
+              )
           ) classified
           GROUP BY bucket, source
           ORDER BY amount DESC
           LIMIT 12
-        `, [userId, periodStart, periodEnd]),
+        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN]),
         db.query(`
           SELECT
             COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,
@@ -144,6 +209,23 @@ const transactionController = {
         amount: parseFloat(r.amount),
         count: parseInt(r.count),
       }));
+
+      const sr = summaryResult.rows[0] || {};
+      const totalIncome = parseFloat(sr.total_income || 0);
+      const totalExpenses = parseFloat(sr.total_expenses || 0);
+      const summary = {
+        total_transactions: parseInt(sr.total_transactions || 0),
+        total_income: totalIncome,
+        total_expenses: totalExpenses,
+        net_balance: totalIncome - totalExpenses,
+        bank_income: parseFloat(sr.bank_income || 0),
+        bank_direct_expenses: parseFloat(sr.bank_direct_expenses || 0),
+        bank_card_settlements: parseFloat(sr.bank_card_settlements || 0),
+        card_charges: parseFloat(sr.card_charges || 0),
+        manual_expenses: parseFloat(sr.manual_expenses || 0),
+        excluded_bank_card_settlements: sr.has_card_detail ? parseFloat(sr.bank_card_settlements || 0) : 0,
+        has_card_detail: sr.has_card_detail === true,
+      };
 
       const bc = bankCostsResult.rows[0] || {};
       const bankCosts = {
