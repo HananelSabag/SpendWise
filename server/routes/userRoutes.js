@@ -187,7 +187,7 @@ router.post('/upload-profile-picture',
 
       // Update user's avatar in database - FIXED: Preserve onboarding_completed
       const db = require('../config/db');
-      const { UserCache } = require('../models/User');
+      const { UserCache } = require('../models/UserCache');
       const result = await db.query(
         'UPDATE users SET avatar = $1, profile_picture_url = $2, updated_at = NOW() WHERE id = $3 RETURNING id, avatar, profile_picture_url, onboarding_completed',
         [req.supabaseUpload.publicUrl, req.supabaseUpload.publicUrl, req.user.id]

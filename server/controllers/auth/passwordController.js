@@ -3,7 +3,8 @@
  * @module controllers/auth/passwordController
  */
 
-const { User, UserCache } = require('../../models/User');
+const { User } = require('../../models/User');
+const { UserCache } = require('../../models/UserCache');
 const errorCodes = require('../../utils/errorCodes');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const logger = require('../../utils/logger');

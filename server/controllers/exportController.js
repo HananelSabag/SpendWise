@@ -4,7 +4,7 @@
  * @module controllers/exportController
  */
 
-const { User } = require('../models/User'); // ✅ FIXED: Destructure User from exports
+const { getExportData } = require('../services/exportDataService');
 const { asyncHandler } = require('../middleware/errorHandler');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
@@ -20,7 +20,7 @@ const exportAsCSV = asyncHandler(async (req, res) => {
   const { includeAnalytics = 'true' } = req.query;
   
   try {
-    const exportData = await User.getExportData(userId);
+    const exportData = await getExportData(userId);
     
     if (!exportData || !exportData.transactions || exportData.transactions.length === 0) {
       return res.status(404).json({
@@ -157,7 +157,7 @@ const exportAsJSON = asyncHandler(async (req, res) => {
   const { includeAnalytics = 'true' } = req.query;
   
   try {
-    const exportData = await User.getExportData(userId);
+    const exportData = await getExportData(userId);
     
     if (!exportData || !exportData.transactions || exportData.transactions.length === 0) {
       return res.status(404).json({
@@ -277,7 +277,7 @@ const exportAsPDF = asyncHandler(async (req, res) => {
   try {
     logger.info('📄 PDF export requested', { userId, includeAnalytics });
     
-    const exportData = await User.getExportData(userId);
+    const exportData = await getExportData(userId);
     
     // ✅ ENHANCED: Validate export data before PDF generation
     if (!exportData || typeof exportData !== 'object') {
