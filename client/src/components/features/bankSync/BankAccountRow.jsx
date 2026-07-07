@@ -23,6 +23,7 @@ export default function BankAccountRow({ account, connectionId, t, lang, hideBal
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
       queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     },
     onError: (err) => toast.error(err?.message || t('loadError')),
   });

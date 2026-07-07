@@ -1,190 +1,366 @@
-/**
- * 🎯 HEADER COMPONENT - SIMPLIFIED ORCHESTRATOR!
- * 🚀 Mobile-first, Component-based, Clean architecture
- * Features: Component orchestration, Modal management, Performance optimized
- * @version 2.0.0 - COMPLETE REFACTOR
- */
-
-import React, { useState, useCallback, Suspense, useEffect } from 'react';
+import React, { useState, useCallback, Suspense, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Wrench } from 'lucide-react';
+import {
+  Building2,
+  Calculator,
+  ChevronLeft,
+  ChevronRight,
+  CreditCard,
+  HelpCircle,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  Shield,
+  User,
+  Wrench
+} from 'lucide-react';
 
-// ✅ Import Zustand stores
-import { 
+import {
   useAuth,
   useTranslation,
+  useNotifications,
   useIsAdmin,
   useIsSuperAdmin
 } from '../../stores';
 import { useAppStore } from '../../stores';
 
-// ✅ Import extracted components
-import MobileNavigation from './MobileNavigation';
-import UserMenu from './UserMenu';
-import QuickPanels from './QuickPanels';
 import HeaderActions from './HeaderActions';
 import NotificationBell from './NotificationBell';
 
 import { cn } from '../../utils/helpers';
-import { LoadingSpinner } from '../ui';
+import { Avatar, LoadingSpinner } from '../ui';
 import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 
-// ✅ Lazy-loaded modals for performance
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
 
+const SIDEBAR_EXPANDED = '17rem';
+const SIDEBAR_COLLAPSED = '5rem';
+
 const Header = () => {
-  // ✅ Zustand stores
-  const { user, isAuthenticated } = useAuth();
-  const { t } = useTranslation();
+  const { user, isAuthenticated, logout } = useAuth();
+  const { t, isRTL = false } = useTranslation();
+  const { addNotification } = useNotifications();
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
+  const hasAdminAccess = Boolean(isSuperAdmin || isAdmin || ['admin', 'super_admin'].includes(user?.role));
   const maintenanceMode = useAppStore((s) => s.maintenanceMode);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ State management
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sw_desktop_sidebar_collapsed') === '1';
+    } catch (_) {
+      return false;
+    }
+  });
   const [activeModal, setActiveModal] = useState(null);
 
-  // ✅ Modal management
+  const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sw-sidebar-width', sidebarWidth);
+    document.documentElement.dataset.sidebarSide = isRTL ? 'right' : 'left';
+    try {
+      localStorage.setItem('sw_desktop_sidebar_collapsed', isCollapsed ? '1' : '0');
+    } catch (_) {}
+  }, [isCollapsed, isRTL, sidebarWidth]);
+
   const openModal = useCallback((modalType) => {
     setActiveModal(modalType);
-    setIsMobileMenuOpen(false); // Close mobile menu when opening modal
   }, []);
 
   const closeModal = useCallback(() => {
     setActiveModal(null);
   }, []);
 
-  // ✅ Window event listeners — used by MobileBottomNav quick-action menu
   useEffect(() => {
-    const openOnboarding  = () => setActiveModal('onboarding');
+    const openOnboarding = () => setActiveModal('onboarding');
     const closeOnboarding = () => setActiveModal(null);
-    const openExchange    = () => setActiveModal('exchange');
+    const openExchange = () => setActiveModal('exchange');
 
-    window.addEventListener('open-onboarding',  openOnboarding);
+    window.addEventListener('open-onboarding', openOnboarding);
     window.addEventListener('close-onboarding', closeOnboarding);
-    window.addEventListener('open-exchange',    openExchange);
+    window.addEventListener('open-exchange', openExchange);
 
     return () => {
-      window.removeEventListener('open-onboarding',  openOnboarding);
+      window.removeEventListener('open-onboarding', openOnboarding);
       window.removeEventListener('close-onboarding', closeOnboarding);
-      window.removeEventListener('open-exchange',    openExchange);
+      window.removeEventListener('open-exchange', openExchange);
     };
   }, []);
 
-  // ✅ Early return for unauthenticated users
+  const go = useCallback((href) => {
+    navigate(href);
+  }, [navigate]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      addNotification({
+        type: 'success',
+        message: t('auth.logoutSuccess')
+      });
+      navigate('/login');
+    } catch (_) {
+      addNotification({
+        type: 'error',
+        message: t('auth.logoutError')
+      });
+    }
+  }, [logout, addNotification, t, navigate]);
+
+  const navItems = useMemo(() => ([
+    {
+      key: 'dashboard',
+      label: t('nav.dashboard') || 'Dashboard',
+      href: '/',
+      icon: LayoutDashboard,
+      active: location.pathname === '/'
+    },
+    {
+      key: 'transactions',
+      label: t('nav.transactions') || 'Transactions',
+      href: '/transactions',
+      icon: CreditCard,
+      active: location.pathname.startsWith('/transactions')
+    },
+    {
+      key: 'bank-sync',
+      label: t('bankSync.title') || 'Bank Sync',
+      href: '/bank-sync',
+      icon: Building2,
+      active: location.pathname.startsWith('/bank-sync')
+    }
+  ]), [location.pathname, t]);
+
+  const accountItems = useMemo(() => ([
+    {
+      key: 'profile',
+      label: t('nav.profile') || 'Profile',
+      href: '/profile',
+      icon: User,
+      active: location.pathname.startsWith('/profile')
+    },
+    ...(hasAdminAccess ? [{
+      key: 'admin',
+      label: t('nav.admin') || 'Admin',
+      href: '/admin',
+      icon: Shield,
+      active: location.pathname.startsWith('/admin')
+    }] : []),
+    ...(isSuperAdmin ? [{
+      key: 'settings',
+      label: t('nav.systemSettings') || 'System Settings',
+      href: '/admin/settings',
+      icon: Settings,
+      active: location.pathname.startsWith('/admin/settings')
+    }] : [])
+  ]), [hasAdminAccess, isSuperAdmin, location.pathname, t]);
+
+  const toolItems = useMemo(() => ([
+    {
+      key: 'exchange',
+      label: t('nav.exchange') || 'Exchange',
+      icon: Calculator,
+      onClick: () => openModal('exchange')
+    },
+    {
+      key: 'help',
+      label: t('nav.help') || 'Help',
+      icon: HelpCircle,
+      onClick: () => openModal('onboarding')
+    }
+  ]), [openModal, t]);
+
+  const NavButton = ({ item }) => {
+    const Icon = item.icon;
+    return (
+      <button
+        type="button"
+        onClick={() => item.href ? go(item.href) : item.onClick?.()}
+        title={isCollapsed ? item.label : undefined}
+        aria-label={item.label}
+        aria-current={item.active ? 'page' : undefined}
+        className={cn(
+          'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors min-h-[44px]',
+          isCollapsed && 'justify-center px-2',
+          item.active
+            ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/25 dark:text-primary-300'
+            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-950 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100'
+        )}
+      >
+        <Icon className="w-5 h-5 shrink-0" />
+        {!isCollapsed && <span className="truncate">{item.label}</span>}
+        {item.active && (
+          <span
+            className={cn(
+              'absolute top-2 bottom-2 w-1 rounded-full bg-primary-500',
+              isRTL ? 'right-0' : 'left-0'
+            )}
+          />
+        )}
+      </button>
+    );
+  };
+
   if (!isAuthenticated || !user) {
     return null;
   }
 
   return (
     <>
-      {/* ✅ Main Header */}
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.3 }}
+      <motion.aside
+        initial={{ opacity: 0, x: isRTL ? 24 : -24 }}
+        animate={{ opacity: 1, x: 0, width: sidebarWidth }}
+        transition={{ duration: 0.22 }}
         className={cn(
-          "hidden lg:block",
-          "sticky top-0 z-30 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700",
-          "supports-[backdrop-filter]:bg-white/60 supports-[backdrop-filter]:dark:bg-gray-900/60"
+          'hidden lg:flex fixed top-0 bottom-0 z-40 flex-col border-gray-200/80 bg-white/92 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-950/92',
+          isRTL ? 'right-0 border-l' : 'left-0 border-r'
         )}
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* ✅ Left side - Logo & Mobile Menu */}
-            <div className="flex items-center space-x-4">
-              {/* Mobile Navigation */}
-              <MobileNavigation
-                isOpen={isMobileMenuOpen}
-                setIsOpen={setIsMobileMenuOpen}
-                onOpenModal={openModal}
-              />
-
-              {/* Logo */}
-              <button
-                onClick={() => navigate('/')}
-                className="flex items-center space-x-2 text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors"
-              >
-                <motion.div
-                  whileHover={{ rotate: 360 }}
-                  transition={{ duration: 0.6 }}
-                  className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center"
-                >
-                  <span className="text-white font-bold text-lg">S</span>
-                </motion.div>
-                <span className="hidden sm:block text-xl font-bold">
+        <div className="flex h-16 items-center gap-3 px-4 border-b border-gray-200/70 dark:border-gray-800/70">
+          <button
+            type="button"
+            onClick={() => go('/')}
+            className={cn(
+              'flex min-w-0 items-center gap-3 text-primary-700 dark:text-primary-300',
+              isCollapsed && 'w-full justify-center'
+            )}
+            aria-label="SpendWise"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-sm shrink-0">
+              <span className="text-white font-bold text-lg">S</span>
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0 text-start">
+                <p className="text-base font-bold leading-tight text-gray-950 dark:text-white">
                   {t('common.appName', { fallback: 'SpendWise' })}
+                </p>
+                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                  {t('nav.overview') || 'Overview'}
+                </p>
+              </div>
+            )}
+          </button>
+
+          {!isCollapsed && (
+            <button
+              type="button"
+              onClick={() => setIsCollapsed(true)}
+              className="ms-auto p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              title={t('common.close', { fallback: 'Close' })}
+              aria-label={t('common.close', { fallback: 'Close' })}
+            >
+              {isRTL ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
+
+        {isCollapsed && (
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(false)}
+            className="mx-auto mt-3 p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            title={t('common.openMenu') || 'Open menu'}
+            aria-label={t('common.openMenu') || 'Open menu'}
+          >
+            {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          {(isAdmin || isSuperAdmin) && maintenanceMode && (
+            <div className={cn(
+              'flex items-center gap-2 rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
+              isCollapsed && 'justify-center px-2'
+            )}>
+              <Wrench className="w-4 h-4 shrink-0" />
+              {!isCollapsed && (
+                <span className="text-xs font-semibold truncate">
+                  {t('admin.settings.maintenanceMode', { fallback: 'Maintenance Mode' })}
                 </span>
-              </button>
-            </div>
-
-            {/* ✅ Center - Main Navigation (Desktop) - CLEANED UP */}
-            <nav className="hidden lg:flex items-center space-x-8">
-              {[
-                { name: t('nav.dashboard'), href: '/', current: location.pathname === '/' },
-                { name: t('nav.transactions'), href: '/transactions', current: location.pathname === '/transactions' }
-                // ✅ REMOVED: Profile (moved to user dropdown only)
-                // ✅ REMOVED: Admin Dashboard (moved to user dropdown only)
-              ].map((item) => (
-                <button
-                  key={item.name}
-                  onClick={() => navigate(item.href)}
-                  className={cn(
-                    "px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center space-x-1",
-                    item.current
-                      ? "text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20"
-                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  )}
-                >
-                  <span>{item.name}</span>
-                </button>
-              ))}
-            </nav>
-
-            {/* ✅ Right side - Actions & User Menu */}
-            <div className="flex items-center space-x-3">
-              {/* Maintenance indicator for Admin/Super Admin */}
-              {(isAdmin || isSuperAdmin) && maintenanceMode && (
-                <div className="hidden md:flex items-center gap-2 px-2 py-1 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300">
-                  <Wrench className="w-4 h-4" />
-                  <span className="text-xs font-medium">{t('admin.settings.maintenanceMode', { fallback: 'Maintenance Mode' })}</span>
-                </div>
               )}
-              {/* Notification Bell */}
-              <NotificationBell />
-
-              {/* Quick Panels - hide on small screens to reduce clutter; accessible via mobile menu */}
-              <div className="hidden md:flex">
-                <QuickPanels onOpenModal={openModal} />
-              </div>
-
-              {/* Header Actions (theme/lang) */}
-              <div className="hidden md:flex">
-                <HeaderActions onOpenModal={openModal} />
-              </div>
-              {/* Mobile theme/lang toggles for session parity */}
-              <div className="flex md:hidden items-center gap-2">
-                {(isAdmin || isSuperAdmin) && maintenanceMode && (
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300">
-                    <Wrench className="w-4 h-4" />
-                    <span className="text-[10px] font-semibold">{t('admin.settings.maintenanceMode', { fallback: 'Maintenance' })}</span>
-                  </div>
-                )}
-                <HeaderActions onOpenModal={openModal} />
-              </div>
-
-              {/* User Menu - always visible */}
-              <UserMenu />
             </div>
+          )}
+
+          <div className="space-y-1">
+            {!isCollapsed && (
+              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                {t('nav.navigation') || 'Navigation'}
+              </p>
+            )}
+            {navItems.map((item) => <NavButton key={item.key} item={item} />)}
+          </div>
+
+          <div className="space-y-1">
+            {!isCollapsed && (
+              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                {t('nav.tools') || 'Tools'}
+              </p>
+            )}
+            {toolItems.map((item) => <NavButton key={item.key} item={item} />)}
+          </div>
+
+          <div className="space-y-1">
+            {!isCollapsed && (
+              <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                {t('common.account', { fallback: 'Account' })}
+              </p>
+            )}
+            {accountItems.map((item) => <NavButton key={item.key} item={item} />)}
           </div>
         </div>
-      </motion.header>
 
-      {/* ✅ Modals */}
+        <div className="border-t border-gray-200/70 dark:border-gray-800/70 p-3 space-y-3">
+          <div className={cn('flex items-center gap-2', isCollapsed ? 'justify-center flex-col' : 'justify-between')}>
+            <NotificationBell />
+            <HeaderActions onOpenModal={openModal} className={isCollapsed ? 'flex-col space-x-0 gap-1' : ''} />
+          </div>
+
+          {!isCollapsed && (
+            <div className="flex items-center gap-3 rounded-xl bg-gray-50 p-2 dark:bg-gray-900/80">
+              <Avatar
+                src={user?.avatar || user?.profile_picture_url || user?.profilePicture}
+                alt={user?.name || user?.email}
+                size="sm"
+                fallback={user?.name?.charAt(0) || user?.username?.charAt(0) || user?.email?.charAt(0)}
+              />
+              <div className="min-w-0 flex-1 text-start">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                  {user?.name || user?.username || t('common.user')}
+                </p>
+                <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                title={t('auth.logout')}
+                aria-label={t('auth.logout')}
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {isCollapsed && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+              title={t('auth.logout')}
+              aria-label={t('auth.logout')}
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </motion.aside>
+
       <Suspense fallback={
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <LoadingSpinner size="lg" />
@@ -196,7 +372,7 @@ const Header = () => {
             onClose={closeModal}
           />
         )}
-        
+
         {activeModal === 'onboarding' && (
           <ModernOnboardingModal
             isOpen={true}

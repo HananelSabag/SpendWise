@@ -33,8 +33,66 @@ export const BANK_FORMS = {
       { key: 'nationalID', labelKey: 'fieldNationalID', type: 'text', inputMode: 'numeric' },
     ],
   },
+  hapoalim: {
+    color: 'from-red-600 to-rose-800',
+    fields: [
+      { key: 'userCode', labelKey: 'fieldUserCode', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
   leumi: {
     color: 'from-indigo-600 to-indigo-900',
+    fields: [
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
+  mizrahi: {
+    color: 'from-orange-600 to-red-800',
+    fields: [
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
+  discount: {
+    color: 'from-emerald-600 to-emerald-800',
+    fields: [
+      { key: 'id',       labelKey: 'fieldId',       type: 'text', inputMode: 'numeric' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+      { key: 'num',      labelKey: 'fieldNum',      type: 'text' },
+    ],
+  },
+  mercantile: {
+    color: 'from-lime-600 to-emerald-800',
+    fields: [
+      { key: 'id',       labelKey: 'fieldId',       type: 'text', inputMode: 'numeric' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+      { key: 'num',      labelKey: 'fieldNum',      type: 'text' },
+    ],
+  },
+  otsar_hahayal: {
+    color: 'from-teal-600 to-cyan-800',
+    fields: [
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
+  beinleumi: {
+    color: 'from-cyan-600 to-blue-800',
+    fields: [
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
+  massad: {
+    color: 'from-emerald-600 to-teal-800',
+    fields: [
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
+      { key: 'password', labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
+  pagi: {
+    color: 'from-slate-600 to-zinc-800',
     fields: [
       { key: 'username', labelKey: 'fieldUsername', type: 'text' },
       { key: 'password', labelKey: 'fieldPassword', type: 'password' },
@@ -48,19 +106,26 @@ export const BANK_FORMS = {
       { key: 'password',    labelKey: 'fieldPassword', type: 'password' },
     ],
   },
-  max: {
-    color: 'from-teal-600 to-teal-800',
+  amex: {
+    color: 'from-blue-700 to-sky-900',
+    fields: [
+      { key: 'id',          labelKey: 'fieldId',       type: 'text', inputMode: 'numeric' },
+      { key: 'card6Digits', labelKey: 'fieldCard6',    type: 'text', inputMode: 'numeric', maxLength: 6 },
+      { key: 'password',    labelKey: 'fieldPassword', type: 'password' },
+    ],
+  },
+  visa_cal: {
+    color: 'from-violet-600 to-fuchsia-800',
     fields: [
       { key: 'username', labelKey: 'fieldUsername', type: 'text' },
       { key: 'password', labelKey: 'fieldPassword', type: 'password' },
     ],
   },
-  discount: {
-    color: 'from-emerald-600 to-emerald-800',
+  max: {
+    color: 'from-teal-600 to-teal-800',
     fields: [
-      { key: 'id',       labelKey: 'fieldId',       type: 'text', inputMode: 'numeric' },
+      { key: 'username', labelKey: 'fieldUsername', type: 'text' },
       { key: 'password', labelKey: 'fieldPassword', type: 'password' },
-      { key: 'num',      labelKey: 'fieldNum',      type: 'text' },
     ],
   },
 };

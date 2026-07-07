@@ -27,7 +27,7 @@ import ModernOnboardingManager from './components/common/ModernOnboardingManager
 import MobileBottomNav from './components/common/MobileBottomNav';
 
 // ✅ Zustand stores
-import { StoreProvider, useAuth } from './stores';
+import { StoreProvider, useAuth, useTranslation } from './stores';
 
 // ✅ Toast Provider
 import { ToastProvider } from './hooks/useToast';
@@ -65,6 +65,7 @@ const queryPersister = typeof window !== 'undefined'
 // ✅ App Content - SIMPLIFIED
 const AppContent = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const { isRTL } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -132,14 +133,18 @@ const AppContent = () => {
   const isShowingPicker = isAuthenticated && !isLoading && user &&
     !prefs.home_preference_set && !prefs.default_home && !prefs.shopping_list_as_default_page &&
     !user?.isAdmin && !pickerDone;
+  const showDesktopShell = isAuthenticated && !isQuickExpensePage && !isShoppingMode && !isShowingPicker;
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div
+      className={`flex flex-col min-h-screen ${showDesktopShell ? 'sw-desktop-shell' : ''}`}
+      data-sidebar-side={showDesktopShell ? (isRTL ? 'right' : 'left') : undefined}
+    >
       <TopProgressBar visible={isLoading} />
       {isAuthenticated && <ModernOnboardingManager />}
 
       {/* Header — hidden in shopping mode and while home picker is on screen */}
-      {isAuthenticated && !isQuickExpensePage && !isShoppingMode && !isShowingPicker && <Header />}
+      {showDesktopShell && <Header />}
 
       {/* Bottom nav — always rendered (ShoppingModeNav / FullNav); hidden only during home picker */}
       {isAuthenticated && !isQuickExpensePage && !isShowingPicker && <MobileBottomNav />}

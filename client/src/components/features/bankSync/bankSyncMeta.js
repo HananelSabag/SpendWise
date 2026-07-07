@@ -9,11 +9,20 @@ import { Landmark, CreditCard, PencilLine } from 'lucide-react';
 // Per-bank gradient (icon square) + soft tint (card) — matches the app's
 // gradient-icon language (see ModernTransactionCard, page headers).
 export const BANK_BRAND = {
-  yahav:    { gradient: 'from-blue-500 to-blue-700',       tint: 'bg-blue-50/60 dark:bg-blue-950/20' },
-  leumi:    { gradient: 'from-indigo-500 to-indigo-800',   tint: 'bg-indigo-50/60 dark:bg-indigo-950/20' },
-  isracard: { gradient: 'from-rose-500 to-rose-700',       tint: 'bg-rose-50/60 dark:bg-rose-950/20' },
-  max:      { gradient: 'from-sky-500 to-blue-600',        tint: 'bg-sky-50/60 dark:bg-sky-950/20' },
-  discount: { gradient: 'from-amber-500 to-orange-600',    tint: 'bg-amber-50/60 dark:bg-amber-950/20' },
+  yahav:         { gradient: 'from-blue-500 to-blue-700',       tint: 'bg-blue-50/60 dark:bg-blue-950/20' },
+  hapoalim:      { gradient: 'from-red-500 to-rose-700',        tint: 'bg-red-50/60 dark:bg-red-950/20' },
+  leumi:         { gradient: 'from-indigo-500 to-indigo-800',   tint: 'bg-indigo-50/60 dark:bg-indigo-950/20' },
+  mizrahi:       { gradient: 'from-orange-500 to-red-600',      tint: 'bg-orange-50/60 dark:bg-orange-950/20' },
+  discount:      { gradient: 'from-amber-500 to-orange-600',    tint: 'bg-amber-50/60 dark:bg-amber-950/20' },
+  mercantile:    { gradient: 'from-lime-500 to-emerald-600',    tint: 'bg-lime-50/60 dark:bg-lime-950/20' },
+  otsar_hahayal: { gradient: 'from-teal-500 to-cyan-700',       tint: 'bg-teal-50/60 dark:bg-teal-950/20' },
+  beinleumi:     { gradient: 'from-cyan-500 to-blue-700',       tint: 'bg-cyan-50/60 dark:bg-cyan-950/20' },
+  massad:        { gradient: 'from-emerald-500 to-teal-700',    tint: 'bg-emerald-50/60 dark:bg-emerald-950/20' },
+  pagi:          { gradient: 'from-slate-500 to-zinc-700',      tint: 'bg-slate-50/60 dark:bg-slate-800/20' },
+  isracard:      { gradient: 'from-rose-500 to-rose-700',       tint: 'bg-rose-50/60 dark:bg-rose-950/20' },
+  amex:          { gradient: 'from-blue-600 to-sky-800',        tint: 'bg-blue-50/60 dark:bg-blue-950/20' },
+  visa_cal:      { gradient: 'from-violet-500 to-fuchsia-700',  tint: 'bg-violet-50/60 dark:bg-violet-950/20' },
+  max:           { gradient: 'from-sky-500 to-blue-600',        tint: 'bg-sky-50/60 dark:bg-sky-950/20' },
 };
 
 export function bankBrand(source) {
@@ -25,11 +34,20 @@ export function bankBrand(source) {
 // credit card company (billing-cycle charges, no real balance); this is the
 // single client-side source of truth for that distinction and display name.
 export const INSTITUTIONS = {
-  yahav:    { kind: 'bank',        label: 'Bank Yahav' },
-  leumi:    { kind: 'bank',        label: 'Bank Leumi' },
-  discount: { kind: 'bank',        label: 'Discount Bank' },
-  isracard: { kind: 'credit_card', label: 'Isracard' },
-  max:      { kind: 'credit_card', label: 'Max' },
+  yahav:         { kind: 'bank',        label: 'Bank Yahav' },
+  hapoalim:      { kind: 'bank',        label: 'Bank Hapoalim' },
+  leumi:         { kind: 'bank',        label: 'Bank Leumi' },
+  mizrahi:       { kind: 'bank',        label: 'Mizrahi Bank' },
+  discount:      { kind: 'bank',        label: 'Discount Bank' },
+  mercantile:    { kind: 'bank',        label: 'Mercantile Bank' },
+  otsar_hahayal: { kind: 'bank',        label: 'Bank Otsar Hahayal' },
+  beinleumi:     { kind: 'bank',        label: 'Beinleumi' },
+  massad:        { kind: 'bank',        label: 'Massad' },
+  pagi:          { kind: 'bank',        label: 'Pagi' },
+  isracard:      { kind: 'credit_card', label: 'Isracard' },
+  amex:          { kind: 'credit_card', label: 'Amex' },
+  visa_cal:      { kind: 'credit_card', label: 'Visa Cal' },
+  max:           { kind: 'credit_card', label: 'Max' },
 };
 
 export function institutionKind(source) {

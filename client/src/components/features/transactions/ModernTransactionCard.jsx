@@ -56,6 +56,11 @@ const ModernTransactionCard = ({
   const sourceLabel = isBankSynced
     ? institutionLabel(transaction.bank_source)
     : t('transactions.manualEntry', 'Manual entry');
+  const sourceKindLabel = !isBankSynced
+    ? t('transactions.sourceKind.manual', 'manual')
+    : kind === 'credit_card'
+      ? t('transactions.sourceKind.cardPurchase', 'card purchase')
+      : t('transactions.sourceKind.bankMovement', 'bank movement');
 
   // Bank-synced rows wear their institution's brand gradient (same language as
   // the Bank Sync page); manual rows stay neutral gray.
@@ -98,11 +103,16 @@ const ModernTransactionCard = ({
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 flex items-center gap-1">
             <span className="truncate">{sourceLabel}</span>
-            {kind === 'credit_card' && (
-              <span className="shrink-0 text-[10px] px-1 py-px rounded bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400">
-                {t('bankSync.creditCardShort', 'card')}
-              </span>
-            )}
+            <span className={cn(
+              'shrink-0 text-[10px] px-1 py-px rounded',
+              kind === 'credit_card'
+                ? 'bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300'
+                : kind === 'bank'
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300'
+                  : 'bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400'
+            )}>
+              {sourceKindLabel}
+            </span>
             {rawCategory && (
               <>
                 <span>·</span>

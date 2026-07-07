@@ -77,6 +77,7 @@ export default {
 
   // שדות פרטי התחברות (לפי בנק)
   fieldUsername: 'שם משתמש',
+  fieldUserCode: 'קוד משתמש',
   fieldPassword: 'סיסמה',
   fieldNationalID: 'תעודת זהות',
   fieldId: 'מספר זהות',
@@ -151,9 +152,18 @@ export default {
   // Bank names
   bankNames: {
     yahav: 'בנק יהב',
+    hapoalim: 'בנק הפועלים',
     leumi: 'בנק לאומי',
+    mizrahi: 'בנק מזרחי טפחות',
+    discount: 'בנק דיסקונט',
+    mercantile: 'בנק מרכנתיל',
+    otsar_hahayal: 'בנק אוצר החייל',
+    beinleumi: 'הבנק הבינלאומי',
+    massad: 'בנק מסד',
+    pagi: 'בנק פאגי',
     isracard: 'ישראכרט',
+    amex: 'אמריקן אקספרס',
+    visa_cal: 'כאל',
     max: 'מקס',
-    discount: 'דיסקונט',
   },
 };

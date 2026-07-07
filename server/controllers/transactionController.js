@@ -16,6 +16,13 @@ const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
   .map(([source]) => source);
 
+const CARD_SETTLEMENT_SOURCE_PATTERNS = {
+  isracard: '(\u05d9\u05e9\u05e8\u05d0\u05db\u05e8\u05d8|isracard)',
+  amex: '(\u05d0\u05de\u05e7\u05e1|\u05d0\u05de\u05e8\u05d9\u05e7\u05df[\\s-]*\u05d0\u05e7\u05e1\u05e4\u05e8\u05e1|american[\\s-]*express|amex)',
+  visa_cal: '(\u05db\u05d0\u05dc|\u05d5\u05d9\u05d6\u05d4[\\s-]*\u05db\u05d0\u05dc|visa[\\s-]*cal|cal)',
+  max: '(\u05de\u05e7\u05e1|max)',
+};
+
 // Auto-classification for bank transactions with no source-provided
 // raw_category. Israeli banks report checking-account cash-flow EVENTS, not
 // itemized purchases — a "לאומי ויזה" line is one month's entire credit-card
@@ -24,7 +31,7 @@ const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
 // IS instead. Matched against live Leumi/Yahav sync data. Static, not user
 // input — safe to interpolate directly (no SQL injection surface).
 const BANK_PATTERN_CASE = `
-  WHEN t.description ~* '(דביט|ויזה|מקס|ישראכרט|אשראי)' THEN 'Card Spending'
+  WHEN t.description ~* '(דביט|ויזה|מקס|ישראכרט|כאל|אמקס|אמריקן אקספרס|אשראי)' THEN 'Card Spending'
   WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'Cash Withdrawals'
   WHEN t.description ~* '(פרעון הלוואה|הלוואה)' THEN 'Loan Payments'
   WHEN t.description ~* '(ריבית|עמלה|עמל\\.)' THEN 'Bank Fees & Interest'
@@ -33,7 +40,7 @@ const BANK_PATTERN_CASE = `
 `.trim();
 
 const BANK_CARD_SETTLEMENT_PATTERN =
-  '(דביט|ויזה|מקס|ישראכרט|אשראי|max|visa|isracard|cal)';
+  '(דביט|ויזה|מקס|ישראכרט|כאל|אמקס|אמריקן אקספרס|אשראי|max|visa|isracard|cal|amex|american express)';
 
 const transactionController = {
   /**
@@ -73,6 +80,13 @@ const transactionController = {
                 WHEN t.bank_source IS NULL THEN 'manual'
                 ELSE 'bank'
               END AS source_kind,
+              CASE
+                WHEN t.description ~* $6 THEN 'isracard'
+                WHEN t.description ~* $7 THEN 'amex'
+                WHEN t.description ~* $8 THEN 'visa_cal'
+                WHEN t.description ~* $9 THEN 'max'
+                ELSE NULL
+              END AS settlement_card_source,
               (t.bank_source IS NOT NULL
                AND NOT (t.bank_source = ANY($5::text[]))
                AND t.type = 'expense'
@@ -88,29 +102,84 @@ const transactionController = {
               AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
           ),
           flags AS (
-            SELECT EXISTS (
-              SELECT 1 FROM scoped WHERE source_kind = 'credit_card' AND type = 'expense'
-            ) AS has_card_detail
+            SELECT
+              COALESCE(
+                ARRAY_AGG(DISTINCT bank_source) FILTER (WHERE source_kind = 'credit_card' AND type = 'expense'),
+                ARRAY[]::text[]
+              ) AS card_sources,
+              (COUNT(DISTINCT bank_source) FILTER (WHERE source_kind = 'credit_card' AND type = 'expense'))::int AS card_source_count,
+              EXISTS (
+                SELECT 1 FROM scoped WHERE source_kind = 'credit_card' AND type = 'expense'
+              ) AS has_card_detail
+          ),
+          classified AS (
+            SELECT
+              scoped.*,
+              (
+                source_kind = 'bank'
+                AND is_card_settlement
+                AND (
+                  (settlement_card_source IS NOT NULL AND settlement_card_source = ANY((SELECT card_sources FROM flags)))
+                  OR (settlement_card_source IS NULL AND (SELECT card_source_count FROM flags) = 1)
+                )
+              ) AS excluded_card_settlement
+            FROM scoped
           )
           SELECT
             COUNT(*)::int AS total_transactions,
             COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) AS total_income,
             COALESCE(SUM(amount) FILTER (
               WHERE type = 'expense'
-                AND NOT (source_kind = 'bank' AND is_card_settlement AND (SELECT has_card_detail FROM flags))
+                AND NOT excluded_card_settlement
             ), 0) AS total_expenses,
             COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND type = 'income'), 0) AS bank_income,
             COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND type = 'expense' AND NOT is_card_settlement), 0) AS bank_direct_expenses,
             COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND is_card_settlement), 0) AS bank_card_settlements,
+            COALESCE(SUM(amount) FILTER (WHERE excluded_card_settlement), 0) AS excluded_bank_card_settlements,
             COALESCE(SUM(amount) FILTER (WHERE source_kind = 'credit_card' AND type = 'expense'), 0) AS card_charges,
             COALESCE(SUM(amount) FILTER (WHERE source_kind = 'manual' AND type = 'expense'), 0) AS manual_expenses,
             (SELECT has_card_detail FROM flags) AS has_card_detail
-          FROM scoped
-        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN, CREDIT_CARD_SOURCES]),
+          FROM classified
+        `, [
+          userId,
+          periodStart,
+          periodEnd,
+          BANK_CARD_SETTLEMENT_PATTERN,
+          CREDIT_CARD_SOURCES,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.isracard,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.amex,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.visa_cal,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.max,
+        ]),
         Transaction.getRecent(userId, 10),
         db.query(`
-          SELECT bucket AS name, source, SUM(amount) AS amount, COUNT(*) AS count
-          FROM (
+          WITH scoped AS (
+            SELECT
+              t.*,
+              CASE
+                WHEN t.description ~* $6 THEN 'isracard'
+                WHEN t.description ~* $7 THEN 'amex'
+                WHEN t.description ~* $8 THEN 'visa_cal'
+                WHEN t.description ~* $9 THEN 'max'
+                ELSE NULL
+              END AS settlement_card_source
+            FROM transactions t
+            LEFT JOIN bank_accounts ba_filter
+              ON ba_filter.user_id = t.user_id
+             AND ba_filter.bank_source = t.bank_source
+             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+            WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
+              AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
+              AND t.date >= $2 AND t.date < $3
+          ),
+          flags AS (
+            SELECT
+              COALESCE(ARRAY_AGG(DISTINCT bank_source), ARRAY[]::text[]) AS card_sources,
+              COUNT(DISTINCT bank_source)::int AS card_source_count
+            FROM scoped
+            WHERE bank_source = ANY($5::text[])
+          ),
+          classified AS (
             SELECT
               t.amount,
               CASE
@@ -122,38 +191,34 @@ const transactionController = {
               -- 'source' = the merchant/source labelled it; 'auto' = we guessed
               -- from the bank description via BANK_PATTERN_CASE.
               CASE WHEN t.raw_category IS NOT NULL AND t.raw_category <> '' THEN 'source' ELSE 'auto' END AS source
-            FROM transactions t
-            LEFT JOIN bank_accounts ba_filter
-              ON ba_filter.user_id = t.user_id
-             AND ba_filter.bank_source = t.bank_source
-             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
-            WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
-              AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
-              AND t.date >= $2 AND t.date < $3
+            FROM scoped t
+            WHERE true
               AND NOT (
                 t.bank_source IS NOT NULL
                 AND NOT (t.bank_source = ANY($5::text[]))
                 AND t.description ~* $4
-                AND EXISTS (
-                  SELECT 1
-                  FROM transactions card_t
-                  LEFT JOIN bank_accounts card_ba_filter
-                    ON card_ba_filter.user_id = card_t.user_id
-                   AND card_ba_filter.bank_source = card_t.bank_source
-                   AND card_ba_filter.account_number = COALESCE(card_t.bank_account_number, '')
-                  WHERE card_t.user_id = t.user_id
-                    AND card_t.deleted_at IS NULL
-                    AND card_t.type = 'expense'
-                    AND card_t.bank_source = ANY($5::text[])
-                    AND COALESCE(card_ba_filter.enabled, true) = true
-                    AND card_t.date >= $2 AND card_t.date < $3
+                AND (
+                  (t.settlement_card_source IS NOT NULL AND t.settlement_card_source = ANY((SELECT card_sources FROM flags)))
+                  OR (t.settlement_card_source IS NULL AND (SELECT card_source_count FROM flags) = 1)
                 )
               )
-          ) classified
+          )
+          SELECT bucket AS name, source, SUM(amount) AS amount, COUNT(*) AS count
+          FROM classified
           GROUP BY bucket, source
           ORDER BY amount DESC
           LIMIT 12
-        `, [userId, periodStart, periodEnd, BANK_CARD_SETTLEMENT_PATTERN, CREDIT_CARD_SOURCES]),
+        `, [
+          userId,
+          periodStart,
+          periodEnd,
+          BANK_CARD_SETTLEMENT_PATTERN,
+          CREDIT_CARD_SOURCES,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.isracard,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.amex,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.visa_cal,
+          CARD_SETTLEMENT_SOURCE_PATTERNS.max,
+        ]),
         db.query(`
           SELECT
             COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,
@@ -228,7 +293,7 @@ const transactionController = {
         bank_card_settlements: parseFloat(sr.bank_card_settlements || 0),
         card_charges: parseFloat(sr.card_charges || 0),
         manual_expenses: parseFloat(sr.manual_expenses || 0),
-        excluded_bank_card_settlements: sr.has_card_detail ? parseFloat(sr.bank_card_settlements || 0) : 0,
+        excluded_bank_card_settlements: parseFloat(sr.excluded_bank_card_settlements || 0),
         has_card_detail: sr.has_card_detail === true,
       };
 

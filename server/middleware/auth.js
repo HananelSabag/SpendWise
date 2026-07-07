@@ -316,9 +316,12 @@ const optionalAuth = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.userId;
       
-      // Check cache first
-      const cacheKey = `user_${userId}`;
-      let user = userCache.get(cacheKey);
+      // Optional auth only needs a small user shape. Keep that cache entry
+      // separate from the full auth cache so it cannot poison protected
+      // routes that need billing preferences, role flags and restrictions.
+      const fullCacheKey = `user_${userId}`;
+      const optionalCacheKey = `optional_user_${userId}`;
+      let user = userCache.get(fullCacheKey) || userCache.get(optionalCacheKey);
       
       if (!user) {
         // Fetch user from database
@@ -331,7 +334,7 @@ const optionalAuth = async (req, res, next) => {
         
         if (result.rows.length > 0) {
           user = result.rows[0];
-          userCache.set(cacheKey, user);
+          userCache.set(optionalCacheKey, user);
         }
       }
       
@@ -365,6 +368,7 @@ const optionalAuth = async (req, res, next) => {
 const clearUserCache = (userId) => {
   const cacheKey = `user_${userId}`;
   userCache.delete(cacheKey);
+  userCache.delete(`optional_user_${userId}`);
   logger.debug('🧹 User cache cleared', { userId });
 };
 

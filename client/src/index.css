@@ -82,6 +82,24 @@
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 
+  :root {
+    --sw-sidebar-width: 17rem;
+  }
+
+  @media (min-width: 1024px) {
+    .sw-desktop-shell {
+      transition: padding 0.2s ease-in-out;
+    }
+
+    .sw-desktop-shell[data-sidebar-side="left"] {
+      padding-left: var(--sw-sidebar-width);
+    }
+
+    .sw-desktop-shell[data-sidebar-side="right"] {
+      padding-right: var(--sw-sidebar-width);
+    }
+  }
+
   /* Ensure lucide-react SVG icons are visible by inheriting current text color */
   svg {
     color: currentColor;

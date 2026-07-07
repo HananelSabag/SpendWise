@@ -77,6 +77,7 @@ export default {
 
   // Credential fields (per bank)
   fieldUsername: 'Username',
+  fieldUserCode: 'User code',
   fieldPassword: 'Password',
   fieldNationalID: 'National ID (Teudat Zehut)',
   fieldId: 'ID Number',
@@ -151,9 +152,18 @@ export default {
   // Bank names
   bankNames: {
     yahav: 'Yahav Bank',
+    hapoalim: 'Bank Hapoalim',
     leumi: 'Bank Leumi',
-    isracard: 'Isracard',
-    max: 'Max',
+    mizrahi: 'Mizrahi Bank',
     discount: 'Discount Bank',
+    mercantile: 'Mercantile Bank',
+    otsar_hahayal: 'Bank Otsar Hahayal',
+    beinleumi: 'Beinleumi',
+    massad: 'Massad',
+    pagi: 'Pagi',
+    isracard: 'Isracard',
+    amex: 'Amex',
+    visa_cal: 'Visa Cal',
+    max: 'Max',
   },
 };

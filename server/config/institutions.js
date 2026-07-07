@@ -3,7 +3,8 @@
  * values are real bank accounts (balance, direct debits, income) vs credit
  * card companies (billing-cycle charges, no real bank balance).
  *
- * Only 5 institutions exist and the mapping never changes at runtime, so
+ * The mapping is static code rather than a DB column: these are product-level
+ * source ids that must match the client and spendwise-agent registries.
  * this is a static code map rather than a DB column — no schema needed for
  * a fixed set of constants.
  *
@@ -11,11 +12,20 @@
  */
 
 const INSTITUTIONS = {
-  yahav:    { kind: 'bank',        label: 'Bank Yahav' },
-  leumi:    { kind: 'bank',        label: 'Bank Leumi' },
-  discount: { kind: 'bank',        label: 'Discount Bank' },
-  isracard: { kind: 'credit_card', label: 'Isracard' },
-  max:      { kind: 'credit_card', label: 'Max' },
+  yahav:          { kind: 'bank',        label: 'Bank Yahav' },
+  hapoalim:       { kind: 'bank',        label: 'Bank Hapoalim' },
+  leumi:          { kind: 'bank',        label: 'Bank Leumi' },
+  mizrahi:        { kind: 'bank',        label: 'Mizrahi Bank' },
+  discount:       { kind: 'bank',        label: 'Discount Bank' },
+  mercantile:     { kind: 'bank',        label: 'Mercantile Bank' },
+  otsar_hahayal:  { kind: 'bank',        label: 'Bank Otsar Hahayal' },
+  beinleumi:      { kind: 'bank',        label: 'Beinleumi' },
+  massad:         { kind: 'bank',        label: 'Massad' },
+  pagi:           { kind: 'bank',        label: 'Pagi' },
+  isracard:       { kind: 'credit_card', label: 'Isracard' },
+  amex:           { kind: 'credit_card', label: 'Amex' },
+  visa_cal:       { kind: 'credit_card', label: 'Visa Cal' },
+  max:            { kind: 'credit_card', label: 'Max' },
 };
 
 const VALID_SOURCES = Object.keys(INSTITUTIONS);

@@ -151,36 +151,68 @@ router.get('/stats', auth, async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await db.query(
-      `SELECT
-         t.bank_source                                                        AS source,
-         COUNT(t.id)::int                                                     AS total,
-         MAX(t.created_at)                                                    AS last_sync,
-         SUM(CASE WHEN t.type='income'  THEN 1 ELSE 0 END)::int              AS income_count,
-         SUM(CASE WHEN t.type='expense' THEN 1 ELSE 0 END)::int              AS expense_count,
-         SUM(CASE WHEN t.type='income'  THEN t.amount ELSE 0 END)            AS total_income,
-         SUM(CASE WHEN t.type='expense' THEN t.amount ELSE 0 END)            AS total_expense,
+      `WITH sources AS (
+         SELECT DISTINCT bank_source AS source
+         FROM transactions
+         WHERE user_id = $1 AND bank_source IS NOT NULL AND deleted_at IS NULL
+         UNION
+         SELECT DISTINCT bank_source AS source
+         FROM bank_accounts
+         WHERE user_id = $1
+       ),
+       tx AS (
+         SELECT t.*
+         FROM transactions t
+         LEFT JOIN bank_accounts ba_filter
+           ON ba_filter.user_id = t.user_id
+          AND ba_filter.bank_source = t.bank_source
+          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+         WHERE t.user_id = $1
+           AND t.bank_source IS NOT NULL
+           AND t.deleted_at IS NULL
+           AND COALESCE(ba_filter.enabled, true) = true
+       ),
+       tx_stats AS (
+         SELECT
+           bank_source AS source,
+           COUNT(id)::int AS total,
+           MAX(created_at) AS last_transaction_sync,
+           COALESCE(SUM(CASE WHEN type='income'  THEN 1 ELSE 0 END), 0)::int AS income_count,
+           COALESCE(SUM(CASE WHEN type='expense' THEN 1 ELSE 0 END), 0)::int AS expense_count,
+           COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS total_income,
+           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS total_expense
+         FROM tx
+         GROUP BY bank_source
+       ),
+       acct_stats AS (
+         SELECT bank_source AS source, MAX(last_synced_at) AS last_account_sync
+         FROM bank_accounts
+         WHERE user_id = $1
+         GROUP BY bank_source
+       )
+       SELECT
+         s.source                                                             AS source,
+         COALESCE(ts.total, 0)::int                                           AS total,
+         COALESCE(ts.last_transaction_sync, ast.last_account_sync)            AS last_sync,
+         COALESCE(ts.income_count, 0)::int                                    AS income_count,
+         COALESCE(ts.expense_count, 0)::int                                   AS expense_count,
+         COALESCE(ts.total_income, 0)                                         AS total_income,
+         COALESCE(ts.total_expense, 0)                                        AS total_expense,
          COALESCE(
-           (SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
-              'account_number', ba.account_number,
-              'account_type',   ba.account_type,
-              'balance',        ba.balance,
-              'enabled',        ba.enabled,
-              'last_synced_at', ba.last_synced_at
-           ) ORDER BY ba.account_number)
-            FROM bank_accounts ba
-            WHERE ba.user_id = $1 AND ba.bank_source = t.bank_source),
-           '[]'::jsonb
-         )                                                                    AS accounts
-       FROM transactions t
-       LEFT JOIN bank_accounts ba_filter
-         ON ba_filter.user_id = t.user_id
-        AND ba_filter.bank_source = t.bank_source
-        AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
-       WHERE t.user_id = $1
-         AND t.bank_source IS NOT NULL
-         AND t.deleted_at IS NULL
-         AND COALESCE(ba_filter.enabled, true) = true
-       GROUP BY t.bank_source
+            (SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
+               'account_number', ba.account_number,
+               'account_type',   ba.account_type,
+               'balance',        ba.balance,
+               'enabled',        ba.enabled,
+               'last_synced_at', ba.last_synced_at
+            ) ORDER BY ba.account_number)
+             FROM bank_accounts ba
+             WHERE ba.user_id = $1 AND ba.bank_source = s.source),
+            '[]'::jsonb
+          )                                                                    AS accounts
+       FROM sources s
+       LEFT JOIN tx_stats ts ON ts.source = s.source
+       LEFT JOIN acct_stats ast ON ast.source = s.source
        ORDER BY last_sync DESC`,
       [userId],
     );

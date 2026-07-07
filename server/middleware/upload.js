@@ -66,15 +66,19 @@ const deleteOldProfilePicture = async (req, res, next) => {
       // Get user's current profile picture from DB
       const db = require('../config/db');
       const user = await db.query(
-        'SELECT preferences FROM users WHERE id = $1',
+        'SELECT avatar, profile_picture_url, preferences FROM users WHERE id = $1',
         [req.user.id]
       );
       
       const preferences = user.rows[0]?.preferences || {};
+      const currentProfilePicture =
+        user.rows[0]?.profile_picture_url ||
+        user.rows[0]?.avatar ||
+        preferences.profilePicture;
       
-      if (preferences.profilePicture) {
+      if (currentProfilePicture) {
         // Extract filename from Supabase URL
-        const fileName = supabaseStorage.extractFileNameFromUrl(preferences.profilePicture);
+        const fileName = supabaseStorage.extractFileNameFromUrl(currentProfilePicture);
         
         if (fileName) {
           await supabaseStorage.deleteProfilePicture(fileName);

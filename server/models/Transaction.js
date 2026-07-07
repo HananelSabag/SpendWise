@@ -179,7 +179,12 @@ class Transaction {
       const query = `
         SELECT ${SELECT_COLUMNS}
         FROM transactions t
+        LEFT JOIN bank_accounts ba_filter
+          ON ba_filter.user_id = t.user_id
+         AND ba_filter.bank_source = t.bank_source
+         AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
+          AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
         ORDER BY t.created_at DESC
         LIMIT $2
       `;

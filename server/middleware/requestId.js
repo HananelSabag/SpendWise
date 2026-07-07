@@ -62,21 +62,30 @@ const requestId = (req, res, next) => {
     }
   };
   
-  // Log request start
-  req.log.info('Request started', {
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-    contentLength: req.get('content-length')
-  });
+  const shouldLogLifecycle =
+    req.method !== 'OPTIONS' &&
+    req.path !== '/' &&
+    req.path !== '/health' &&
+    !req.path.startsWith('/uploads/');
+
+  if (shouldLogLifecycle) {
+    req.log.info('Request started', {
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+      contentLength: req.get('content-length')
+    });
+  }
   
   // Track response completion
   res.on('finish', () => {
     const duration = Date.now() - req.startTime;
-    req.log.info('Request completed', {
-      statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      contentLength: res.get('content-length')
-    });
+    if (shouldLogLifecycle) {
+      req.log.info('Request completed', {
+        statusCode: res.statusCode,
+        duration: `${duration}ms`,
+        contentLength: res.get('content-length')
+      });
+    }
   });
   
   next();

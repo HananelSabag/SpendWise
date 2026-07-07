@@ -50,30 +50,59 @@ function useAvailableSources(transactionsData) {
 const SourceFilterChips = ({ transactionsData, sourceFilter, setSourceFilter, t }) => {
   const { banks, cards } = useAvailableSources(transactionsData);
 
-  const chips = [
-    { key: 'all', label: t('source.all', 'All') },
-    { key: 'manual', label: t('source.manual', 'Manual') },
-    ...banks.map((s) => ({ key: s, label: institutionLabel(s), icon: Landmark })),
-    ...cards.map((s) => ({ key: s, label: institutionLabel(s), icon: CreditCard })),
+  const groups = [
+    {
+      key: 'general',
+      label: '',
+      chips: [
+        { key: 'all', label: t('source.all', 'All') },
+        { key: 'manual', label: t('source.manual', 'Manual') },
+      ],
+    },
+    {
+      key: 'banks',
+      label: t('source.banks', 'Bank accounts'),
+      chips: banks.map((s) => ({ key: s, label: institutionLabel(s), icon: Landmark })),
+    },
+    {
+      key: 'cards',
+      label: t('source.cards', 'Credit companies'),
+      chips: cards.map((s) => ({ key: s, label: institutionLabel(s), icon: CreditCard })),
+    },
   ];
 
   return (
-    <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-      {chips.map(({ key, label, icon: ChipIcon }) => (
-        <button
-          key={key}
-          onClick={() => setSourceFilter(key)}
-          className={cn(
-            'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0',
-            sourceFilter === key
-              ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-              : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400',
-          )}
-        >
-          {ChipIcon && <ChipIcon className="w-3 h-3" />}
-          {label}
-        </button>
-      ))}
+    <div className="space-y-2">
+      <div className="flex items-start gap-2 text-[11px] text-gray-400 dark:text-gray-500 leading-snug">
+        <Landmark className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <span>{t('source.legend', 'Bank rows are account cash flow. Credit-company rows are itemized card purchases.')}</span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        {groups.filter((group) => group.chips.length > 0).map((group) => (
+          <div key={group.key} className="flex items-center gap-1.5 shrink-0">
+            {group.label && (
+              <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 px-1">
+                {group.label}
+              </span>
+            )}
+            {group.chips.map(({ key, label, icon: ChipIcon }) => (
+              <button
+                key={key}
+                onClick={() => setSourceFilter(key)}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0',
+                  sourceFilter === key
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                    : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400',
+                )}
+              >
+                {ChipIcon && <ChipIcon className="w-3 h-3" />}
+                {label}
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
