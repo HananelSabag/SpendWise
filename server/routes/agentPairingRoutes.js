@@ -99,7 +99,11 @@ router.post('/confirm', confirmLimiter, async (req, res) => {
   if (typeof code !== 'string' || !/^[A-Z0-9]{8}$/.test(code)) {
     return res.status(400).json({ error: 'Invalid code' });
   }
-  if (typeof publicKey !== 'string' || publicKey.length < 32 || publicKey.length > 128) {
+  // Must decode to exactly 32 bytes — a real X25519 public key. Catching a
+  // malformed key here (not just at seal-time in someone's browser later)
+  // fails fast and clear instead of leaving a connection nobody can open.
+  if (typeof publicKey !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/.test(publicKey)
+      || Buffer.from(publicKey, 'base64').length !== 32) {
     return res.status(400).json({ error: 'Invalid public_key' });
   }
   const safeLabel = typeof label === 'string' ? label.trim().slice(0, 100) : null;

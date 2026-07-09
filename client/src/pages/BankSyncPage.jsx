@@ -49,6 +49,7 @@ export default function BankSyncPage() {
   const queryClient = useQueryClient();
   const [showConnect, setShowConnect] = useState(false);
   const [showCyclePicker, setShowCyclePicker] = useState(false);
+  const [showSourceGuide, setShowSourceGuide] = useState(false);
   const [savingCycle, setSavingCycle] = useState(false);
 
   // Change the financial-cycle day inline (same billing_cycle_day the Profile
@@ -142,13 +143,19 @@ export default function BankSyncPage() {
     </button>
   );
 
+  // Collapsed by default — useful the first time, not something to re-scroll
+  // past on every visit. Same collapse pattern as HowItWorksPanel below.
   const SourceModelGuide = () => (
-    <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-700/70 p-4">
-      <div className="flex items-start gap-3 mb-3">
+    <section className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200/70 dark:border-gray-700/70 overflow-hidden">
+      <button
+        onClick={() => setShowSourceGuide(v => !v)}
+        className="w-full flex items-center gap-3 p-4 text-start hover:bg-gray-50 dark:hover:bg-gray-800/40 transition-colors"
+        aria-expanded={showSourceGuide}
+      >
         <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
           <Building2 className="w-[18px] h-[18px] text-indigo-600 dark:text-indigo-300" />
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white">
             {t('sourceModelTitle', { fallback: 'Bank account or credit company?' })}
           </h2>
@@ -156,29 +163,42 @@ export default function BankSyncPage() {
             {t('sourceModelSubtitle', { fallback: 'SpendWise keeps them separate so your dashboard shows real cash flow without double-counting card bills.' })}
           </p>
         </div>
-      </div>
+        <ChevronDown className={cn('w-4 h-4 text-gray-400 shrink-0 transition-transform', showSourceGuide && 'rotate-180')} />
+      </button>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <div className="rounded-lg bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <Landmark className="w-4 h-4 text-blue-600 dark:text-blue-300" />
-            <p className="text-xs font-bold text-blue-900 dark:text-blue-100">{t('sourceModelBankTitle', { fallback: 'Bank account' })}</p>
-          </div>
-          <p className="text-[11px] text-blue-700 dark:text-blue-200 leading-snug">
-            {t('sourceModelBankText', { fallback: 'Shows real balance, salary/income, transfers, cash withdrawals, fees, loans, and the monthly card-payment withdrawal.' })}
-          </p>
-        </div>
+      <AnimatePresence initial={false}>
+        {showSourceGuide && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="grid gap-3 md:grid-cols-2 px-4 pb-4">
+              <div className="rounded-lg bg-blue-50/70 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/40 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Landmark className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                  <p className="text-xs font-bold text-blue-900 dark:text-blue-100">{t('sourceModelBankTitle', { fallback: 'Bank account' })}</p>
+                </div>
+                <p className="text-[11px] text-blue-700 dark:text-blue-200 leading-snug">
+                  {t('sourceModelBankText', { fallback: 'Shows real balance, salary/income, transfers, cash withdrawals, fees, loans, and the monthly card-payment withdrawal.' })}
+                </p>
+              </div>
 
-        <div className="rounded-lg bg-violet-50/70 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-900/40 p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <CreditCard className="w-4 h-4 text-violet-600 dark:text-violet-300" />
-            <p className="text-xs font-bold text-violet-900 dark:text-violet-100">{t('sourceModelCardTitle', { fallback: 'Credit company' })}</p>
-          </div>
-          <p className="text-[11px] text-violet-700 dark:text-violet-200 leading-snug">
-            {t('sourceModelCardText', { fallback: 'Shows itemized card purchases. It has no bank balance; when purchase details exist, SpendWise does not count the bank card-payment withdrawal again.' })}
-          </p>
-        </div>
-      </div>
+              <div className="rounded-lg bg-violet-50/70 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-900/40 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CreditCard className="w-4 h-4 text-violet-600 dark:text-violet-300" />
+                  <p className="text-xs font-bold text-violet-900 dark:text-violet-100">{t('sourceModelCardTitle', { fallback: 'Credit company' })}</p>
+                </div>
+                <p className="text-[11px] text-violet-700 dark:text-violet-200 leading-snug">
+                  {t('sourceModelCardText', { fallback: 'Shows itemized card purchases. It has no bank balance; when purchase details exist, SpendWise does not count the bank card-payment withdrawal again.' })}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 

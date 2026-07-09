@@ -53,8 +53,12 @@ const ModernTransactionCard = ({
   const Icon = institutionIcon(transaction?.bank_source);
   const kind = institutionKind(transaction?.bank_source);
 
+  // Appending the account/card number distinguishes two accounts or cards
+  // under the same institution (e.g. two Isracard cards) — without it they
+  // render as visually identical rows with no way to tell them apart.
   const sourceLabel = isBankSynced
-    ? institutionLabel(transaction.bank_source)
+    ? institutionLabel(transaction.bank_source) +
+      (transaction.bank_account_number ? ` · ${transaction.bank_account_number}` : '')
     : t('transactions.manualEntry', 'Manual entry');
   const sourceKindLabel = !isBankSynced
     ? t('transactions.sourceKind.manual', 'manual')

@@ -68,7 +68,7 @@ const transactionController = {
       periodStart = period.start;
       periodEnd = period.end;
 
-      const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult] = await Promise.all([
+      const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult, perAccountResult] = await Promise.all([
         db.query(`
           WITH scoped AS (
             SELECT
@@ -271,6 +271,43 @@ const transactionController = {
           WHERE user_id = $1 AND enabled = true
           GROUP BY bank_source
         `, [userId]),
+        // Per-account/card breakdown — a bank login or card company can
+        // expose more than one account/card (bank_accounts is keyed on
+        // account_number); the dashboard's other two queries only ever
+        // aggregate at the institution level, which silently sums two
+        // accounts/cards into one number. This lets the UI show each one
+        // separately. Includes disabled accounts (greyed out client-side,
+        // same as the Bank Sync page) — their own past numbers are still
+        // theirs even if excluded from current aggregate totals.
+        db.query(`
+          SELECT
+            ba.bank_source,
+            ba.account_number,
+            ba.account_type,
+            ba.balance,
+            ba.enabled,
+            ba.last_synced_at,
+            COALESCE(act.income, 0)   AS income,
+            COALESCE(act.expenses, 0) AS expenses,
+            COALESCE(act.count, 0)::int AS count,
+            act.last_transaction_at
+          FROM bank_accounts ba
+          LEFT JOIN (
+            SELECT
+              bank_source,
+              COALESCE(bank_account_number, '') AS account_number,
+              COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS income,
+              COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expenses,
+              COUNT(*) AS count,
+              MAX(date) AS last_transaction_at
+            FROM transactions
+            WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
+              AND date >= $2 AND date < $3
+            GROUP BY bank_source, COALESCE(bank_account_number, '')
+          ) act ON act.bank_source = ba.bank_source AND act.account_number = ba.account_number
+          WHERE ba.user_id = $1
+          ORDER BY ba.bank_source, ba.account_number
+        `, [userId, periodStart, periodEnd]),
       ]);
 
       const categoryBreakdown = categoriesResult.rows.map(r => ({
@@ -314,6 +351,25 @@ const transactionController = {
         }])
       );
 
+      // Per-account/card breakdown, grouped by bank_source — lets the UI
+      // show "card ending 1234: ₪X" instead of only ever one summed figure
+      // per institution when there's more than one account/card under it.
+      const accountsBySource = {};
+      for (const r of perAccountResult.rows) {
+        const isBank = institutionKind(r.bank_source) === 'bank';
+        (accountsBySource[r.bank_source] ??= []).push({
+          accountNumber: r.account_number,
+          accountType: r.account_type,
+          enabled: r.enabled,
+          balance: isBank && r.balance !== null ? parseFloat(r.balance) : null,
+          income: parseFloat(r.income || 0),
+          expenses: parseFloat(r.expenses || 0),
+          count: parseInt(r.count || 0),
+          lastTransactionAt: r.last_transaction_at || null,
+          lastSyncedAt: r.last_synced_at || null,
+        });
+      }
+
       // Union of sources that have activity this period AND sources with a
       // connected account but no transactions yet — the dashboard should list
       // every connected source, not only ones with rows in the window.
@@ -342,6 +398,7 @@ const transactionController = {
           balance: isBank && acct.hasBalance ? acct.balance : null,
           hasBalance: isBank ? (acct.hasBalance || false) : false,
           lastSyncedAt: acct.lastSyncedAt || null,
+          accounts: accountsBySource[key] || [],
         };
       }).sort((a, b) => b.expenses - a.expenses);
 

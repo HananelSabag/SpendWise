@@ -293,7 +293,10 @@ export default {
     staleWarning: "לא סונכרן מעל יממה",
     neverSynced: "עדיין לא סונכרן",
     syncedAgo: "סונכרן {{time}}",
-    cardExplainer: "חיובי הכרטיס מופיעים כאן לפי עסקה, ואז כחיוב מרוכז אחד בחשבון הבנק"
+    cardExplainer: "חיובי הכרטיס מופיעים כאן לפי עסקה, ואז כחיוב מרוכז אחד בחשבון הבנק",
+    accountAsOf: "{{count}} עסקאות · נכון ל-{{date}}",
+    accountNoActivity: "אין עסקאות בתקופה הזו",
+    chargedLabel: "חויב"
   },
   bankCosts: {
     title: "עלויות בנקאיות בתקופה זו",

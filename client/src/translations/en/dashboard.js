@@ -304,7 +304,10 @@ export default {
     staleWarning: "Not synced in over a day",
     neverSynced: "Not synced yet",
     syncedAgo: "Synced {{time}}",
-    cardExplainer: "Card charges appear here per purchase, then as one summarized charge in your bank account"
+    cardExplainer: "Card charges appear here per purchase, then as one summarized charge in your bank account",
+    accountAsOf: "{{count}} transactions · as of {{date}}",
+    accountNoActivity: "No transactions this period",
+    chargedLabel: "charged"
   },
   bankCosts: {
     title: "Bank Costs This Period",

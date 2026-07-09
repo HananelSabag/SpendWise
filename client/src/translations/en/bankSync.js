@@ -141,6 +141,9 @@ export default {
   accountSyncOn: 'Syncing',
   accountSyncOff: 'Not syncing',
   accountDisabledHint: 'Transactions from this account are not imported',
+  accountAsOf: '{{count}} transactions · as of {{date}}',
+  accountNoActivity: 'No transactions synced yet',
+  chargedLabel: 'charged',
 
   // Sync method — Default Host vs. the user's own paired computer
   syncMethodTitle: 'How your syncs run',

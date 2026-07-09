@@ -501,7 +501,9 @@ export default {
     all: "All",
     bank: "Bank",
     manual: "Manual",
-    bankSynced: "Bank-synced"
+    bankSynced: "Bank-synced",
+    account: "Account/card",
+    allAccounts: "All"
   },
 
   fromBank: "Imported from your bank",

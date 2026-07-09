@@ -141,6 +141,9 @@ export default {
   accountSyncOn: 'מסתנכרן',
   accountSyncOff: 'לא מסתנכרן',
   accountDisabledHint: 'עסקאות מחשבון זה לא מיובאות',
+  accountAsOf: '{{count}} עסקאות · נכון ל-{{date}}',
+  accountNoActivity: 'עדיין לא סונכרנו עסקאות',
+  chargedLabel: 'חויב',
 
   // שיטת סנכרון — השרת של SpendWise מול המחשב האישי של המשתמש
   syncMethodTitle: 'איך הסנכרון שלך רץ',

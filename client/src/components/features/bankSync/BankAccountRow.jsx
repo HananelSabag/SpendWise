@@ -1,6 +1,9 @@
 /**
  * BankAccountRow - one account/card under a synced source, with an on/off
- * switch. Real bank accounts show balance; credit-card accounts do not.
+ * switch. Real bank accounts show balance; credit-card accounts show what
+ * that specific card charged instead (they have no bank balance). Either
+ * way, a second line always says how many transactions and as-of when, so
+ * the number the toggle sits next to is never a mystery.
  */
 
 import React from 'react';
@@ -9,13 +12,14 @@ import { Switch } from '../../ui';
 import { useToast } from '../../../hooks/useToast';
 import { cn } from '../../../utils/helpers';
 import bankConnectionsApi from '../../../api/bankConnections';
-import { formatILS } from './bankSyncMeta';
+import { formatILS, formatDateTime } from './bankSyncMeta';
 
 export default function BankAccountRow({ account, connectionId, t, lang, hideBalance = false }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const enabled = account.enabled !== false;
   const hasBalance = account.balance !== null && account.balance !== undefined;
+  const txCount = account.transaction_count || 0;
 
   const toggle = useMutation({
     mutationFn: (next) =>
@@ -37,9 +41,30 @@ export default function BankAccountRow({ account, connectionId, t, lang, hideBal
         {!enabled && (
           <p className="text-[11px] text-amber-600 dark:text-amber-400">{t('accountDisabledHint')}</p>
         )}
+        {enabled && (
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+            {account.last_transaction_at
+              ? t('accountAsOf', { count: txCount, date: formatDateTime(account.last_transaction_at, lang), fallback: `${txCount} transactions · as of ${formatDateTime(account.last_transaction_at, lang)}` })
+              : t('accountNoActivity', { fallback: 'No transactions synced yet' })}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        {!hideBalance && (
+        {hideBalance ? (
+          <div className="text-end">
+            <span className={cn(
+              'text-sm font-bold tabular-nums block leading-tight',
+              enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through',
+            )}>
+              {txCount > 0 ? formatILS(account.expense, lang) : '-'}
+            </span>
+            {txCount > 0 && (
+              <span className="text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                {t('chargedLabel', { fallback: 'charged' })}
+              </span>
+            )}
+          </div>
+        ) : (
           <span className={cn(
             'text-sm font-bold tabular-nums',
             enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through',

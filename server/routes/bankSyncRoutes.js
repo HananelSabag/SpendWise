@@ -189,6 +189,22 @@ router.get('/stats', auth, async (req, res) => {
          FROM bank_accounts
          WHERE user_id = $1
          GROUP BY bank_source
+       ),
+       acct_tx_stats AS (
+         -- Same shape as tx_stats but broken out per account/card, not just
+         -- per institution — a bank login or card company can expose more
+         -- than one account/card (bank_accounts is keyed on account_number),
+         -- and each one needs its own "how much moved through this specific
+         -- account/card" figure, not one number shared across all of them.
+         SELECT
+           bank_source AS source,
+           COALESCE(bank_account_number, '') AS account_number,
+           COUNT(id)::int AS total,
+           MAX(created_at) AS last_transaction_sync,
+           COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS total_income,
+           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS total_expense
+         FROM tx
+         GROUP BY bank_source, COALESCE(bank_account_number, '')
        )
        SELECT
          s.source                                                             AS source,
@@ -200,13 +216,19 @@ router.get('/stats', auth, async (req, res) => {
          COALESCE(ts.total_expense, 0)                                        AS total_expense,
          COALESCE(
             (SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
-               'account_number', ba.account_number,
-               'account_type',   ba.account_type,
-               'balance',        ba.balance,
-               'enabled',        ba.enabled,
-               'last_synced_at', ba.last_synced_at
+               'account_number',      ba.account_number,
+               'account_type',        ba.account_type,
+               'balance',             ba.balance,
+               'enabled',             ba.enabled,
+               'last_synced_at',      ba.last_synced_at,
+               'transaction_count',   COALESCE(act.total, 0),
+               'income',              COALESCE(act.total_income, 0),
+               'expense',             COALESCE(act.total_expense, 0),
+               'last_transaction_at', act.last_transaction_sync
             ) ORDER BY ba.account_number)
              FROM bank_accounts ba
+             LEFT JOIN acct_tx_stats act
+               ON act.source = ba.bank_source AND act.account_number = ba.account_number
              WHERE ba.user_id = $1 AND ba.bank_source = s.source),
             '[]'::jsonb
           )                                                                    AS accounts

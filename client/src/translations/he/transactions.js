@@ -501,7 +501,9 @@ export default {
     all: "הכל",
     bank: "בנק",
     manual: "ידני",
-    bankSynced: "מסונכרן מהבנק"
+    bankSynced: "מסונכרן מהבנק",
+    account: "חשבון/כרטיס",
+    allAccounts: "הכל"
   },
 
   fromBank: "יובא מחשבון הבנק שלך",

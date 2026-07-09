@@ -25,8 +25,10 @@ import {
   CreditCard,
   AlertTriangle,
   ChevronRight,
+  ChevronDown,
   CalendarClock,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import {
   useTranslation,
@@ -366,7 +368,62 @@ function syncFreshness(iso, t) {
   };
 }
 
+// One row per account/card under `src.bankSource` — only rendered when
+// there's more than one, so a single-account source stays exactly as
+// compact as it always was.
+const AccountSubRow = ({ account, isBank, formatCurrency, t }) => {
+  const value = isBank
+    ? account.balance !== null
+      ? formatCurrency(account.balance)
+      : "—"
+    : formatCurrency(account.expenses);
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5 ps-11">
+      <div className="min-w-0">
+        <p
+          className={cn(
+            "text-xs font-medium truncate",
+            account.enabled
+              ? "text-gray-700 dark:text-gray-300"
+              : "text-gray-400 dark:text-gray-500",
+          )}
+        >
+          {account.accountNumber || t("mainAccount", { fallback: "Main account" })}
+        </p>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+          {account.count > 0
+            ? t("sourcesOverview.accountAsOf", {
+                count: account.count,
+                date: account.lastTransactionAt
+                  ? new Date(account.lastTransactionAt).toLocaleDateString()
+                  : "—",
+                fallback: `${account.count} transactions · as of ${account.lastTransactionAt ? new Date(account.lastTransactionAt).toLocaleDateString() : "—"}`,
+              })
+            : t("sourcesOverview.accountNoActivity", { fallback: "No transactions this period" })}
+        </p>
+      </div>
+      <div className="text-end shrink-0">
+        <p
+          className={cn(
+            "text-xs font-bold tabular-nums",
+            account.enabled ? "text-gray-900 dark:text-white" : "text-gray-400 line-through",
+          )}
+        >
+          {value}
+        </p>
+        {!isBank && account.count > 0 && (
+          <p className="text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+            {t("sourcesOverview.chargedLabel", { fallback: "charged" })}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const SourceRow = ({ src, formatCurrency, t }) => {
+  const [open, setOpen] = useState(false);
   const Icon = src.kind === "credit_card" ? CreditCard : Landmark;
   const brand = bankBrand(src.bankSource);
   const fresh = syncFreshness(src.lastSyncedAt, t);
@@ -380,9 +437,10 @@ const SourceRow = ({ src, formatCurrency, t }) => {
           fallback: "Balance not available",
         })
     : formatCurrency(src.expenses);
+  const hasBreakdown = (src.accounts || []).length > 1;
 
-  return (
-    <div className="flex items-center gap-3 py-2">
+  const Row = (
+    <div className="flex items-center gap-3 py-2 flex-1 min-w-0">
       <div
         className={cn(
           "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white bg-gradient-to-br",
@@ -441,6 +499,51 @@ const SourceRow = ({ src, formatCurrency, t }) => {
             : t("sourcesOverview.charges", { fallback: "Charges this period" })}
         </p>
       </div>
+      {hasBreakdown && (
+        <ChevronDown
+          className={cn(
+            "w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      )}
+    </div>
+  );
+
+  if (!hasBreakdown) return Row;
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center text-start hover:bg-gray-50 dark:hover:bg-gray-800/40 rounded-lg transition-colors -mx-1 px-1"
+        aria-expanded={open}
+      >
+        {Row}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="divide-y divide-gray-100 dark:divide-gray-800/60 pb-1">
+              {src.accounts.map((a) => (
+                <AccountSubRow
+                  key={a.accountNumber}
+                  account={a}
+                  isBank={isBank}
+                  formatCurrency={formatCurrency}
+                  t={t}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -47,8 +47,28 @@ function useAvailableSources(transactionsData) {
   }, [transactionsData]);
 }
 
+// Distinct account/card numbers for one bank_source — e.g. two Isracard
+// cards under the same institution. Only meaningful once a single source
+// (not 'all'/'manual') is selected, and only shown when there's more than
+// one, so the common single-account case stays exactly as simple as before.
+function useAvailableAccounts(transactionsData, source) {
+  return useMemo(() => {
+    if (!source) return [];
+    const set = new Set();
+    (transactionsData || []).forEach((t) => {
+      if (t.bank_source === source && t.bank_account_number) set.add(t.bank_account_number);
+    });
+    return Array.from(set).sort();
+  }, [transactionsData, source]);
+}
+
 const SourceFilterChips = ({ transactionsData, sourceFilter, setSourceFilter, t }) => {
   const { banks, cards } = useAvailableSources(transactionsData);
+  const [selectedSource, selectedAccount] = sourceFilter.split('::');
+  const accountsForSelectedSource = useAvailableAccounts(
+    transactionsData,
+    selectedSource !== 'all' && selectedSource !== 'manual' ? selectedSource : null,
+  );
 
   const groups = [
     {
@@ -91,7 +111,7 @@ const SourceFilterChips = ({ transactionsData, sourceFilter, setSourceFilter, t 
                 onClick={() => setSourceFilter(key)}
                 className={cn(
                   'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap shrink-0',
-                  sourceFilter === key
+                  selectedSource === key
                     ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
                     : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400',
                 )}
@@ -103,6 +123,42 @@ const SourceFilterChips = ({ transactionsData, sourceFilter, setSourceFilter, t 
           </div>
         ))}
       </div>
+
+      {/* Account/card sub-filter — only appears once a single institution is
+          selected AND it has more than one account/card, e.g. two Isracard
+          cards. Lets the user isolate one specific card's transactions. */}
+      {accountsForSelectedSource.length > 1 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar ps-1">
+          <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">
+            {t('source.account', 'Account/card')}
+          </span>
+          <button
+            onClick={() => setSourceFilter(selectedSource)}
+            className={cn(
+              'px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap shrink-0',
+              !selectedAccount
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400',
+            )}
+          >
+            {t('source.allAccounts', 'All')}
+          </button>
+          {accountsForSelectedSource.map((acc) => (
+            <button
+              key={acc}
+              onClick={() => setSourceFilter(`${selectedSource}::${acc}`)}
+              className={cn(
+                'px-2.5 py-0.5 rounded-full text-[11px] font-medium transition-colors whitespace-nowrap shrink-0',
+                selectedAccount === acc
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 dark:text-gray-400',
+              )}
+            >
+              {acc}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -612,11 +668,13 @@ const ModernTransactions = () => {
   const transactions = useMemo(() => {
     if (!transactionsData || !Array.isArray(transactionsData)) return [];
     let filtered = [...transactionsData];
-    // Bank-aware source filter: 'manual' or a specific institution's bank_source
+    // Bank-aware source filter: 'manual', a specific institution's bank_source,
+    // or 'bank_source::account_number' to isolate one account/card.
     if (sourceFilter === 'manual') {
       filtered = filtered.filter((t) => !t.bank_source);
     } else if (sourceFilter !== 'all') {
-      filtered = filtered.filter((t) => t.bank_source === sourceFilter);
+      const [src, acct] = sourceFilter.split('::');
+      filtered = filtered.filter((t) => t.bank_source === src && (!acct || t.bank_account_number === acct));
     }
     if (filters.amountMin) {
       const min = parseFloat(filters.amountMin);
