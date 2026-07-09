@@ -19,6 +19,9 @@ import { ConfirmModal } from '../../ui';
 import { useToast } from '../../../hooks/useToast';
 import agentPairingApi from '../../../api/agentPairing';
 
+// Update this when a new Agent build is released (see spendwise-agent repo → Releases).
+const AGENT_DOWNLOAD_URL = 'https://github.com/HananelSabag/spendwise-agent/releases/download/v26.7.9/SpendWiseAgent-ForUsers.zip';
+
 export default function SyncMethodPanel({ t, hasConnections }) {
   const toast = useToast();
   const queryClient = useQueryClient();
@@ -136,11 +139,14 @@ export default function SyncMethodPanel({ t, hasConnections }) {
             <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mb-2">{t('syncMethodOwnBody')}</p>
             <div className="flex flex-col gap-1.5">
               <a
-                href="/downloads/SpendWiseWorker.exe"
+                href={AGENT_DOWNLOAD_URL}
                 className="flex items-center justify-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <Download className="w-3.5 h-3.5" /> {t('syncMethodDownload')}
               </a>
+              <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-snug px-0.5">
+                {t('syncMethodSmartScreenHint')}
+              </p>
               <button
                 onClick={requestCode}
                 disabled={startMutation.isPending}

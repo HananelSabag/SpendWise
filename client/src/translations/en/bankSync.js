@@ -150,6 +150,7 @@ export default {
   syncMethodOwnTitle: 'My own computer',
   syncMethodOwnBody: 'Run the SpendWise Agent yourself; only your computer ever sees your bank login.',
   syncMethodDownload: 'Download the Agent',
+  syncMethodSmartScreenHint: 'Windows may show a security warning since the app isn’t code-signed yet — click "More info" then "Run anyway".',
   syncMethodGenerateCode: 'Get a pairing code',
   syncMethodCodeExpires: 'Expires in {{minutes}} minutes',
   syncMethodCodeHint: 'Open the SpendWise Agent on your computer and enter this code.',

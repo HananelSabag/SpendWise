@@ -150,6 +150,7 @@ export default {
   syncMethodOwnTitle: 'המחשב שלי',
   syncMethodOwnBody: 'מריצים את ה-SpendWise Agent בעצמכם; רק המחשב שלכם רואה את פרטי ההתחברות לבנק.',
   syncMethodDownload: 'הורדת ה-Agent',
+  syncMethodSmartScreenHint: 'ייתכן שווינדוס יציג אזהרת אבטחה כי האפליקציה עדיין לא חתומה דיגיטלית - לחצו על "מידע נוסף" ואז "הפעל בכל זאת".',
   syncMethodGenerateCode: 'קבלת קוד חיבור',
   syncMethodCodeExpires: 'פג תוקף בעוד {{minutes}} דקות',
   syncMethodCodeHint: 'פתחו את SpendWise Agent במחשב שלכם והזינו את הקוד הזה.',
