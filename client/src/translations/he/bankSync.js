@@ -142,6 +142,28 @@ export default {
   accountSyncOff: 'לא מסתנכרן',
   accountDisabledHint: 'עסקאות מחשבון זה לא מיובאות',
 
+  // שיטת סנכרון — השרת של SpendWise מול המחשב האישי של המשתמש
+  syncMethodTitle: 'איך הסנכרון שלך רץ',
+  syncMethodSubtitle: 'בחר איזה מחשב מתחבר לבנק שלך.',
+  syncMethodDefaultTitle: 'השרת של SpendWise',
+  syncMethodDefaultBody: 'בלי הגדרות - אנחנו מטפלים בזה בשבילך.',
+  syncMethodOwnTitle: 'המחשב שלי',
+  syncMethodOwnBody: 'מריצים את ה-SpendWise Agent בעצמכם; רק המחשב שלכם רואה את פרטי ההתחברות לבנק.',
+  syncMethodDownload: 'הורדת ה-Agent',
+  syncMethodGenerateCode: 'קבלת קוד חיבור',
+  syncMethodCodeExpires: 'פג תוקף בעוד {{minutes}} דקות',
+  syncMethodCodeHint: 'פתחו את SpendWise Agent במחשב שלכם והזינו את הקוד הזה.',
+  syncMethodWaiting: 'ממתין שהמחשב שלך יתחבר...',
+  syncMethodPaired: 'מחובר - {{label}}',
+  syncMethodPairedSince: 'מחובר מאז {{date}}',
+  syncMethodUnpair: 'חזרה לשרת של SpendWise',
+  syncMethodUnpairConfirmTitle: 'להחליף שיטת סנכרון?',
+  syncMethodUnpairConfirmBody: 'הבנקים שלך היו מחוברים דרך {{label}}. אחרי המעבר תצטרך לחבר אותם מחדש - התחברויות שמורות לא עוברות אוטומטית.',
+  syncMethodSwitchToOwnConfirmBody: 'אחרי חיבור המחשב שלך תצטרך לחבר מחדש את הבנקים - התחברויות שמורות לא עוברות אוטומטית למכשיר החדש.',
+  syncMethodConfirm: 'החלף בכל זאת',
+  syncMethodCancel: 'ביטול',
+  syncMethodError: 'לא הצלחנו להגיע לשירות החיבור - נסה שוב',
+
   // איך זה עובד
   howItWorks: 'איך זה עובד?',
   howItWorksStep1: 'אתה מחבר את הבנק — הפרטים מוצפנים בדפדפן שלך עוד לפני שהם נשלחים',

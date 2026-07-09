@@ -37,13 +37,25 @@ const connectionsLimiter = rateLimit({
 router.use(connectionsLimiter, auth);
 
 // ── GET /public-key ───────────────────────────────────────────────────────────
-// The agent's X25519 public key, used by the browser to seal credentials.
-router.get('/public-key', (req, res) => {
-  const publicKey = process.env.BANK_AGENT_PUBLIC_KEY;
-  if (!publicKey) {
-    return res.status(503).json({ error: 'Bank connect is not configured yet' });
+// The X25519 public key the browser seals credentials to. A user who has
+// paired their own device gets THAT device's key back instead of the
+// Default Host's — every subsequent connect/reconnect for them then seals
+// to a key only their own machine can open.
+router.get('/public-key', async (req, res) => {
+  try {
+    const device = await db.query(
+      `SELECT public_key FROM agent_devices WHERE user_id = $1 AND status = 'active'`,
+      [req.user.id],
+    );
+    const publicKey = device.rows[0]?.public_key || process.env.BANK_AGENT_PUBLIC_KEY;
+    if (!publicKey) {
+      return res.status(503).json({ error: 'Bank connect is not configured yet' });
+    }
+    res.json({ ok: true, publicKey });
+  } catch (err) {
+    logger.error('bank-connections: public-key lookup failed', { error: err.message, userId: req.user.id });
+    res.status(500).json({ error: 'Failed to fetch public key' });
   }
-  res.json({ ok: true, publicKey });
 });
 
 // ── GET / ─────────────────────────────────────────────────────────────────────

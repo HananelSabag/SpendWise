@@ -1,13 +1,19 @@
 /**
- * Bank Agent Routes — machine-to-machine API for the local scraper agent
+ * Bank Agent Routes — machine-to-machine API for scraper agents
  *
- * The agent (running on a trusted residential machine) polls for pending
- * sync jobs, receives the encrypted credentials (which only IT can decrypt
- * with its private key), scrapes the bank, and reports results back.
+ * An agent (running on a trusted machine) polls for pending sync jobs,
+ * receives the encrypted credentials (which only IT can decrypt with its
+ * private key), scrapes the bank, and reports results back.
  *
- * Auth: X-Agent-Key header, timing-safe comparison (same pattern as the
- * legacy bank-sync route). This key only grants job-queue access — the
- * credentials remain sealed to anyone without the agent's private key.
+ * Two kinds of agent, two auth methods, same endpoints:
+ *  - Default Host: X-Agent-Key, timing-safe comparison against the single
+ *    BANK_AGENT_KEY shared secret (unchanged from the original design).
+ *    Scope: every user who has NOT paired their own device.
+ *  - A user's own paired device: X-Device-Token, hashed and looked up in
+ *    agent_devices. Scope: only that device's own user_id — see
+ *    routes/agentPairingRoutes.js for how a device gets paired.
+ * Either way this key only grants job-queue access — the credentials
+ * remain sealed to whoever holds the matching private key.
  */
 
 const express = require('express');
@@ -33,29 +39,50 @@ const agentLimiter = rateLimit({
   message: { error: 'Too many requests' },
 });
 
-function agentAuth(req, res, next) {
+function timingSafeStringEqual(a, b) {
+  try {
+    const bufA = Buffer.from(a, 'utf8');
+    const bufB = Buffer.from(b, 'utf8');
+    return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
+}
+
+async function agentAuth(req, res, next) {
+  const deviceToken = req.headers['x-device-token'];
+  if (deviceToken) {
+    const hash = crypto.createHash('sha256').update(String(deviceToken), 'utf8').digest('hex');
+    try {
+      const result = await db.query(
+        `UPDATE agent_devices SET last_seen_at = NOW()
+         WHERE device_token_hash = $1 AND status = 'active'
+         RETURNING user_id`,
+        [hash],
+      );
+      if (result.rows.length === 0) {
+        logger.warn('bank-agent: rejected invalid device token', { ip: req.ip });
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      req.agentScope = { userId: result.rows[0].user_id };
+      return next();
+    } catch (err) {
+      logger.error('bank-agent: device token lookup failed', { error: err.message });
+      return res.status(500).json({ error: 'Auth check failed' });
+    }
+  }
+
   const expected = process.env.BANK_AGENT_KEY;
   if (!expected) {
     logger.error('bank-agent: BANK_AGENT_KEY is not set — endpoint disabled');
     return res.status(503).json({ error: 'Bank agent not configured' });
   }
   const incoming = req.headers['x-agent-key'];
-  if (!incoming) {
-    logger.warn('bank-agent: missing X-Agent-Key header', { ip: req.ip });
+  if (!incoming || !timingSafeStringEqual(incoming, expected)) {
+    logger.warn('bank-agent: rejected invalid or missing agent key', { ip: req.ip });
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  let valid = false;
-  try {
-    const a = Buffer.from(incoming, 'utf8');
-    const b = Buffer.from(expected, 'utf8');
-    valid = a.length === b.length && crypto.timingSafeEqual(a, b);
-  } catch {
-    valid = false;
-  }
-  if (!valid) {
-    logger.warn('bank-agent: rejected invalid agent key', { ip: req.ip });
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  req.agentScope = { global: true };
   next();
 }
 
@@ -72,6 +99,13 @@ router.use(agentLimiter, agentAuth);
 router.post('/jobs/claim', async (req, res) => {
   const limit = Math.min(Number(req.body?.limit) || 5, 10);
 
+  // Default Host only ever sees users who haven't paired their own device;
+  // a paired device only ever sees its own user. Never both, never neither.
+  const scopeClause = req.agentScope.global
+    ? `AND user_id NOT IN (SELECT user_id FROM agent_devices WHERE status = 'active')`
+    : `AND user_id = $2`;
+  const params = req.agentScope.global ? [limit] : [limit, req.agentScope.userId];
+
   try {
     await enqueueDueJobs();
 
@@ -82,6 +116,7 @@ router.post('/jobs/claim', async (req, res) => {
        FROM (
          SELECT id FROM bank_sync_jobs
          WHERE status = 'pending'
+         ${scopeClause}
          ORDER BY requested_at ASC
          LIMIT $1
          FOR UPDATE SKIP LOCKED
@@ -90,10 +125,10 @@ router.post('/jobs/claim', async (req, res) => {
        WHERE j.id = picked.id AND c.id = j.connection_id
        RETURNING j.id, j.connection_id, j.user_id, j.trigger,
                  c.bank_source, c.encrypted_credentials`,
-      [limit],
+      params,
     );
     if (result.rows.length > 0) {
-      logger.info('bank-agent: jobs claimed', { count: result.rows.length });
+      logger.info('bank-agent: jobs claimed', { count: result.rows.length, scope: req.agentScope.global ? 'global' : `user:${req.agentScope.userId}` });
     }
     res.json({ ok: true, jobs: result.rows });
   } catch (err) {
@@ -137,6 +172,16 @@ router.post('/jobs/:id/result', async (req, res) => {
     if (job.status !== 'running') {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: `Job is ${job.status}, expected running` });
+    }
+    // A paired device may only ever report on its own user's jobs — without
+    // this, a compromised device could inject fabricated accounts/balances
+    // into another user's data via a job it never legitimately claimed.
+    if (!req.agentScope.global && job.user_id !== req.agentScope.userId) {
+      await client.query('ROLLBACK');
+      logger.warn('bank-agent: device attempted to report a job outside its scope', {
+        jobId, jobUserId: job.user_id, deviceUserId: req.agentScope.userId,
+      });
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
     if (success) {

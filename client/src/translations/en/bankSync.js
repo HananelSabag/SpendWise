@@ -142,6 +142,28 @@ export default {
   accountSyncOff: 'Not syncing',
   accountDisabledHint: 'Transactions from this account are not imported',
 
+  // Sync method — Default Host vs. the user's own paired computer
+  syncMethodTitle: 'How your syncs run',
+  syncMethodSubtitle: 'Choose which computer talks to your bank.',
+  syncMethodDefaultTitle: "SpendWise's server",
+  syncMethodDefaultBody: 'No setup — we handle it for you.',
+  syncMethodOwnTitle: 'My own computer',
+  syncMethodOwnBody: 'Run the SpendWise Agent yourself; only your computer ever sees your bank login.',
+  syncMethodDownload: 'Download the Agent',
+  syncMethodGenerateCode: 'Get a pairing code',
+  syncMethodCodeExpires: 'Expires in {{minutes}} minutes',
+  syncMethodCodeHint: 'Open the SpendWise Agent on your computer and enter this code.',
+  syncMethodWaiting: 'Waiting for your computer to connect...',
+  syncMethodPaired: 'Connected — {{label}}',
+  syncMethodPairedSince: 'Connected since {{date}}',
+  syncMethodUnpair: 'Switch back to SpendWise\'s server',
+  syncMethodUnpairConfirmTitle: 'Switch sync method?',
+  syncMethodUnpairConfirmBody: "Your banks were connected for {{label}}. After switching you'll need to reconnect them — already-saved logins can't carry over.",
+  syncMethodSwitchToOwnConfirmBody: "After connecting your own computer you'll need to reconnect your banks — already-saved logins can't carry over to the new device.",
+  syncMethodConfirm: 'Switch anyway',
+  syncMethodCancel: 'Cancel',
+  syncMethodError: "Couldn't reach the pairing service — try again",
+
   // How it works
   howItWorks: 'How does it work?',
   howItWorksStep1: 'You connect your bank — credentials are encrypted in your browser before they are sent',

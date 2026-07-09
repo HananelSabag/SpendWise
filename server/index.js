@@ -346,6 +346,13 @@ try {
     logger.error('❌ Bank agent routes failed:', error.message);
   }
 
+  try {
+    app.use(`${API_VERSION}/agent-pairing`, require('./routes/agentPairingRoutes'));
+    logger.debug('✅ Agent pairing routes loaded');
+  } catch (error) {
+    logger.error('❌ Agent pairing routes failed:', error.message);
+  }
+
 } catch (error) {
   logger.error(`❌ API routes loading failed: ${error.message}`, { stack: error.stack });
   // Don't exit - server can still respond to health checks

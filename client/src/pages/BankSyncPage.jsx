@@ -22,6 +22,7 @@ import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
 import BankConnectionCard from '../components/features/bankSync/BankConnectionCard';
 import BankStatsCard from '../components/features/bankSync/BankStatsCard';
 import HowItWorksPanel from '../components/features/bankSync/HowItWorksPanel';
+import SyncMethodPanel from '../components/features/bankSync/SyncMethodPanel';
 
 // Split a list of bank-source-tagged items into bank-account vs credit-card
 // groups. Banks and credit card companies are not the same kind of
@@ -208,6 +209,8 @@ export default function BankSyncPage() {
 
       <div className="max-w-6xl mx-auto px-4 lg:px-8 py-5 lg:py-8 space-y-6">
         <SourceModelGuide />
+
+        <SyncMethodPanel t={t} hasConnections={hasAnyConnection} />
 
         {/* Financial cycle — the period that drives every dashboard summary.
             Same billing_cycle_day the Profile editor writes; surfaced here as a
