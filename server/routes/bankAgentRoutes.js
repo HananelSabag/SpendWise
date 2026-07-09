@@ -102,8 +102,8 @@ router.post('/jobs/claim', async (req, res) => {
   // Default Host only ever sees users who haven't paired their own device;
   // a paired device only ever sees its own user. Never both, never neither.
   const scopeClause = req.agentScope.global
-    ? `AND user_id NOT IN (SELECT user_id FROM agent_devices WHERE status = 'active')`
-    : `AND user_id = $2`;
+    ? `AND j2.user_id NOT IN (SELECT user_id FROM agent_devices WHERE status = 'active')`
+    : `AND j2.user_id = $2`;
   const params = req.agentScope.global ? [limit] : [limit, req.agentScope.userId];
 
   try {
@@ -114,12 +114,14 @@ router.post('/jobs/claim', async (req, res) => {
          status = 'running',
          started_at = NOW()
        FROM (
-         SELECT id FROM bank_sync_jobs
-         WHERE status = 'pending'
+         SELECT j2.id FROM bank_sync_jobs j2
+         JOIN bank_connections c2 ON c2.id = j2.connection_id
+         WHERE j2.status = 'pending'
+           AND c2.status = 'active'
          ${scopeClause}
-         ORDER BY requested_at ASC
+         ORDER BY j2.requested_at ASC
          LIMIT $1
-         FOR UPDATE SKIP LOCKED
+         FOR UPDATE OF j2 SKIP LOCKED
        ) picked,
        bank_connections c
        WHERE j.id = picked.id AND c.id = j.connection_id

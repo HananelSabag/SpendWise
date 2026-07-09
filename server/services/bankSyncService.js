@@ -14,6 +14,17 @@ const { institutionKind } = require('../config/institutions');
 const MAX_TXNS = 2000;
 const MAX_AMOUNT = 10_000_000;
 
+// The calendar date a transaction belongs to, in the app's timezone.
+// toISOString() would use UTC — an Israeli 00:30 purchase would land on the
+// previous day, shifting day grouping and financial-period boundaries.
+const INGEST_TZ = process.env.PERIOD_TIMEZONE || process.env.SYNC_TIMEZONE || 'Asia/Jerusalem';
+function calendarDateInTz(d) {
+  // en-CA formats as YYYY-MM-DD.
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: INGEST_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
+}
+
 /**
  * Ingest scraped accounts for a user inside an existing DB transaction.
  *
@@ -68,7 +79,7 @@ async function ingestAccounts(client, userId, source, accounts) {
       const type = chargedAmount < 0 ? 'expense' : 'income';
       const amount = Math.abs(chargedAmount);
       const txnDate = txn.date ? new Date(txn.date) : new Date();
-      const date = txnDate.toISOString().split('T')[0];
+      const date = calendarDateInTz(txnDate);
       const transactionDatetime = txnDate.toISOString();
       const description = (txn.description || '').trim().slice(0, 500);
       // Source-provided category text (Max sends one; banks usually don't).
@@ -94,10 +105,12 @@ async function ingestAccounts(client, userId, source, accounts) {
         result.rows.length > 0 ? inserted++ : skipped++;
       } else {
         // Soft dedup: match on (user_id, source, account, date, amount, description).
+        // Deliberately INCLUDES tombstoned rows (deleted_at set): a user-deleted
+        // bank transaction must keep blocking re-import, not resurrect here.
         const existing = await client.query(
           `SELECT id FROM transactions
            WHERE user_id=$1 AND bank_source=$2 AND date=$3
-             AND amount=$4 AND description=$5 AND deleted_at IS NULL
+             AND amount=$4 AND description=$5
              AND bank_account_number IS NOT DISTINCT FROM $6
            LIMIT 1`,
           [userId, source, date, amount, description, acctNum],

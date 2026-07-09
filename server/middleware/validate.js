@@ -13,9 +13,14 @@ const logger = require('../utils/logger');
 const validators = {
   email: (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
   
+  // Registration-time password policy — same bar as password set/change/reset
+  // (8+ chars, at least one letter and one number). Login deliberately does
+  // NOT use this: existing accounts with older, shorter passwords must still
+  // be able to sign in.
   password: (password) => {
-    if (!password || password.length < 6) return false;
+    if (!password || password.length < 8) return false;
     if (password.length > 128) return false; // Prevent DoS
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) return false;
     return true;
   },
   
@@ -111,7 +116,7 @@ const validate = {
     if (!validators.password(password)) {
       return res.status(400).json(createValidationError(
         'WEAK_PASSWORD',
-        'Password must be 6-128 characters long'
+        'Password must be 8-128 characters and include at least one letter and one number'
       ));
     }
 

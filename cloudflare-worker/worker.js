@@ -23,7 +23,7 @@ function isBlockedHost(hostname) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -37,6 +37,14 @@ export default {
 
     if (request.method !== 'GET') {
       return new Response('Method not allowed', { status: 405 });
+    }
+
+    // Shared secret — without it this is an open relay anyone can abuse.
+    // Set PROXY_KEY in the Worker's env (dash.cloudflare.com → Settings →
+    // Variables) to the same value as the server's SCRAPER_PROXY_KEY.
+    // Enforced only when configured, so an un-keyed deploy keeps working.
+    if (env?.PROXY_KEY && request.headers.get('X-Proxy-Key') !== env.PROXY_KEY) {
+      return new Response('Unauthorized', { status: 401 });
     }
 
     const reqUrl = new URL(request.url);

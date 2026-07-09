@@ -430,11 +430,26 @@ const transactionController = {
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const offset = (page - 1) * limit;
 
+    // Source filter: 'manual' or a known institution id — anything else is ignored.
+    const rawSource = req.query.source || null;
+    const bankSource = rawSource === 'manual' || (rawSource && INSTITUTIONS[rawSource])
+      ? rawSource
+      : null;
+    const bankAccountNumber = bankSource && bankSource !== 'manual' && req.query.account
+      ? String(req.query.account).slice(0, 64)
+      : null;
+    const amountMin = Number.isFinite(parseFloat(req.query.amountMin)) ? parseFloat(req.query.amountMin) : null;
+    const amountMax = Number.isFinite(parseFloat(req.query.amountMax)) ? parseFloat(req.query.amountMax) : null;
+
     const filters = {
       type: req.query.type || null,
       dateFrom: req.query.dateFrom || null,
       dateTo: req.query.dateTo || null,
-      search: req.query.search || null
+      search: req.query.search || null,
+      source: bankSource,
+      account: bankAccountNumber,
+      amountMin,
+      amountMax
     };
 
     try {
@@ -444,25 +459,30 @@ const transactionController = {
         type: filters.type,
         dateFrom: filters.dateFrom,
         dateTo: filters.dateTo,
-        search: filters.search // ✅ CRITICAL FIX: Pass search to model instead of applying after
+        search: filters.search, // ✅ CRITICAL FIX: Pass search to model instead of applying after
+        bankSource,
+        bankAccountNumber,
+        amountMin,
+        amountMax
       };
 
       logger.info('getTransactions options', { userId, options, filters });
 
-      // ✅ CRITICAL FIX: Get both transactions AND total count
-      const [transactions, totalCountResult] = await Promise.all([
+      // List page + total count + whole-set totals (the stats tiles must
+      // reflect the full filtered set, not whichever pages happen to be loaded)
+      const [transactions, totalCountResult, filteredSummary] = await Promise.all([
         Transaction.findByUser(userId, options),
-        Transaction.getTotalCount(userId, options)
+        Transaction.getTotalCount(userId, options),
+        Transaction.getFilteredSummary(userId, options)
       ]);
 
       const totalTransactions = totalCountResult || 0;
 
-      // Calculate summary
       const summary = {
-        total: totalTransactions, // ✅ FIXED: Use actual total count, not page count
-        totalIncome: transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + parseFloat(t.amount), 0),
-        totalExpenses: transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + parseFloat(t.amount), 0),
-        count: transactions.length
+        total: totalTransactions,
+        totalIncome: filteredSummary.totalIncome,
+        totalExpenses: filteredSummary.totalExpenses,
+        count: filteredSummary.count
       };
       summary.netAmount = summary.totalIncome - summary.totalExpenses;
 
@@ -500,6 +520,16 @@ const transactionController = {
       logger.error('Get transactions failed', { userId, error: error.message });
       throw error;
     }
+  }),
+
+  /**
+   * Distinct months (YYYY-MM) that have transactions — feeds the month
+   * filter dropdown regardless of which pages the client has loaded.
+   * @route GET /api/v1/transactions/months
+   */
+  getMonths: asyncHandler(async (req, res) => {
+    const months = await Transaction.getAvailableMonths(req.user.id);
+    res.json({ success: true, data: { months } });
   }),
 
   /**
@@ -610,6 +640,12 @@ const transactionController = {
           error: 'Transaction not found'
         });
       }
+      if (error.message === 'Bank-synced transactions cannot be edited') {
+        return res.status(400).json({
+          success: false,
+          error: 'Bank-synced transactions cannot be edited'
+        });
+      }
 
       logger.error('Transaction update failed', { transactionId: id, userId, error: error.message });
       throw error;
@@ -673,14 +709,24 @@ const transactionController = {
     }
 
     try {
-      // Delete transactions in a single query for better performance
-      const deleteQuery = `
-        DELETE FROM transactions
-        WHERE id = ANY($1) AND user_id = $2
-        RETURNING id, type, description
-      `;
-
-      const result = await db.query(deleteQuery, [transactionIds, userId]);
+      // Bank-synced rows are tombstoned so the dedup index keeps blocking
+      // re-import on the next sync; manual rows are really deleted (they
+      // have no re-import source). Same rule as Transaction.delete.
+      const [tombstoned, hardDeleted] = await Promise.all([
+        db.query(
+          `UPDATE transactions SET deleted_at = NOW(), updated_at = NOW()
+           WHERE id = ANY($1) AND user_id = $2 AND bank_source IS NOT NULL AND deleted_at IS NULL
+           RETURNING id, type, description`,
+          [transactionIds, userId],
+        ),
+        db.query(
+          `DELETE FROM transactions
+           WHERE id = ANY($1) AND user_id = $2 AND bank_source IS NULL
+           RETURNING id, type, description`,
+          [transactionIds, userId],
+        ),
+      ]);
+      const result = { rows: [...tombstoned.rows, ...hardDeleted.rows] };
       const deletedCount = result.rows.length;
 
       // ✅ Handle case where some/all transactions don't exist or were already deleted

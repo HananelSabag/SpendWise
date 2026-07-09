@@ -47,6 +47,13 @@ router.get('/',
   transactionController.getTransactions
 );
 
+// Distinct months that have transactions (populates the month filter without
+// depending on which pages happen to be loaded client-side)
+router.get('/months',
+  getSummaryLimiter,
+  transactionController.getMonths
+);
+
 /**
  * Transaction CRUD Routes
  * Create, update, delete individual one-time transactions

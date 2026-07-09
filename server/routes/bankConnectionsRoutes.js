@@ -184,21 +184,54 @@ router.patch('/:id', async (req, res) => {
 
 // ── DELETE /:id ───────────────────────────────────────────────────────────────
 // Permanent delete — ciphertext is gone forever (jobs cascade).
+// By default the already-synced transactions/accounts are KEPT (deleting a
+// login shouldn't erase financial history). Pass ?purge_data=true to also
+// remove every transaction + account row this source synced. Hard delete is
+// correct for a purge: with the connection gone nothing can re-import, and
+// if the user ever reconnects, getting the data back from the bank is the
+// expected outcome.
 router.delete('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid id' });
+  const purge = req.query.purge_data === 'true';
 
+  const client = await db.getClient();
   try {
-    const result = await db.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       `DELETE FROM bank_connections WHERE id = $1 AND user_id = $2 RETURNING bank_source`,
       [id, req.user.id],
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Connection not found' });
-    logger.info('bank-connections: deleted', { userId: req.user.id, bank: result.rows[0].bank_source });
-    res.json({ ok: true });
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Connection not found' });
+    }
+    const bankSource = result.rows[0].bank_source;
+
+    let purgedTransactions = 0;
+    if (purge) {
+      const txns = await client.query(
+        `DELETE FROM transactions WHERE user_id = $1 AND bank_source = $2 RETURNING id`,
+        [req.user.id, bankSource],
+      );
+      await client.query(
+        `DELETE FROM bank_accounts WHERE user_id = $1 AND bank_source = $2`,
+        [req.user.id, bankSource],
+      );
+      purgedTransactions = txns.rowCount;
+    }
+
+    await client.query('COMMIT');
+    logger.info('bank-connections: deleted', {
+      userId: req.user.id, bank: bankSource, purge, purgedTransactions,
+    });
+    res.json({ ok: true, purged: purge, purged_transactions: purgedTransactions });
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error('bank-connections: delete failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to delete connection' });
+  } finally {
+    client.release();
   }
 });
 

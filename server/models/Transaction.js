@@ -93,9 +93,13 @@ class Transaction {
     }
   }
 
-  // Shared WHERE builder for list + count so their filters can never drift.
+  // Shared WHERE builder for list + count + summary so filters can never drift.
   static buildFilters(userId, options = {}) {
-    const { type = null, dateFrom = null, dateTo = null, search = null } = options;
+    const {
+      type = null, dateFrom = null, dateTo = null, search = null,
+      bankSource = null, bankAccountNumber = null,
+      amountMin = null, amountMax = null,
+    } = options;
 
     const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
     const values = [userId];
@@ -116,6 +120,30 @@ class Transaction {
       values.push(dateTo);
       paramCount++;
     }
+    // 'manual' selects rows a human typed (no bank_source); a source id
+    // selects that institution's rows, optionally narrowed to one account.
+    if (bankSource === 'manual') {
+      conditions.push('t.bank_source IS NULL');
+    } else if (bankSource) {
+      conditions.push(`t.bank_source = $${paramCount}`);
+      values.push(bankSource);
+      paramCount++;
+      if (bankAccountNumber) {
+        conditions.push(`t.bank_account_number = $${paramCount}`);
+        values.push(bankAccountNumber);
+        paramCount++;
+      }
+    }
+    if (amountMin !== null && amountMin !== undefined) {
+      conditions.push(`t.amount >= $${paramCount}`);
+      values.push(amountMin);
+      paramCount++;
+    }
+    if (amountMax !== null && amountMax !== undefined) {
+      conditions.push(`t.amount <= $${paramCount}`);
+      values.push(amountMax);
+      paramCount++;
+    }
     if (search) {
       conditions.push(`(
         LOWER(t.description) LIKE LOWER($${paramCount}) OR
@@ -127,6 +155,52 @@ class Transaction {
     }
 
     return { conditions, values, paramCount };
+  }
+
+  /**
+   * Income/expense totals over the WHOLE filtered set (not one page) —
+   * what the stats tiles must show while the list itself is paginated.
+   */
+  static async getFilteredSummary(userId, options = {}) {
+    try {
+      const { conditions, values } = this.buildFilters(userId, options);
+      const result = await db.query(
+        `SELECT
+           COUNT(*)::int AS count,
+           COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) AS total_income,
+           COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) AS total_expenses
+         FROM transactions t
+         WHERE ${conditions.join(' AND ')}`,
+        values,
+      );
+      const row = result.rows[0] || {};
+      return {
+        count: parseInt(row.count) || 0,
+        totalIncome: parseFloat(row.total_income) || 0,
+        totalExpenses: parseFloat(row.total_expenses) || 0,
+      };
+    } catch (error) {
+      logger.error('Transaction filtered summary failed', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  /** Distinct YYYY-MM months that have (non-deleted) transactions. */
+  static async getAvailableMonths(userId, limit = 36) {
+    try {
+      const result = await db.query(
+        `SELECT DISTINCT TO_CHAR(date, 'YYYY-MM') AS month
+         FROM transactions
+         WHERE user_id = $1 AND deleted_at IS NULL
+         ORDER BY month DESC
+         LIMIT $2`,
+        [userId, limit],
+      );
+      return result.rows.map((r) => r.month);
+    } catch (error) {
+      logger.error('Transaction months lookup failed', { userId, error: error.message });
+      throw error;
+    }
   }
 
   /**
@@ -185,7 +259,7 @@ class Transaction {
          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
           AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
-        ORDER BY t.created_at DESC
+        ORDER BY t.transaction_datetime DESC NULLS LAST, t.created_at DESC
         LIMIT $2
       `;
       const result = await db.query(query, [userId, limit]);
@@ -223,8 +297,16 @@ class Transaction {
       if (!existing) {
         throw new Error('Transaction not found');
       }
+      // Bank-synced rows are facts reported by the bank — the UI never offers
+      // editing them, and the API must not either.
+      if (existing.bank_source) {
+        throw new Error('Bank-synced transactions cannot be edited');
+      }
 
-      const allowedFields = ['amount', 'description', 'notes', 'date'];
+      const allowedFields = ['amount', 'type', 'description', 'notes', 'date'];
+      if (updateData.type !== undefined && !['income', 'expense'].includes(updateData.type)) {
+        delete updateData.type;
+      }
       const updates = {};
       const values = [];
       let paramCount = 1;
@@ -275,8 +357,14 @@ class Transaction {
   }
 
   /**
-   * Delete a transaction (bank rows: dedup via bank_sync_id prevents
-   * re-import of the same row on the next sync).
+   * Delete a transaction.
+   *
+   * Bank-synced rows are TOMBSTONED (deleted_at set), never hard-deleted:
+   * the row must keep occupying the (user_id, bank_sync_id) unique index —
+   * and stay findable by the soft-dedup lookup — otherwise the next sync
+   * (banks re-send the last months on every scrape) re-imports exactly what
+   * the user deleted. Manual rows have no re-import source, so they are
+   * really deleted.
    */
   static async delete(transactionId, userId) {
     try {
@@ -285,10 +373,17 @@ class Transaction {
         throw new Error('Transaction not found');
       }
 
-      const result = await db.query(
-        `DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING id, type`,
-        [transactionId, userId],
-      );
+      const result = existing.bank_source
+        ? await db.query(
+            `UPDATE transactions SET deleted_at = NOW(), updated_at = NOW()
+             WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
+             RETURNING id, type`,
+            [transactionId, userId],
+          )
+        : await db.query(
+            `DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING id, type`,
+            [transactionId, userId],
+          );
       const success = result.rows.length > 0;
 
       if (success) {

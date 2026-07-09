@@ -31,6 +31,7 @@ const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
 const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
 const { VALID_SOURCES } = require('../config/institutions');
+const { getUserFinancialCycle } = require('../services/financialCycleService');
 
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
@@ -150,6 +151,10 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
 router.get('/stats', auth, async (req, res) => {
   const userId = req.user.id;
   try {
+    // Money figures (income/expense) are scoped to the user's current
+    // financial period so this page and the dashboard tell the same story;
+    // transaction COUNTS stay all-time — they're sync-health, not money.
+    const period = await getUserFinancialCycle(userId);
     const result = await db.query(
       `WITH sources AS (
          SELECT DISTINCT bank_source AS source
@@ -177,10 +182,10 @@ router.get('/stats', auth, async (req, res) => {
            bank_source AS source,
            COUNT(id)::int AS total,
            MAX(created_at) AS last_transaction_sync,
-           COALESCE(SUM(CASE WHEN type='income'  THEN 1 ELSE 0 END), 0)::int AS income_count,
-           COALESCE(SUM(CASE WHEN type='expense' THEN 1 ELSE 0 END), 0)::int AS expense_count,
-           COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS total_income,
-           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS total_expense
+           COALESCE(SUM(CASE WHEN type='income'  AND date >= $2 AND date < $3 THEN 1 ELSE 0 END), 0)::int AS income_count,
+           COALESCE(SUM(CASE WHEN type='expense' AND date >= $2 AND date < $3 THEN 1 ELSE 0 END), 0)::int AS expense_count,
+           COALESCE(SUM(CASE WHEN type='income'  AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_income,
+           COALESCE(SUM(CASE WHEN type='expense' AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_expense
          FROM tx
          GROUP BY bank_source
        ),
@@ -200,9 +205,9 @@ router.get('/stats', auth, async (req, res) => {
            bank_source AS source,
            COALESCE(bank_account_number, '') AS account_number,
            COUNT(id)::int AS total,
-           MAX(created_at) AS last_transaction_sync,
-           COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS total_income,
-           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS total_expense
+           MAX(date) AS last_transaction_at,
+           COALESCE(SUM(CASE WHEN type='income'  AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_income,
+           COALESCE(SUM(CASE WHEN type='expense' AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_expense
          FROM tx
          GROUP BY bank_source, COALESCE(bank_account_number, '')
        )
@@ -224,7 +229,7 @@ router.get('/stats', auth, async (req, res) => {
                'transaction_count',   COALESCE(act.total, 0),
                'income',              COALESCE(act.total_income, 0),
                'expense',             COALESCE(act.total_expense, 0),
-               'last_transaction_at', act.last_transaction_sync
+               'last_transaction_at', act.last_transaction_at
             ) ORDER BY ba.account_number)
              FROM bank_accounts ba
              LEFT JOIN acct_tx_stats act
@@ -236,7 +241,7 @@ router.get('/stats', auth, async (req, res) => {
        LEFT JOIN tx_stats ts ON ts.source = s.source
        LEFT JOIN acct_stats ast ON ast.source = s.source
        ORDER BY last_sync DESC`,
-      [userId],
+      [userId, period.start, period.end],
     );
     const { institutionKind, INSTITUTIONS } = require('../config/institutions');
     const sources = result.rows.map((r) => ({
@@ -244,7 +249,11 @@ router.get('/stats', auth, async (req, res) => {
       kind: institutionKind(r.source),
       label: INSTITUTIONS[r.source]?.label || r.source,
     }));
-    res.json({ ok: true, sources });
+    res.json({
+      ok: true,
+      sources,
+      period: { start: period.start, end: period.end, cycleDay: period.cycleDay },
+    });
   } catch (err) {
     logger.error('bank-sync stats failed', { error: err.message, userId });
     res.status(500).json({ error: 'Failed to fetch bank sync stats' });

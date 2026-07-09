@@ -89,6 +89,11 @@ async function scrapeProductUrl(rawUrl) {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml',
         'Accept-Language': 'he,en-US;q=0.9',
+        // Shared secret so the Cloudflare Worker isn't an open relay —
+        // set the same value as PROXY_KEY in the Worker's env.
+        ...(proxyBase && process.env.SCRAPER_PROXY_KEY
+          ? { 'X-Proxy-Key': process.env.SCRAPER_PROXY_KEY }
+          : {}),
       },
     });
     clearTimeout(timer);
