@@ -80,7 +80,7 @@ const DeleteTransaction = ({
           </div>
           <Badge
             variant={transactionData.isExpense ? 'destructive' : 'success'}
-            className="text-sm font-bold shrink-0 ml-3"
+            className="text-sm font-bold shrink-0 ms-3"
           >
             {transactionData.isExpense ? '-' : '+'}{formatCurrency(transactionData.formattedAmount)}
           </Badge>
@@ -98,7 +98,7 @@ const DeleteTransaction = ({
             loading={isDeleting}
             className="flex-1 h-10 text-sm bg-red-600 hover:bg-red-700 text-white"
           >
-            <Trash2 className="w-4 h-4 mr-1.5" />
+            <Trash2 className="w-4 h-4 me-1.5" />
             {isDeleting ? t('loading.deleting', 'Deleting...') : t('delete.confirm', 'Delete')}
           </Button>
         </div>

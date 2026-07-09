@@ -8,7 +8,7 @@
  * never handles plaintext. Full i18n via the bankSync module.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Building2, RefreshCw, AlertCircle, Plus, Landmark, CreditCard, CalendarClock, ChevronDown } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -105,13 +105,17 @@ export default function BankSyncPage() {
     },
   });
 
-  // Refresh synced-transaction stats when the newest sync time advances.
+  // Refresh synced-transaction stats when the newest sync time ADVANCES —
+  // not on first render, where invalidating just refetches data we only
+  // now received.
   const latestSyncStamp = connections.map(c => c.last_sync_at || '').sort().slice(-1)[0] || '';
+  const prevSyncStamp = useRef(null);
   useEffect(() => {
-    if (latestSyncStamp) {
+    if (latestSyncStamp && prevSyncStamp.current && latestSyncStamp !== prevSyncStamp.current) {
       queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
     }
+    if (latestSyncStamp) prevSyncStamp.current = latestSyncStamp;
   }, [latestSyncStamp, queryClient]);
 
   const { banks: bankConnections, cards: cardConnections } = useMemo(

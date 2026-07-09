@@ -7,68 +7,44 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, Copy, Trash2, MoreVertical, Calendar, AlertTriangle, Pencil } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 
 // ✅ Import Zustand stores
 import { useTranslation } from '../../../../stores';
 
 // ✅ Import our new foundation
 import TransactionForm from '../forms/TransactionForm';
-import { Modal, Button, Dropdown } from '../../../ui';
+import { Modal } from '../../../ui';
 import { useTransactionActions } from '../../../../hooks/useTransactionActions';
 import { cn } from '../../../../utils/helpers';
 
 /**
  * ✏️ Edit Transaction Modal Component
+ * Delete/duplicate entry points live on the transaction card — this modal
+ * only edits (or, in duplicate mode, creates the copy).
  */
 const EditTransactionModal = ({
   isOpen = false,
   onClose,
   onSuccess,
-  onDelete,
-  onDuplicate,
   transaction = null,
   mode = 'edit', // edit, duplicate, view
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
-  const { createTransaction, updateTransaction, deleteTransaction, isOperating: isLoading } = useTransactionActions();
-  
+  const { createTransaction, updateTransaction, isOperating: isLoading } = useTransactionActions();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // ✅ Modal title and subtitle based on mode
-  const modalConfig = useMemo(() => {
+  // ✅ Modal title based on mode
+  const modalTitle = useMemo(() => {
     switch (mode) {
-      case 'duplicate':
-        return {
-          title: t('modals.edit.duplicate.title'),
-          subtitle: t('modals.edit.duplicate.subtitle'),
-          icon: Copy,
-          color: 'text-purple-600 dark:text-purple-400',
-          bgColor: 'bg-purple-100 dark:bg-purple-900/30'
-        };
-      case 'view':
-        return {
-          title: t('modals.edit.view.title'),
-          subtitle: t('modals.edit.view.subtitle'),
-          icon: Calendar,
-          color: 'text-gray-600 dark:text-gray-400',
-          bgColor: 'bg-gray-100 dark:bg-gray-700/30'
-        };
-      default:
-        return {
-          title: t('modals.edit.edit.title'),
-          subtitle: t('modals.edit.edit.subtitle'),
-          icon: Pencil,
-          color: 'text-blue-600 dark:text-blue-400',
-          bgColor: 'bg-blue-100 dark:bg-blue-900/30'
-        };
+      case 'duplicate': return t('modals.edit.duplicate.title');
+      case 'view':      return t('modals.edit.view.title');
+      default:          return t('modals.edit.edit.title');
     }
   }, [mode, t]);
-
-  const IconComponent = modalConfig.icon;
 
   // ✅ Handle form submission
   const handleSubmit = useCallback(async (formData) => {
@@ -107,64 +83,24 @@ const EditTransactionModal = ({
     }
   }, [transaction, mode, createTransaction, updateTransaction, onSuccess, onClose]);
 
-  // ✅ Handle delete
-  const handleDelete = useCallback(async () => {
-    if (!transaction) return;
-    
-    try {
-      await deleteTransaction(transaction.id); // already toasts
-      onDelete?.(transaction);
-      onClose?.();
-    } catch (error) {
-      console.error('Failed to delete transaction:', error);
-    }
-
-    setShowDeleteConfirm(false);
-  }, [transaction, deleteTransaction, onDelete, onClose]);
-
   // ✅ Handle modal close
   const handleClose = useCallback(() => {
     if (isSubmitting) return; // Prevent closing during submission
     onClose?.();
   }, [isSubmitting, onClose]);
 
-  // ✅ Action menu items
-  const actionMenuItems = useMemo(() => {
-    const items = [];
-    
-    if (mode === 'edit') {
-      items.push({
-        label: t('actions.duplicate'),
-        icon: Copy,
-        onClick: () => onDuplicate?.(transaction)
-      });
-    }
-    
-    if (mode !== 'view') {
-      items.push({
-        label: t('actions.delete'),
-        icon: Trash2,
-        onClick: () => setShowDeleteConfirm(true),
-        variant: 'danger'
-      });
-    }
-    
-    return items;
-  }, [mode, t, transaction, onDuplicate]);
-
   if (!transaction) return null;
 
   return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        title={modalConfig.title}
-        size="5xl"
-        className={cn("backdrop-blur-sm", className)}
-        sheet
-        drawerWidth={760}
-      >
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={modalTitle}
+      size="5xl"
+      className={cn("backdrop-blur-sm", className)}
+      sheet
+      drawerWidth={760}
+    >
         <AnimatePresence mode="wait">
           {!showSuccess ? (
             <motion.div
@@ -225,59 +161,9 @@ const EditTransactionModal = ({
               </motion.div>
             </motion.div>
           )}
-        </AnimatePresence>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        maxWidth="md"
-      >
-        <div className="p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t('modals.delete.title')}
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t('modals.delete.subtitle')}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
-            <p className="text-sm text-red-800 dark:text-red-200">
-              {t('modals.delete.warning', { 
-                description: transaction?.description,
-                amount: transaction?.amount 
-              })}
-            </p>
-          </div>
-
-          <div className="flex space-x-3">
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-              className="flex-1"
-            >
-              {t('actions.cancel')}
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleDelete}
-              className="flex-1"
-            >
-              {t('actions.delete')}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-    </>
+      </AnimatePresence>
+    </Modal>
   );
 };
 
-export default EditTransactionModal; 
+export default EditTransactionModal;

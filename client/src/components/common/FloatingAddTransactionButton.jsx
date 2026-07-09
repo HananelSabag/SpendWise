@@ -26,7 +26,7 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
           } catch (_) {}
         }
       }}
-      className="hidden lg:block fixed bottom-6 left-6 z-[10000] group focus:outline-none"
+      className="hidden lg:block fixed bottom-6 start-6 z-[10000] group focus:outline-none"
     >
       {/* Main circle — clean, no glow halo */}
       <span
@@ -37,7 +37,7 @@ const FloatingAddTransactionButton = ({ onClick, title }) => {
       </span>
 
       {/* Label on hover (desktop) */}
-      <span className="pointer-events-none absolute left-20 bottom-2 rounded-lg bg-gray-900 text-white px-3 py-1 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity hidden lg:inline-block">
+      <span className="pointer-events-none absolute start-20 bottom-2 rounded-lg bg-gray-900 text-white px-3 py-1 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity hidden lg:inline-block">
         {label}
       </span>
     </button>

@@ -112,7 +112,7 @@ const TransactionForm = ({
       {/* Actions */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
         {isDirty && (
-          <span className="text-xs text-gray-400 dark:text-gray-500 mr-auto">
+          <span className="text-xs text-gray-400 dark:text-gray-500 me-auto">
             {t('form.unsavedChanges', 'Unsaved changes')}
           </span>
         )}
@@ -123,7 +123,7 @@ const TransactionForm = ({
           disabled={isSubmitting || isLoading}
           className="px-4 py-2 h-auto text-sm"
         >
-          <X className="w-3.5 h-3.5 mr-1.5" />
+          <X className="w-3.5 h-3.5 me-1.5" />
           {t('form.cancel', 'Cancel')}
         </Button>
         <Button
@@ -133,8 +133,8 @@ const TransactionForm = ({
           className="px-5 py-2 h-auto text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
         >
           {isSubmitting || isLoading
-            ? <LoadingSpinner size="sm" className="mr-1.5" />
-            : <Save className="w-3.5 h-3.5 mr-1.5" />}
+            ? <LoadingSpinner size="sm" className="me-1.5" />
+            : <Save className="w-3.5 h-3.5 me-1.5" />}
           {isSubmitting
             ? t('form.saving', 'Saving...')
             : mode === 'create'

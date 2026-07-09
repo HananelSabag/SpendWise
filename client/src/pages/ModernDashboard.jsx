@@ -48,7 +48,6 @@ import {
 
 import ModernBalancePanel from "../components/features/dashboard/ModernBalancePanel";
 import ModernRecentTransactionsWidget from "../components/features/dashboard/ModernRecentTransactionsWidget";
-import AddTransactionModal from "../components/features/transactions/modals/AddTransactionModal";
 import FloatingAddTransactionButton from "../components/common/FloatingAddTransactionButton.jsx";
 
 // ─── Greeting ────────────────────────────────────────────────────────────────
@@ -1135,8 +1134,6 @@ const ModernDashboard = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
-
   const {
     data: dashboardData,
     isLoading,
@@ -1188,22 +1185,10 @@ const ModernDashboard = () => {
         <DesktopDashboard {...sharedProps} onRefresh={handleRefresh} />
       )}
 
-      <AddTransactionModal
-        isOpen={showAddTransaction}
-        onClose={() => setShowAddTransaction(false)}
-        onSuccess={() => {
-          setShowAddTransaction(false);
-          try {
-            window.dispatchEvent(
-              new CustomEvent("dashboard-refresh-requested"),
-            );
-          } catch (_) {}
-        }}
-      />
-
-      <FloatingAddTransactionButton
-        onClick={() => setShowAddTransaction(true)}
-      />
+      {/* No onClick — the FAB dispatches 'transaction:add', handled by the
+          global UnifiedTransactionActions; it broadcasts 'transaction-added'
+          on success, which useDashboard already listens for. */}
+      <FloatingAddTransactionButton />
     </>
   );
 };

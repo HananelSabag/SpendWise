@@ -34,7 +34,7 @@ const AdvancedFilters = ({ filters, onFilterChange, onClear }) => {
         {activeCount > 0 && (
           <Button variant="ghost" size="sm" onClick={onClear}
             className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs">
-            <X className="w-3 h-3 mr-1" /> {t('actions.clearFilters') || 'Clear'}
+            <X className="w-3 h-3 me-1" /> {t('actions.clearFilters') || 'Clear'}
           </Button>
         )}
       </div>

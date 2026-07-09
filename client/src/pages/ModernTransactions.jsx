@@ -25,7 +25,6 @@ import { api } from '../api';
 
 import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
 import QuickMonthSelector from '../components/features/transactions/QuickMonthSelector';
-import AddTransactionModal from '../components/features/transactions/modals/AddTransactionModal';
 import EditTransactionModal from '../components/features/transactions/modals/EditTransactionModal';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton';
@@ -311,7 +310,7 @@ const BulkDeleteModal = ({ isOpen, count, onClose, onConfirm }) => {
         <div className="flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">{t('actions.cancel') || 'Cancel'}</Button>
           <Button variant="destructive" onClick={onConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white">
-            <Trash2 className="w-4 h-4 mr-2" /> {t('bulkDelete.deleteAll') || 'Delete All'}
+            <Trash2 className="w-4 h-4 me-2" /> {t('bulkDelete.deleteAll') || 'Delete All'}
           </Button>
         </div>
       </div>
@@ -335,7 +334,7 @@ const LoadMoreSection = ({ loadMoreRef, isFetchingNextPage, hasMore, count, onLo
         <div className="flex justify-center py-4">
           <Button variant="outline" onClick={onLoadMore}
             className="px-8 rounded-xl border-2 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300">
-            <ChevronDown className="w-4 h-4 mr-2" />
+            <ChevronDown className="w-4 h-4 me-2" />
             {t('loadMore') || 'Load More'}
           </Button>
         </div>
@@ -392,7 +391,7 @@ const MobileTransactions = ({
           >
             <Filter className="w-4 h-4" />
             {activeCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -end-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
                 {activeCount}
               </span>
             )}
@@ -485,13 +484,13 @@ const DesktopTransactions = ({
           <Card className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex flex-col lg:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   type="text"
                   placeholder={t('search.placeholder') || 'Search transactions...'}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-10 rounded-xl"
+                  className="ps-10 h-10 rounded-xl"
                 />
               </div>
               <div className="flex gap-2 flex-wrap">
@@ -505,10 +504,10 @@ const DesktopTransactions = ({
                   onClick={() => setShowFilters(!showFilters)}
                   className="relative h-10 px-4 rounded-xl"
                 >
-                  <Filter className="w-4 h-4 mr-2" />
+                  <Filter className="w-4 h-4 me-2" />
                   {t('actions.filter') || 'Filters'}
                   {activeCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1.5 -end-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {activeCount}
                     </span>
                   )}
@@ -518,7 +517,7 @@ const DesktopTransactions = ({
                   onClick={() => { setMultiSelectMode(!multiSelectMode); if (multiSelectMode) setSelectedIds(new Set()); }}
                   className="h-10 px-4 rounded-xl"
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
+                  <CheckCircle className="w-4 h-4 me-2" />
                   {t('actions.select') || 'Select'}
                 </Button>
               </div>
@@ -539,7 +538,7 @@ const DesktopTransactions = ({
             {hasActiveSearch && (
               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <Button variant="ghost" onClick={() => { clearFilters(); setSourceFilter('all'); }} className="text-gray-500 hover:text-gray-700 text-sm">
-                  <X className="w-4 h-4 mr-2" /> {t('actions.clearFilters') || 'Clear all filters'}
+                  <X className="w-4 h-4 me-2" /> {t('actions.clearFilters') || 'Clear all filters'}
                 </Button>
               </div>
             )}
@@ -570,7 +569,7 @@ const DesktopTransactions = ({
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>{t('clearSelection') || 'Clear'}</Button>
                   <Button variant="destructive" size="sm" onClick={() => setShowBulkDeleteModal(true)}>
-                    <Trash2 className="w-4 h-4 mr-2" /> {t('actions.delete') || 'Delete'}
+                    <Trash2 className="w-4 h-4 me-2" /> {t('actions.delete') || 'Delete'}
                   </Button>
                 </div>
             </div>
@@ -619,8 +618,8 @@ const ModernTransactions = () => {
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  // ── Modal state ──
-  const [showAddTransaction, setShowAddTransaction] = useState(false);
+  // ── Modal state ── (Add lives in the global UnifiedTransactionActions —
+  // the FAB dispatches 'transaction:add'; this page only owns edit/delete)
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
@@ -812,12 +811,6 @@ const ModernTransactions = () => {
       }
 
       {/* Modals */}
-      <AddTransactionModal
-        isOpen={showAddTransaction}
-        onClose={() => setShowAddTransaction(false)}
-        onSuccess={handleTransactionSuccess}
-      />
-
       <EditTransactionModal
         isOpen={showEditModal}
         onClose={() => { setShowEditModal(false); setSelectedTransaction(null); }}
@@ -853,7 +846,10 @@ const ModernTransactions = () => {
           }}
         />
 
-      <FloatingAddTransactionButton onClick={() => setShowAddTransaction(true)} />
+      {/* No onClick — the FAB dispatches 'transaction:add', handled by the
+          global UnifiedTransactionActions; it broadcasts 'transactions:refetch'
+          on success, which this page already listens for. */}
+      <FloatingAddTransactionButton />
     </>
   );
 };
