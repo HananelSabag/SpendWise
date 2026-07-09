@@ -66,6 +66,14 @@ export default {
     later: "I'll do it later",
     laterHint: "Connect anytime from the Bank Sync page"
   },
+  billingCycle: {
+    title: "When does your financial month start?",
+    subtitle: "This is usually your salary day. We use it to calculate your dashboard totals for a real, fixed period — not just the last 30 days.",
+    dayOfMonth: "Day {{day}}",
+    pickAnyDay: "Or pick any day",
+    selectedSummary: "Your financial month starts on day {{day}} and ends the day before day {{day}} of the next month.",
+    changeLater: "You can change this anytime in your profile settings."
+  },
   welcome: {
     title: "Welcome to SpendWise!",
     subtitle: "Your smart financial companion",

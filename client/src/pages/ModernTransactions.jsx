@@ -7,9 +7,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Search, Filter, ArrowLeftRight,
-  X, CheckCircle, List, Grid3X3, Receipt,
+  X, CheckCircle, Receipt,
   ChevronDown, AlertTriangle, Trash2, Landmark, CreditCard,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 import { useTranslation, useCurrency } from '../stores';
 import { useTransactions } from '../hooks/useTransactions';
@@ -18,7 +19,9 @@ import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button, Input, Card, Modal, PageSkeleton } from '../components/ui';
 import { cn } from '../utils/helpers';
-import { institutionKind, institutionLabel } from '../components/features/bankSync/bankSyncMeta';
+import { institutionLabel } from '../components/features/bankSync/bankSyncMeta';
+import apiClient from '../api/client';
+import { api } from '../api';
 
 import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
 import QuickMonthSelector from '../components/features/transactions/QuickMonthSelector';
@@ -33,42 +36,29 @@ import AdvancedFilters from '../components/features/transactions/list/AdvancedFi
 import { MonthHeader, DayHeader } from '../components/features/transactions/list/ListHeaders';
 
 // ─── Source filter chips (bank-aware) ──────────────────────────────────────────
-// 'all' | 'manual' | a specific bank_source (yahav/leumi/max/...). Options are
-// derived from whatever sources actually appear in the loaded transactions —
-// no extra request needed just to populate the filter.
+// 'all' | 'manual' | a specific bank_source (yahav/leumi/max/...). Options come
+// from /bank-sync/stats (every synced source + its accounts) — NOT from the
+// loaded transaction pages, which would hide any source/account that hasn't
+// scrolled into view yet.
 
-function useAvailableSources(transactionsData) {
-  return useMemo(() => {
-    const set = new Set();
-    (transactionsData || []).forEach((t) => { if (t.bank_source) set.add(t.bank_source); });
-    const banks = Array.from(set).filter((s) => institutionKind(s) === 'bank');
-    const cards = Array.from(set).filter((s) => institutionKind(s) === 'credit_card');
+const SourceFilterChips = ({ syncedSources, sourceFilter, setSourceFilter, t, lang }) => {
+  const { banks, cards } = useMemo(() => {
+    const banks = [];
+    const cards = [];
+    for (const s of syncedSources || []) {
+      (s.kind === 'credit_card' ? cards : banks).push(s.source);
+    }
     return { banks, cards };
-  }, [transactionsData]);
-}
-
-// Distinct account/card numbers for one bank_source — e.g. two Isracard
-// cards under the same institution. Only meaningful once a single source
-// (not 'all'/'manual') is selected, and only shown when there's more than
-// one, so the common single-account case stays exactly as simple as before.
-function useAvailableAccounts(transactionsData, source) {
-  return useMemo(() => {
-    if (!source) return [];
-    const set = new Set();
-    (transactionsData || []).forEach((t) => {
-      if (t.bank_source === source && t.bank_account_number) set.add(t.bank_account_number);
-    });
-    return Array.from(set).sort();
-  }, [transactionsData, source]);
-}
-
-const SourceFilterChips = ({ transactionsData, sourceFilter, setSourceFilter, t }) => {
-  const { banks, cards } = useAvailableSources(transactionsData);
+  }, [syncedSources]);
   const [selectedSource, selectedAccount] = sourceFilter.split('::');
-  const accountsForSelectedSource = useAvailableAccounts(
-    transactionsData,
-    selectedSource !== 'all' && selectedSource !== 'manual' ? selectedSource : null,
-  );
+  const accountsForSelectedSource = useMemo(() => {
+    if (selectedSource === 'all' || selectedSource === 'manual') return [];
+    const src = (syncedSources || []).find((s) => s.source === selectedSource);
+    return (src?.accounts || [])
+      .map((a) => a.account_number)
+      .filter(Boolean)
+      .sort();
+  }, [syncedSources, selectedSource]);
 
   const groups = [
     {
@@ -82,12 +72,12 @@ const SourceFilterChips = ({ transactionsData, sourceFilter, setSourceFilter, t 
     {
       key: 'banks',
       label: t('source.banks', 'Bank accounts'),
-      chips: banks.map((s) => ({ key: s, label: institutionLabel(s), icon: Landmark })),
+      chips: banks.map((s) => ({ key: s, label: institutionLabel(s, lang), icon: Landmark })),
     },
     {
       key: 'cards',
       label: t('source.cards', 'Credit companies'),
-      chips: cards.map((s) => ({ key: s, label: institutionLabel(s), icon: CreditCard })),
+      chips: cards.map((s) => ({ key: s, label: institutionLabel(s, lang), icon: CreditCard })),
     },
   ];
 
@@ -276,11 +266,14 @@ const TransactionList = ({
 
 const StatsRow = ({ summary, formatCurrency }) => {
   const { t } = useTranslation('transactions');
+  const net = summary.net;
   const items = [
     { label: t('title') || 'Transactions', value: summary.count },
     { label: t('types.income') || 'Income', value: formatCurrency(summary.totalIncome), color: 'green' },
     { label: t('types.expense') || 'Expenses', value: formatCurrency(summary.totalExpenses), color: 'red' },
-    { label: t('source.bankSynced', 'Bank-synced'), value: `${summary.bankSyncedCount} (${Math.round(summary.bankSyncedPercentage)}%)` },
+    // Signed net of the filtered set — clearer than the old "bank-synced %"
+    // (whose numbers only covered the loaded pages anyway).
+    { label: t('stats.net', 'Net'), value: `${net >= 0 ? '+' : '−'}${formatCurrency(Math.abs(net))}`, color: net >= 0 ? 'green' : 'red' },
   ];
 
   return (
@@ -363,9 +356,10 @@ const MobileTransactions = ({
   sourceFilter, setSourceFilter,
   filters, onFilterChange, clearFilters,
   availableMonths,
-  transactions, transactionsData, transactionsLoading,
+  transactions, syncedSources, transactionsLoading,
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
   onEdit, onDelete, onDuplicate,
+  lang,
 }) => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const { t } = useTranslation('transactions');
@@ -413,10 +407,11 @@ const MobileTransactions = ({
         {/* Source chips — the bank-aware quick filter */}
         <div className="px-3 py-2">
           <SourceFilterChips
-            transactionsData={transactionsData}
+            syncedSources={syncedSources}
             sourceFilter={sourceFilter}
             setSourceFilter={setSourceFilter}
             t={t}
+            lang={lang}
           />
         </div>
       </div>
@@ -462,18 +457,18 @@ const DesktopTransactions = ({
   filters, onFilterChange, clearFilters,
   showFilters, setShowFilters,
   availableMonths,
-  transactions, transactionsData, transactionsLoading,
+  transactions, syncedSources, transactionsLoading,
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
   summary,
   formatCurrency,
   onEdit, onDelete, onDuplicate,
   selectedIds, onSelect, multiSelectMode, setMultiSelectMode, setSelectedIds,
   setShowBulkDeleteModal,
-  viewMode, setViewMode,
+  lang,
 }) => {
   const { t } = useTranslation('transactions');
   const activeCount = countActiveFilters(filters);
-  const hasActiveSearch = searchQuery || Object.values(filters).some((f) => f !== 'all' && f !== '') || sourceFilter !== 'all';
+  const hasActiveSearch = Boolean(searchQuery) || activeCount > 0 || filters.month !== 'all' || sourceFilter !== 'all';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
@@ -519,13 +514,6 @@ const DesktopTransactions = ({
                   )}
                 </Button>
                 <Button
-                  variant={viewMode === 'grid' ? 'default' : 'outline'}
-                  onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-                  className="h-10 px-3 rounded-xl"
-                >
-                  {viewMode === 'list' ? <Grid3X3 className="w-4 h-4" /> : <List className="w-4 h-4" />}
-                </Button>
-                <Button
                   variant={multiSelectMode ? 'default' : 'outline'}
                   onClick={() => { setMultiSelectMode(!multiSelectMode); if (multiSelectMode) setSelectedIds(new Set()); }}
                   className="h-10 px-4 rounded-xl"
@@ -539,10 +527,11 @@ const DesktopTransactions = ({
             {/* Source chips — the bank-aware quick filter */}
             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
               <SourceFilterChips
-                transactionsData={transactionsData}
+                syncedSources={syncedSources}
                 sourceFilter={sourceFilter}
                 setSourceFilter={setSourceFilter}
                 t={t}
+                lang={lang}
               />
             </div>
 
@@ -618,16 +607,15 @@ const DesktopTransactions = ({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const ModernTransactions = () => {
-  const { t } = useTranslation('transactions');
+  const { t, isRTL, currentLanguage } = useTranslation('transactions');
   const { formatCurrency } = useCurrency();
   const isMobile = useIsMobile();
 
   // ── UI state (declared before hooks that depend on them) ──
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [sourceFilter, setSourceFilter] = useState('all'); // all | manual | <bank_source>
+  const [sourceFilter, setSourceFilter] = useState('all'); // all | manual | <bank_source>[::account]
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState('list');
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -643,10 +631,17 @@ const ModernTransactions = () => {
   const observerRef = useRef(null);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
+  // Amount inputs are typed — debounce so we don't refetch per keystroke.
+  const debouncedAmountMin = useDebounce(filters.amountMin, 400);
+  const debouncedAmountMax = useDebounce(filters.amountMax, 400);
 
-  // ── Data hooks ──
+  const [selectedSource, selectedAccount] = sourceFilter.split('::');
+
+  // ── Data hooks ── (source/account/amount are server-side filters now, so
+  // the list, the stats tiles and pagination all describe the same set)
   const {
-    transactions: transactionsData,
+    transactions,
+    summary: serverSummary,
     loading: transactionsLoading,
     refetch: refetchTransactions,
     hasNextPage: hasMore,
@@ -658,67 +653,63 @@ const ModernTransactions = () => {
       type: filters.type,
       month: filters.month,
       search: debouncedSearch,
+      source: selectedSource !== 'all' ? selectedSource : null,
+      account: selectedAccount || null,
+      amountMin: debouncedAmountMin,
+      amountMax: debouncedAmountMax,
     },
     pageSize: 50,
   });
 
   const { deleteTransaction, freshBulkDelete } = useTransactionActions();
 
-  // ── Client-side filtering (amount range + source — server can't filter these) ──
-  const transactions = useMemo(() => {
-    if (!transactionsData || !Array.isArray(transactionsData)) return [];
-    let filtered = [...transactionsData];
-    // Bank-aware source filter: 'manual', a specific institution's bank_source,
-    // or 'bank_source::account_number' to isolate one account/card.
-    if (sourceFilter === 'manual') {
-      filtered = filtered.filter((t) => !t.bank_source);
-    } else if (sourceFilter !== 'all') {
-      const [src, acct] = sourceFilter.split('::');
-      filtered = filtered.filter((t) => t.bank_source === src && (!acct || t.bank_account_number === acct));
-    }
-    if (filters.amountMin) {
-      const min = parseFloat(filters.amountMin);
-      if (!isNaN(min)) filtered = filtered.filter((t) => Math.abs(parseFloat(t.amount)) >= min);
-    }
-    if (filters.amountMax) {
-      const max = parseFloat(filters.amountMax);
-      if (!isNaN(max)) filtered = filtered.filter((t) => Math.abs(parseFloat(t.amount)) <= max);
-    }
-    return filtered;
-  }, [transactionsData, filters.amountMin, filters.amountMax, sourceFilter]);
+  // Synced sources (+ their accounts) for the filter chips — from
+  // /bank-sync/stats, shared with the dashboard's cache key.
+  const { data: syncedSources = [] } = useQuery({
+    queryKey: ['bankSyncStats'],
+    queryFn: () => apiClient.get('/bank-sync/stats').then((r) => r.data.sources || []),
+    staleTime: 5 * 60_000,
+  });
 
   // ── Derived data ──
+  // Month options from the server (all months with data), not from whichever
+  // pages happen to be loaded.
+  const { data: monthKeys = [] } = useQuery({
+    queryKey: ['transactionMonths'],
+    queryFn: async () => {
+      const res = await api.transactions.getMonths();
+      return res.success ? res.data?.months || [] : [];
+    },
+    staleTime: 5 * 60_000,
+  });
   const availableMonths = useMemo(() => {
-    if (!Array.isArray(transactionsData)) return [];
-    const set = new Set();
-    transactionsData.forEach((tx) => {
-      const d = new Date(tx.date);
-      set.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    });
-    return Array.from(set).sort((a, b) => b.localeCompare(a)).map((mk) => {
+    const locale = isRTL ? 'he-IL' : 'en-US';
+    return monthKeys.map((mk) => {
       const [year, month] = mk.split('-');
       const d = new Date(parseInt(year), parseInt(month) - 1, 1);
       return {
         key: mk,
-        label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-        shortLabel: d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        label: d.toLocaleDateString(locale, { month: 'long', year: 'numeric' }),
+        shortLabel: d.toLocaleDateString(locale, { month: 'short', year: 'numeric' }),
       };
     });
-  }, [transactionsData]);
+  }, [monthKeys, isRTL]);
 
   const summary = useMemo(() => {
+    if (serverSummary) {
+      return {
+        count: serverSummary.count ?? 0,
+        totalIncome: serverSummary.totalIncome ?? 0,
+        totalExpenses: serverSummary.totalExpenses ?? 0,
+        net: serverSummary.netAmount ?? (serverSummary.totalIncome ?? 0) - (serverSummary.totalExpenses ?? 0),
+      };
+    }
+    // Fallback (older server / offline cache): compute from loaded rows.
     const txs = transactions || [];
     const totalIncome = txs.filter((t) => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0);
     const totalExpenses = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0);
-    const bankSyncedCount = txs.filter((t) => t.bank_source).length;
-    return {
-      count: txs.length,
-      totalIncome,
-      totalExpenses,
-      bankSyncedCount,
-      bankSyncedPercentage: txs.length > 0 ? (bankSyncedCount / txs.length) * 100 : 0,
-    };
-  }, [transactions]);
+    return { count: txs.length, totalIncome, totalExpenses, net: totalIncome - totalExpenses };
+  }, [serverSummary, transactions]);
 
   // ── Handlers ──
   // Create/update/delete mutations (useTransactions) show their own toasts,
@@ -798,18 +789,18 @@ const ModernTransactions = () => {
     filters, onFilterChange, clearFilters,
     showFilters, setShowFilters,
     availableMonths,
-    transactions, transactionsData, transactionsLoading,
+    transactions, syncedSources, transactionsLoading,
     loadMoreRef, isFetchingNextPage, hasMore, loadMore,
     summary, formatCurrency,
     onEdit, onDelete, onDuplicate,
     selectedIds, onSelect,
     multiSelectMode, setMultiSelectMode, setSelectedIds,
     setShowBulkDeleteModal,
-    viewMode, setViewMode,
+    lang: currentLanguage,
   };
 
   // Show skeleton on first load before any data has arrived
-  if (transactionsLoading && (!transactionsData || transactionsData.length === 0)) {
+  if (transactionsLoading && (!transactions || transactions.length === 0)) {
     return <PageSkeleton page="transactions" />;
   }
 

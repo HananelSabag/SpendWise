@@ -5,12 +5,12 @@
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { ArrowRight, Plus, RefreshCw, Landmark } from 'lucide-react';
+import { ArrowRight, Plus, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation, useCurrency } from '../../../stores';
 import { useTransactions } from '../../../hooks/useTransactions';
 import { cn } from '../../../utils/helpers';
-import { institutionLabel } from '../bankSync/bankSyncMeta';
+import { institutionLabel, institutionIcon, bankBrand } from '../bankSync/bankSyncMeta';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -26,26 +26,19 @@ const formatRelativeDate = (dateStr, t) => {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
-const SourceBadge = ({ type, isBankSynced }) => (
-  <div className={cn(
-    'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
-    type === 'income'
-      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-  )}>
-    {isBankSynced ? <Landmark className="w-4 h-4" /> : (type === 'income' ? 'I' : 'E')}
-  </div>
-);
-
 // ─── Transaction row ─────────────────────────────────────────────────────────
+// Same visual language as ModernTransactionCard on the transactions page:
+// brand-gradient source icon, green income / red expense amounts, translated
+// institution names — one entity, one look.
 
-const TxRow = ({ transaction, formatCurrency, t }) => {
+const TxRow = ({ transaction, formatCurrency, t, lang }) => {
   const isIncome = transaction.type === 'income';
   const isBankSynced = Boolean(transaction.bank_source);
   const amount = parseFloat(transaction.amount) || 0;
   const dateStr = transaction.transaction_datetime || transaction.created_at || transaction.date;
+  const Icon = institutionIcon(transaction.bank_source);
   const sourceLabel = isBankSynced
-    ? institutionLabel(transaction.bank_source)
+    ? institutionLabel(transaction.bank_source, lang)
     : t('manualEntry', { fallback: 'Manual entry' });
 
   return (
@@ -54,23 +47,30 @@ const TxRow = ({ transaction, formatCurrency, t }) => {
       animate={{ opacity: 1, y: 0 }}
       className="flex items-center gap-3 py-3 border-b border-gray-100 dark:border-gray-700/50 last:border-0"
     >
-      <SourceBadge type={transaction.type} isBankSynced={isBankSynced} />
+      <div className={cn(
+        'w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0',
+        isBankSynced
+          ? `bg-gradient-to-br ${bankBrand(transaction.bank_source).gradient} text-white`
+          : 'bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400'
+      )}>
+        <Icon className="w-4 h-4" />
+      </div>
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
           {transaction.description || (isIncome ? 'Income' : 'Expense')}
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500">
-          <span className="mr-1">{sourceLabel} · </span>
+          <span className="me-1">{sourceLabel} · </span>
           {formatRelativeDate(dateStr, t)}
         </p>
       </div>
 
       <span className={cn(
-        'text-sm font-bold flex-shrink-0',
-        isIncome ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'
+        'text-sm font-bold flex-shrink-0 tabular-nums',
+        isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
       )}>
-        {isIncome ? '+' : '-'}{formatCurrency(Math.abs(amount))}
+        {isIncome ? '+' : '−'}{formatCurrency(Math.abs(amount))}
       </span>
     </motion.div>
   );
@@ -88,7 +88,7 @@ const ModernRecentTransactionsWidget = ({
   preloadedTransactions = null,
   preloadedLoading = false,
 }) => {
-  const { t } = useTranslation('dashboard');
+  const { t, currentLanguage } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
 
   // Only fire our own fetch when the parent didn't preload anything.
@@ -112,8 +112,20 @@ const ModernRecentTransactionsWidget = ({
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    try { await refetch?.(); } finally { setRefreshing(false); }
-  }, [refetch]);
+    try {
+      if (preloadedTransactions) {
+        // Preloaded data comes from the dashboard query — refetching our own
+        // (disabled) query would fetch data nothing displays. Ask the
+        // dashboard to refresh instead (useDashboard listens for this).
+        window.dispatchEvent(new CustomEvent('dashboard-refresh-requested'));
+        await new Promise((r) => setTimeout(r, 1200));
+      } else {
+        await refetch?.();
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetch, preloadedTransactions]);
 
   // ✅ CRASH FIX: always return { recent, total } — never bare array
   const processedTransactions = useMemo(() => {
@@ -202,7 +214,7 @@ const ModernRecentTransactionsWidget = ({
           /* Transaction list */
           <AnimatePresence initial={false}>
             {recent.map(tx => (
-              <TxRow key={tx.id} transaction={tx} formatCurrency={formatCurrency} t={t} />
+              <TxRow key={tx.id} transaction={tx} formatCurrency={formatCurrency} t={t} lang={currentLanguage} />
             ))}
           </AnimatePresence>
         )}

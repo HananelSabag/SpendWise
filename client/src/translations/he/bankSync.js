@@ -35,6 +35,10 @@ export default {
 
   // Errors
   loadError: 'לא ניתן לטעון נתוני סנכרון',
+  saveError: 'השמירה נכשלה — נסה שוב',
+  statsLoadError: 'לא הצלחנו לטעון את היתרה — הנתונים שלך בטוחים, זו בעיית תקשורת',
+  connectionsLoadError: 'לא הצלחנו לטעון את חיבורי הבנק — נסה שוב',
+  retry: 'נסה שוב',
 
   // ── חיבור בנק (שירות עצמי) ──
   connectBank: 'חבר בנק',
@@ -85,6 +89,9 @@ export default {
   fieldNum: 'קוד מזהה',
   displayNameLabel: 'כינוי (אופציונלי)',
   displayNamePlaceholder: 'למשל: החשבון הראשי שלי',
+  replacesExistingNote: 'המוסד הזה כבר מחובר — שמירה כאן מחליפה את פרטי ההתחברות השמורים.',
+  betaBadge: 'בטא',
+  betaNote: 'המוסד הזה נתמך במלואו אבל עדיין לא נבדק מול חשבון אמיתי. אם סנכרון נכשל — ספרו לנו.',
 
   // הסבר אבטחה
   securityTitle: 'הפרטים שלך מוגנים',
@@ -98,14 +105,17 @@ export default {
   statusActive: 'פעיל',
   statusPaused: 'מושהה',
   statusError: 'דורש טיפול',
-  pausedAfterFailures: 'הושהה אחרי כשלונות חוזרים — בדוק את פרטי ההתחברות והפעל מחדש',
+  pausedAfterFailures: 'הושהה אחרי כשלונות חוזרים — בדרך כלל סיסמת בנק שהשתנתה',
+  tryAgain: 'נסה שוב',
   lastSyncLabel: 'סנכרון אחרון',
   neverSynced: 'טרם סונכרן',
   pause: 'השהה',
   resume: 'הפעל מחדש',
   delete: 'מחק',
   deleteConfirmTitle: 'למחוק את החיבור?',
-  deleteConfirmBody: 'פרטי ההתחברות המוצפנים יימחקו לצמיתות. העסקאות שסונכרנו יישארו ב-SpendWise.',
+  deleteConfirmBody: 'פרטי ההתחברות המוצפנים יימחקו לצמיתות.',
+  deleteKeepsDataNote: 'העסקאות והיתרות שסונכרנו יישארו ב-SpendWise, אלא אם תסמן את התיבה למטה.',
+  deletePurgeLabel: 'מחק גם את כל העסקאות והיתרות שסונכרנו מהמקור הזה',
   cancel: 'ביטול',
 
   // מצבי משימה חיים (בכרטיס החיבור)
@@ -162,11 +172,23 @@ export default {
   syncMethodPairedSince: 'מחובר מאז {{date}}',
   syncMethodUnpair: 'חזרה לשרת של SpendWise',
   syncMethodUnpairConfirmTitle: 'להחליף שיטת סנכרון?',
+  syncMethodSwitchConfirmTitle: 'להעביר את הסנכרון למחשב שלך?',
   syncMethodUnpairConfirmBody: 'הבנקים שלך היו מחוברים דרך {{label}}. אחרי המעבר תצטרך לחבר אותם מחדש - התחברויות שמורות לא עוברות אוטומטית.',
   syncMethodSwitchToOwnConfirmBody: 'אחרי חיבור המחשב שלך תצטרך לחבר מחדש את הבנקים - התחברויות שמורות לא עוברות אוטומטית למכשיר החדש.',
   syncMethodConfirm: 'החלף בכל זאת',
   syncMethodCancel: 'ביטול',
   syncMethodError: 'לא הצלחנו להגיע לשירות החיבור - נסה שוב',
+
+  // חשבון בנק מול חברת אשראי — הסבר המודל בעמוד הסנכרון
+  sourceModelTitle: 'חשבון בנק או חברת אשראי?',
+  sourceModelSubtitle: 'SpendWise מפריד ביניהם כדי שהדשבורד יציג תזרים אמיתי בלי לספור חיובי אשראי פעמיים.',
+  sourceModelBankTitle: 'חשבון בנק',
+  sourceModelBankText: 'מציג יתרה אמיתית, משכורת/הכנסות, העברות, משיכות מזומן, עמלות, הלוואות ואת חיוב האשראי החודשי המרוכז.',
+  sourceModelCardTitle: 'חברת אשראי',
+  sourceModelCardText: 'מציגה קניות מפורטות בכרטיס. אין לה יתרת בנק; כשיש פירוט קניות, SpendWise לא סופר שוב את חיוב האשראי שירד מהבנק.',
+
+  // היקף הנתונים בכרטיס הסטטיסטיקה — כסף לפי תקופה, ספירה מאז ומעולם
+  statsScopeNote: 'הכנסות והוצאות מתייחסות לתקופה הפיננסית הנוכחית; מונה העסקאות כולל את כל מה שסונכרן אי פעם.',
 
   // איך זה עובד
   howItWorks: 'איך זה עובד?',

@@ -141,16 +141,15 @@ export const useTransactionActions = (context = 'transactions') => {
 
   /**
    * Update Transaction - Context-aware immediate refresh
-   * 
-   * @param {string} type - Transaction type
+   *
    * @param {number} id - Transaction ID
-   * @param {object} data - Updated transaction data
+   * @param {object} data - Updated transaction data (includes type)
    * @returns {Promise} - Update result
    */
-  const updateTransaction = useCallback(async (type, id, data) => {
+  const updateTransaction = useCallback(async (id, data) => {
     try {
-      logAction(`Updating transaction ${id}`, { type });
-      const result = await baseUpdateTransaction(type, id, data);
+      logAction(`Updating transaction ${id}`, { type: data?.type });
+      const result = await baseUpdateTransaction(id, data);
       
       await invalidateRelevantQueries('high');
       
@@ -251,7 +250,7 @@ export const useTransactionActions = (context = 'transactions') => {
             case 'delete':
               return baseDeleteTransaction(id);
             case 'update':
-              return baseUpdateTransaction(options.type, id, options.data);
+              return baseUpdateTransaction(id, options.data);
             default:
               throw new Error(`Unsupported bulk operation: ${operation}`);
           }

@@ -15,7 +15,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, RefreshCw, Landmark, CreditCard, Plus } from 'lucide-react';
+import { Building2, RefreshCw, Landmark, CreditCard, Plus, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency, useTranslation } from '../../../stores';
@@ -72,13 +72,13 @@ const SkeletonBox = ({ className }) => (
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ModernBalancePanel = ({ className = '' }) => {
   const { formatCurrency } = useCurrency();
-  const { t } = useTranslation('bankSync');
+  const { t, currentLanguage } = useTranslation('bankSync');
 
-  const { data: sources, isLoading, refetch, isFetching } = useQuery({
+  const { data: sources, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['bankSyncStats'],
     queryFn: () => apiClient.get('/bank-sync/stats').then(r => r.data.sources || []),
     staleTime: 5 * 60_000,
-    retry: false,
+    retry: 1,
   });
 
   const hasSynced = sources && sources.length > 0;
@@ -112,6 +112,32 @@ const ModernBalancePanel = ({ className = '' }) => {
           <SkeletonBox className="h-6 w-20 rounded-full" />
           <SkeletonBox className="h-6 w-20 rounded-full" />
         </div>
+      </div>
+    );
+  }
+
+  // ── Load failure — say so. NEVER show the "connect a bank" CTA on an
+  // error: telling a user with connected banks that they have none is the
+  // fastest way to make a finance app feel untrustworthy. ──
+  if (isError && !sources) {
+    return (
+      <div className={cn(
+        'rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20',
+        'p-4 flex items-center gap-3',
+        className,
+      )}>
+        <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+        <p className="text-sm text-red-700 dark:text-red-300 flex-1 min-w-0">
+          {t('statsLoadError')}
+        </p>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+        >
+          <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
+          {t('retry')}
+        </button>
       </div>
     );
   }
@@ -187,7 +213,7 @@ const ModernBalancePanel = ({ className = '' }) => {
             <p className="text-2xl font-bold opacity-50">{t('unavailable')}</p>
             <p className="text-[11px] opacity-50 mt-0.5">
               {hasBankSource
-                ? t('unavailableNote', { bank: institutionLabel(bankSources[0]?.source) })
+                ? t('unavailableNote', { bank: institutionLabel(bankSources[0]?.source, currentLanguage) })
                 : t('balanceNeedsBank')}
             </p>
           </div>
@@ -198,7 +224,7 @@ const ModernBalancePanel = ({ className = '' }) => {
           <div className="mt-2 space-y-0.5">
             {accountsWithBalance.map((a, i) => (
               <p key={i} className="text-[11px] opacity-60">
-                {institutionLabel(a.source)}
+                {institutionLabel(a.source, currentLanguage)}
                 {a.account_number ? ` · ${a.account_number}` : ''}
                 {' · '}{formatCurrency(Number(a.balance))}
               </p>
@@ -217,7 +243,7 @@ const ModernBalancePanel = ({ className = '' }) => {
                 className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium"
               >
                 <ChipIcon className="w-2.5 h-2.5" />
-                {institutionLabel(src.source)}
+                {institutionLabel(src.source, currentLanguage)}
                 <span className="opacity-60">· {t('transactions', { count: src.total })}</span>
               </span>
             );

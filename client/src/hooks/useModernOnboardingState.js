@@ -67,7 +67,7 @@ export const useModernOnboardingState = (options = {}) => {
       password: '',
       confirmPassword: '',
       language: currentLanguage || 'en',
-      currency: 'USD',
+      currency: 'ILS',
       theme: 'auto'
     },
     // Step 2: Education (understanding concepts)
@@ -279,7 +279,7 @@ export const useModernOnboardingState = (options = {}) => {
         password: '',
         confirmPassword: '',
         language: currentLanguage || 'en',
-        currency: 'USD',
+        currency: 'ILS',
         theme: 'auto'
       },
       education: {

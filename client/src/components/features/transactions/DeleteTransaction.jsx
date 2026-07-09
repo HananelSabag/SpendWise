@@ -17,7 +17,7 @@ const DeleteTransaction = ({
   onSuccess,
   isDeleting = false,
 }) => {
-  const { t, isRTL }        = useTranslation('transactions');
+  const { t, isRTL, currentLanguage } = useTranslation('transactions');
   const { formatCurrency }   = useCurrency();
 
   const transactionData = useMemo(() => {
@@ -28,10 +28,10 @@ const DeleteTransaction = ({
       displayDate: dateHelpers.format(transaction.date, 'MMM dd, yyyy'),
       description: transaction.description || t('noDescription', 'No description'),
       sourceLabel: transaction.bank_source
-        ? institutionLabel(transaction.bank_source)
+        ? institutionLabel(transaction.bank_source, currentLanguage)
         : t('manualEntry', 'Manual entry'),
     };
-  }, [transaction, t]);
+  }, [transaction, t, currentLanguage]);
 
   const handleDelete = useCallback(async () => {
     if (!transaction) return;
@@ -55,12 +55,17 @@ const DeleteTransaction = ({
     >
       <div className="p-5 space-y-4" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
 
-        {/* Warning banner */}
+        {/* Warning banner — bank rows are hidden (they'd re-import from the
+            bank otherwise), manual rows are really deleted. Say which. */}
         <div className="flex items-center gap-3 p-3.5 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-800">
           <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-red-900 dark:text-red-100">{t('delete.description', 'This action cannot be undone')}</p>
-            <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">{t('delete.warning', 'The transaction will be permanently removed')}</p>
+            <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
+              {transaction.bank_source
+                ? t('delete.bankWarning', 'The transaction will be removed from your data and will not re-import on future syncs')
+                : t('delete.warning', 'The transaction will be permanently removed')}
+            </p>
           </div>
         </div>
 

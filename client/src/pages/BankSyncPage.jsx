@@ -48,9 +48,17 @@ export default function BankSyncPage() {
   const cycleDay = Number(user?.billing_cycle_day) || 1;
   const queryClient = useQueryClient();
   const [showConnect, setShowConnect] = useState(false);
+  // Set when "update credentials" is clicked on a failed connection —
+  // ConnectBankModal then skips the picker and goes straight to that bank.
+  const [connectInitialBank, setConnectInitialBank] = useState(null);
   const [showCyclePicker, setShowCyclePicker] = useState(false);
   const [showSourceGuide, setShowSourceGuide] = useState(false);
   const [savingCycle, setSavingCycle] = useState(false);
+
+  const openConnect = (bankSource = null) => {
+    setConnectInitialBank(bankSource);
+    setShowConnect(true);
+  };
 
   // Change the financial-cycle day inline (same billing_cycle_day the Profile
   // editor writes) and refresh the dashboard so its periods recompute.
@@ -66,10 +74,10 @@ export default function BankSyncPage() {
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['financialCycle'] });
       } else {
-        toast.error(t('loadError'));
+        toast.error(t('saveError'));
       }
     } catch {
-      toast.error(t('loadError'));
+      toast.error(t('saveError'));
     } finally {
       setSavingCycle(false);
     }
@@ -81,7 +89,12 @@ export default function BankSyncPage() {
     staleTime: 60_000,
   });
 
-  const { data: connections = [], isLoading: connsLoading } = useQuery({
+  const {
+    data: connections = [],
+    isLoading: connsLoading,
+    isError: connsError,
+    refetch: refetchConnections,
+  } = useQuery({
     queryKey: ['bankConnections'],
     queryFn: bankConnectionsApi.list,
     staleTime: 30_000,
@@ -306,7 +319,22 @@ export default function BankSyncPage() {
 
               {connsLoading && <div className="h-32 rounded-xl bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />}
 
-              {!connsLoading && connections.length === 0 && (
+              {/* A failed request is NOT "you have no connections" — never
+                  show the first-run connect CTA on an error. */}
+              {!connsLoading && connsError && connections.length === 0 && (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                  <p className="text-sm text-red-700 dark:text-red-300 flex-1">{t('connectionsLoadError')}</p>
+                  <button
+                    onClick={() => refetchConnections()}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 text-xs font-semibold text-red-600 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                  >
+                    {t('retry')}
+                  </button>
+                </div>
+              )}
+
+              {!connsLoading && !connsError && connections.length === 0 && (
                 <motion.button
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   onClick={() => setShowConnect(true)}
@@ -329,7 +357,7 @@ export default function BankSyncPage() {
                   />
                   {bankConnections.length > 0
                     ? bankConnections.map(conn => (
-                        <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} />
+                        <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} onUpdateCredentials={openConnect} />
                       ))
                     : <SectionEmptyPrompt icon={Landmark} label={t('bankSectionEmpty')} cta={t('addBank')} />
                   }
@@ -345,7 +373,7 @@ export default function BankSyncPage() {
                   />
                   {cardConnections.length > 0
                     ? cardConnections.map(conn => (
-                        <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} />
+                        <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} onUpdateCredentials={openConnect} />
                       ))
                     : <SectionEmptyPrompt icon={CreditCard} label={t('cardSectionEmpty')} cta={t('addCard')} />
                   }
@@ -405,7 +433,12 @@ export default function BankSyncPage() {
         </div>
       </div>
 
-      <ConnectBankModal isOpen={showConnect} onClose={() => setShowConnect(false)} />
+      <ConnectBankModal
+        isOpen={showConnect}
+        onClose={() => { setShowConnect(false); setConnectInitialBank(null); }}
+        initialBank={connectInitialBank}
+        existingSources={connections.map(c => c.bank_source)}
+      />
     </div>
   );
 }

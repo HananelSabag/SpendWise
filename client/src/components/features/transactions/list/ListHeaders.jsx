@@ -15,8 +15,11 @@ export const MonthHeader = ({ title, totalIncome, totalExpenses }) => {
   const net = totalIncome - totalExpenses;
 
   // Quiet glass bar — the month NET is the only colored element.
+  // Sticky on desktop only: on mobile the search/filter block is already
+  // sticky at top-0, and a second top-0 sticky bar fights it for the same
+  // pixels.
   return (
-    <div className="glass-card flex items-center justify-between gap-3 px-4 py-2.5 mb-3 rounded-xl sticky top-0 z-20">
+    <div className="glass-card flex items-center justify-between gap-3 px-4 py-2.5 mb-3 rounded-xl lg:sticky lg:top-0 z-10">
       <div className="flex items-center gap-2 min-w-0">
         <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
         <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm truncate">{title}</span>

@@ -286,9 +286,21 @@ export default {
     net: "Net",
     cycleDay: "Cycle day {{day}}",
     cycleHint: "Your billing cycle starts on day {{day}} of each month",
-    notSet: "Set your financial cycle day so these totals match your real month, not the 1st",
-    cardSettlementExcluded: "{{amount}} in bank card-payment withdrawals is shown separately and not counted twice because card purchase details are connected."
+    notSet: "Set your financial cycle day so these totals match your real month, not the 1st"
   },
+  moneyModel: {
+    title: "How this period is counted",
+    subtitle: "Banks show real account cash flow. Credit companies show purchase detail. SpendWise avoids counting the same card bill twice.",
+    bankDirect: "Bank account movement",
+    bankDirectHint: "Cash flow that really left or entered your bank account.",
+    cardPurchases: "Credit-card purchases",
+    cardPurchasesHint: "Itemized purchases from credit companies, counted by purchase date.",
+    manual: "Manual entries",
+    manualHint: "One-time transactions you added yourself.",
+    settlementsExcluded: "{{amount}} in bank card-payment withdrawals is not counted again because the card purchases are connected.",
+    settlementsCounted: "{{amount}} in card-payment withdrawals is counted from the bank because no card-company purchase detail is connected."
+  },
+  mainAccount: "Main account",
   sourcesOverview: {
     banksTitle: "Bank accounts",
     cardsTitle: "Credit companies",
@@ -304,6 +316,7 @@ export default {
     staleWarning: "Not synced in over a day",
     neverSynced: "Not synced yet",
     syncedAgo: "Synced {{time}}",
+    syncedRecently: "Synced recently",
     cardExplainer: "Card charges appear here per purchase, then as one summarized charge in your bank account",
     accountAsOf: "{{count}} transactions · as of {{date}}",
     accountNoActivity: "No transactions this period",
@@ -318,7 +331,8 @@ export default {
   breakdown: {
     title: "Spending by type",
     auto: "auto",
-    autoHint: "\"auto\" groups are guessed from bank transaction descriptions"
+    autoHint: "\"auto\" groups are guessed from bank transaction descriptions",
+    other: "Other"
   },
   manualEntry: "Manual entry",
   manualEntryActions: {

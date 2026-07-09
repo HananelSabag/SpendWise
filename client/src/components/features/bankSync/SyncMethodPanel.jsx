@@ -19,8 +19,8 @@ import { ConfirmModal } from '../../ui';
 import { useToast } from '../../../hooks/useToast';
 import agentPairingApi from '../../../api/agentPairing';
 
-// Update this when a new Agent build is released (see spendwise-agent repo → Releases).
-const AGENT_DOWNLOAD_URL = 'https://github.com/HananelSabag/spendwise-agent/releases/download/v26.7.9/SpendWiseAgent-ForUsers.zip';
+// Always points at the newest release — no client change needed per Agent build.
+const AGENT_DOWNLOAD_URL = 'https://github.com/HananelSabag/spendwise-agent/releases/latest/download/SpendWiseAgent-ForUsers.zip';
 
 export default function SyncMethodPanel({ t, hasConnections }) {
   const toast = useToast();
@@ -165,7 +165,7 @@ export default function SyncMethodPanel({ t, hasConnections }) {
         isOpen={confirmAction === 'start'}
         onClose={() => setConfirmAction(null)}
         onConfirm={() => startMutation.mutate()}
-        title={t('syncMethodUnpairConfirmTitle')}
+        title={t('syncMethodSwitchConfirmTitle')}
         message={t('syncMethodSwitchToOwnConfirmBody')}
         confirmText={t('syncMethodConfirm')}
         cancelText={t('syncMethodCancel')}

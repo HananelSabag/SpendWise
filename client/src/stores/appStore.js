@@ -601,9 +601,17 @@ export const useAppStore = create(
       {
         name: 'spendwise-app',
         storage: createJSONStorage(() => localStorage),
+        // Currency is pinned to ILS: all synced bank data is ILS and the old
+        // display-currency picker only swapped the symbol (₪14,632 rendered
+        // as "$14,632"). The pin also neutralizes any 'USD' persisted by
+        // older builds.
+        merge: (persistedState, currentState) => ({
+          ...currentState,
+          ...(persistedState || {}),
+          currency: 'ILS',
+        }),
         partialize: (state) => ({
           // Exclude theme and accessibility so they are session-only
-          currency: state.currency,
           currencyPosition: state.currencyPosition,
           decimalPlaces: state.decimalPlaces,
           thousandSeparator: state.thousandSeparator,

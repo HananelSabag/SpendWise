@@ -34,28 +34,33 @@ export function bankBrand(source) {
 // credit card company (billing-cycle charges, no real balance); this is the
 // single client-side source of truth for that distinction and display name.
 export const INSTITUTIONS = {
-  yahav:         { kind: 'bank',        label: 'Bank Yahav' },
-  hapoalim:      { kind: 'bank',        label: 'Bank Hapoalim' },
-  leumi:         { kind: 'bank',        label: 'Bank Leumi' },
-  mizrahi:       { kind: 'bank',        label: 'Mizrahi Bank' },
-  discount:      { kind: 'bank',        label: 'Discount Bank' },
-  mercantile:    { kind: 'bank',        label: 'Mercantile Bank' },
-  otsar_hahayal: { kind: 'bank',        label: 'Bank Otsar Hahayal' },
-  beinleumi:     { kind: 'bank',        label: 'Beinleumi' },
-  massad:        { kind: 'bank',        label: 'Massad' },
-  pagi:          { kind: 'bank',        label: 'Pagi' },
-  isracard:      { kind: 'credit_card', label: 'Isracard' },
-  amex:          { kind: 'credit_card', label: 'Amex' },
-  visa_cal:      { kind: 'credit_card', label: 'Visa Cal' },
-  max:           { kind: 'credit_card', label: 'Max' },
+  yahav:         { kind: 'bank',        label: 'Bank Yahav',         labelHe: 'בנק יהב' },
+  hapoalim:      { kind: 'bank',        label: 'Bank Hapoalim',      labelHe: 'בנק הפועלים' },
+  leumi:         { kind: 'bank',        label: 'Bank Leumi',         labelHe: 'בנק לאומי' },
+  mizrahi:       { kind: 'bank',        label: 'Mizrahi Bank',       labelHe: 'בנק מזרחי טפחות' },
+  discount:      { kind: 'bank',        label: 'Discount Bank',      labelHe: 'בנק דיסקונט' },
+  mercantile:    { kind: 'bank',        label: 'Mercantile Bank',    labelHe: 'בנק מרכנתיל' },
+  otsar_hahayal: { kind: 'bank',        label: 'Bank Otsar Hahayal', labelHe: 'בנק אוצר החייל' },
+  beinleumi:     { kind: 'bank',        label: 'Beinleumi',          labelHe: 'הבנק הבינלאומי' },
+  massad:        { kind: 'bank',        label: 'Massad',             labelHe: 'בנק מסד' },
+  pagi:          { kind: 'bank',        label: 'Pagi',               labelHe: 'בנק פאג"י' },
+  isracard:      { kind: 'credit_card', label: 'Isracard',           labelHe: 'ישראכרט' },
+  amex:          { kind: 'credit_card', label: 'Amex',               labelHe: 'אמריקן אקספרס' },
+  visa_cal:      { kind: 'credit_card', label: 'Visa Cal',           labelHe: 'ויזה כאל' },
+  max:           { kind: 'credit_card', label: 'Max',                labelHe: 'מקס' },
 };
 
 export function institutionKind(source) {
   return INSTITUTIONS[source]?.kind || null;
 }
 
-export function institutionLabel(source) {
-  return INSTITUTIONS[source]?.label || source;
+// Language-aware display name. Pass the current language ('he'/'en') so a
+// Hebrew UI shows "בנק יהב", not "Bank Yahav" — half the app used to show
+// translated names (t('bankNames.*')) and the other half this English label.
+export function institutionLabel(source, lang) {
+  const inst = INSTITUTIONS[source];
+  if (!inst) return source;
+  return lang === 'he' ? (inst.labelHe || inst.label) : inst.label;
 }
 
 // Icon by institution kind — a bank account and a credit-card company are

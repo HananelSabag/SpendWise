@@ -215,6 +215,8 @@ const PeriodSummary = ({
                 : "text-red-500 dark:text-red-400",
             )}
           >
+            {/* Keep the sign — color alone must not carry "negative" */}
+            {net < 0 && "−"}
             {formatCurrency(Math.abs(net))}
           </p>
         </div>
@@ -357,8 +359,15 @@ function syncFreshness(iso, t) {
   const stale = diff > STALE_MS;
   const h = Math.floor(diff / 3_600_000);
   const d = Math.floor(diff / 86_400_000);
-  const token =
-    h < 1 ? t("date.today", { fallback: "today" }) : d >= 1 ? `${d}d` : `${h}h`;
+  // Under an hour gets its own phrasing — interpolating "today" into
+  // "Synced {time} ago" read as "Synced today ago".
+  if (h < 1) {
+    return {
+      text: t("sourcesOverview.syncedRecently", { fallback: "Synced recently" }),
+      stale,
+    };
+  }
+  const token = d >= 1 ? `${d}d` : `${h}h`;
   return {
     text: t("sourcesOverview.syncedAgo", {
       time: token,
@@ -422,7 +431,7 @@ const AccountSubRow = ({ account, isBank, formatCurrency, t }) => {
   );
 };
 
-const SourceRow = ({ src, formatCurrency, t }) => {
+const SourceRow = ({ src, formatCurrency, t, lang }) => {
   const [open, setOpen] = useState(false);
   const Icon = src.kind === "credit_card" ? CreditCard : Landmark;
   const brand = bankBrand(src.bankSource);
@@ -451,7 +460,7 @@ const SourceRow = ({ src, formatCurrency, t }) => {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-          {src.label}
+          {institutionLabel(src.bankSource, lang)}
         </p>
         <p className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1 truncate">
           {fresh.stale && (
@@ -548,7 +557,7 @@ const SourceRow = ({ src, formatCurrency, t }) => {
   );
 };
 
-const SourcesOverview = ({ sources, formatCurrency, t, navigate }) => {
+const SourcesOverview = ({ sources, formatCurrency, t, lang, navigate }) => {
   const banks = (sources || []).filter((s) => s.kind === "bank");
   const cards = (sources || []).filter((s) => s.kind === "credit_card");
   if (!banks.length && !cards.length) return null; // ModernBalancePanel shows the connect CTA
@@ -569,6 +578,7 @@ const SourcesOverview = ({ sources, formatCurrency, t, navigate }) => {
               src={s}
               formatCurrency={formatCurrency}
               t={t}
+              lang={lang}
             />
           ))}
         </div>
@@ -715,11 +725,9 @@ const COLORS = [
 
 const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t }) => {
   const data = useMemo(() => {
-    const total = (categoryBreakdown || []).reduce(
-      (s, c) => s + Math.abs(Number(c.amount) || 0),
-      0,
-    );
-    return (categoryBreakdown || []).slice(0, 5).map((c, i) => ({
+    const all = categoryBreakdown || [];
+    const total = all.reduce((s, c) => s + Math.abs(Number(c.amount) || 0), 0);
+    const top = all.slice(0, 5).map((c, i) => ({
       name: c.name || "Other",
       source: c.source || "auto",
       amount: Math.abs(Number(c.amount) || 0),
@@ -729,7 +737,21 @@ const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t }) => {
           : 0,
       color: COLORS[i % COLORS.length],
     }));
-  }, [categoryBreakdown]);
+    // Everything past the top 5 rolls into one honest "Other" row so the
+    // bars account for the whole total instead of silently dropping spend.
+    const shown = top.reduce((s, c) => s + c.amount, 0);
+    const rest = total - shown;
+    if (rest > 0.5) {
+      top.push({
+        name: t("breakdown.other", { fallback: "Other" }),
+        source: "rest",
+        amount: rest,
+        pct: Math.round((rest / total) * 100),
+        color: "#94a3b8",
+      });
+    }
+    return top;
+  }, [categoryBreakdown, t]);
 
   if (!data.length) return null;
   const hasAuto = data.some((d) => d.source === "auto");
@@ -887,45 +909,71 @@ const DashboardError = ({ onRetry, t }) => {
 
 // ─── Greeting header (shared) ─────────────────────────────────────────────────
 
-const GreetingHeader = ({ greeting, user, navigate, compact = false }) => (
-  <div className={cn("flex items-center justify-between", !compact && "mb-1")}>
-    <div className="min-w-0">
-      <h1
-        className={cn(
-          "font-bold text-gray-900 dark:text-white leading-tight truncate",
-          compact ? "text-lg" : "text-2xl",
+const GreetingHeader = ({ greeting, user, navigate, compact = false, onRefresh, t }) => {
+  // Desktop has no pull-to-refresh — give it a real refresh control.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh || refreshing) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [onRefresh, refreshing]);
+
+  return (
+    <div className={cn("flex items-center justify-between", !compact && "mb-1")}>
+      <div className="min-w-0">
+        <h1
+          className={cn(
+            "font-bold text-gray-900 dark:text-white leading-tight truncate",
+            compact ? "text-lg" : "text-2xl",
+          )}
+        >
+          {greeting}
+        </h1>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+          {new Date().toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          })}
+        </p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {onRefresh && (
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            title={t?.("refresh", { fallback: "Refresh" })}
+            className="p-2 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          >
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+          </button>
         )}
-      >
-        {greeting}
-      </h1>
-      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-        {new Date().toLocaleDateString(undefined, {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-        })}
-      </p>
+        <button
+          onClick={() => navigate("/profile")}
+          className="rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <Avatar
+            src={user?.avatar || user?.profile_picture_url || user?.picture}
+            fallback={
+              user?.firstName?.charAt(0) ||
+              user?.first_name?.charAt(0) ||
+              user?.email?.charAt(0) ||
+              "U"
+            }
+            className={cn(
+              "rounded-full ring-2 ring-white/60 dark:ring-gray-700 shadow-sm hover:opacity-80 transition-opacity",
+              compact ? "w-9 h-9" : "w-11 h-11",
+            )}
+          />
+        </button>
+      </div>
     </div>
-    <button
-      onClick={() => navigate("/profile")}
-      className="shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
-    >
-      <Avatar
-        src={user?.avatar || user?.profile_picture_url || user?.picture}
-        fallback={
-          user?.firstName?.charAt(0) ||
-          user?.first_name?.charAt(0) ||
-          user?.email?.charAt(0) ||
-          "U"
-        }
-        className={cn(
-          "rounded-full ring-2 ring-white/60 dark:ring-gray-700 shadow-sm hover:opacity-80 transition-opacity",
-          compact ? "w-9 h-9" : "w-11 h-11",
-        )}
-      />
-    </button>
-  </div>
-);
+  );
+};
 
 // ─── Mobile layout ────────────────────────────────────────────────────────────
 
@@ -935,6 +983,7 @@ const MobileDashboard = ({
   dashboardData,
   financialCycle,
   t,
+  lang,
   navigate,
   onRefresh,
   formatCurrency,
@@ -984,6 +1033,7 @@ const MobileDashboard = ({
           sources={dashboardData.sources}
           formatCurrency={formatCurrency}
           t={t}
+          lang={lang}
           navigate={navigate}
         />
         <BankCosts
@@ -1016,12 +1066,14 @@ const DesktopDashboard = ({
   dashboardData,
   financialCycle,
   t,
+  lang,
   navigate,
   formatCurrency,
+  onRefresh,
 }) => (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
     <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6">
-      <GreetingHeader greeting={greeting} user={user} navigate={navigate} />
+      <GreetingHeader greeting={greeting} user={user} navigate={navigate} onRefresh={onRefresh} t={t} />
     </div>
 
     <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-6">
@@ -1054,6 +1106,7 @@ const DesktopDashboard = ({
             sources={dashboardData.sources}
             formatCurrency={formatCurrency}
             t={t}
+            lang={lang}
             navigate={navigate}
           />
           <BankCosts
@@ -1075,7 +1128,7 @@ const DesktopDashboard = ({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const ModernDashboard = () => {
-  const { t } = useTranslation("dashboard");
+  const { t, currentLanguage } = useTranslation("dashboard");
   const { user } = useAuth();
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
@@ -1123,6 +1176,7 @@ const ModernDashboard = () => {
     financialCycle,
     formatCurrency,
     t,
+    lang: currentLanguage,
     navigate,
   };
 
@@ -1131,7 +1185,7 @@ const ModernDashboard = () => {
       {isMobile ? (
         <MobileDashboard {...sharedProps} onRefresh={handleRefresh} />
       ) : (
-        <DesktopDashboard {...sharedProps} />
+        <DesktopDashboard {...sharedProps} onRefresh={handleRefresh} />
       )}
 
       <AddTransactionModal

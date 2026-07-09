@@ -35,7 +35,8 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
         </div>
       </div>
 
-      {/* Count / income / expense */}
+      {/* Count (all-time, sync health) / income / expense (current period,
+          same scope as the dashboard so the two pages tell one story) */}
       <div className="mt-4 grid grid-cols-3 gap-2">
         <div className="rounded-lg bg-white/70 dark:bg-gray-900/40 py-2.5 text-center">
           <p className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{stat.total}</p>
@@ -54,6 +55,9 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
           <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('expenses')}</p>
         </div>
       </div>
+      <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 leading-snug">
+        {t('statsScopeNote')}
+      </p>
 
       {/* Accounts + per-account toggle */}
       <div className="mt-3 rounded-lg bg-white/70 dark:bg-gray-900/40 px-3 py-1.5">

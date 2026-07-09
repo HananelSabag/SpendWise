@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useMemo } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../api';
 import { useAuth } from '../stores';
 import { useToast } from './useToast';
@@ -25,6 +25,18 @@ function buildApiFilters({ filters = {}, search = '', activeTab = 'all' }) {
 
   if (filters.type && filters.type !== 'all') apiFilters.type = filters.type;
   if (search || filters.search) apiFilters.search = search || filters.search;
+
+  // Source filter — 'manual' or an institution id, optionally one account.
+  // Server-side so results (and the stats tiles) cover the whole filtered
+  // set, not just whichever pages happen to be loaded.
+  if (filters.source && filters.source !== 'all') {
+    apiFilters.source = filters.source;
+    if (filters.account) apiFilters.account = filters.account;
+  }
+  const amountMin = parseFloat(filters.amountMin);
+  const amountMax = parseFloat(filters.amountMax);
+  if (!Number.isNaN(amountMin)) apiFilters.amountMin = amountMin;
+  if (!Number.isNaN(amountMax)) apiFilters.amountMax = amountMax;
 
   if (activeTab === 'upcoming') {
     // Future transactions only, from tomorrow onward.
@@ -95,11 +107,16 @@ export const useTransactions = (options = {}) => {
         hasMore,
         total,
         page: pageParam,
+        // Whole-filtered-set totals computed server-side (same on every page).
+        summary: Array.isArray(raw) ? null : (raw.summary || null),
       };
     },
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.page + 1 : undefined),
     staleTime: 2 * 60 * 1000,
     refetchInterval: autoRefresh ? 30 * 1000 : false,
+    // Keep showing the previous list while a filter change fetches — a chip
+    // tap must not blank the page into a skeleton.
+    placeholderData: keepPreviousData,
   });
 
   const allTransactions = useMemo(
@@ -180,6 +197,8 @@ export const useTransactions = (options = {}) => {
   return {
     // Data
     transactions: allTransactions,
+    // Server-computed totals for the WHOLE filtered set (null until loaded)
+    summary: transactionsQuery.data?.pages?.[0]?.summary || null,
 
     // Pagination
     hasNextPage: transactionsQuery.hasNextPage,

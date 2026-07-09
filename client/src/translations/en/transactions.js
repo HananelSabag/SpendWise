@@ -314,6 +314,7 @@ export default {
     title: "Delete Transaction",
     description: "Are you sure you want to delete this transaction?",
     warning: "This action cannot be undone.",
+    bankWarning: "The transaction will be removed from your view and will not re-import on future syncs",
     confirm: "Delete Transaction",
     recurring: {
       title: "Delete Recurring Transaction",
@@ -661,6 +662,7 @@ export default {
     }
   },
   stats: {
+    net: "Net",
     totalTransactions: "Total Transactions",
     totalIncome: "Total Income",
     totalExpenses: "Total Expenses",

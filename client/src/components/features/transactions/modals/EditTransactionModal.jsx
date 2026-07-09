@@ -32,7 +32,7 @@ const EditTransactionModal = ({
   className = ''
 }) => {
   const { t } = useTranslation('transactions');
-  const { updateTransaction, deleteTransaction, isOperating: isLoading } = useTransactionActions();
+  const { createTransaction, updateTransaction, deleteTransaction, isOperating: isLoading } = useTransactionActions();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -78,10 +78,13 @@ const EditTransactionModal = ({
     
     try {
       let result;
-      
+
       if (mode === 'duplicate') {
-        // Create new transaction (handled by parent)
-        result = await onDuplicate?.(formData);
+        // Duplicate = create a NEW transaction from the form values. (This
+        // used to call the parent's onDuplicate, which only re-opens this
+        // modal — the "duplicate" then reported success without creating
+        // anything.)
+        result = await createTransaction(formData);
       } else {
         // Update existing transaction
         result = await updateTransaction(transaction.id, formData);
@@ -102,7 +105,7 @@ const EditTransactionModal = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [transaction, mode, updateTransaction, onDuplicate, onSuccess, onClose]);
+  }, [transaction, mode, createTransaction, updateTransaction, onSuccess, onClose]);
 
   // ✅ Handle delete
   const handleDelete = useCallback(async () => {

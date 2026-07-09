@@ -52,7 +52,7 @@ const QuickMonthSelector = ({ availableMonths, selectedMonth, onMonthChange }) =
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className="absolute top-full mt-2 left-0 right-0 sm:left-0 sm:right-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 py-2 z-50 sm:min-w-[220px] max-h-[320px] overflow-y-auto"
+              className="absolute top-full mt-2 start-0 end-0 sm:start-0 sm:end-auto bg-white dark:bg-gray-800 rounded-xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 py-2 z-50 sm:min-w-[220px] max-h-[320px] overflow-y-auto"
             >
               <button
                 onClick={() => {

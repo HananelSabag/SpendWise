@@ -13,11 +13,10 @@ import {
 } from 'lucide-react';
 
 // ✅ Import Zustand stores
-import { 
-  useAuth, 
-  useTranslation, 
-  useTheme, 
-  useCurrency
+import {
+  useAuth,
+  useTranslation,
+  useTheme
 } from '../../../../stores';
 
 import { Button, Input, Card, Avatar, Badge, Switch } from '../../../ui';
@@ -44,7 +43,6 @@ const ModernProfileStep = ({
   const { t: tAuth } = useTranslation('auth');
   const { t: tProfile } = useTranslation('profile');
   const { isDark, setTheme } = useTheme();
-  const { currency, setCurrency } = useCurrency();
 
   // ✅ Auto-populate names from email for new users
   const getNameFromEmail = (email) => {
@@ -74,8 +72,9 @@ const ModernProfileStep = ({
     confirmPassword: data.confirmPassword || '',
     language: data.language || currentLanguage || 'en',
     theme: data.theme || (isDark ? 'dark' : 'light'),
-    currency: data.currency || currency || 'USD',
-    ...data
+    // All synced bank data is ILS — currency is a fact of the app, not a choice.
+    ...data,
+    currency: 'ILS',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -197,10 +196,7 @@ const ModernProfileStep = ({
     if (field === 'theme') {
       setTheme(value);
     }
-    if (field === 'currency' && value !== currency) {
-      setCurrency(value);
-    }
-  }, [profileData, onDataUpdate, errors, currentLanguage, setLanguage, setTheme, currency, setCurrency]);
+  }, [profileData, onDataUpdate, errors, currentLanguage, setLanguage, setTheme]);
 
 
 
@@ -231,14 +227,6 @@ const ModernProfileStep = ({
   const languageOptions = [
     { value: 'en', label: 'English', flag: '🇺🇸', nativeName: 'English' },
     { value: 'he', label: 'עברית', flag: '🇮🇱', nativeName: 'עברית' }
-  ];
-
-  // ✅ Currency options - ENHANCED
-  const currencyOptions = [
-    { value: 'USD', label: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-    { value: 'EUR', label: 'Euro', symbol: '€', flag: '🇪🇺' },
-    { value: 'ILS', label: 'Israeli Shekel', symbol: '₪', flag: '🇮🇱' },
-    { value: 'GBP', label: 'British Pound', symbol: '£', flag: '🇬🇧' }
   ];
 
   // ✅ Theme options - ENHANCED
@@ -468,7 +456,7 @@ const ModernProfileStep = ({
           <Card className="p-4">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Globe className="w-4 h-4 text-blue-500" />
-              Language &amp; Currency
+              Language
             </h2>
 
             {/* Language — compact horizontal buttons */}
@@ -488,28 +476,6 @@ const ModernProfileStep = ({
                   <span>{option.flag}</span>
                   <span>{option.label}</span>
                   {profileData.language === option.value && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                </button>
-              ))}
-            </div>
-
-            {/* Currency — compact grid */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {currencyOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleInputChange('currency', option.value)}
-                  className={cn(
-                    "flex items-center gap-2 p-2.5 rounded-lg border-2 text-sm transition-all",
-                    profileData.currency === option.value
-                      ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 font-medium"
-                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300"
-                  )}
-                >
-                  <span>{option.flag}</span>
-                  <span className="font-bold text-gray-600 dark:text-gray-400">{option.symbol}</span>
-                  <span className="flex-1 truncate">{option.label}</span>
-                  {profileData.currency === option.value && <Check className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />}
                 </button>
               ))}
             </div>

@@ -58,6 +58,19 @@ const transactionAPI = {
   },
 
   /**
+   * Distinct YYYY-MM months that have transactions (for the month filter).
+   * @returns {Promise<Object>} { success, data: { months: ['2026-07', ...] } }
+   */
+  async getMonths() {
+    try {
+      const response = await apiClient.client.get('/transactions/months');
+      return { success: true, data: response.data?.data || response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  /**
    * Update an existing transaction - TIMEZONE AWARE
    * @param {string} type - 'transaction' or 'recurring'
    * @param {string} id - Transaction ID

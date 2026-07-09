@@ -35,6 +35,10 @@ export default {
 
   // Errors
   loadError: 'Could not load sync data',
+  saveError: 'Could not save — try again',
+  statsLoadError: "Couldn't load your balance — your data is safe, this is a connection issue",
+  connectionsLoadError: "Couldn't load your bank connections — try again",
+  retry: 'Retry',
 
   // ── Bank Connect (self-service connections) ──
   connectBank: 'Connect a Bank',
@@ -85,6 +89,9 @@ export default {
   fieldNum: 'Identification code',
   displayNameLabel: 'Nickname (optional)',
   displayNamePlaceholder: 'e.g. My main account',
+  replacesExistingNote: 'This institution is already connected — saving here replaces its stored login details.',
+  betaBadge: 'beta',
+  betaNote: 'This institution is fully supported but has not been battle-tested with a live account yet. If a sync fails, let us know.',
 
   // Security explainer
   securityTitle: 'Your credentials are safe',
@@ -98,14 +105,17 @@ export default {
   statusActive: 'Active',
   statusPaused: 'Paused',
   statusError: 'Needs attention',
-  pausedAfterFailures: 'Paused after repeated failures — check your credentials and resume',
+  pausedAfterFailures: 'Paused after repeated failures — usually a changed bank password',
+  tryAgain: 'Try again',
   lastSyncLabel: 'Last sync',
   neverSynced: 'Never synced',
   pause: 'Pause',
   resume: 'Resume',
   delete: 'Delete',
   deleteConfirmTitle: 'Delete this connection?',
-  deleteConfirmBody: 'The encrypted credentials will be erased permanently. Synced transactions stay in SpendWise.',
+  deleteConfirmBody: 'The encrypted credentials will be erased permanently.',
+  deleteKeepsDataNote: 'Synced transactions and balances stay in SpendWise unless you also tick the box below.',
+  deletePurgeLabel: 'Also delete all transactions and balances synced from this source',
   cancel: 'Cancel',
 
   // Live job states (shown on the connection card)
@@ -162,11 +172,23 @@ export default {
   syncMethodPairedSince: 'Connected since {{date}}',
   syncMethodUnpair: 'Switch back to SpendWise\'s server',
   syncMethodUnpairConfirmTitle: 'Switch sync method?',
+  syncMethodSwitchConfirmTitle: 'Move syncs to your own computer?',
   syncMethodUnpairConfirmBody: "Your banks were connected for {{label}}. After switching you'll need to reconnect them — already-saved logins can't carry over.",
   syncMethodSwitchToOwnConfirmBody: "After connecting your own computer you'll need to reconnect your banks — already-saved logins can't carry over to the new device.",
   syncMethodConfirm: 'Switch anyway',
   syncMethodCancel: 'Cancel',
   syncMethodError: "Couldn't reach the pairing service — try again",
+
+  // Bank account vs credit company — the model explainer on the sync page
+  sourceModelTitle: 'Bank account or credit company?',
+  sourceModelSubtitle: 'SpendWise keeps them separate so your dashboard shows real cash flow without double-counting card bills.',
+  sourceModelBankTitle: 'Bank account',
+  sourceModelBankText: 'Shows real balance, salary/income, transfers, cash withdrawals, fees, loans, and the monthly card-payment withdrawal.',
+  sourceModelCardTitle: 'Credit company',
+  sourceModelCardText: 'Shows itemized card purchases. It has no bank balance; when purchase details exist, SpendWise does not count the bank card-payment withdrawal again.',
+
+  // Stats card scope — money figures follow the financial period, counts don't
+  statsScopeNote: 'Income and expenses cover the current financial period; the transaction count is everything ever synced.',
 
   // How it works
   howItWorks: 'How does it work?',

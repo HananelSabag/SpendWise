@@ -34,9 +34,13 @@ export const bankConnectionsApi = {
   rename: (id, displayName) =>
     api.patch(`/bank-connections/${id}`, { display_name: displayName }).then((r) => r.data.connection),
 
-  /** Permanent delete — the ciphertext is gone forever. */
-  remove: (id) =>
-    api.delete(`/bank-connections/${id}`).then((r) => r.data),
+  /**
+   * Permanent delete — the ciphertext is gone forever. Synced data is KEPT
+   * unless purgeData is true, which also removes every transaction/account
+   * row this source synced.
+   */
+  remove: (id, { purgeData = false } = {}) =>
+    api.delete(`/bank-connections/${id}${purgeData ? '?purge_data=true' : ''}`).then((r) => r.data),
 
   /** Enable/disable syncing a specific account under a connection. */
   setAccountEnabled: (id, accountNumber, enabled) =>

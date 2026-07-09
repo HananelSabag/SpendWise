@@ -7,7 +7,7 @@
  */
 
 import React from 'react';
-import { ArrowLeftRight, X, DollarSign } from 'lucide-react';
+import { ArrowLeftRight, X, Coins } from 'lucide-react';
 
 import { useTranslation } from '../../../../stores';
 import { Button, Input } from '../../../ui';
@@ -75,7 +75,7 @@ const AdvancedFilters = ({ filters, onFilterChange, onClear }) => {
         {/* Amount range */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-            <DollarSign className="w-3 h-3" />
+            <Coins className="w-3 h-3" />
             {t('filters.amountRangeLabel', 'Amount Range')}
             {(filters.amountMin || filters.amountMax) && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />}
           </label>

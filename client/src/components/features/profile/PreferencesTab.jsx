@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Loader2, CalendarClock } from 'lucide-react';
-import { useAuth, useTranslation, useTranslationStore, useAppStore } from '../../../stores';
+import { useAuth, useTranslation, useTranslationStore } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import queryClient from '../../../config/queryClient';
 
@@ -12,11 +12,11 @@ const Row = ({ label, value, onChange, options }) => (
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="text-sm pl-3 pr-8 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none cursor-pointer appearance-none transition-colors duration-150"
+        className="text-sm ps-3 pe-8 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-400 outline-none cursor-pointer appearance-none transition-colors duration-150"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+      <ChevronDown className="absolute end-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
     </div>
   </div>
 );
@@ -33,10 +33,12 @@ export const PreferencesTab = ({ user, authToasts }) => {
     return 'dashboard';
   };
 
+  // Currency is deliberately NOT a preference: all synced bank data is ILS,
+  // and a display-currency picker that only swaps the symbol shows wrong
+  // amounts (₪14,632 rendered as "$14,632").
   const buildPrefs = (u) => ({
     language_preference: u?.language_preference  || 'en',
     theme_preference:    u?.theme_preference      || 'system',
-    currency_preference: u?.currency_preference  || 'ILS',
     default_home:        resolveDefaultHome(u),
     billing_cycle_day:   Number(u?.billing_cycle_day) || 1,
   });
@@ -48,7 +50,7 @@ export const PreferencesTab = ({ user, authToasts }) => {
     const p = buildPrefs(user);
     setPrefs(p);
     setOriginal(p);
-  }, [user?.language_preference, user?.theme_preference, user?.currency_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page, user?.billing_cycle_day]);
+  }, [user?.language_preference, user?.theme_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page, user?.billing_cycle_day]);
 
   const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
 
@@ -74,8 +76,6 @@ export const PreferencesTab = ({ user, authToasts }) => {
 
       if (prefs.language_preference !== user?.language_preference)
         useTranslationStore.getState().actions?.setLanguage?.(prefs.language_preference);
-      if (prefs.currency_preference !== user?.currency_preference)
-        useAppStore.getState().actions?.setCurrency?.(prefs.currency_preference);
 
       // Update session flags so nav/header switch immediately (React Query cache is still stale)
       try {
@@ -124,20 +124,6 @@ export const PreferencesTab = ({ user, authToasts }) => {
             { value: 'system', label: t('preferences.themeOptions.system') || 'System' },
             { value: 'light',  label: t('preferences.themeOptions.light')  || 'Light'  },
             { value: 'dark',   label: t('preferences.themeOptions.dark')   || 'Dark'   },
-          ]}
-        />
-        <Row
-          label={t('preferences.language.currency') || 'Currency'}
-          value={prefs.currency_preference}
-          onChange={v => setPrefs(p => ({ ...p, currency_preference: v }))}
-          options={[
-            { value: 'ILS', label: '₪ Israeli Shekel'   },
-            { value: 'USD', label: '$ US Dollar'         },
-            { value: 'EUR', label: '€ Euro'              },
-            { value: 'GBP', label: '£ British Pound'     },
-            { value: 'JPY', label: '¥ Japanese Yen'      },
-            { value: 'CAD', label: 'C$ Canadian Dollar'  },
-            { value: 'AUD', label: 'A$ Australian Dollar'},
           ]}
         />
         {/* Default home picker */}

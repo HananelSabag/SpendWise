@@ -28,7 +28,7 @@ const ModernTransactionCard = ({
   viewMode = 'list',
   className = ''
 }) => {
-  const { t, isRTL } = useTranslation();
+  const { t, isRTL, currentLanguage } = useTranslation();
   const { formatCurrency } = useCurrency();
 
   const isIncome     = transaction?.type === 'income';
@@ -57,7 +57,7 @@ const ModernTransactionCard = ({
   // under the same institution (e.g. two Isracard cards) — without it they
   // render as visually identical rows with no way to tell them apart.
   const sourceLabel = isBankSynced
-    ? institutionLabel(transaction.bank_source) +
+    ? institutionLabel(transaction.bank_source, currentLanguage) +
       (transaction.bank_account_number ? ` · ${transaction.bank_account_number}` : '')
     : t('transactions.manualEntry', 'Manual entry');
   const sourceKindLabel = !isBankSynced

@@ -314,6 +314,7 @@ export default {
     title: "מחק עסקה",
     description: "האם אתם בטוחים שברצונכם למחוק את העסקה הזו?",
     warning: "פעולה זו לא ניתנת לביטול.",
+    bankWarning: "העסקה תוסר מהנתונים שלך ולא תיובא מחדש בסנכרונים הבאים",
     confirm: "מחק עסקה",
     recurring: {
       title: "מחק עסקה חוזרת",
@@ -661,6 +662,7 @@ export default {
     }
   },
   stats: {
+    net: "נטו",
     totalTransactions: "סה״כ עסקאות",
     totalIncome: "סה״כ הכנסות",
     totalExpenses: "סה״כ הוצאות",

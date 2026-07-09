@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  RefreshCw, Clock, AlertCircle, Pause, Play, Trash2, Loader2, ChevronDown,
+  RefreshCw, Clock, AlertCircle, Pause, Play, Trash2, Loader2, KeyRound,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../../hooks/useToast';
@@ -25,10 +25,11 @@ const SYNC_ERROR_KEYS = {
 // Mirrors MANUAL_SYNC_GAP_HOURS in server/routes/bankConnectionsRoutes.js.
 // Used only to show the user WHEN they'll be able to sync again — the
 // server is the actual source of truth/enforcement.
-export default function BankConnectionCard({ conn, t, lang }) {
+export default function BankConnectionCard({ conn, t, lang, onUpdateCredentials }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [purgeData, setPurgeData] = useState(false);
 
   // Force a re-render every 30s so the cooldown countdown/enable-state below
   // updates on its own, without the user needing to refresh anything.
@@ -66,9 +67,35 @@ export default function BankConnectionCard({ conn, t, lang }) {
     onError: (err) => toast.error(err?.message || t('loadError')),
   });
   const deleteMutation = useMutation({
-    mutationFn: () => bankConnectionsApi.remove(conn.id),
-    onSuccess: () => { setConfirmDelete(false); invalidate(); },
+    mutationFn: (opts) => bankConnectionsApi.remove(conn.id, { purgeData: opts?.purge === true }),
+    onSuccess: (_res, opts) => {
+      setConfirmDelete(false);
+      invalidate();
+      // A purge changes every money figure — refresh them all.
+      if (opts?.purge) {
+        ['bankSyncStats', 'dashboard', 'transactions', 'transactionMonths'].forEach((key) =>
+          queryClient.invalidateQueries({ queryKey: [key] }),
+        );
+      }
+    },
     onError: (err) => toast.error(err?.message || t('loadError')),
+  });
+
+  // Failed connection (usually a changed bank password): resume + queue a
+  // fresh sync in one tap instead of leaving a disabled primary button.
+  const retryMutation = useMutation({
+    mutationFn: async () => {
+      await bankConnectionsApi.setStatus(conn.id, 'active');
+      return bankConnectionsApi.syncNow(conn.id);
+    },
+    onSuccess: () => { toast.success(t('syncQueued')); invalidate(); },
+    onError: (err) => {
+      const code = err?.details?.code || err?.code;
+      const key = SYNC_ERROR_KEYS[code];
+      if (key) toast.warning(t(key));
+      else toast.error(err?.message || t('loadError'));
+      invalidate();
+    },
   });
 
   // Every click must produce visible feedback. During the client-side cooldown
@@ -143,10 +170,22 @@ export default function BankConnectionCard({ conn, t, lang }) {
             <motion.div
               key="error"
               initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-              className="mt-3 flex items-start gap-2 text-xs text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2"
+              className="mt-3 text-xs text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2"
             >
-              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-              <span>{t('pausedAfterFailures')}</span>
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{t('pausedAfterFailures')}</span>
+              </div>
+              {/* The most common cause is a changed bank password — offer the
+                  actual fix, not just pause/resume/delete. */}
+              {onUpdateCredentials && (
+                <button
+                  onClick={() => onUpdateCredentials(conn.bank_source)}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-200 underline underline-offset-2 hover:opacity-80"
+                >
+                  <KeyRound className="w-3 h-3" /> {t('updateCredentials')}
+                </button>
+              )}
             </motion.div>
           )}
           {!isError && !isPending && !isRunning && conn.last_error && (
@@ -181,6 +220,16 @@ export default function BankConnectionCard({ conn, t, lang }) {
 
         {/* Actions */}
         <div className="mt-3 flex gap-2">
+          {isError ? (
+            <button
+              onClick={() => retryMutation.mutate()}
+              disabled={retryMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-xs font-semibold transition-colors bg-red-600 hover:bg-red-700 disabled:opacity-40"
+            >
+              {retryMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              {t('tryAgain')}
+            </button>
+          ) : (
           <button
             onClick={handleSync}
             disabled={syncMutation.isPending || conn.status !== 'active'}
@@ -194,6 +243,7 @@ export default function BankConnectionCard({ conn, t, lang }) {
             {syncMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
             {t('syncNow')}
           </button>
+          )}
 
           {conn.status === 'active' ? (
             <button
@@ -230,17 +280,29 @@ export default function BankConnectionCard({ conn, t, lang }) {
               className="mt-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-3"
             >
               <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-1">{t('deleteConfirmTitle')}</p>
-              <p className="text-[11px] text-red-600 dark:text-red-400 mb-3">{t('deleteConfirmBody')}</p>
+              <p className="text-[11px] text-red-600 dark:text-red-400 mb-2">{t('deleteConfirmBody')}</p>
+              {/* Be explicit about the data lifecycle: by default synced
+                  history stays; the checkbox removes it too. */}
+              <p className="text-[11px] text-red-600/80 dark:text-red-400/80 mb-2">{t('deleteKeepsDataNote')}</p>
+              <label className="flex items-start gap-2 mb-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={purgeData}
+                  onChange={(e) => setPurgeData(e.target.checked)}
+                  className="mt-0.5 w-3.5 h-3.5 rounded border-red-300 text-red-600 focus:ring-red-500"
+                />
+                <span className="text-[11px] font-medium text-red-700 dark:text-red-300">{t('deletePurgeLabel')}</span>
+              </label>
               <div className="flex gap-2">
                 <button
-                  onClick={() => deleteMutation.mutate()}
+                  onClick={() => deleteMutation.mutate({ purge: purgeData })}
                   disabled={deleteMutation.isPending}
                   className="flex-1 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition-colors"
                 >
                   {deleteMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mx-auto" /> : t('delete')}
                 </button>
                 <button
-                  onClick={() => setConfirmDelete(false)}
+                  onClick={() => { setConfirmDelete(false); setPurgeData(false); }}
                   className="flex-1 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium transition-colors"
                 >
                   {t('cancel')}

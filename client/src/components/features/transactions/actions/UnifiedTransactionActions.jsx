@@ -115,11 +115,7 @@ const UnifiedTransactionActions = () => {
         }}
         onSuccess={handleSuccess}
         onDelete={(tx) => handleDelete(tx || selectedTx)}
-        onDuplicate={(data) => {
-          // When duplicate action is chosen inside Edit modal, keep modal logic
-          // The Edit modal will call parent-provided onDuplicate which triggers create inside it
-          return data;
-        }}
+        onDuplicate={(tx) => handleDuplicate(tx || selectedTx)}
         transaction={selectedTx}
         mode={editMode}
       />
