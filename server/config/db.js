@@ -62,22 +62,27 @@ try {
 // 🚀 OPTIMIZED Database configuration for production
 const dbConfig = {
   ...baseConfig,
-  
+
   // 🎯 Optimized for Render + Supabase limits
   max: 15,                        // Reduced from 20 (Render connection limits)
-  min: 2,                         // Keep minimum alive
-  
-  // ⚡ Faster timeouts for production
-  connectionTimeoutMillis: 20000,  // Reduced from 30s
-  idleTimeoutMillis: 60000,        // Increased to 60s (keep connections longer)
-  
+
+  // ⚡ Timeouts
+  connectionTimeoutMillis: 20000,
+  // Idle connections must OUTLIVE the 10-minute keep-alive ping cycle
+  // (utils/keepAlive.js). The old 60s reaping meant nearly every request
+  // arrived at an empty pool and paid a fresh TLS+auth handshake to the
+  // Supabase pooler (~0.5–1s) — the actual source of the "SLOW QUERY"
+  // warnings and the ~550ms average query time. 15 min keeps one warm
+  // connection alive continuously (each health ping resets its idle clock).
+  idleTimeoutMillis: 15 * 60 * 1000,
+
   // 🔧 Query optimization
   statement_timeout: 45000,        // Increased for complex dashboard queries
-  
+
   // 🚀 Production optimizations
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
-  
+
   // 📊 Enhanced monitoring
   application_name: `spendwise-${process.env.NODE_ENV || 'development'}-optimized`
 };
@@ -240,7 +245,12 @@ const testConnection = async () => {
       ssl: !!dbConfig.ssl,
       optimizations: 'Enhanced connection pooling, query monitoring, performance tracking'
     });
-    
+
+    // Pre-warm a second connection so the first real burst (the dashboard
+    // fires several queries in parallel) doesn't pay handshake time.
+    // node-postgres has no `min` option — warming must be done explicitly.
+    pool.query('SELECT 1').catch(() => { /* warm-up only — never fatal */ });
+
     return true;
   } catch (error) {
     logger.error('❌ OPTIMIZED Supabase connection failed', {

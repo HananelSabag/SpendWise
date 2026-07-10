@@ -129,20 +129,12 @@ router.get('/verify-email/:token',
  * @desc    Logout user and cleanup session (graceful auth handling)
  * @access  Public (handles auth failures gracefully)
  */
-router.post('/logout',
-  // ✅ Optional auth - don't fail if token is invalid
-  (req, res, next) => {
-    // Try to authenticate, but continue even if it fails
-    auth(req, res, (error) => {
-      if (error) {
-        // Auth failed - continue without user info
-        req.user = null;
-      }
-      next(); // Always continue to logout handler
-    });
-  },
-  authController.logout
-);
+// Deliberately NO auth middleware: the strict `auth` RESPONDS with 401 on a
+// bad/expired token (it never calls next(error)), which used to block the
+// logout handler exactly when users most need it. The global optionalAuth in
+// index.js already sets req.user when the token is valid; logout must always
+// succeed regardless.
+router.post('/logout', authController.logout);
 
 /**
  * @route   GET /api/v1/users/profile

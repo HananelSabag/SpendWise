@@ -238,8 +238,11 @@ const authController = {
     }
 
     try {
-      // Verify refresh token
-      const decoded = verifyToken(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
+      // Verify refresh token — STRICTLY against the refresh secret. Falling
+      // back to JWT_SECRET would let a (short-lived) ACCESS token be replayed
+      // here to mint fresh tokens. index.js refuses to boot without
+      // JWT_REFRESH_SECRET, so there is no legitimate fallback case.
+      const decoded = verifyToken(refreshToken, process.env.JWT_REFRESH_SECRET);
       const userId = decoded.userId;
 
       // Get fresh user data

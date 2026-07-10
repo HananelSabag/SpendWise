@@ -494,16 +494,18 @@ const hasRole = (user, requiredRole) => {
 // Role hierarchy checker
 const canManageUser = (adminUser, targetUser) => {
   if (!adminUser || !targetUser) return false;
-  
-  // Super admin can manage anyone
+
+  // Nobody can manage themselves through this function (prevents
+  // self-demotion/self-block). Must be checked FIRST — the old order let a
+  // super_admin fall into the "can manage anyone" branch for themselves.
+  if (adminUser.id === targetUser.id) return false;
+
+  // Super admin can manage anyone else
   if (adminUser.role === 'super_admin') return true;
-  
+
   // Admin can manage regular users only
   if (adminUser.role === 'admin' && targetUser.role === 'user') return true;
-  
-  // Nobody can manage themselves through this function (prevents self-demotion)
-  if (adminUser.id === targetUser.id) return false;
-  
+
   return false;
 };
 
