@@ -71,7 +71,10 @@ class Scheduler {
       this.jobs.get(name).stop();
     }
 
-    const job = cron.schedule(cronPattern, async () => {
+    // node-cron v4's createTask() preserves the old explicit lifecycle:
+    // create stopped, register it, then start exactly once below. schedule()
+    // starts immediately in v4 and no longer accepts `scheduled: false`.
+    const job = cron.createTask(cronPattern, async () => {
       const start = Date.now();
       
       try {
@@ -102,8 +105,6 @@ class Scheduler {
           totalFailed: this.stats.failedRuns
         });
       }
-    }, {
-      scheduled: false // Don't start immediately
     });
 
     this.jobs.set(name, job);
@@ -290,4 +291,4 @@ class Scheduler {
 
 // Export singleton instance
 const scheduler = new Scheduler();
-module.exports = scheduler; 
+module.exports = scheduler;
