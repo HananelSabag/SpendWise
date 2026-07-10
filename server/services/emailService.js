@@ -51,7 +51,10 @@ class SmtpSender {
       port: parseInt(process.env.SMTP_PORT),
       secure: process.env.SMTP_SECURE === 'true',
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      tls: { rejectUnauthorized: false },
+      // Verify SMTP certificates by default. Local/private SMTP deployments
+      // can opt into a self-signed certificate explicitly instead of silently
+      // weakening every production connection.
+      tls: { rejectUnauthorized: process.env.SMTP_ALLOW_SELF_SIGNED !== 'true' },
       connectionTimeout: 8000,
       greetingTimeout: 8000,
       socketTimeout: 8000,
