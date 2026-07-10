@@ -3,6 +3,30 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+// Vite 8/Rolldown accepts a function for manual chunking (the old object
+// form was removed). Keep the existing stable vendor boundaries without
+// coupling the config to platform-specific path separators.
+const VENDOR_CHUNKS = {
+  'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+  'ui-vendor': ['framer-motion', '@radix-ui/react-tabs', 'lucide-react'],
+  'data-vendor': ['@tanstack/react-query', 'axios', 'date-fns', 'zustand'],
+  'chart-vendor': ['recharts'],
+  'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
+  'style-vendor': ['clsx', 'classnames', 'tailwind-merge'],
+};
+
+function vendorChunk(id) {
+  const normalized = id.replaceAll('\\', '/');
+  if (!normalized.includes('/node_modules/')) return undefined;
+
+  for (const [chunkName, packages] of Object.entries(VENDOR_CHUNKS)) {
+    if (packages.some((pkg) => normalized.includes(`/node_modules/${pkg}/`))) {
+      return chunkName;
+    }
+  }
+  return undefined;
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
   // Load .env files and merge with real process.env (Vercel/CI injects only into process.env)
@@ -123,14 +147,7 @@ export default defineConfig(({ command, mode }) => {
       },
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-            'ui-vendor': ['framer-motion', '@radix-ui/react-tabs', 'lucide-react'],
-            'data-vendor': ['@tanstack/react-query', 'axios', 'date-fns', 'zustand'],
-            'chart-vendor': ['recharts'],
-            'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
-            'style-vendor': ['clsx', 'classnames', 'tailwind-merge']
-          }
+          manualChunks: vendorChunk,
         }
       },
       reportCompressedSize: true,
