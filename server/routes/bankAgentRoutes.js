@@ -22,6 +22,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
+const { buildAgentClaimScope } = require('../services/agentClaimScope');
 const { ingestAccounts } = require('../services/bankSyncService');
 const { enqueueDueJobs } = require('../services/syncSchedulingService');
 
@@ -57,14 +58,14 @@ async function agentAuth(req, res, next) {
       const result = await db.query(
         `UPDATE agent_devices SET last_seen_at = NOW()
          WHERE device_token_hash = $1 AND status = 'active'
-         RETURNING user_id`,
+         RETURNING user_id, label`,
         [hash],
       );
       if (result.rows.length === 0) {
         logger.warn('bank-agent: rejected invalid device token', { ip: req.ip });
         return res.status(401).json({ error: 'Unauthorized' });
       }
-      req.agentScope = { userId: result.rows[0].user_id };
+      req.agentScope = { userId: result.rows[0].user_id, label: result.rows[0].label };
       return next();
     } catch (err) {
       logger.error('bank-agent: device token lookup failed', { error: err.message });
@@ -101,10 +102,10 @@ router.post('/jobs/claim', async (req, res) => {
 
   // Default Host only ever sees users who haven't paired their own device;
   // a paired device only ever sees its own user. Never both, never neither.
-  const scopeClause = req.agentScope.global
-    ? `AND j2.user_id NOT IN (SELECT user_id FROM agent_devices WHERE status = 'active')`
-    : `AND j2.user_id = $2`;
-  const params = req.agentScope.global ? [limit] : [limit, req.agentScope.userId];
+  // The privacy boundary is centralized + unit-tested: Default Host excludes
+  // paired users; a paired device can select only its own user id. The second
+  // parameter is also persisted as the per-job audit label.
+  const { scopeClause, params } = buildAgentClaimScope(req.agentScope, limit);
 
   try {
     await enqueueDueJobs();
@@ -112,7 +113,8 @@ router.post('/jobs/claim', async (req, res) => {
     const result = await db.query(
       `UPDATE bank_sync_jobs j SET
          status = 'running',
-         started_at = NOW()
+         started_at = NOW(),
+         claimed_by = $2
        FROM (
          SELECT j2.id FROM bank_sync_jobs j2
          JOIN bank_connections c2 ON c2.id = j2.connection_id

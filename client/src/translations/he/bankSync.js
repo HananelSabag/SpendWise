@@ -21,6 +21,7 @@ export default {
   // Transaction summary
   income: 'הכנסות',
   expenses: 'הוצאות',
+  cardCharges: 'חיובים בדף החשבון',
   netActivity: 'נטו פעילות',
   transactions: '{{count}} תנועות',
   transactionsShort: 'תנועות',
@@ -69,6 +70,8 @@ export default {
 
   // שלבי אשף
   stepPickBank: 'בחר את הבנק שלך',
+  stepPickBankOnly: 'בחר את הבנק שלך',
+  stepPickCard: 'בחר את חברת האשראי שלך',
   stepCredentials: 'פרטי התחברות',
   stepConfirm: 'סיכום ואישור',
   back: 'חזרה',
@@ -162,6 +165,12 @@ export default {
   syncMethodDefaultBody: 'בלי הגדרות - אנחנו מטפלים בזה בשבילך.',
   syncMethodOwnTitle: 'המחשב שלי',
   syncMethodOwnBody: 'מריצים את ה-SpendWise Agent בעצמכם; רק המחשב שלכם רואה את פרטי ההתחברות לבנק.',
+  syncMethodOwnTipLabel: 'איך זה עובד?',
+  syncMethodOwnTipStep1: 'מורידים את ה-Agent ומחלצים את התיקייה לכל מקום במחשב.',
+  syncMethodOwnTipStep2: 'פותחים את SpendWiseWorker ולוחצים כאן על "קבלת קוד חיבור".',
+  syncMethodOwnTipStep3: 'מקלידים את הקוד ב-Agent — וזה כל התהליך.',
+  syncMethodOwnTipStep4: 'מחברים מחדש את הבנקים; מעכשיו הסנכרונים רצים מהמחשב הזה.',
+  syncMethodOwnTipPrivacy: 'מחשב מחובר מריץ אך ורק את הסנכרונים של החשבון שלך — הוא לא יכול לראות או להריץ עבודות של משתמש אחר, ופרטי הבנק לא עוזבים אותו.',
   syncMethodDownload: 'הורדת ה-Agent',
   syncMethodSmartScreenHint: 'ייתכן שווינדוס יציג אזהרת אבטחה כי האפליקציה עדיין לא חתומה דיגיטלית - לחצו על "מידע נוסף" ואז "הפעל בכל זאת".',
   syncMethodGenerateCode: 'קבלת קוד חיבור',
@@ -189,6 +198,7 @@ export default {
 
   // היקף הנתונים בכרטיס הסטטיסטיקה — כסף לפי תקופה, ספירה מאז ומעולם
   statsScopeNote: 'הכנסות והוצאות מתייחסות לתקופה הפיננסית הנוכחית; מונה העסקאות כולל את כל מה שסונכרן אי פעם.',
+  cardStatsScopeNote: 'החיובים מחושבים לפי תאריך החיוב/הפירעון שחברת האשראי דיווחה, כדי שסכום המחזור יתאים לדף החשבון שלה. מונה העסקאות כולל את כל מה שסונכרן אי פעם.',
 
   // איך זה עובד
   howItWorks: 'איך זה עובד?',

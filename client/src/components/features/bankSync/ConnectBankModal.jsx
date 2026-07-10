@@ -133,6 +133,10 @@ const ConnectBankModal = ({
   // bank_source ids that already have a connection: picking one of these
   // replaces its stored credentials (server upserts), so say so.
   existingSources = [],
+  // 'bank' | 'credit_card' | null — banks and credit companies are different
+  // kinds of source, so each gets its own entry button and its own sheet
+  // showing only that kind (same wizard flow either way).
+  kindFilter = null,
 }) => {
   const { t } = useTranslation('bankSync');
   const toast = useToast();
@@ -189,10 +193,25 @@ const ConnectBankModal = ({
 
   const stepTitle = succeeded
     ? t('connected')
-    : [t('stepPickBank'), t('stepCredentials'), t('stepConfirm')][step];
+    : [
+        kindFilter === 'bank'
+          ? t('stepPickBankOnly', { fallback: t('stepPickBank') })
+          : kindFilter === 'credit_card'
+            ? t('stepPickCard', { fallback: t('stepPickBank') })
+            : t('stepPickBank'),
+        t('stepCredentials'),
+        t('stepConfirm'),
+      ][step];
+
+  const modalTitle =
+    kindFilter === 'bank'
+      ? t('addBank')
+      : kindFilter === 'credit_card'
+        ? t('addCard')
+        : t('connectBank');
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('connectBank')} sheet drawerWidth={480}>
+    <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} sheet drawerWidth={480}>
       <div className="p-4 space-y-5">
 
         {/* Progress dots */}
@@ -240,7 +259,7 @@ const ConnectBankModal = ({
               {[
                 { kind: 'bank',        title: t('bankAccounts'), icon: Landmark,   provides: t('banksProvide') },
                 { kind: 'credit_card', title: t('creditCards'),  icon: CreditCard, provides: t('cardsProvide') },
-              ].map(({ kind, title, icon: SecIcon, provides }) => {
+              ].filter(({ kind }) => !kindFilter || kind === kindFilter).map(({ kind, title, icon: SecIcon, provides }) => {
                 const list = Object.keys(BANK_FORMS).filter((s) => institutionKind(s) === kind);
                 if (!list.length) return null;
                 return (

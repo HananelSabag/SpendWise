@@ -72,6 +72,7 @@ router.get('/', async (req, res) => {
               j.trigger      AS latest_job_trigger,
               j.requested_at AS latest_job_requested_at,
               j.result       AS latest_job_result,
+              j.claimed_by   AS latest_job_claimed_by,
               q.manual_today,
               q.last_done_sync_at,
               CASE
@@ -80,7 +81,7 @@ router.get('/', async (req, res) => {
               END AS next_manual_sync_at
        FROM bank_connections c
        LEFT JOIN LATERAL (
-         SELECT status, trigger, requested_at, result
+         SELECT status, trigger, requested_at, result, claimed_by
          FROM bank_sync_jobs
          WHERE connection_id = c.id
          ORDER BY requested_at DESC
@@ -356,7 +357,7 @@ router.get('/jobs', async (req, res) => {
   try {
     const result = await db.query(
       `SELECT j.id, j.connection_id, j.status, j.trigger, j.requested_at,
-              j.finished_at, j.result, c.bank_source
+              j.finished_at, j.result, j.claimed_by, c.bank_source
        FROM bank_sync_jobs j
        JOIN bank_connections c ON c.id = j.connection_id
        WHERE j.user_id = $1

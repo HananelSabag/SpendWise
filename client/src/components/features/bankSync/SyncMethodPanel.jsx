@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Laptop, Server, Check, Loader2, Download, KeyRound } from 'lucide-react';
+import { Laptop, Server, Check, Loader2, Download, KeyRound, HelpCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '../../ui';
 import { useToast } from '../../../hooks/useToast';
@@ -27,6 +27,8 @@ export default function SyncMethodPanel({ t, hasConnections }) {
   const queryClient = useQueryClient();
   const [pendingCode, setPendingCode] = useState(null); // { code, expires_at }
   const [confirmAction, setConfirmAction] = useState(null); // 'start' | 'unpair' | null
+  // Tap-friendly help (mobile has no hover) explaining what pairing does.
+  const [showOwnTip, setShowOwnTip] = useState(false);
 
   const { data: pairing = { paired: false }, isLoading } = useQuery({
     queryKey: ['agentPairingStatus'],
@@ -135,8 +137,30 @@ export default function SyncMethodPanel({ t, hasConnections }) {
             <div className="flex items-center gap-2 mb-1">
               <Laptop className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{t('syncMethodOwnTitle')}</p>
+              <button
+                type="button"
+                onClick={() => setShowOwnTip(v => !v)}
+                aria-expanded={showOwnTip}
+                aria-label={t('syncMethodOwnTipLabel')}
+                className="ms-auto p-0.5 rounded-full text-gray-400 hover:text-indigo-500 transition-colors"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
             </div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug mb-2">{t('syncMethodOwnBody')}</p>
+            {showOwnTip && (
+              <div className="mb-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 px-2.5 py-2 space-y-1">
+                {[1, 2, 3, 4].map((n) => (
+                  <p key={n} className="text-[11px] text-indigo-700 dark:text-indigo-300 leading-snug flex gap-1.5">
+                    <span className="font-bold shrink-0">{n}.</span>
+                    <span>{t(`syncMethodOwnTipStep${n}`)}</span>
+                  </p>
+                ))}
+                <p className="text-[10px] text-indigo-500 dark:text-indigo-400 leading-snug pt-0.5">
+                  {t('syncMethodOwnTipPrivacy')}
+                </p>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <a
                 href={AGENT_DOWNLOAD_URL}

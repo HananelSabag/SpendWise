@@ -21,6 +21,7 @@ export default {
   // Transaction summary
   income: 'Income',
   expenses: 'Expenses',
+  cardCharges: 'Statement charges',
   netActivity: 'Net Activity',
   transactions: '{{count}} transactions',
   transactionsShort: 'Txns',
@@ -69,6 +70,8 @@ export default {
 
   // Wizard steps
   stepPickBank: 'Choose your bank',
+  stepPickBankOnly: 'Choose your bank',
+  stepPickCard: 'Choose your credit company',
   stepCredentials: 'Login details',
   stepConfirm: 'Review & confirm',
   back: 'Back',
@@ -162,6 +165,12 @@ export default {
   syncMethodDefaultBody: 'No setup — we handle it for you.',
   syncMethodOwnTitle: 'My own computer',
   syncMethodOwnBody: 'Run the SpendWise Agent yourself; only your computer ever sees your bank login.',
+  syncMethodOwnTipLabel: 'How does this work?',
+  syncMethodOwnTipStep1: 'Download the Agent and extract the folder anywhere on your PC.',
+  syncMethodOwnTipStep2: 'Open SpendWiseWorker and tap "Get a pairing code" here.',
+  syncMethodOwnTipStep3: 'Type the code into the Agent — that\'s the whole setup.',
+  syncMethodOwnTipStep4: 'Reconnect your banks; from now on syncs run from this computer.',
+  syncMethodOwnTipPrivacy: 'A paired computer runs ONLY your own account\'s syncs — it can never see or run another user\'s jobs, and your bank login never leaves it.',
   syncMethodDownload: 'Download the Agent',
   syncMethodSmartScreenHint: 'Windows may show a security warning since the app isn’t code-signed yet — click "More info" then "Run anyway".',
   syncMethodGenerateCode: 'Get a pairing code',
@@ -189,6 +198,7 @@ export default {
 
   // Stats card scope — money figures follow the financial period, counts don't
   statsScopeNote: 'Income and expenses cover the current financial period; the transaction count is everything ever synced.',
+  cardStatsScopeNote: 'Statement charges use the debit/payment date reported by the credit company, so cycle-day totals match its statement. The transaction count is everything ever synced.',
 
   // How it works
   howItWorks: 'How does it work?',

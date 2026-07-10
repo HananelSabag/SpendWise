@@ -51,12 +51,16 @@ export default function BankSyncPage() {
   // Set when "update credentials" is clicked on a failed connection —
   // ConnectBankModal then skips the picker and goes straight to that bank.
   const [connectInitialBank, setConnectInitialBank] = useState(null);
+  // 'bank' | 'credit_card' | null — banks and credit companies each get
+  // their own connect button and their own sheet (same wizard, one kind).
+  const [connectKind, setConnectKind] = useState(null);
   const [showCyclePicker, setShowCyclePicker] = useState(false);
   const [showSourceGuide, setShowSourceGuide] = useState(false);
   const [savingCycle, setSavingCycle] = useState(false);
 
-  const openConnect = (bankSource = null) => {
+  const openConnect = (bankSource = null, kind = null) => {
     setConnectInitialBank(bankSource);
+    setConnectKind(kind);
     setShowConnect(true);
   };
 
@@ -145,9 +149,9 @@ export default function BankSyncPage() {
 
   // Shown inside a kind section when the OTHER kind exists but this one doesn't,
   // nudging the user to connect the missing kind (first-run shows the big CTA).
-  const SectionEmptyPrompt = ({ icon: Icon, label, cta }) => (
+  const SectionEmptyPrompt = ({ icon: Icon, label, cta, onClick }) => (
     <button
-      onClick={() => setShowConnect(true)}
+      onClick={onClick}
       className="w-full flex items-center gap-2 py-3 px-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 text-left hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors"
     >
       <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
@@ -307,17 +311,27 @@ export default function BankSyncPage() {
           <div className="space-y-6">
             {/* My connections */}
             <section className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <h2 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   {t('myConnections')}
                 </h2>
                 {connections.length > 0 && (
-                  <button
-                    onClick={() => setShowConnect(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition-colors shadow-sm"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> {t('connectBank')}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    {/* Banks and credit companies are different kinds of
+                        source — each gets its own connect button + sheet. */}
+                    <button
+                      onClick={() => openConnect(null, 'bank')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                    >
+                      <Landmark className="w-3.5 h-3.5" /> {t('addBank')}
+                    </button>
+                    <button
+                      onClick={() => openConnect(null, 'credit_card')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold transition-colors shadow-sm"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" /> {t('addCard')}
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -339,17 +353,39 @@ export default function BankSyncPage() {
               )}
 
               {!connsLoading && !connsError && connections.length === 0 && (
-                <motion.button
+                <motion.div
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  onClick={() => setShowConnect(true)}
-                  className="w-full text-center py-10 px-6 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors group"
+                  className="space-y-3"
                 >
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 mx-auto mb-3 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-                    <Plus className="w-7 h-7 text-white" />
+                  <div className="text-center pt-2">
+                    <p className="font-semibold text-gray-800 dark:text-gray-200 mb-1">{t('noConnections')}</p>
+                    <p className="text-sm text-gray-400 dark:text-gray-500">{t('noConnectionsHint')}</p>
                   </div>
-                  <p className="font-semibold text-gray-800 dark:text-gray-200 mb-1">{t('noConnections')}</p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500">{t('noConnectionsHint')}</p>
-                </motion.button>
+                  {/* Two entry points from day one — a bank account and a
+                      credit company are different kinds of source. */}
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <button
+                      onClick={() => openConnect(null, 'bank')}
+                      className="text-center py-8 px-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-indigo-400 dark:hover:border-indigo-600 transition-colors group"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 mx-auto mb-2.5 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <Landmark className="w-6 h-6 text-white" />
+                      </div>
+                      <p className="font-semibold text-sm text-gray-800 dark:text-gray-200 mb-0.5">{t('addBank')}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{t('banksProvide')}</p>
+                    </button>
+                    <button
+                      onClick={() => openConnect(null, 'credit_card')}
+                      className="text-center py-8 px-4 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-violet-400 dark:hover:border-violet-600 transition-colors group"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 mx-auto mb-2.5 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                        <CreditCard className="w-6 h-6 text-white" />
+                      </div>
+                      <p className="font-semibold text-sm text-gray-800 dark:text-gray-200 mb-0.5">{t('addCard')}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{t('cardsProvide')}</p>
+                    </button>
+                  </div>
+                </motion.div>
               )}
 
               {hasAnyConnection && (
@@ -363,7 +399,7 @@ export default function BankSyncPage() {
                     ? bankConnections.map(conn => (
                         <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} onUpdateCredentials={openConnect} />
                       ))
-                    : <SectionEmptyPrompt icon={Landmark} label={t('bankSectionEmpty')} cta={t('addBank')} />
+                    : <SectionEmptyPrompt icon={Landmark} label={t('bankSectionEmpty')} cta={t('addBank')} onClick={() => openConnect(null, 'bank')} />
                   }
                 </div>
               )}
@@ -379,7 +415,7 @@ export default function BankSyncPage() {
                     ? cardConnections.map(conn => (
                         <BankConnectionCard key={conn.id} conn={conn} t={t} lang={currentLanguage} onUpdateCredentials={openConnect} />
                       ))
-                    : <SectionEmptyPrompt icon={CreditCard} label={t('cardSectionEmpty')} cta={t('addCard')} />
+                    : <SectionEmptyPrompt icon={CreditCard} label={t('cardSectionEmpty')} cta={t('addCard')} onClick={() => openConnect(null, 'credit_card')} />
                   }
                 </div>
               )}
@@ -439,8 +475,9 @@ export default function BankSyncPage() {
 
       <ConnectBankModal
         isOpen={showConnect}
-        onClose={() => { setShowConnect(false); setConnectInitialBank(null); }}
+        onClose={() => { setShowConnect(false); setConnectInitialBank(null); setConnectKind(null); }}
         initialBank={connectInitialBank}
+        kindFilter={connectKind}
         existingSources={connections.map(c => c.bank_source)}
       />
     </div>

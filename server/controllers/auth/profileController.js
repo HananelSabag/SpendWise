@@ -4,12 +4,14 @@
  */
 
 const { User } = require('../../models/User');
+const { UserCache } = require('../../models/UserCache');
 const { clearUserCache } = require('../../middleware/auth');
 const { normalizeUserData } = require('../../utils/userNormalizer');
 const errorCodes = require('../../utils/errorCodes');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const logger = require('../../utils/logger');
 const { getUserFinancialCycle } = require('../../services/financialCycleService');
+const db = require('../../config/db');
 
 const profileController = {
   getFinancialCycle: asyncHandler(async (req, res) => {
@@ -117,6 +119,46 @@ const profileController = {
       });
       throw error;
     }
+  }),
+
+  /**
+   * 🖼️ Persist the uploaded profile picture (storage upload happens in
+   * middleware/upload.js → req.supabaseUpload). Moved out of userRoutes so
+   * routes stay routing-only.
+   * @route POST /api/v1/users/upload-profile-picture
+   */
+  saveProfilePicture: asyncHandler(async (req, res) => {
+    if (!req.supabaseUpload) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'NO_FILE_UPLOADED', message: 'No file was uploaded' }
+      });
+    }
+
+    const result = await db.query(
+      'UPDATE users SET avatar = $1, profile_picture_url = $2, updated_at = NOW() WHERE id = $3 RETURNING id, avatar, profile_picture_url, onboarding_completed',
+      [req.supabaseUpload.publicUrl, req.supabaseUpload.publicUrl, req.user.id]
+    );
+
+    // Invalidate both cache layers so the next request serves the new avatar
+    UserCache.invalidate(`user:${req.user.id}`);
+    UserCache.invalidate(`${req.user.id}`);
+    clearUserCache(req.user.id);
+
+    logger.info('✅ Profile picture updated', {
+      userId: req.user.id,
+      avatarUrl: req.supabaseUpload.publicUrl
+    });
+
+    res.json({
+      success: true,
+      data: {
+        url: req.supabaseUpload.publicUrl,
+        fileName: req.supabaseUpload.fileName,
+        message: 'Profile picture uploaded successfully',
+        user: result.rows[0]
+      }
+    });
   })
 };
 
