@@ -7,7 +7,7 @@
  * per-institution activity — see transactionController.getDashboardData.
  */
 
-import { useEffect, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../api';
@@ -34,31 +34,25 @@ const EMPTY_DASHBOARD = {
   bankCosts: { feesInterest: 0, loanPayments: 0, cashWithdrawn: 0, cashWithdrawalCount: 0 },
   sources: [],
   recentTransactions: [],
+  recurringPatterns: [],
   isEmpty: true,
 };
 
-export const useDashboard = () => {
+export const useDashboard = ({ periodOffset = 0 } = {}) => {
   const { isAuthenticated, user } = useAuthStore();
   const queryClient = useQueryClient();
   const userCycleDay = Number(user?.billing_cycle_day) || 1;
   const queryKey = useMemo(
-    () => ['dashboard', user?.id, userCycleDay],
-    [user?.id, userCycleDay]
+    () => ['dashboard', user?.id, userCycleDay, periodOffset],
+    [user?.id, userCycleDay, periodOffset]
   );
-
-  useEffect(() => {
-    const events = ['transaction-added', 'dashboard-refresh-requested', 'server-woke'];
-    const handleRefresh = () => queryClient.invalidateQueries({ queryKey });
-    events.forEach((event) => window.addEventListener(event, handleRefresh));
-    return () => events.forEach((event) => window.removeEventListener(event, handleRefresh));
-  }, [queryClient, queryKey]);
 
   const dashboardQuery = useQuery({
     queryKey,
     enabled: isAuthenticated && !!getAccessToken(),
     queryFn: async () => {
       if (!getAccessToken()) return null;
-      const result = await api.transactions.getDashboardData({ cycleDay: userCycleDay });
+      const result = await api.transactions.getDashboardData({ periodOffset });
       if (!result.success) throw new Error(result.error?.message || 'Failed to fetch dashboard data');
       return result.data?.data ?? result.data;
     },
@@ -94,6 +88,7 @@ export const useDashboard = () => {
         bankCosts: raw.bankCosts || EMPTY_DASHBOARD.bankCosts,
         sources: raw.sources || [],
         recentTransactions,
+        recurringPatterns: raw.recurringPatterns || [],
         isEmpty: recentTransactions.length === 0 && (parseInt(summary.total_transactions) || 0) === 0,
       };
     }, []),

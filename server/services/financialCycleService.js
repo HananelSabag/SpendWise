@@ -1,12 +1,18 @@
 const db = require('../config/db');
-const { getCurrentPeriod, toSqlDate } = require('../utils/financialPeriod');
+const { getPeriodForOffset, toSqlDate } = require('../utils/financialPeriod');
 
 function normalizeCycleDay(value) {
   const day = Number(value);
   return Number.isInteger(day) && day >= 1 && day <= 31 ? day : 1;
 }
 
-async function getUserFinancialCycle(userId) {
+function normalizePeriodOffset(value) {
+  const offset = Number(value);
+  if (!Number.isInteger(offset)) return 0;
+  return Math.max(-24, Math.min(0, offset));
+}
+
+async function getUserFinancialCycle(userId, requestedOffset = 0) {
   const result = await db.query(
     'SELECT billing_cycle_day FROM users WHERE id = $1 AND is_active = true',
     [userId],
@@ -14,11 +20,14 @@ async function getUserFinancialCycle(userId) {
   );
 
   const cycleDay = normalizeCycleDay(result.rows[0]?.billing_cycle_day);
-  const { start, end } = getCurrentPeriod(cycleDay);
+  const offset = normalizePeriodOffset(requestedOffset);
+  const { start, end } = getPeriodForOffset(cycleDay, offset);
 
   return {
     cycleDay,
     cycleDaySet: true,
+    offset,
+    isCurrent: offset === 0,
     start: toSqlDate(start),
     end: toSqlDate(end),
   };
@@ -27,4 +36,5 @@ async function getUserFinancialCycle(userId) {
 module.exports = {
   getUserFinancialCycle,
   normalizeCycleDay,
+  normalizePeriodOffset,
 };

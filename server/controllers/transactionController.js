@@ -11,6 +11,11 @@ const logger = require('../utils/logger');
 const db = require('../config/db');
 const { INSTITUTIONS } = require('../config/institutions');
 const { buildDashboardData } = require('../services/dashboardService');
+const { getUserFinancialCycle } = require('../services/financialCycleService');
+
+const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
+  .filter(([, meta]) => meta.kind === 'credit_card')
+  .map(([source]) => source);
 
 const transactionController = {
   /**
@@ -22,7 +27,7 @@ const transactionController = {
   getDashboardData: asyncHandler(async (req, res) => {
     const userId = req.user.id;
     try {
-      const data = await buildDashboardData(userId);
+      const data = await buildDashboardData(userId, req.query.periodOffset);
       res.json({ success: true, data });
     } catch (error) {
       logger.error('Dashboard data fetch failed', { userId, error: error.message });
@@ -51,6 +56,9 @@ const transactionController = {
     const amountMin = Number.isFinite(parseFloat(req.query.amountMin)) ? parseFloat(req.query.amountMin) : null;
     const amountMax = Number.isFinite(parseFloat(req.query.amountMax)) ? parseFloat(req.query.amountMax) : null;
 
+    const financialPeriod = req.query.periodOffset !== undefined
+      ? await getUserFinancialCycle(userId, req.query.periodOffset)
+      : null;
     const filters = {
       type: req.query.type || null,
       dateFrom: req.query.dateFrom || null,
@@ -59,7 +67,10 @@ const transactionController = {
       source: bankSource,
       account: bankAccountNumber,
       amountMin,
-      amountMax
+      amountMax,
+      financialPeriodStart: financialPeriod?.start || null,
+      financialPeriodEnd: financialPeriod?.end || null,
+      creditCardSources: CREDIT_CARD_SOURCES
     };
 
     try {
@@ -73,7 +84,10 @@ const transactionController = {
         bankSource,
         bankAccountNumber,
         amountMin,
-        amountMax
+        amountMax,
+        financialPeriodStart: filters.financialPeriodStart,
+        financialPeriodEnd: filters.financialPeriodEnd,
+        creditCardSources: filters.creditCardSources
       };
 
       logger.info('getTransactions options', { userId, options, filters });
@@ -123,7 +137,8 @@ const transactionController = {
             hasMore: hasMore, // ✅ FIXED: Proper hasMore logic
             currentPageCount: transactions.length
           },
-          filters: filters
+          filters: filters,
+          period: financialPeriod
         }
       });
     } catch (error) {

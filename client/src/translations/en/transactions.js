@@ -506,6 +506,11 @@ export default {
     account: "Account/card",
     allAccounts: "All"
   },
+  sourceKind: {
+    manual: "Manual",
+    cardPurchase: "Card purchase",
+    bankMovement: "Bank movement"
+  },
 
   fromBank: "Imported from your bank",
 

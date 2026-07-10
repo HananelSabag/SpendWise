@@ -88,8 +88,13 @@ export const AdminSync = createLazyComponent(
 
 // ✅ Bank Sync Page
 export const BankSyncPage = createLazyComponent(
-  () => import('../pages/BankSyncPage.jsx'),
+  () => import('../pages/BankSyncPageV2.jsx'),
   'BankSyncPage'
+);
+
+export const InsightsPage = createLazyComponent(
+  () => import('../pages/InsightsPage.jsx'),
+  'InsightsPage'
 );
 
 // ✅ Utility Pages
@@ -145,4 +150,4 @@ export const PrivacyPolicyModal = createLazyComponent(
 // Initialize all lazy components
 export const initializeLazyComponents = () => {
   // Removed noisy initialization logging
-}; 
+};

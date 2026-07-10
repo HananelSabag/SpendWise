@@ -158,7 +158,7 @@ router.get('/stats', auth, async (req, res) => {
     // Money figures (income/expense) are scoped to the user's current
     // financial period so this page and the dashboard tell the same story;
     // transaction COUNTS stay all-time — they're sync-health, not money.
-    const period = await getUserFinancialCycle(userId);
+    const period = await getUserFinancialCycle(userId, req.query.periodOffset);
     const result = await db.query(
       `WITH sources AS (
          SELECT DISTINCT bank_source AS source
@@ -261,7 +261,13 @@ router.get('/stats', auth, async (req, res) => {
     res.json({
       ok: true,
       sources,
-      period: { start: period.start, end: period.end, cycleDay: period.cycleDay },
+      period: {
+        start: period.start,
+        end: period.end,
+        cycleDay: period.cycleDay,
+        offset: period.offset,
+        isCurrent: period.isCurrent,
+      },
     });
   } catch (err) {
     logger.error('bank-sync stats failed', { error: err.message, userId });

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Building2,
+  BarChart3,
   Calculator,
   ChevronLeft,
   ChevronRight,
@@ -31,6 +32,7 @@ import NotificationBell from './NotificationBell';
 import { cn } from '../../utils/helpers';
 import { Avatar, LoadingSpinner } from '../ui';
 import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
+import BrandMark from '../common/BrandMark';
 
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
 
@@ -39,7 +41,7 @@ const SIDEBAR_COLLAPSED = '5rem';
 
 const Header = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { t, isRTL = false } = useTranslation();
+  const { t, isRTL = false, currentLanguage } = useTranslation();
   const { addNotification } = useNotifications();
   const isAdmin = useIsAdmin();
   const isSuperAdmin = useIsSuperAdmin();
@@ -128,13 +130,20 @@ const Header = () => {
       active: location.pathname.startsWith('/transactions')
     },
     {
+      key: 'insights',
+      label: currentLanguage === 'he' ? 'תובנות' : 'Insights',
+      href: '/insights',
+      icon: BarChart3,
+      active: location.pathname.startsWith('/insights')
+    },
+    {
       key: 'bank-sync',
       label: t('bankSync.title') || 'Bank Sync',
       href: '/bank-sync',
       icon: Building2,
       active: location.pathname.startsWith('/bank-sync')
     }
-  ]), [location.pathname, t]);
+  ]), [currentLanguage, location.pathname, t]);
 
   const accountItems = useMemo(() => ([
     {
@@ -232,9 +241,7 @@ const Header = () => {
             )}
             aria-label="SpendWise"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-sm shrink-0">
-              <span className="text-white font-bold text-lg">S</span>
-            </div>
+            <BrandMark size="md" />
             {!isCollapsed && (
               <div className="min-w-0 text-start">
                 <p className="text-base font-bold leading-tight text-gray-950 dark:text-white">

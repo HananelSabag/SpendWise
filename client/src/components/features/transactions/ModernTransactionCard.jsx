@@ -61,10 +61,10 @@ const ModernTransactionCard = ({
       (transaction.bank_account_number ? ` · ${transaction.bank_account_number}` : '')
     : t('transactions.manualEntry', 'Manual entry');
   const sourceKindLabel = !isBankSynced
-    ? t('transactions.sourceKind.manual', 'manual')
+    ? t('transactions.sourceKind.manual', { fallback: 'manual' })
     : kind === 'credit_card'
-      ? t('transactions.sourceKind.cardPurchase', 'card purchase')
-      : t('transactions.sourceKind.bankMovement', 'bank movement');
+      ? t('transactions.sourceKind.cardPurchase', { fallback: 'card purchase' })
+      : t('transactions.sourceKind.bankMovement', { fallback: 'bank movement' });
 
   // Bank-synced rows wear their institution's brand gradient (same language as
   // the Bank Sync page); manual rows stay neutral gray.
@@ -103,7 +103,7 @@ const ModernTransactionCard = ({
         {/* Description + meta */}
         <div className="flex-1 min-w-0">
           <p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate leading-snug">
-            {transaction?.description || t('transactions.noDescription', 'No description')}
+            {transaction?.description || t('transactions.noDescription', { fallback: 'No description' })}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 flex items-center gap-1">
             <span className="truncate">{sourceLabel}</span>

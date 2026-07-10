@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { Heart, Github, ExternalLink } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from '../../stores';
+import BrandMark from '../common/BrandMark';
 
 const AccessibilityStatement = lazy(() => import('../common/AccessibilityStatement'));
 const PrivacyPolicyModal      = lazy(() => import('../common/PrivacyPolicyModal'));
@@ -41,6 +42,7 @@ const Footer = () => {
 
             {/* Brand */}
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
+              <BrandMark size="sm" />
               <span className="font-bold text-indigo-600 dark:text-indigo-400">SpendWise</span>
               <span className="text-gray-300 dark:text-gray-700">·</span>
               <span className="flex items-center gap-1">

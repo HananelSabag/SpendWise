@@ -506,6 +506,11 @@ export default {
     account: "חשבון/כרטיס",
     allAccounts: "הכל"
   },
+  sourceKind: {
+    manual: "ידני",
+    cardPurchase: "רכישה בכרטיס",
+    bankMovement: "תנועת בנק"
+  },
 
   fromBank: "יובא מחשבון הבנק שלך",
 

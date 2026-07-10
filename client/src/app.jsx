@@ -33,6 +33,8 @@ import { StoreProvider, useAuth, useTranslation } from './stores';
 import { ToastProvider } from './hooks/useToast';
 import { useToastCleanup } from './hooks/useToastCleanup';
 import { usePWAAutoReload } from './hooks/usePWAAutoReload';
+import { useFinancialDataSync } from './hooks/useFinancialDataSync';
+import { useBankSyncMonitor } from './hooks/useBankSyncMonitor';
 import AuthToastProvider from './components/common/AuthToastProvider';
 import AuthRecoveryProvider from './components/common/AuthRecoveryProvider';
 import ConnectionStatusOverlay from './components/common/ConnectionStatusOverlay';
@@ -74,6 +76,10 @@ const AppContent = () => {
 
   // ✅ Auto-reload on PWA service worker update
   usePWAAutoReload();
+
+  // Keep every financial query aligned after background bank/card syncs.
+  useFinancialDataSync();
+  useBankSyncMonitor();
 
   const isQuickExpensePage = location.pathname === '/quick-expense';
 

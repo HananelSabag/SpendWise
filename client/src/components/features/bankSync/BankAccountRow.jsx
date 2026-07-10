@@ -33,8 +33,8 @@ export default function BankAccountRow({ account, connectionId, t, lang, hideBal
   });
 
   return (
-    <div className="flex items-center justify-between gap-3 py-2">
-      <div className="min-w-0">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 rounded-lg py-2.5">
+      <div className="min-w-0 pe-1">
         <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
           {account.account_number || t('mainAccount')}
         </p>
@@ -49,7 +49,7 @@ export default function BankAccountRow({ account, connectionId, t, lang, hideBal
           </p>
         )}
       </div>
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex min-w-[104px] items-center justify-end gap-2.5 shrink-0">
         {hideBalance ? (
           <div className="text-end">
             <span className={cn(

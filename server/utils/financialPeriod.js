@@ -42,9 +42,14 @@ function partsInTz(date) {
 function getPeriodContaining(cycleDay, date) {
   const { y, m, d } = partsInTz(date);
 
-  // If we're before this month's cycle day, the current period started last month.
+  // Compare against the REAL boundary in this month. A cycle day of 31 starts
+  // on February 28/29, not in March; comparing `d < cycleDay` incorrectly kept
+  // February's final day in the previous period.
+  const boundaryDay = Math.min(cycleDay, lastDayOfMonth(y, m));
+
+  // If we're before this month's clamped cycle day, the period started last month.
   let sy = y, sm = m;
-  if (d < cycleDay) {
+  if (d < boundaryDay) {
     sm = m - 1;
     if (sm < 1) { sm = 12; sy = y - 1; }
   }
@@ -60,6 +65,30 @@ function getCurrentPeriod(cycleDay, today = new Date()) {
   return getPeriodContaining(cycleDay, today);
 }
 
+function shiftYearMonth(year, month1, offset) {
+  const zeroBased = year * 12 + (month1 - 1) + offset;
+  return {
+    year: Math.floor(zeroBased / 12),
+    month: ((zeroBased % 12) + 12) % 12 + 1,
+  };
+}
+
+/**
+ * A cycle relative to the current one. Offset 0 is current, -1 is the
+ * previous cycle, -2 is two cycles ago. Boundaries keep the user's cycle day
+ * and clamp independently in short months.
+ */
+function getPeriodForOffset(cycleDay, offset = 0, today = new Date()) {
+  const current = getCurrentPeriod(cycleDay, today);
+  const [startYear, startMonth] = current.start.split('-').map(Number);
+  const shiftedStart = shiftYearMonth(startYear, startMonth, offset);
+  const shiftedEnd = shiftYearMonth(shiftedStart.year, shiftedStart.month, 1);
+  return {
+    start: ymd(shiftedStart.year, shiftedStart.month, cycleDay),
+    end: ymd(shiftedEnd.year, shiftedEnd.month, cycleDay),
+  };
+}
+
 // Accepts an already-formatted 'YYYY-MM-DD' string (new path) or a Date (legacy
 // callers, e.g. the calendar-month summary) and normalises to a SQL date string.
 function toSqlDate(date) {
@@ -67,4 +96,4 @@ function toSqlDate(date) {
   return date.toISOString().split('T')[0];
 }
 
-module.exports = { getCurrentPeriod, getPeriodContaining, toSqlDate };
+module.exports = { getCurrentPeriod, getPeriodContaining, getPeriodForOffset, toSqlDate };

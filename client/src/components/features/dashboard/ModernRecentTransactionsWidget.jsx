@@ -35,7 +35,7 @@ const TxRow = ({ transaction, formatCurrency, t, lang }) => {
   const isIncome = transaction.type === 'income';
   const isBankSynced = Boolean(transaction.bank_source);
   const amount = parseFloat(transaction.amount) || 0;
-  const dateStr = transaction.transaction_datetime || transaction.created_at || transaction.date;
+  const dateStr = transaction.financial_period_date || transaction.transaction_datetime || transaction.created_at || transaction.date;
   const Icon = institutionIcon(transaction.bank_source);
   const sourceLabel = isBankSynced
     ? institutionLabel(transaction.bank_source, lang)
@@ -135,12 +135,12 @@ const ModernRecentTransactionsWidget = ({
     const now = new Date();
     const filtered = allTransactions
       .filter(tx => {
-        const d = new Date(tx.transaction_datetime || tx.created_at || tx.date);
+        const d = new Date(tx.financial_period_date || tx.transaction_datetime || tx.created_at || tx.date);
         return !isNaN(d) && d <= now && !tx.is_template;
       })
       .sort((a, b) => {
-        const da = new Date(a.transaction_datetime || a.created_at || a.date);
-        const db = new Date(b.transaction_datetime || b.created_at || b.date);
+        const da = new Date(a.financial_period_date || a.transaction_datetime || a.created_at || a.date);
+        const db = new Date(b.financial_period_date || b.transaction_datetime || b.created_at || b.date);
         return db - da;
       });
     return { recent: filtered.slice(0, maxItems), total: filtered.length };

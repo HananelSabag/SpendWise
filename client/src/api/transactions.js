@@ -150,4 +150,4 @@ const transactionAPI = {
   //   were removed; see the financial-model refactor plan.
 };
 
-export default transactionAPI; 
+export default transactionAPI;

@@ -19,7 +19,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, User,
   PlusCircle, MinusCircle, Calculator,
-  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, Menu, X, Building2,
+  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -28,6 +28,7 @@ import { useNotifications } from '../../hooks/useNotifications';
 import { useToast } from '../../hooks/useToast';
 import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
+import BrandMark from './BrandMark';
 
 // ─── Shopping-only 2-tab nav ──────────────────────────────────────────────────
 
@@ -237,7 +238,7 @@ const FullNav = () => {
                           <X className="w-7 h-7 text-white" strokeWidth={2.5} />
                         </motion.div>
                       : <motion.div key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.18 }}>
-                          <Menu className="w-7 h-7 text-white" strokeWidth={2.5} />
+                          <BrandMark size="md" className="h-11 w-11 rounded-full shadow-none" />
                         </motion.div>
                     }
                   </AnimatePresence>

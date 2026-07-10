@@ -15,7 +15,7 @@ const db = require('../../config/db');
 
 const profileController = {
   getFinancialCycle: asyncHandler(async (req, res) => {
-    const period = await getUserFinancialCycle(req.user.id);
+    const period = await getUserFinancialCycle(req.user.id, req.query.periodOffset);
     res.json({
       success: true,
       data: period,

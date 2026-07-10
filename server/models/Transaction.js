@@ -99,6 +99,8 @@ class Transaction {
       type = null, dateFrom = null, dateTo = null, search = null,
       bankSource = null, bankAccountNumber = null,
       amountMin = null, amountMax = null,
+      financialPeriodStart = null, financialPeriodEnd = null,
+      creditCardSources = [],
     } = options;
 
     const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
@@ -110,7 +112,17 @@ class Transaction {
       values.push(type);
       paramCount++;
     }
-    if (dateFrom) {
+    if (financialPeriodStart && financialPeriodEnd) {
+      const startParam = paramCount;
+      const endParam = paramCount + 1;
+      const sourcesParam = paramCount + 2;
+      conditions.push(`(CASE WHEN t.bank_source = ANY($${sourcesParam}::text[])
+        THEN COALESCE(t.bank_processed_date, t.date) ELSE t.date END) >= $${startParam}`);
+      conditions.push(`(CASE WHEN t.bank_source = ANY($${sourcesParam}::text[])
+        THEN COALESCE(t.bank_processed_date, t.date) ELSE t.date END) < $${endParam}`);
+      values.push(financialPeriodStart, financialPeriodEnd, creditCardSources);
+      paramCount += 3;
+    } else if (dateFrom) {
       conditions.push(`t.date >= $${paramCount}`);
       values.push(dateFrom);
       paramCount++;
@@ -266,6 +278,48 @@ class Transaction {
       return result.rows;
     } catch (error) {
       logger.error('Recent transactions retrieval failed', { userId, error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * Recent rows inside one financial period. Credit-card rows are scoped and
+   * ordered by their statement/payment date; every other source uses its
+   * transaction date. The original purchase date remains in the payload.
+   */
+  static async getRecentForPeriod(userId, periodStart, periodEnd, creditCardSources, limit = 10) {
+    try {
+      const query = `
+        SELECT ${SELECT_COLUMNS},
+          CASE
+            WHEN t.bank_source = ANY($4::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END AS financial_period_date
+        FROM transactions t
+        LEFT JOIN bank_accounts ba_filter
+          ON ba_filter.user_id = t.user_id
+         AND ba_filter.bank_source = t.bank_source
+         AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+          AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
+          AND (CASE
+            WHEN t.bank_source = ANY($4::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) >= $2
+          AND (CASE
+            WHEN t.bank_source = ANY($4::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) < $3
+        ORDER BY financial_period_date DESC, t.transaction_datetime DESC NULLS LAST, t.created_at DESC
+        LIMIT $5
+      `;
+      const result = await db.query(query, [userId, periodStart, periodEnd, creditCardSources, limit]);
+      return result.rows;
+    } catch (error) {
+      logger.error('Period transaction retrieval failed', { userId, error: error.message });
       throw error;
     }
   }

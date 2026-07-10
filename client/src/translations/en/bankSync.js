@@ -197,7 +197,7 @@ export default {
   sourceModelCardText: 'Shows itemized card purchases. It has no bank balance; when purchase details exist, SpendWise does not count the bank card-payment withdrawal again.',
 
   // Stats card scope — money figures follow the financial period, counts don't
-  statsScopeNote: 'Income and expenses cover the current financial period; the transaction count is everything ever synced.',
+  statsScopeNote: 'Income and expenses cover the selected financial period; the transaction count is everything ever synced.',
   cardStatsScopeNote: 'Statement charges use the debit/payment date reported by the credit company, so cycle-day totals match its statement. The transaction count is everything ever synced.',
 
   // How it works

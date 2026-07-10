@@ -17,7 +17,9 @@ export { default as useTransactionActions } from './useTransactionActions';
 
 // Other verified hooks with default exports
 export { default as useDashboard } from './useDashboard';
-export { default as useFinancialCycle } from './useFinancialCycle';
+export { default as useFinancialPeriodSelection } from './useFinancialPeriodSelection';
+export { useFinancialDataRefresh, useFinancialDataSync } from './useFinancialDataSync';
+export { default as useBankSyncMonitor } from './useBankSyncMonitor';
 export { default as useExport } from './useExport';
 export { default as useToast } from './useToast';
 

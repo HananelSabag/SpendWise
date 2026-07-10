@@ -76,6 +76,16 @@ export const AppRoutes = ({ isAuthenticated }) => (
       </ProtectedRoute>
     } />
 
+    <Route path="/insights" element={
+      <ProtectedRoute>
+        <RouteErrorBoundary routeName="Insights">
+          <Suspense fallback={<RouteLoadingFallback route="insights" />}>
+            <LazyComponents.InsightsPage />
+          </Suspense>
+        </RouteErrorBoundary>
+      </ProtectedRoute>
+    } />
+
     <Route path="/profile" element={
       <ProtectedRoute>
         <RouteErrorBoundary routeName="Profile">

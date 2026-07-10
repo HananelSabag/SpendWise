@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom';
 import { Building2, RefreshCw, Landmark, CreditCard, Plus, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { useCurrency, useTranslation } from '../../../stores';
+import { useAuth, useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import apiClient from '../../../api/client';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
@@ -73,10 +73,11 @@ const SkeletonBox = ({ className }) => (
 const ModernBalancePanel = ({ className = '' }) => {
   const { formatCurrency } = useCurrency();
   const { t, currentLanguage } = useTranslation('bankSync');
+  const { user } = useAuth();
 
   const { data: sources, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['bankSyncStats'],
-    queryFn: () => apiClient.get('/bank-sync/stats').then(r => r.data.sources || []),
+    queryKey: ['bankBalances', user?.id],
+    queryFn: () => apiClient.get('/bank-sync/stats', { params: { periodOffset: 0 } }).then(r => r.data.sources || []),
     staleTime: 5 * 60_000,
     retry: 1,
   });

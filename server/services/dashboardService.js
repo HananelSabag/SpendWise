@@ -7,7 +7,9 @@
  *
  * Model notes (the whole app rests on this):
  *  - A bank account and a credit-card company are different kinds of source.
- *  - Card purchases are counted by purchase date; the bank's summarized
+ *  - Card purchases are counted by statement/payment date for financial-cycle
+ *    cash-flow views; the original purchase date remains on each transaction.
+ *    The bank's summarized
  *    card-payment withdrawal is EXCLUDED when the matching card's purchase
  *    detail is connected (no double counting), and counted otherwise.
  */
@@ -52,11 +54,11 @@ const BANK_CARD_SETTLEMENT_PATTERN =
  * @param {number} userId
  * @returns {Promise<object>} the `data` object for GET /transactions/dashboard
  */
-async function buildDashboardData(userId) {
-  const period = await getUserFinancialCycle(userId);
+async function buildDashboardData(userId, requestedOffset = 0) {
+  const period = await getUserFinancialCycle(userId, requestedOffset);
   const { cycleDay, start: periodStart, end: periodEnd } = period;
 
-  const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult, perAccountResult] = await Promise.all([
+  const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult, perAccountResult, recurringResult] = await Promise.all([
     db.query(`
       WITH scoped AS (
         SELECT
@@ -85,7 +87,16 @@ async function buildDashboardData(userId) {
          AND ba_filter.bank_source = t.bank_source
          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1
-          AND t.date >= $2 AND t.date < $3
+          AND (CASE
+            WHEN t.bank_source = ANY($5::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) >= $2
+          AND (CASE
+            WHEN t.bank_source = ANY($5::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) < $3
           AND t.deleted_at IS NULL
           AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
       ),
@@ -141,7 +152,7 @@ async function buildDashboardData(userId) {
       CARD_SETTLEMENT_SOURCE_PATTERNS.visa_cal,
       CARD_SETTLEMENT_SOURCE_PATTERNS.max,
     ]),
-    Transaction.getRecent(userId, 10),
+    Transaction.getRecentForPeriod(userId, periodStart, periodEnd, CREDIT_CARD_SOURCES, 10),
     db.query(`
       WITH scoped AS (
         SELECT
@@ -160,7 +171,16 @@ async function buildDashboardData(userId) {
          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
           AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
-          AND t.date >= $2 AND t.date < $3
+          AND (CASE
+            WHEN t.bank_source = ANY($5::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) >= $2
+          AND (CASE
+            WHEN t.bank_source = ANY($5::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) < $3
       ),
       flags AS (
         SELECT
@@ -233,9 +253,18 @@ async function buildDashboardData(userId) {
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
           AND t.type = 'expense' AND t.bank_source IS NOT NULL
           AND COALESCE(ba_filter.enabled, true) = true
-          AND t.date >= $2 AND t.date < $3
+          AND (CASE
+            WHEN t.bank_source = ANY($4::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) >= $2
+          AND (CASE
+            WHEN t.bank_source = ANY($4::text[])
+              THEN COALESCE(t.bank_processed_date, t.date)
+            ELSE t.date
+          END) < $3
       ) classified
-    `, [userId, periodStart, periodEnd]),
+    `, [userId, periodStart, periodEnd, CREDIT_CARD_SOURCES]),
     db.query(`
       SELECT
         t.bank_source,
@@ -249,9 +278,18 @@ async function buildDashboardData(userId) {
        AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
       WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.bank_source IS NOT NULL
         AND COALESCE(ba_filter.enabled, true) = true
-        AND t.date >= $2 AND t.date < $3
+        AND (CASE
+          WHEN t.bank_source = ANY($4::text[])
+            THEN COALESCE(t.bank_processed_date, t.date)
+          ELSE t.date
+        END) >= $2
+        AND (CASE
+          WHEN t.bank_source = ANY($4::text[])
+            THEN COALESCE(t.bank_processed_date, t.date)
+          ELSE t.date
+        END) < $3
       GROUP BY t.bank_source
-    `, [userId, periodStart, periodEnd]),
+    `, [userId, periodStart, periodEnd, CREDIT_CARD_SOURCES]),
     db.query(`
       SELECT
         bank_source,
@@ -286,15 +324,52 @@ async function buildDashboardData(userId) {
           COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS income,
           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expenses,
           COUNT(*) AS count,
-          MAX(date) AS last_transaction_at
+          MAX(CASE
+            WHEN bank_source = ANY($4::text[])
+              THEN COALESCE(bank_processed_date, date)
+            ELSE date
+          END) AS last_transaction_at
         FROM transactions
         WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
-          AND date >= $2 AND date < $3
+          AND (CASE
+            WHEN bank_source = ANY($4::text[])
+              THEN COALESCE(bank_processed_date, date)
+            ELSE date
+          END) >= $2
+          AND (CASE
+            WHEN bank_source = ANY($4::text[])
+              THEN COALESCE(bank_processed_date, date)
+            ELSE date
+          END) < $3
         GROUP BY bank_source, COALESCE(bank_account_number, '')
       ) act ON act.bank_source = ba.bank_source AND act.account_number = ba.account_number
       WHERE ba.user_id = $1
       ORDER BY ba.bank_source, ba.account_number
-    `, [userId, periodStart, periodEnd]),
+    `, [userId, periodStart, periodEnd, CREDIT_CARD_SOURCES]),
+    // Repeated merchant patterns across multiple calendar months. This is
+    // intentionally presented as a detected pattern, not a guaranteed bill.
+    db.query(`
+      SELECT MIN(t.description) AS description,
+             MIN(t.raw_category) FILTER (WHERE t.raw_category IS NOT NULL AND t.raw_category <> '') AS category,
+             MIN(t.bank_source) AS bank_source,
+             COUNT(*)::int AS occurrences,
+             COUNT(DISTINCT DATE_TRUNC('month', COALESCE(t.bank_processed_date, t.date)))::int AS active_months,
+             ROUND(AVG(t.amount)::numeric, 2) AS average_amount,
+             MAX(COALESCE(t.bank_processed_date, t.date)) AS last_seen
+      FROM transactions t
+      LEFT JOIN bank_accounts ba_filter
+        ON ba_filter.user_id = t.user_id
+       AND ba_filter.bank_source = t.bank_source
+       AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+      WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
+        AND COALESCE(ba_filter.enabled, true) = true
+        AND COALESCE(t.bank_processed_date, t.date) >= CURRENT_DATE - INTERVAL '7 months'
+        AND LENGTH(TRIM(t.description)) > 2
+      GROUP BY LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
+      HAVING COUNT(DISTINCT DATE_TRUNC('month', COALESCE(t.bank_processed_date, t.date))) >= 2
+      ORDER BY active_months DESC, occurrences DESC, average_amount DESC
+      LIMIT 12
+    `, [userId]),
   ]);
 
   const categoryBreakdown = categoriesResult.rows.map(r => ({
@@ -328,6 +403,16 @@ async function buildDashboardData(userId) {
     cashWithdrawn: parseFloat(bc.cash_withdrawn || 0),
     cashWithdrawalCount: parseInt(bc.cash_withdrawal_count || 0),
   };
+
+  const recurringPatterns = recurringResult.rows.map((row) => ({
+    description: row.description,
+    category: row.category,
+    bank_source: row.bank_source,
+    occurrences: parseInt(row.occurrences) || 0,
+    active_months: parseInt(row.active_months) || 0,
+    average_amount: parseFloat(row.average_amount) || 0,
+    last_seen: row.last_seen,
+  }));
 
   // Per-source account facts (balance + freshness) keyed by bank_source.
   const acctBySource = Object.fromEntries(
@@ -388,10 +473,18 @@ async function buildDashboardData(userId) {
   }).sort((a, b) => b.expenses - a.expenses);
 
   return {
-    period: { start: periodStart, end: periodEnd, cycleDay, cycleDaySet: true },
+    period: {
+      start: periodStart,
+      end: periodEnd,
+      cycleDay,
+      cycleDaySet: true,
+      offset: period.offset,
+      isCurrent: period.isCurrent,
+    },
     summary,
     categoryBreakdown,
     bankCosts,
+    recurringPatterns,
     sources,
     recent_transactions: recentTransactions,
     metadata: { generated_at: new Date().toISOString() },
