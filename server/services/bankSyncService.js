@@ -25,6 +25,16 @@ function calendarDateInTz(d) {
   }).format(d);
 }
 
+function normalizeProcessedDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : calendarDateInTz(date);
+}
+
+function normalizeBankStatus(value) {
+  return value === 'pending' || value === 'completed' ? value : null;
+}
+
 /**
  * Ingest scraped accounts for a user inside an existing DB transaction.
  *
@@ -85,6 +95,8 @@ async function ingestAccounts(client, userId, source, accounts) {
       // Source-provided category text (Max sends one; banks usually don't).
       // null when absent — we never guess a category at ingest time.
       const rawCategory = (txn.raw_category || '').toString().trim().slice(0, 200) || null;
+      const bankProcessedDate = normalizeProcessedDate(txn.processed_date);
+      const bankStatus = normalizeBankStatus(txn.status);
       const bankSyncId = txn.identifier ? `${source}:${acctKey}:${txn.identifier}` : null;
 
       const acctNum = acctKey === 'default' ? null : acctKey;
@@ -94,21 +106,32 @@ async function ingestAccounts(client, userId, source, accounts) {
         const result = await client.query(
           `INSERT INTO transactions
              (user_id, amount, type, description, notes, date, transaction_datetime,
-              raw_category, bank_sync_id, bank_source, bank_account_number, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,$10,NOW(),NOW())
+              raw_category, bank_sync_id, bank_source, bank_account_number,
+              bank_processed_date, bank_status, created_at, updated_at)
+           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
            ON CONFLICT (user_id, bank_sync_id)
              WHERE bank_sync_id IS NOT NULL
-           DO NOTHING
-           RETURNING id`,
-          [userId, amount, type, description, date, transactionDatetime, rawCategory, bankSyncId, source, acctNum],
+           DO UPDATE SET
+             bank_processed_date = COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date),
+             bank_status         = COALESCE(EXCLUDED.bank_status, transactions.bank_status),
+             raw_category        = COALESCE(transactions.raw_category, EXCLUDED.raw_category),
+             updated_at          = NOW()
+           WHERE transactions.bank_processed_date IS DISTINCT FROM COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date)
+              OR transactions.bank_status IS DISTINCT FROM COALESCE(EXCLUDED.bank_status, transactions.bank_status)
+              OR transactions.raw_category IS DISTINCT FROM COALESCE(transactions.raw_category, EXCLUDED.raw_category)
+           RETURNING id, (xmax = 0) AS was_inserted`,
+          [
+            userId, amount, type, description, date, transactionDatetime,
+            rawCategory, bankSyncId, source, acctNum, bankProcessedDate, bankStatus,
+          ],
         );
-        result.rows.length > 0 ? inserted++ : skipped++;
+        result.rows[0]?.was_inserted ? inserted++ : skipped++;
       } else {
         // Soft dedup: match on (user_id, source, account, date, amount, description).
         // Deliberately INCLUDES tombstoned rows (deleted_at set): a user-deleted
         // bank transaction must keep blocking re-import, not resurrect here.
         const existing = await client.query(
-          `SELECT id FROM transactions
+          `SELECT id, bank_processed_date, bank_status, raw_category FROM transactions
            WHERE user_id=$1 AND bank_source=$2 AND date=$3
              AND amount=$4 AND description=$5
              AND bank_account_number IS NOT DISTINCT FROM $6
@@ -116,14 +139,34 @@ async function ingestAccounts(client, userId, source, accounts) {
           [userId, source, date, amount, description, acctNum],
         );
         if (existing.rows.length > 0) {
+          // A deduped re-sync can still enrich an old row with statement date
+          // and status metadata introduced after that row was first imported.
+          await client.query(
+            `UPDATE transactions SET
+               bank_processed_date = COALESCE($2, bank_processed_date),
+               bank_status         = COALESCE($3, bank_status),
+               raw_category        = COALESCE(raw_category, $4),
+               updated_at          = NOW()
+             WHERE id = $1
+               AND (
+                 bank_processed_date IS DISTINCT FROM COALESCE($2, bank_processed_date)
+                 OR bank_status IS DISTINCT FROM COALESCE($3, bank_status)
+                 OR raw_category IS DISTINCT FROM COALESCE(raw_category, $4)
+               )`,
+            [existing.rows[0].id, bankProcessedDate, bankStatus, rawCategory],
+          );
           skipped++;
         } else {
           await client.query(
             `INSERT INTO transactions
                (user_id, amount, type, description, notes, date, transaction_datetime,
-                raw_category, bank_source, bank_account_number, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,NOW(),NOW())`,
-            [userId, amount, type, description, date, transactionDatetime, rawCategory, source, acctNum],
+                raw_category, bank_source, bank_account_number,
+                bank_processed_date, bank_status, created_at, updated_at)
+             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())`,
+            [
+              userId, amount, type, description, date, transactionDatetime,
+              rawCategory, source, acctNum, bankProcessedDate, bankStatus,
+            ],
           );
           inserted++;
         }
@@ -161,4 +204,10 @@ async function ingestAccounts(client, userId, source, accounts) {
   return { inserted, skipped };
 }
 
-module.exports = { ingestAccounts, MAX_TXNS };
+module.exports = {
+  ingestAccounts,
+  MAX_TXNS,
+  calendarDateInTz,
+  normalizeProcessedDate,
+  normalizeBankStatus,
+};

@@ -52,11 +52,13 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
           <p className="text-sm font-bold text-red-500 dark:text-red-400 tabular-nums flex items-center justify-center gap-1">
             <TrendingDown className="w-3.5 h-3.5" />{formatILS(stat.total_expense, lang)}
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('expenses')}</p>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            {isCreditCard ? t('cardCharges') : t('expenses')}
+          </p>
         </div>
       </div>
       <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 leading-snug">
-        {t('statsScopeNote')}
+        {isCreditCard ? t('cardStatsScopeNote') : t('statsScopeNote')}
       </p>
 
       {/* Accounts + per-account toggle */}

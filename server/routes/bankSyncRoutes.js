@@ -30,8 +30,12 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
 const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
-const { VALID_SOURCES } = require('../config/institutions');
+const { VALID_SOURCES, INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getUserFinancialCycle } = require('../services/financialCycleService');
+
+const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
+  .filter(([, meta]) => meta.kind === 'credit_card')
+  .map(([source]) => source);
 
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
@@ -166,7 +170,13 @@ router.get('/stats', auth, async (req, res) => {
          WHERE user_id = $1
        ),
        tx AS (
-         SELECT t.*
+         SELECT
+           t.*,
+           CASE
+             WHEN t.bank_source = ANY($4::text[])
+               THEN COALESCE(t.bank_processed_date, t.date)
+             ELSE t.date
+           END AS activity_date
          FROM transactions t
          LEFT JOIN bank_accounts ba_filter
            ON ba_filter.user_id = t.user_id
@@ -182,10 +192,10 @@ router.get('/stats', auth, async (req, res) => {
            bank_source AS source,
            COUNT(id)::int AS total,
            MAX(created_at) AS last_transaction_sync,
-           COALESCE(SUM(CASE WHEN type='income'  AND date >= $2 AND date < $3 THEN 1 ELSE 0 END), 0)::int AS income_count,
-           COALESCE(SUM(CASE WHEN type='expense' AND date >= $2 AND date < $3 THEN 1 ELSE 0 END), 0)::int AS expense_count,
-           COALESCE(SUM(CASE WHEN type='income'  AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_income,
-           COALESCE(SUM(CASE WHEN type='expense' AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_expense
+           COALESCE(SUM(CASE WHEN type='income'  AND activity_date >= $2 AND activity_date < $3 THEN 1 ELSE 0 END), 0)::int AS income_count,
+           COALESCE(SUM(CASE WHEN type='expense' AND activity_date >= $2 AND activity_date < $3 THEN 1 ELSE 0 END), 0)::int AS expense_count,
+           COALESCE(SUM(CASE WHEN type='income'  AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_income,
+           COALESCE(SUM(CASE WHEN type='expense' AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_expense
          FROM tx
          GROUP BY bank_source
        ),
@@ -205,9 +215,9 @@ router.get('/stats', auth, async (req, res) => {
            bank_source AS source,
            COALESCE(bank_account_number, '') AS account_number,
            COUNT(id)::int AS total,
-           MAX(date) AS last_transaction_at,
-           COALESCE(SUM(CASE WHEN type='income'  AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_income,
-           COALESCE(SUM(CASE WHEN type='expense' AND date >= $2 AND date < $3 THEN amount ELSE 0 END), 0) AS total_expense
+           MAX(activity_date) AS last_transaction_at,
+           COALESCE(SUM(CASE WHEN type='income'  AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_income,
+           COALESCE(SUM(CASE WHEN type='expense' AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_expense
          FROM tx
          GROUP BY bank_source, COALESCE(bank_account_number, '')
        )
@@ -241,9 +251,8 @@ router.get('/stats', auth, async (req, res) => {
        LEFT JOIN tx_stats ts ON ts.source = s.source
        LEFT JOIN acct_stats ast ON ast.source = s.source
        ORDER BY last_sync DESC`,
-      [userId, period.start, period.end],
+      [userId, period.start, period.end, CREDIT_CARD_SOURCES],
     );
-    const { institutionKind, INSTITUTIONS } = require('../config/institutions');
     const sources = result.rows.map((r) => ({
       ...r,
       kind: institutionKind(r.source),

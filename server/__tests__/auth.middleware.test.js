@@ -171,12 +171,9 @@ describe('canManageUser', () => {
     expect(canManageUser({ role: 'user', id: 1 }, { role: 'user', id: 2 })).toBe(false);
   });
 
-  it('admin+user path returns true even with same id (self-id guard is unreachable dead code)', () => {
-    // NOTE: The self-id guard in canManageUser never fires because the
-    // "admin can manage user" branch returns before reaching it.
-    // This test documents the actual behavior; fixing the guard is a separate task.
-    expect(canManageUser({ role: 'admin', id: 5 }, { role: 'user', id: 5 })).toBe(true);
-    expect(canManageUser({ role: 'super_admin', id: 5 }, { role: 'user', id: 5 })).toBe(true);
+  it('prevents admins and super admins from managing their own account', () => {
+    expect(canManageUser({ role: 'admin', id: 5 }, { role: 'user', id: 5 })).toBe(false);
+    expect(canManageUser({ role: 'super_admin', id: 5 }, { role: 'user', id: 5 })).toBe(false);
   });
 
   it('returns false when either argument is null', () => {
