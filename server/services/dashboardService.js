@@ -99,6 +99,7 @@ async function buildDashboardData(userId) {
           EXISTS (
             SELECT 1 FROM scoped WHERE source_kind = 'credit_card' AND type = 'expense'
           ) AS has_card_detail
+        FROM scoped
       ),
       classified AS (
         SELECT
@@ -107,11 +108,12 @@ async function buildDashboardData(userId) {
             source_kind = 'bank'
             AND is_card_settlement
             AND (
-              (settlement_card_source IS NOT NULL AND settlement_card_source = ANY((SELECT card_sources FROM flags)))
-              OR (settlement_card_source IS NULL AND (SELECT card_source_count FROM flags) = 1)
+              (settlement_card_source IS NOT NULL AND settlement_card_source = ANY(flags.card_sources))
+              OR (settlement_card_source IS NULL AND flags.card_source_count = 1)
             )
           ) AS excluded_card_settlement
         FROM scoped
+        CROSS JOIN flags
       )
       SELECT
         COUNT(*)::int AS total_transactions,
@@ -180,14 +182,15 @@ async function buildDashboardData(userId) {
           -- from the bank description via BANK_PATTERN_CASE.
           CASE WHEN t.raw_category IS NOT NULL AND t.raw_category <> '' THEN 'source' ELSE 'auto' END AS source
         FROM scoped t
+        CROSS JOIN flags
         WHERE true
           AND NOT (
             t.bank_source IS NOT NULL
             AND NOT (t.bank_source = ANY($5::text[]))
             AND t.description ~* $4
             AND (
-              (t.settlement_card_source IS NOT NULL AND t.settlement_card_source = ANY((SELECT card_sources FROM flags)))
-              OR (t.settlement_card_source IS NULL AND (SELECT card_source_count FROM flags) = 1)
+              (t.settlement_card_source IS NOT NULL AND t.settlement_card_source = ANY(flags.card_sources))
+              OR (t.settlement_card_source IS NULL AND flags.card_source_count = 1)
             )
           )
       )
