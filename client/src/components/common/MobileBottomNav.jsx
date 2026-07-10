@@ -19,7 +19,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, User,
   PlusCircle, MinusCircle, Calculator,
-  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2,
+  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -180,6 +180,13 @@ const FullNav = () => {
 
   const toolActions = useMemo(() => [
     {
+      key: 'insights',
+      label: t('nav.insights') || (currentLanguage === 'he' ? 'תובנות' : 'Insights'),
+      icon: BarChart3,
+      iconTint: 'text-indigo-500 dark:text-indigo-400',
+      action: () => closeAndGo('/insights'),
+    },
+    {
       key: 'exchange',
       label: t('nav.exchange') || 'Exchange',
       icon: Calculator,
@@ -191,7 +198,7 @@ const FullNav = () => {
       label: t('nav.help') || 'Help',
       icon: HelpCircle,
       iconTint: 'text-teal-500 dark:text-teal-400',
-      action: () => { handleClose(); dispatch('open-onboarding'); },
+      action: () => { handleClose(); dispatch('open-help'); },
     },
     ...(isAdmin ? [{
       key: 'admin',

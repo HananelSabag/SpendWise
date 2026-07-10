@@ -18,6 +18,22 @@ const db = require('../config/db');
 const { Transaction } = require('../models/Transaction');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getUserFinancialCycle } = require('./financialCycleService');
+const { getCurrentPeriod, getPeriodContaining } = require('../utils/financialPeriod');
+
+// Half-open-cycle offset (≤ 0) of the earliest transaction relative to the
+// current cycle — so the client can stop users navigating to periods that
+// never had any data (item 5). 0 = data only exists in the current cycle.
+function periodIndex(ymdStr) {
+  const [y, m] = ymdStr.split('-').map(Number);
+  return y * 12 + (m - 1);
+}
+function computeMinOffset(cycleDay, earliestDate) {
+  if (!earliestDate) return 0;
+  const current = getCurrentPeriod(cycleDay);
+  const earliest = getPeriodContaining(cycleDay, new Date(earliestDate));
+  const diff = periodIndex(earliest.start) - periodIndex(current.start);
+  return Math.max(-24, Math.min(0, diff));
+}
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
@@ -472,6 +488,16 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     };
   }).sort((a, b) => b.expenses - a.expenses);
 
+  // Earliest transaction → how far back navigation is meaningful.
+  const earliestResult = await db.query(
+    `SELECT MIN(COALESCE(bank_processed_date, date)) AS earliest
+       FROM transactions
+      WHERE user_id = $1 AND deleted_at IS NULL`,
+    [userId],
+    'dashboard_earliest_txn'
+  );
+  const minOffset = computeMinOffset(cycleDay, earliestResult.rows[0]?.earliest);
+
   return {
     period: {
       start: periodStart,
@@ -480,6 +506,7 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       cycleDaySet: true,
       offset: period.offset,
       isCurrent: period.isCurrent,
+      minOffset,
     },
     summary,
     categoryBreakdown,

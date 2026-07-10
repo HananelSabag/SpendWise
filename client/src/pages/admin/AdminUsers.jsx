@@ -10,6 +10,7 @@ import { useAuth, useTranslation, useNotifications, useCurrency } from '../../st
 import { api } from '../../api';
 import { Button, Badge, Dropdown, Modal, Avatar, PageSkeleton } from '../../components/ui';
 import ModernUsersTable from '../../components/features/admin/ModernUsersTable.jsx';
+import AdminTabsNav from '../../components/features/admin/AdminTabsNav';
 import { cn } from '../../utils/helpers';
 
 const AdminUsers = () => {
@@ -181,6 +182,8 @@ const AdminUsers = () => {
               <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
             </button>
           </div>
+
+          <AdminTabsNav className="mt-3" />
 
           {/* Compact stats pills */}
           <div

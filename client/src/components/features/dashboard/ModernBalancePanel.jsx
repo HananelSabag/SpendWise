@@ -1,16 +1,19 @@
 /**
  * ModernBalancePanel — Balance summary (dashboard hero)
  *
- * Shows the user's consolidated bank balance from /bank-sync/stats:
- *   - Real account balance (bank_accounts.balance) when the bank exposes it
- *   - "Not available" when it doesn't (e.g. Yahav via israeli-bank-scrapers)
+ * The architecture refactor made "one account balance" a wrong assumption: a
+ * user can have Leumi + Poalim + Discount + Yahav at once. So the hero lists
+ * EACH bank account separately, then a clear "Total bank balance" summary —
+ * never a single blended number that hides which account holds what.
  *
- * Slimmed intentionally: balance + freshness + source chips only. Per-source
- * income/expense detail lives in the dashboard's SourcesOverview, and
- * period-based income/expense in the PeriodSummary — this hero no longer
- * duplicates them. (Its old all-time income/expense/net block was ~half the
- * screen and its all-time totals visually conflicted with the period card
- * directly below it.)
+ *   - Real account balance (bank_accounts.balance) when the bank exposes it
+ *   - "Not available" when it doesn't (e.g. Yahav via israeli-bank-scrapers),
+ *     shown per-account and excluded from the total
+ *
+ * A credit company (max/isracard/cal) NEVER has a balance — only charges — so
+ * it never appears in the balance list or the total; it stays a source chip.
+ * Per-source charges and period income/expense live in SourcesOverview /
+ * PeriodSummary — this hero doesn't duplicate them.
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -69,6 +72,24 @@ const SkeletonBox = ({ className }) => (
   <div className={cn('animate-pulse bg-white/20 rounded-xl', className)} />
 );
 
+// One account row inside the multi-account list. `balance === null` means the
+// bank doesn't expose it (Yahav) — we say so instead of printing a fake 0.
+const AccountRow = ({ label, balance, formatCurrency, unavailableLabel }) => (
+  <div className="flex items-baseline justify-between gap-3 py-1.5">
+    <span className="min-w-0 truncate text-sm font-medium text-white/90">{label}</span>
+    <span
+      className={cn(
+        'shrink-0 tabular-nums',
+        balance === null
+          ? 'text-xs font-medium text-white/50'
+          : 'text-sm font-bold text-white',
+      )}
+    >
+      {balance === null ? unavailableLabel : formatCurrency(balance)}
+    </span>
+  </div>
+);
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const ModernBalancePanel = ({ className = '' }) => {
   const { formatCurrency } = useCurrency();
@@ -90,18 +111,28 @@ const ModernBalancePanel = ({ className = '' }) => {
     return !latest || (d && d > latest) ? d : latest;
   }, null);
 
-  // Balance = real money in a real bank account. A credit company (max/
-  // isracard/cal) NEVER has a balance — only charges — so it must never count
-  // toward the total. User-disabled accounts are excluded too.
+  // A credit company never holds a balance, so only bank-kind sources feed the
+  // balance list. Every enabled account is listed (even ones without a balance,
+  // so the user sees the account exists); only real numbers reach the total.
   const bankSources = (sources || []).filter(src => src.kind !== 'credit_card');
   const hasBankSource = bankSources.length > 0;
-  const accountsWithBalance = bankSources.flatMap(src =>
+  const bankAccounts = bankSources.flatMap(src =>
     (src.accounts || [])
-      .filter(a => a.enabled !== false && a.balance !== null && a.balance !== undefined)
-      .map(a => ({ ...a, source: src.source }))
+      .filter(a => a.enabled !== false)
+      .map(a => ({
+        source: src.source,
+        accountNumber: a.account_number || null,
+        balance: a.balance === null || a.balance === undefined ? null : Number(a.balance),
+        label: institutionLabel(src.source, currentLanguage) +
+          (a.account_number ? ` · ${a.account_number}` : ''),
+      }))
   );
+  const accountsWithBalance = bankAccounts.filter(a => a.balance !== null);
   const hasRealBalance   = accountsWithBalance.length > 0;
-  const totalRealBalance = accountsWithBalance.reduce((s, a) => s + Number(a.balance || 0), 0);
+  const totalRealBalance = accountsWithBalance.reduce((s, a) => s + a.balance, 0);
+  // "Break down into rows" once there is more than one bank account to show —
+  // a single account stays the clean big-number hero it always was.
+  const multiAccount = bankAccounts.length > 1;
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading) {
@@ -167,8 +198,9 @@ const ModernBalancePanel = ({ className = '' }) => {
   }
 
   const timeLabel = relativeTime(lastSync, t);
+  const unavailableLabel = t('unavailable');
 
-  // ── Synced — compact balance-only hero ──────────────────────────────────────
+  // ── Synced — balance hero ────────────────────────────────────────────────────
   return (
     <div className={cn('rounded-2xl overflow-hidden shadow-lg text-white', HERO_GRADIENT, className)}>
       <div className="p-5">
@@ -194,42 +226,82 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
         </div>
 
-        {/* Balance */}
-        <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1 font-medium">
-          {t('accountBalance')}
-        </p>
-
-        {hasRealBalance ? (
-          <motion.div
-            key={totalRealBalance}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="text-4xl font-bold tracking-tight"
-          >
-            <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
-          </motion.div>
-        ) : (
+        {!hasBankSource ? (
+          // Only credit companies connected — there is no balance to total.
           <div>
-            <p className="text-2xl font-bold opacity-50">{t('unavailable')}</p>
-            <p className="text-[11px] opacity-50 mt-0.5">
-              {hasBankSource
-                ? t('unavailableNote', { bank: institutionLabel(bankSources[0]?.source, currentLanguage) })
-                : t('balanceNeedsBank')}
+            <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1 font-medium">
+              {t('accountBalance')}
             </p>
+            <p className="text-2xl font-bold opacity-50">{unavailableLabel}</p>
+            <p className="text-[11px] opacity-50 mt-0.5">{t('balanceNeedsBank')}</p>
           </div>
-        )}
+        ) : multiAccount ? (
+          // Multiple bank accounts — list each, then a clear total.
+          <div>
+            <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1 font-medium">
+              {t('accountsListTitle')}
+            </p>
+            <div className="divide-y divide-white/10">
+              {bankAccounts.map((a, i) => (
+                <AccountRow
+                  key={`${a.source}-${a.accountNumber || i}`}
+                  label={a.label}
+                  balance={a.balance}
+                  formatCurrency={formatCurrency}
+                  unavailableLabel={unavailableLabel}
+                />
+              ))}
+            </div>
 
-        {/* Per-account rows when more than one account has a balance */}
-        {hasRealBalance && accountsWithBalance.length > 1 && (
-          <div className="mt-2 space-y-0.5">
-            {accountsWithBalance.map((a, i) => (
-              <p key={i} className="text-[11px] opacity-60">
-                {institutionLabel(a.source, currentLanguage)}
-                {a.account_number ? ` · ${a.account_number}` : ''}
-                {' · '}{formatCurrency(Number(a.balance))}
-              </p>
-            ))}
+            <div className="mt-3 border-t border-white/25 pt-3 flex items-end justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide opacity-80">
+                {t('totalBankBalance')}
+              </span>
+              {hasRealBalance ? (
+                <motion.span
+                  key={totalRealBalance}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl"
+                >
+                  <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
+                </motion.span>
+              ) : (
+                <span className="text-lg font-bold opacity-50">{unavailableLabel}</span>
+              )}
+            </div>
+            {hasRealBalance && accountsWithBalance.length < bankAccounts.length && (
+              <p className="mt-1 text-[10px] opacity-50">{t('totalExcludesUnavailable')}</p>
+            )}
+          </div>
+        ) : (
+          // Exactly one bank account — the classic single big-number hero.
+          <div>
+            <p className="text-[11px] uppercase tracking-wide opacity-70 mb-1 font-medium">
+              {t('accountBalance')}
+            </p>
+            {hasRealBalance ? (
+              <>
+                <motion.div
+                  key={totalRealBalance}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="text-4xl font-bold tracking-tight"
+                >
+                  <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
+                </motion.div>
+                <p className="mt-1 text-[11px] opacity-60 truncate">{bankAccounts[0]?.label}</p>
+              </>
+            ) : (
+              <div>
+                <p className="text-2xl font-bold opacity-50">{unavailableLabel}</p>
+                <p className="text-[11px] opacity-50 mt-0.5">
+                  {t('unavailableNote', { bank: institutionLabel(bankSources[0]?.source, currentLanguage) })}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

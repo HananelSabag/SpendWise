@@ -501,8 +501,11 @@ export default {
   source: {
     all: "הכל",
     bank: "בנק",
+    banks: "חשבונות בנק",
+    cards: "חברות אשראי",
     manual: "ידני",
     bankSynced: "מסונכרן מהבנק",
+    legend: "שורות בנק מייצגות תזרים בחשבון. שורות חברת אשראי הן פירוט קניות בכרטיס.",
     account: "חשבון/כרטיס",
     allAccounts: "הכל"
   },
@@ -510,6 +513,25 @@ export default {
     manual: "ידני",
     cardPurchase: "רכישה בכרטיס",
     bankMovement: "תנועת בנק"
+  },
+  detail: {
+    title: "פרטי עסקה",
+    description: "תיאור",
+    date: "תאריך",
+    source: "מקור",
+    movement: "סוג תנועה",
+    account: "חשבון / כרטיס",
+    category: "קטגוריה",
+    notes: "הערות",
+    origin: "מקור הנתונים",
+    originBank: "מסונכרן מהבנק · לקריאה בלבד",
+    originManual: "רשומה ידנית שהזנת",
+    addedOn: "נוסף בתאריך",
+    id: "מזהה",
+    manual: "רשומה ידנית",
+    edit: "עריכה",
+    duplicate: "שכפול",
+    delete: "מחיקה"
   },
 
   fromBank: "יובא מחשבון הבנק שלך",

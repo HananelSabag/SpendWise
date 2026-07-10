@@ -14,6 +14,7 @@ import {
 import { useTranslation } from '../../stores';
 import { api } from '../../api';
 import { LoadingSpinner } from '../../components/ui';
+import AdminTabsNav from '../../components/features/admin/AdminTabsNav';
 import { cn } from '../../utils/helpers';
 import { institutionLabel, institutionKind } from '../../components/features/bankSync/bankSyncMeta';
 
@@ -111,6 +112,8 @@ const AdminSync = () => {
               <RefreshCw className={cn('w-4 h-4', refreshing && 'animate-spin')} />
             </button>
           </div>
+
+          <AdminTabsNav className="mt-3" />
 
           <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {pills.map(({ label, value, color, bg }) => (

@@ -25,11 +25,21 @@ const ModernTransactionCard = ({
   onEdit,
   onDelete,
   onDuplicate,
+  onOpenDetail,
   viewMode = 'list',
   className = ''
 }) => {
   const { t, isRTL, currentLanguage } = useTranslation();
   const { formatCurrency } = useCurrency();
+
+  // Tapping the row body opens the full detail view (item 12 — descriptions
+  // are truncated here). In multi-select mode the row toggles selection
+  // instead, matching the visible checkbox.
+  const handleCardClick = () => {
+    if (onSelect) onSelect(transaction.id, !isSelected);
+    else if (onOpenDetail) onOpenDetail(transaction);
+  };
+  const interactive = Boolean(onSelect || onOpenDetail);
 
   const isIncome     = transaction?.type === 'income';
   const isBankSynced = Boolean(transaction?.bank_source);
@@ -75,9 +85,16 @@ const ModernTransactionCard = ({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
+      onClick={interactive ? handleCardClick : undefined}
+      onKeyDown={interactive ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCardClick(); }
+      } : undefined}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
       className={cn(
         'relative group rounded-xl border transition-colors',
         'bg-white dark:bg-gray-800/80',
+        interactive && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400',
         isSelected
           ? 'border-indigo-400 dark:border-indigo-600 bg-indigo-50/60 dark:bg-indigo-900/15'
           : 'border-gray-100 dark:border-gray-700/60 hover:border-gray-200 dark:hover:border-gray-600',
@@ -137,33 +154,36 @@ const ModernTransactionCard = ({
             {isIncome ? '+' : '−'}{formatCurrency(amount)}
           </span>
 
-          {/* Actions: bank rows are read-only facts — delete only.
-              Manual rows get the full set. */}
-          <OneTimeTransactionActions
-            transaction={transaction}
-            onEdit={isBankSynced ? undefined : onEdit}
-            onDelete={onDelete}
-            onDuplicate={isBankSynced ? undefined : onDuplicate}
-            onSuccess={() => {}}
-            variant="compact"
-            readOnly={isBankSynced}
-          />
+          {/* Action controls must not trigger the row's open-detail click. */}
+          <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+            {/* Actions: bank rows are read-only facts — delete only.
+                Manual rows get the full set. */}
+            <OneTimeTransactionActions
+              transaction={transaction}
+              onEdit={isBankSynced ? undefined : onEdit}
+              onDelete={onDelete}
+              onDuplicate={isBankSynced ? undefined : onDuplicate}
+              onSuccess={() => {}}
+              variant="compact"
+              readOnly={isBankSynced}
+            />
 
-          {/* Select checkbox (bulk mode) */}
-          {onSelect && (
-            <button
-              onClick={e => { e.stopPropagation(); onSelect(transaction.id, !isSelected); }}
-              className={cn(
-                'w-5 h-5 rounded border flex items-center justify-center transition-colors shrink-0',
-                isSelected
-                  ? 'bg-indigo-500 border-indigo-500 text-white'
-                  : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
-              )}
-              aria-label={t('actions.select', 'Select')}
-            >
-              {isSelected && <span className="text-[10px] leading-none">✓</span>}
-            </button>
-          )}
+            {/* Select checkbox (bulk mode) */}
+            {onSelect && (
+              <button
+                onClick={e => { e.stopPropagation(); onSelect(transaction.id, !isSelected); }}
+                className={cn(
+                  'w-5 h-5 rounded border flex items-center justify-center transition-colors shrink-0',
+                  isSelected
+                    ? 'bg-indigo-500 border-indigo-500 text-white'
+                    : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400'
+                )}
+                aria-label={t('actions.select', 'Select')}
+              >
+                {isSelected && <span className="text-[10px] leading-none">✓</span>}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </motion.div>

@@ -11,7 +11,7 @@ import ModernTransactionCard from '../ModernTransactionCard';
 import { MonthHeader, DayHeader } from './ListHeaders';
 
 const TransactionList = ({
-  transactions, loading, onEdit, onDelete, onDuplicate,
+  transactions, loading, onEdit, onDelete, onDuplicate, onOpenDetail,
   selectedIds, onSelect, multiSelectMode,
 }) => {
   const { t, isRTL } = useTranslation('transactions');
@@ -103,6 +103,7 @@ const TransactionList = ({
                       onEdit={onEdit}
                       onDelete={onDelete}
                       onDuplicate={onDuplicate}
+                      onOpenDetail={onOpenDetail}
                       isSelected={selectedIds?.has(tx.id)}
                       onSelect={multiSelectMode ? onSelect : undefined}
                     />

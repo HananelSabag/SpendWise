@@ -12,6 +12,9 @@ export default {
 
   // Account balance
   accountBalance: 'יתרת חשבון',
+  accountsListTitle: 'חשבונות בנק',
+  totalBankBalance: 'סך יתרת הבנק',
+  totalExcludesUnavailable: 'הסכום אינו כולל חשבונות שלא חושפים יתרה',
   unavailable: 'לא זמין',
   unavailableNote: '{{bank}} עדיין לא חושף יתרת חשבון',
   balanceNeedsBank: 'חבר חשבון בנק כדי לראות יתרה — חברות אשראי מציגות חיובים בלבד',

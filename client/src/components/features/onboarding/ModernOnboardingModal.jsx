@@ -137,8 +137,10 @@ const ModernOnboardingModal = ({
         />
       </div>
 
-      {/* Scrollable step content */}
-      <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6 min-h-0">
+      {/* Scrollable step content — clip the x-axis so the per-step slide-in
+          animation (x: ±20) can't spill past the sheet/drawer edge, which is
+          what produced the horizontal cutoff on mobile. */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 min-h-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -146,7 +148,7 @@ const ModernOnboardingModal = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: isRTL ? 20 : -20 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="w-full"
+            className="w-full max-w-full"
           >
             {(() => {
               const StepComponent = currentStepConfig?.component;

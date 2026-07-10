@@ -12,6 +12,9 @@ export default {
 
   // Account balance
   accountBalance: 'Account Balance',
+  accountsListTitle: 'Bank accounts',
+  totalBankBalance: 'Total bank balance',
+  totalExcludesUnavailable: 'Total excludes accounts that don\'t share a balance',
   unavailable: 'Not available',
   unavailableNote: '{{bank}} does not expose account balance yet',
   balanceNeedsBank: 'Connect a bank account to see your balance — credit companies show charges only',

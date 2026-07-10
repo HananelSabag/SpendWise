@@ -85,22 +85,15 @@ const UserMenu = ({ className = '' }) => {
     setShowDropdown(false);
   }, [navigate]);
 
-  // ✅ Handle onboarding trigger
+  // Help button → the Help center (NOT onboarding). Onboarding is the guided
+  // first-run; Help is the always-available reference. The Help center itself
+  // offers a "Replay setup" button for anyone who wants onboarding again.
   const handleOnboardingTrigger = useCallback(() => {
-    console.log('🎯 UserMenu - Triggering onboarding from Help button');
     try {
-      window.dispatchEvent(new Event('open-onboarding'));
-    } catch (_) {
-      setShowOnboarding(true);
-    }
+      window.dispatchEvent(new Event('open-help'));
+    } catch (_) {}
     setShowDropdown(false);
-    
-    addNotification({
-      type: 'info',
-      message: t('onboarding.completion.starting') || 'Starting setup guide...',
-      duration: 2000
-    });
-  }, [addNotification]);
+  }, []);
 
   // ✅ Handle onboarding completion
   const handleOnboardingComplete = useCallback(() => {

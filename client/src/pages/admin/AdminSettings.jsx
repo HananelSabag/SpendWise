@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Settings, Save, Shield, Mail, Zap, BarChart, Ref
 import { useTranslation, useNotifications } from '../../stores';
 import { api } from '../../api';
 import { LoadingSpinner } from '../../components/ui';
+import AdminTabsNav from '../../components/features/admin/AdminTabsNav';
 import { cn } from '../../utils/helpers';
 
 const toBoolean = (v) => {
@@ -173,6 +174,8 @@ const AdminSettings = () => {
               <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
             </button>
           </div>
+
+          <AdminTabsNav className="mt-3" />
 
           {/* Tab pills */}
           <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>

@@ -325,7 +325,8 @@ export default {
     chargedLabel: "חויב"
   },
   bankCosts: {
-    title: "עלויות בנקאיות בתקופה זו",
+    title: "חיובים בחשבון הבנק",
+    subtitle: "עמלות וריבית, החזרי הלוואות ומשיכות מזומן מחשבון הבנק במחזור הזה",
     feesInterest: "עמלות וריבית",
     loanPayments: "תשלומי הלוואה",
     cashWithdrawn: "משיכות מזומן"

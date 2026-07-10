@@ -501,8 +501,11 @@ export default {
   source: {
     all: "All",
     bank: "Bank",
+    banks: "Bank accounts",
+    cards: "Credit companies",
     manual: "Manual",
     bankSynced: "Bank-synced",
+    legend: "Bank rows are account cash flow. Credit-company rows are itemized card purchases.",
     account: "Account/card",
     allAccounts: "All"
   },
@@ -510,6 +513,25 @@ export default {
     manual: "Manual",
     cardPurchase: "Card purchase",
     bankMovement: "Bank movement"
+  },
+  detail: {
+    title: "Transaction details",
+    description: "Description",
+    date: "Date",
+    source: "Source",
+    movement: "Movement",
+    account: "Account / card",
+    category: "Category",
+    notes: "Notes",
+    origin: "Origin",
+    originBank: "Synced from your bank · read-only",
+    originManual: "Manual entry you added",
+    addedOn: "Added on",
+    id: "Reference",
+    manual: "Manual entry",
+    edit: "Edit",
+    duplicate: "Duplicate",
+    delete: "Delete"
   },
 
   fromBank: "Imported from your bank",

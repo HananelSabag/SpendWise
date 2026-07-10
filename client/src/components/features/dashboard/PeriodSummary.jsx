@@ -1,24 +1,50 @@
 /** Income, expenses, and net for the selected billing-cycle window. */
 
 import React from 'react';
+import { CalendarRange } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import PeriodCountingPopover from './PeriodCountingPopover';
 
+// The cycle window is a half-open range [start, end); the last day the user
+// actually sees is end − 1 (e.g. cycle day 26 → "26 Jun – 25 Jul").
+function formatCycleRange(period) {
+  if (!period?.start || !period?.end) return '';
+  const start = new Date(`${period.start}T12:00:00`);
+  const end = new Date(`${period.end}T12:00:00`);
+  end.setDate(end.getDate() - 1);
+  if (isNaN(start) || isNaN(end)) return '';
+  const fmt = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: start.getFullYear() === end.getFullYear() ? undefined : 'numeric',
+  });
+  return `${fmt.format(start)} – ${fmt.format(end)}`;
+}
+
 export default function PeriodSummary({ dashboardData, formatCurrency, t }) {
   const { summary, period } = dashboardData;
   const net = summary.net_balance;
+  const range = formatCycleRange(period);
 
   return (
     <section className="glass-card rounded-2xl p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div>
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">
             {period?.isCurrent
               ? t('period.title', { fallback: 'This financial period' })
               : t('period.selectedTitle', { fallback: 'Selected financial period' })}
           </h3>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+          {/* Item 11 — the active cycle window is always spelled out, so the
+              user never has to guess what "this period" covers. */}
+          {range && (
+            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+              <CalendarRange className="h-3 w-3" />
+              {range}
+            </span>
+          )}
+          <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
             {t('period.cashFlowHint', { fallback: 'What came in and went out inside this cycle window' })}
           </p>
         </div>

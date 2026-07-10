@@ -336,7 +336,8 @@ export default {
     chargedLabel: "charged"
   },
   bankCosts: {
-    title: "Bank Costs This Period",
+    title: "Bank account charges",
+    subtitle: "Fees & interest, loan repayments and cash withdrawals from your bank account this cycle",
     feesInterest: "Fees & Interest",
     loanPayments: "Loan Payments",
     cashWithdrawn: "Cash Withdrawn"

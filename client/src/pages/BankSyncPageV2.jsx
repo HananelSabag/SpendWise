@@ -7,6 +7,7 @@ import apiClient from '../api/client';
 import bankConnectionsApi from '../api/bankConnections';
 import { cn } from '../utils/helpers';
 import BrandMark from '../components/common/BrandMark';
+import { LiquidTabs } from '../components/ui';
 import BankConnectionCard from '../components/features/bankSync/BankConnectionCard';
 import BankStatsCard from '../components/features/bankSync/BankStatsCard';
 import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
@@ -98,9 +99,14 @@ export default function BankSyncPageV2() {
           </div>
           <button onClick={refresh} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('refresh')}><RefreshCw className={cn('h-4 w-4', (connectionsQuery.isFetching || statsQuery.isFetching) && 'animate-spin')} /></button>
         </div>
-        <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-4 pb-2 lg:px-8" aria-label={he ? 'אזורי סנכרון' : 'Sync sections'}>
-          {TABS.map(([key, Icon]) => <button key={key} onClick={() => setTab(key)} className={cn('flex min-w-max items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition', tab === key ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800')}><Icon className="h-3.5 w-3.5" />{tabLabel(key)}</button>)}
-        </nav>
+        <div className="mx-auto max-w-6xl px-4 pb-2 lg:px-8">
+          <LiquidTabs
+            tabs={TABS.map(([key, Icon]) => ({ id: key, label: tabLabel(key), icon: Icon }))}
+            active={tab}
+            onChange={setTab}
+            size="sm"
+          />
+        </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-5 lg:px-8">

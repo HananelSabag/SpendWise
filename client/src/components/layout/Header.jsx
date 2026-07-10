@@ -35,6 +35,7 @@ import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal'
 import BrandMark from '../common/BrandMark';
 
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
+const HelpCenter = React.lazy(() => import('../features/help/HelpCenter'));
 
 const SIDEBAR_EXPANDED = '17rem';
 const SIDEBAR_COLLAPSED = '5rem';
@@ -82,15 +83,18 @@ const Header = () => {
     const openOnboarding = () => setActiveModal('onboarding');
     const closeOnboarding = () => setActiveModal(null);
     const openExchange = () => setActiveModal('exchange');
+    const openHelp = () => setActiveModal('help');
 
     window.addEventListener('open-onboarding', openOnboarding);
     window.addEventListener('close-onboarding', closeOnboarding);
     window.addEventListener('open-exchange', openExchange);
+    window.addEventListener('open-help', openHelp);
 
     return () => {
       window.removeEventListener('open-onboarding', openOnboarding);
       window.removeEventListener('close-onboarding', closeOnboarding);
       window.removeEventListener('open-exchange', openExchange);
+      window.removeEventListener('open-help', openHelp);
     };
   }, []);
 
@@ -386,6 +390,10 @@ const Header = () => {
             onClose={closeModal}
             previewOnly={false}
           />
+        )}
+
+        {activeModal === 'help' && (
+          <HelpCenter isOpen={true} onClose={closeModal} />
         )}
       </Suspense>
     </>

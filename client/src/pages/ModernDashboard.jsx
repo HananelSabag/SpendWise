@@ -5,7 +5,7 @@
 
 import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, BarChart3, ArrowRight } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
@@ -18,12 +18,10 @@ import FloatingAddTransactionButton from '../components/common/FloatingAddTransa
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
 import PeriodSummary from '../components/features/dashboard/PeriodSummary';
-import SourcesOverview from '../components/features/dashboard/SourcesOverview';
 import BankCosts from '../components/features/dashboard/BankCosts';
 import SpendingBreakdown from '../components/features/dashboard/SpendingBreakdown';
 import GreetingHeader from '../components/features/dashboard/GreetingHeader';
 import DashboardError from '../components/features/dashboard/DashboardError';
-import ManualEntryLink from '../components/features/dashboard/ManualEntryLink';
 import { usePullToRefresh } from '../components/features/dashboard/usePullToRefresh';
 
 const useGreeting = (user, t) =>
@@ -46,7 +44,7 @@ const useGreeting = (user, t) =>
   }, [user, t]);
 
 export default function ModernDashboard() {
-  const { t, currentLanguage } = useTranslation('dashboard');
+  const { t } = useTranslation('dashboard');
   const { user } = useAuth();
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
@@ -110,21 +108,6 @@ export default function ModernDashboard() {
         <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:space-y-6 lg:px-8 lg:py-6">
           <ModernBalancePanel />
 
-          <button
-            type="button"
-            onClick={() => navigate('/insights')}
-            className="flex w-full items-center gap-3 rounded-2xl border border-indigo-100 bg-white/80 p-3 text-start shadow-sm transition hover:border-indigo-300 dark:border-indigo-900/50 dark:bg-gray-900/80"
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-300">
-              <BarChart3 className="h-5 w-5" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-gray-900 dark:text-white">{currentLanguage === 'he' ? 'כל המחזורים והתובנות' : 'All cycles and insights'}</span>
-              <span className="block truncate text-xs text-gray-500 dark:text-gray-400">{currentLanguage === 'he' ? 'קטגוריות, עסקאות חוזרות וניווט לתקופות קודמות' : 'Categories, recurring patterns and previous periods'}</span>
-            </span>
-            <ArrowRight className="h-4 w-4 shrink-0 text-indigo-500 rtl:rotate-180" />
-          </button>
-
           <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-3">
             <div className="space-y-4 lg:space-y-6 xl:col-span-2">
               <PeriodSummary
@@ -138,23 +121,15 @@ export default function ModernDashboard() {
                 preloadedTransactions={dashboardData.recentTransactions}
                 preloadedLoading={isRefetching}
               />
-              <ManualEntryLink t={t} />
             </div>
 
             <aside className="space-y-4 lg:space-y-6 xl:col-span-1">
-              <SourcesOverview
-                sources={dashboardData.sources}
-                formatCurrency={formatCurrency}
-                t={t}
-                lang={currentLanguage}
-                navigate={navigate}
-              />
-              <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
               <SpendingBreakdown
                 categoryBreakdown={dashboardData.categoryBreakdown}
                 formatCurrency={formatCurrency}
                 t={t}
               />
+              <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
             </aside>
           </div>
         </main>

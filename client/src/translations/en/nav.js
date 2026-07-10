@@ -31,6 +31,7 @@ export default {
   recent: "Recent",
   favorites: "Favorites",
   exchange: "Exchange",
+  insights: "Insights",
   recurring: "Recurring",
   alerts: "Alerts",
   notifications: "Notifications",

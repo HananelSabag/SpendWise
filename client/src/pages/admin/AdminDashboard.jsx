@@ -9,6 +9,7 @@ import {
 import { useAuth, useTranslation, useNotifications } from '../../stores';
 import { api } from '../../api';
 import { PageSkeleton } from '../../components/ui';
+import AdminTabsNav from '../../components/features/admin/AdminTabsNav';
 import { cn } from '../../utils/helpers';
 
 const AdminDashboard = () => {
@@ -134,6 +135,8 @@ const AdminDashboard = () => {
               <RefreshCw className={cn('w-4 h-4', isFetching && 'animate-spin')} />
             </button>
           </div>
+
+          <AdminTabsNav className="mt-3" />
 
           {/* Stats pills */}
           <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>

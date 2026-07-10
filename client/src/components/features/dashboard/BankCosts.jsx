@@ -41,9 +41,17 @@ const BankCosts = ({ bankCosts, formatCurrency, t }) => {
 
   return (
     <div className="glass-card rounded-2xl p-4">
-      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
-        {t("bankCosts.title", { fallback: "Bank Costs This Period" })}
-      </h3>
+      <div className="mb-3">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+          {t("bankCosts.title", { fallback: "Bank account charges" })}
+        </h3>
+        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500 leading-snug">
+          {t("bankCosts.subtitle", {
+            fallback:
+              "Fees & interest, loan repayments and cash withdrawals from your bank account this cycle",
+          })}
+        </p>
+      </div>
       <div className="space-y-2.5">
         {items.map(({ label, value, icon: Icon, tint, sub }) => (
           <div key={label} className="flex items-center gap-3">

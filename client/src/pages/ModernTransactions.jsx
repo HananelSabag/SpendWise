@@ -25,6 +25,7 @@ import { api } from '../api';
 
 import QuickMonthSelector from '../components/features/transactions/QuickMonthSelector';
 import EditTransactionModal from '../components/features/transactions/modals/EditTransactionModal';
+import TransactionDetailSheet from '../components/features/transactions/TransactionDetailSheet';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton';
 import BottomSheet from '../components/common/BottomSheet';
@@ -46,7 +47,7 @@ const MobileTransactions = ({
   availableMonths,
   transactions, syncedSources, transactionsLoading,
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
-  onEdit, onDelete, onDuplicate,
+  onEdit, onDelete, onDuplicate, onOpenDetail,
   lang,
 }) => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
@@ -113,6 +114,7 @@ const MobileTransactions = ({
             onEdit={onEdit}
             onDelete={onDelete}
             onDuplicate={onDuplicate}
+            onOpenDetail={onOpenDetail}
           />
 
           <LoadMoreSection
@@ -149,7 +151,7 @@ const DesktopTransactions = ({
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
   summary,
   formatCurrency,
-  onEdit, onDelete, onDuplicate,
+  onEdit, onDelete, onDuplicate, onOpenDetail,
   selectedIds, onSelect, multiSelectMode, setMultiSelectMode, setSelectedIds,
   setShowBulkDeleteModal,
   lang,
@@ -273,6 +275,7 @@ const DesktopTransactions = ({
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
+                onOpenDetail={onOpenDetail}
                 selectedIds={selectedIds}
                 onSelect={onSelect}
                 multiSelectMode={multiSelectMode}
@@ -313,6 +316,7 @@ const ModernTransactions = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [detailTransaction, setDetailTransaction] = useState(null);
   const [modalMode, setModalMode] = useState('create');
 
   const loadMoreRef = useRef(null);
@@ -432,6 +436,10 @@ const ModernTransactions = () => {
     setShowEditModal(true);
   }, []);
 
+  const onOpenDetail = useCallback((transaction) => {
+    setDetailTransaction(transaction);
+  }, []);
+
   const onSelect = useCallback((id, selected) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -480,7 +488,7 @@ const ModernTransactions = () => {
     transactions, syncedSources, transactionsLoading,
     loadMoreRef, isFetchingNextPage, hasMore, loadMore,
     summary, formatCurrency,
-    onEdit, onDelete, onDuplicate,
+    onEdit, onDelete, onDuplicate, onOpenDetail,
     selectedIds, onSelect,
     multiSelectMode, setMultiSelectMode, setSelectedIds,
     setShowBulkDeleteModal,
@@ -498,6 +506,16 @@ const ModernTransactions = () => {
         ? <MobileTransactions {...sharedProps} />
         : <DesktopTransactions {...sharedProps} />
       }
+
+      {/* Full transaction detail — tap a row to open (item 12). */}
+      <TransactionDetailSheet
+        transaction={detailTransaction}
+        isOpen={!!detailTransaction}
+        onClose={() => setDetailTransaction(null)}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
+      />
 
       {/* Modals */}
       <EditTransactionModal
