@@ -58,9 +58,9 @@ const SourceFilterChips = ({ syncedSources, sourceFilter, setSourceFilter, t, la
         <Landmark className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         <span>{t('source.legend', 'Bank rows are account cash flow. Credit-company rows are itemized card purchases.')}</span>
       </div>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar">
+      <div className="flex flex-wrap gap-2">
         {groups.filter((group) => group.chips.length > 0).map((group) => (
-          <div key={group.key} className="flex items-center gap-1.5 shrink-0">
+          <div key={group.key} className="flex items-center gap-1.5">
             {group.label && (
               <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 px-1">
                 {group.label}
@@ -89,7 +89,7 @@ const SourceFilterChips = ({ syncedSources, sourceFilter, setSourceFilter, t, la
           selected AND it has more than one account/card, e.g. two Isracard
           cards. Lets the user isolate one specific card's transactions. */}
       {accountsForSelectedSource.length > 1 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar ps-1">
+        <div className="flex flex-wrap items-center gap-1.5 ps-1">
           <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500 shrink-0">
             {t('source.account', 'Account/card')}
           </span>

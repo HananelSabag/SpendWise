@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertCircle, Bot, CreditCard, HelpCircle, Landmark, Plus, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, Bot, CreditCard, Landmark, Plus, RefreshCw } from 'lucide-react';
 
 import { useAuth, useTranslation } from '../stores';
 import apiClient from '../api/client';
@@ -11,7 +11,6 @@ import { LiquidTabs } from '../components/ui';
 import BankConnectionCard from '../components/features/bankSync/BankConnectionCard';
 import BankStatsCard from '../components/features/bankSync/BankStatsCard';
 import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
-import HowItWorksPanel from '../components/features/bankSync/HowItWorksPanel';
 import SyncMethodPanel from '../components/features/bankSync/SyncMethodPanel';
 import { institutionKind, nextAutoSync, formatDateTime } from '../components/features/bankSync/bankSyncMeta';
 
@@ -19,7 +18,6 @@ const TABS = [
   ['overview', Activity],
   ['accounts', Landmark],
   ['agent', Bot],
-  ['help', HelpCircle],
 ];
 const EMPTY_LIST = [];
 
@@ -61,10 +59,9 @@ export default function BankSyncPageV2() {
   const refresh = () => Promise.all([connectionsQuery.refetch(), statsQuery.refetch()]);
 
   const tabLabel = (key) => ({
-    overview: he ? 'סנכרון אחרון' : 'Last sync',
-    accounts: he ? 'חשבונות מחוברים' : 'Connected accounts',
-    agent: he ? 'Agent פרטי' : 'Private Agent',
-    help: he ? 'עזרה' : 'Help',
+    overview: he ? 'סקירה' : 'Overview',
+    accounts: he ? 'חשבונות' : 'Accounts',
+    agent: he ? 'Agent' : 'Agent',
   }[key]);
 
   const ConnectionGroup = ({ kind, items }) => {
@@ -105,6 +102,7 @@ export default function BankSyncPageV2() {
             active={tab}
             onChange={setTab}
             size="sm"
+            fill
           />
         </div>
       </header>
@@ -133,7 +131,6 @@ export default function BankSyncPageV2() {
 
         {tab === 'accounts' && <div className="grid gap-7 lg:grid-cols-2"><ConnectionGroup kind="bank" items={groupedConnections.banks} /><ConnectionGroup kind="credit_card" items={groupedConnections.cards} /></div>}
         {tab === 'agent' && <div className="mx-auto max-w-3xl"><SyncMethodPanel t={t} hasConnections={connections.length > 0} /></div>}
-        {tab === 'help' && <div className="mx-auto max-w-3xl space-y-4"><HowItWorksPanel t={t} /><div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-4 text-sm text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-100">{he ? 'חשבון בנק מציג תזרים ויתרה. חברת אשראי מציגה רכישות מפורטות. SpendWise מחבר ביניהם בלי לספור את חיוב הכרטיס פעמיים.' : 'A bank account shows cash flow and balance. A credit company shows itemized purchases. SpendWise combines them without counting the card settlement twice.'}</div></div>}
       </main>
 
       <ConnectBankModal isOpen={showConnect} onClose={() => { setShowConnect(false); setInitialBank(null); setConnectKind(null); }} initialBank={initialBank} kindFilter={connectKind} existingSources={connections.map((c) => c.bank_source)} />

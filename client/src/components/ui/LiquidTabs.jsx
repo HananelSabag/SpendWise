@@ -35,7 +35,11 @@ export default function LiquidTabs({
     <div
       role="tablist"
       className={cn(
-        'flex gap-1 overflow-x-auto no-scrollbar rounded-2xl bg-gray-100/80 p-1 dark:bg-gray-800/70',
+        'flex gap-1 rounded-2xl bg-gray-100/80 p-1 dark:bg-gray-800/70',
+        // fill = everything fits one row (Profile, Bank Sync — no horizontal
+        // scroll on mobile). Otherwise the row scrolls (Admin, which is fine
+        // with more tabs than fit).
+        fill ? 'w-full' : 'overflow-x-auto no-scrollbar',
         className,
       )}
     >
@@ -50,9 +54,11 @@ export default function LiquidTabs({
             aria-selected={isActive}
             onClick={() => onChange?.(tab.id)}
             className={cn(
-              'relative flex min-w-max items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors focus:outline-none',
+              'relative flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors focus:outline-none',
               pad,
-              fill && 'flex-1',
+              // fill → shrink to share the row (min-w-0 lets the label truncate
+              // instead of forcing a scroll). Non-fill → size to content.
+              fill ? 'min-w-0 flex-1' : 'min-w-max',
               isActive
                 ? 'text-white'
                 : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200',
@@ -66,7 +72,7 @@ export default function LiquidTabs({
               />
             )}
             {Icon && <Icon className="relative z-10 h-4 w-4 shrink-0" />}
-            <span className="relative z-10 whitespace-nowrap">{tab.label}</span>
+            <span className={cn('relative z-10', fill ? 'truncate' : 'whitespace-nowrap')}>{tab.label}</span>
           </button>
         );
       })}

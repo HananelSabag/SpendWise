@@ -1,19 +1,26 @@
 /**
  * 👤 PROFILE PAGE
  * Header-less app → the page owns a sticky top bar: identity + a liquid
- * top-tab selector (same language as the Bank Sync page). One layout for
- * mobile and desktop; the old desktop-sidebar / mobile drill-in split is gone.
+ * top-tab selector. The tabs FIT the row (no horizontal scroll on mobile):
+ * Personal · Preferences · Security. Export is a quiet header button (it's a
+ * one-off action, not a place you live in), opening a sheet.
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingCart, LogOut } from 'lucide-react';
+import { ShoppingCart, LogOut, Download } from 'lucide-react';
 
 import { useAuth, useTranslation } from '../stores';
 import { useAuthToasts } from '../hooks/useAuthToasts';
-import { PageSkeleton, Avatar, LiquidTabs } from '../components/ui';
+import { PageSkeleton, Avatar, LiquidTabs, Modal } from '../components/ui';
 import { TABS } from '../components/features/profile/ProfileTabsConfig';
 import { ProfileTabContent } from '../components/features/profile/ProfileTabContent';
+import { ExportTab } from '../components/features/profile/ExportTab';
+
+// Export is promoted out of the tab row into a header button, so the remaining
+// tabs (3) always fit one row.
+const NAV_TABS = TABS.filter((tab) => tab.id !== 'export');
+const VALID = NAV_TABS.map((tab) => tab.id);
 
 const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
@@ -22,16 +29,15 @@ const Profile = () => {
   const authToasts   = useAuthToasts();
   const navigate     = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [showExport, setShowExport] = useState(false);
 
   const initialTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(
-    TABS.some((tab) => tab.id === initialTab) ? initialTab : 'personal'
-  );
+  const [activeTab, setActiveTab] = useState(VALID.includes(initialTab) ? initialTab : 'personal');
 
   // Keep the active tab in sync with the URL (deep links + OS back gesture).
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (TABS.some((x) => x.id === tab)) setActiveTab(tab);
+    if (VALID.includes(tab)) setActiveTab(tab);
     else if (!tab) setActiveTab('personal');
   }, [searchParams]);
 
@@ -41,7 +47,7 @@ const Profile = () => {
   }, [setSearchParams]);
 
   const tabItems = useMemo(
-    () => TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey, tab.id), icon: tab.icon })),
+    () => NAV_TABS.map((tab) => ({ id: tab.id, label: t(tab.labelKey, tab.id), icon: tab.icon })),
     [t]
   );
 
@@ -74,6 +80,14 @@ const Profile = () => {
               <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
             </div>
             <button
+              onClick={() => setShowExport(true)}
+              className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-indigo-600 dark:hover:bg-gray-800"
+              aria-label={t('tabs.export', 'Export')}
+              title={t('tabs.export', 'Export')}
+            >
+              <Download className="h-5 w-5" />
+            </button>
+            <button
               onClick={() => navigate('/shopping')}
               className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-emerald-600 dark:hover:bg-gray-800"
               aria-label={t('shoppingEntry.title', 'Shopping')}
@@ -92,12 +106,17 @@ const Profile = () => {
           </div>
 
           <div className="mt-3">
-            <LiquidTabs tabs={tabItems} active={activeTab} onChange={handleSelect} />
+            <LiquidTabs tabs={tabItems} active={activeTab} onChange={handleSelect} fill />
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-5 lg:px-8">{tabContent}</main>
+
+      {/* Export — a one-off action, shown on demand rather than as a tab */}
+      <Modal isOpen={showExport} onClose={() => setShowExport(false)} sheet title={t('tabs.export', 'Export data')}>
+        <ExportTab t={t} />
+      </Modal>
     </div>
   );
 };
