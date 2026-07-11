@@ -14,6 +14,30 @@ const { institutionKind } = require('../config/institutions');
 const MAX_TXNS = 2000;
 const MAX_AMOUNT = 10_000_000;
 
+const PENDING_REKEY_CANDIDATE_SQL = `/* pending-to-settled rekey candidate */
+  SELECT id
+  FROM transactions stale
+  WHERE stale.user_id = $1
+    AND stale.bank_source = $2
+    AND stale.bank_account_number IS NOT DISTINCT FROM $3
+    AND stale.amount = $4
+    AND stale.type = $5
+    AND LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g'))
+        = LOWER(REGEXP_REPLACE(TRIM($6), '\\s+', ' ', 'g'))
+    AND ABS(stale.date - $7::date) <= 3
+    AND stale.deleted_at IS NULL
+    AND stale.bank_sync_id IS NOT NULL
+    AND stale.bank_sync_id <> $8
+    AND (stale.bank_status IS NULL OR stale.bank_status = 'pending')
+    AND RIGHT(stale.bank_sync_id, LENGTH($9)) = $9
+    AND NOT EXISTS (
+      SELECT 1 FROM transactions current
+      WHERE current.user_id = $1 AND current.bank_sync_id = $8
+    )
+  ORDER BY stale.id
+  LIMIT 2
+  FOR UPDATE OF stale`;
+
 // The calendar date a transaction belongs to, in the app's timezone.
 // toISOString() would use UTC — an Israeli 00:30 purchase would land on the
 // previous day, shifting day grouping and financial-period boundaries.
@@ -65,6 +89,7 @@ function normalizePositiveInteger(value) {
 async function ingestAccounts(client, userId, source, accounts) {
   let inserted = 0;
   let skipped = 0;
+  const isCreditCompany = institutionKind(source) === 'credit_card';
 
   const totalTxns = accounts.reduce(
     (sum, a) => sum + (Array.isArray(a.txns) ? a.txns.length : 0), 0
@@ -129,6 +154,53 @@ async function ingestAccounts(client, userId, source, accounts) {
       const acctNum = acctKey === 'default' ? null : acctKey;
 
       if (bankSyncId) {
+        // Some banks re-key the same movement when it settles (Leumi has been
+        // observed changing 45061616 → 61616 and shifting the date by 2 days).
+        // Before inserting a completed bank row, look for exactly one stale
+        // pending/unknown predecessor whose old identifier ends with the new
+        // identifier. This intentionally does not run for card-company rows.
+        if (!isCreditCompany && bankStatus === 'completed') {
+          const rekeyCandidates = await client.query(
+            PENDING_REKEY_CANDIDATE_SQL,
+            [
+              userId, source, acctNum, amount, type, description, date,
+              bankSyncId, String(txn.identifier),
+            ],
+          );
+          if (rekeyCandidates.rows.length === 1) {
+            await client.query(
+              `UPDATE transactions SET
+                 bank_sync_id         = $2,
+                 amount               = $3,
+                 type                 = $4,
+                 description          = $5,
+                 notes                = CASE WHEN COALESCE($6, '') <> '' THEN $6 ELSE notes END,
+                 date                 = $7,
+                 transaction_datetime = $8,
+                 raw_category         = COALESCE(raw_category, $9),
+                 bank_processed_date  = COALESCE($10, bank_processed_date),
+                 bank_status          = $11,
+                 original_amount      = COALESCE($12, original_amount),
+                 original_currency    = COALESCE($13, original_currency),
+                 charged_currency     = COALESCE($14, charged_currency),
+                 txn_kind             = COALESCE($15, txn_kind),
+                 installment_number   = COALESCE($16, installment_number),
+                 installment_total    = COALESCE($17, installment_total),
+                 updated_at           = NOW()
+               WHERE id = $1`,
+              [
+                rekeyCandidates.rows[0].id, bankSyncId, amount, type, description,
+                bankNotes, date, transactionDatetime, rawCategory, bankProcessedDate,
+                bankStatus, originalAmount, originalCurrency, chargedCurrency, txnKind,
+                validInstallments ? installmentNumber : null,
+                validInstallments ? installmentTotal : null,
+              ],
+            );
+            skipped++;
+            continue;
+          }
+        }
+
         // Hard dedup via partial unique index on (user_id, bank_sync_id).
         const result = await client.query(
            `INSERT INTO transactions
@@ -279,7 +351,6 @@ async function ingestAccounts(client, userId, source, accounts) {
   // A credit company (isracard/max/cal) has NO bank balance — only a real bank
   // account does. Even if the scraper reports a figure for a card source, we
   // never store it as a balance, so it can't leak into the dashboard's total.
-  const isCreditCompany = institutionKind(source) === 'credit_card';
   for (const account of accounts) {
     const balance = (!isCreditCompany && typeof account.balance === 'number' && Number.isFinite(account.balance))
       ? account.balance
@@ -310,4 +381,5 @@ module.exports = {
   normalizeOptionalAmount,
   normalizeCurrency,
   normalizePositiveInteger,
+  PENDING_REKEY_CANDIDATE_SQL,
 };

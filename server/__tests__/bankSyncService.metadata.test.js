@@ -76,4 +76,70 @@ describe('bank sync statement metadata', () => {
     expect(upsert.sql).toContain('transaction_datetime = EXCLUDED.transaction_datetime');
     expect(upsert.sql).toContain('installment_number  = COALESCE');
   });
+
+  test('a uniquely matched settled bank re-key updates the pending row instead of inserting', async () => {
+    const calls = [];
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending-to-settled rekey candidate')) return { rows: [{ id: 2470 }] };
+        return { rows: [] };
+      }),
+    };
+
+    const result = await ingestAccounts(client, 1, 'leumi', [{
+      account_number: '1234',
+      type: 'checking',
+      balance: 1000,
+      txns: [{
+        charged_amount: -387.29,
+        date: '2026-07-02T09:00:00.000Z',
+        description: 'Debit purchase',
+        notes: 'Settled bank movement',
+        status: 'completed',
+        identifier: '61616',
+      }],
+    }]);
+
+    const candidate = calls.find(({ sql }) => sql.includes('pending-to-settled rekey candidate'));
+    expect(candidate.params.slice(-2)).toEqual(['leumi:1234:61616', '61616']);
+
+    const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
+    expect(repair.params[0]).toBe(2470);
+    expect(repair.params[1]).toBe('leumi:1234:61616');
+    expect(repair.params[10]).toBe('completed');
+    expect(calls.some(({ sql }) => sql.includes('INSERT INTO transactions\n'))).toBe(false);
+    expect(result).toEqual({ inserted: 0, skipped: 1 });
+  });
+
+  test('an ambiguous pending re-key match is not repaired automatically', async () => {
+    const calls = [];
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending-to-settled rekey candidate')) {
+          return { rows: [{ id: 10 }, { id: 11 }] };
+        }
+        if (sql.includes('INSERT INTO transactions')) return { rows: [{ was_inserted: true }] };
+        return { rows: [] };
+      }),
+    };
+
+    const result = await ingestAccounts(client, 1, 'leumi', [{
+      account_number: '1234',
+      txns: [{
+        charged_amount: -25,
+        date: '2026-07-02T09:00:00.000Z',
+        description: 'Ambiguous movement',
+        status: 'completed',
+        identifier: '123',
+      }],
+    }]);
+
+    expect(calls.some(({ sql }) => sql.includes('INSERT INTO transactions'))).toBe(true);
+    expect(calls.some(({ sql }) => sql.includes('UPDATE transactions SET'))).toBe(false);
+    expect(result).toEqual({ inserted: 1, skipped: 0 });
+  });
 });
