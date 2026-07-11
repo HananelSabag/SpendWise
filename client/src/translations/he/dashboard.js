@@ -272,6 +272,8 @@ export default {
     title: "התקופה הפיננסית הנוכחית",
     selectedTitle: "התקופה הפיננסית שנבחרה",
     cashFlowHint: "מה נכנס ומה יצא בחלון המחזור הזה",
+    soFar: "עד עכשיו",
+    runningHint: "סכום רץ למחזור הזה — עדיין בעיצומו",
     current: "תקופה נוכחית",
     previous: "תקופה קודמת",
     periodsAgo: "לפני {{count}} תקופות",

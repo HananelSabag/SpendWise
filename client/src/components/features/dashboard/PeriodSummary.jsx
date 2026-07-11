@@ -36,16 +36,27 @@ export default function PeriodSummary({ dashboardData, formatCurrency, t }) {
               ? t('period.title', { fallback: 'This financial period' })
               : t('period.selectedTitle', { fallback: 'Selected financial period' })}
           </h3>
-          {/* Item 11 — the active cycle window is always spelled out, so the
-              user never has to guess what "this period" covers. */}
-          {range && (
-            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-              <CalendarRange className="h-3 w-3" />
-              {range}
-            </span>
-          )}
+          {/* The active cycle window is always spelled out, plus a "so far"
+              badge on the current cycle: the totals are running, not the
+              final month — a big early expense here is often last month's card
+              bill settling, so we must not let it read as "done". */}
+          <span className="mt-1 flex flex-wrap items-center gap-1.5">
+            {range && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                <CalendarRange className="h-3 w-3" />
+                {range}
+              </span>
+            )}
+            {period?.isCurrent && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                {t('period.soFar', { fallback: 'so far' })}
+              </span>
+            )}
+          </span>
           <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
-            {t('period.cashFlowHint', { fallback: 'What came in and went out inside this cycle window' })}
+            {period?.isCurrent
+              ? t('period.runningHint', { fallback: 'Running total for this cycle — still in progress' })
+              : t('period.cashFlowHint', { fallback: 'What came in and went out inside this cycle window' })}
           </p>
         </div>
         <PeriodCountingPopover summary={summary} formatCurrency={formatCurrency} t={t} />

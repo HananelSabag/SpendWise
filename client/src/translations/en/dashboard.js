@@ -283,6 +283,8 @@ export default {
     title: "This financial period",
     selectedTitle: "Selected financial period",
     cashFlowHint: "What came in and went out inside this cycle window",
+    soFar: "so far",
+    runningHint: "Running total for this cycle — still in progress",
     current: "Current period",
     previous: "Previous period",
     periodsAgo: "{{count}} periods ago",
