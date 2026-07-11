@@ -3,6 +3,9 @@ const {
   calendarDateInTz,
   normalizeProcessedDate,
   normalizeBankStatus,
+  normalizeOptionalAmount,
+  normalizeCurrency,
+  normalizePositiveInteger,
 } = require('../services/bankSyncService');
 
 describe('bank sync statement metadata', () => {
@@ -20,6 +23,15 @@ describe('bank sync statement metadata', () => {
     expect(normalizeBankStatus('pending')).toBe('pending');
     expect(normalizeBankStatus('completed')).toBe('completed');
     expect(normalizeBankStatus('unknown')).toBeNull();
+  });
+
+  test('normalizes provider financial metadata conservatively', () => {
+    expect(normalizeOptionalAmount(-20)).toBe(20);
+    expect(normalizeOptionalAmount('not-money')).toBeNull();
+    expect(normalizeCurrency('₪')).toBe('ILS');
+    expect(normalizeCurrency(' usd ')).toBe('USD');
+    expect(normalizePositiveInteger(5)).toBe(5);
+    expect(normalizePositiveInteger(0)).toBeNull();
   });
 
   test('a deduped Israeli-midnight row repairs its old UTC date and enriches notes', async () => {
@@ -45,6 +57,12 @@ describe('bank sync statement metadata', () => {
         notes: 'Monthly salary',
         status: 'completed',
         identifier: 'salary-1',
+        original_amount: -120,
+        original_currency: 'usd',
+        charged_currency: '₪',
+        txn_kind: 'installments',
+        installment_number: 5,
+        installment_total: 10,
       }],
     }]);
 
@@ -52,8 +70,10 @@ describe('bank sync statement metadata', () => {
     expect(upsert.params[4]).toBe('2026-07-09');
     expect(upsert.params[5]).toBe('2026-07-08T21:00:00.000Z');
     expect(upsert.params[12]).toBe('Monthly salary');
+    expect(upsert.params.slice(13)).toEqual([120, 'USD', 'ILS', 'installments', 5, 10]);
     expect(upsert.sql).toContain('amount              = EXCLUDED.amount');
     expect(upsert.sql).toContain('date                = EXCLUDED.date');
     expect(upsert.sql).toContain('transaction_datetime = EXCLUDED.transaction_datetime');
+    expect(upsert.sql).toContain('installment_number  = COALESCE');
   });
 });

@@ -65,6 +65,54 @@ async function main() {
       notes: row.notes,
     }));
 
+  const cardStatementBreakdown = await db.query(`
+    SELECT
+      bank_source,
+      COALESCE(bank_account_number, '') AS account_number,
+      COALESCE(bank_status, 'unknown') AS status,
+      bank_processed_date::date AS processed_date,
+      ROUND(SUM(amount)::numeric, 2) AS total,
+      COUNT(*)::int AS count
+    FROM transactions
+    WHERE user_id = $1
+      AND deleted_at IS NULL
+      AND type = 'expense'
+      AND bank_source IN ('max', 'visa_cal', 'isracard', 'amex')
+      AND date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+      AND date < DATE_TRUNC('month', CURRENT_DATE)
+    GROUP BY bank_source, COALESCE(bank_account_number, ''),
+             COALESCE(bank_status, 'unknown'), bank_processed_date::date
+    ORDER BY bank_source, account_number, processed_date
+  `, [user.id]);
+
+  const bankExpenseBreakdown = await db.query(`
+    SELECT
+      date::date AS date,
+      description,
+      COALESCE(bank_status, 'unknown') AS status,
+      ROUND(SUM(amount)::numeric, 2) AS total,
+      COUNT(*)::int AS count
+    FROM transactions
+    WHERE user_id = $1
+      AND deleted_at IS NULL
+      AND type = 'expense'
+      AND bank_source NOT IN ('max', 'visa_cal', 'isracard', 'amex')
+      AND bank_source IS NOT NULL
+      AND date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+      AND date < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+    GROUP BY date::date, description, COALESCE(bank_status, 'unknown')
+    ORDER BY date, description
+  `, [user.id]);
+
+  if (process.argv.includes('--reconciliation-only')) {
+    process.stdout.write(`${JSON.stringify({
+      user,
+      previousMonthCardStatements: cardStatementBreakdown.rows,
+      bankExpensesPreviousAndCurrentMonth: bankExpenseBreakdown.rows,
+    }, null, 2)}\n`);
+    return;
+  }
+
   const dashboard = await buildDashboardData(user.id);
   const monthlyAccounting = await buildMonthlyAccounting(user.id);
   const retentionResult = await db.query(`
@@ -83,6 +131,8 @@ async function main() {
     user,
     bySource,
     notable,
+    previousMonthCardStatements: cardStatementBreakdown.rows,
+    bankExpensesPreviousAndCurrentMonth: bankExpenseBreakdown.rows,
     dashboard: {
       period: dashboard.period,
       summary: dashboard.summary,

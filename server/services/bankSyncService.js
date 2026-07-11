@@ -35,6 +35,24 @@ function normalizeBankStatus(value) {
   return value === 'pending' || value === 'completed' ? value : null;
 }
 
+function normalizeOptionalAmount(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || Math.abs(amount) > MAX_AMOUNT) return null;
+  return Math.abs(amount);
+}
+
+function normalizeCurrency(value) {
+  const currency = String(value ?? '').trim().toUpperCase();
+  if (!currency) return null;
+  if (currency === '₪' || currency === 'NIS') return 'ILS';
+  return currency.slice(0, 12);
+}
+
+function normalizePositiveInteger(value) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 && number <= 32767 ? number : null;
+}
+
 /**
  * Ingest scraped accounts for a user inside an existing DB transaction.
  *
@@ -98,6 +116,14 @@ async function ingestAccounts(client, userId, source, accounts) {
       const rawCategory = (txn.raw_category || '').toString().trim().slice(0, 200) || null;
       const bankProcessedDate = normalizeProcessedDate(txn.processed_date);
       const bankStatus = normalizeBankStatus(txn.status);
+      const originalAmount = normalizeOptionalAmount(txn.original_amount);
+      const originalCurrency = normalizeCurrency(txn.original_currency);
+      const chargedCurrency = normalizeCurrency(txn.charged_currency);
+      const txnKind = String(txn.txn_kind ?? '').trim().slice(0, 50) || null;
+      const installmentNumber = normalizePositiveInteger(txn.installment_number);
+      const installmentTotal = normalizePositiveInteger(txn.installment_total);
+      const validInstallments = installmentNumber && installmentTotal
+        && installmentNumber <= installmentTotal;
       const bankSyncId = txn.identifier ? `${source}:${acctKey}:${txn.identifier}` : null;
 
       const acctNum = acctKey === 'default' ? null : acctKey;
@@ -105,11 +131,13 @@ async function ingestAccounts(client, userId, source, accounts) {
       if (bankSyncId) {
         // Hard dedup via partial unique index on (user_id, bank_sync_id).
         const result = await client.query(
-          `INSERT INTO transactions
+           `INSERT INTO transactions
              (user_id, amount, type, description, notes, date, transaction_datetime,
               raw_category, bank_sync_id, bank_source, bank_account_number,
-              bank_processed_date, bank_status, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$13,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
+              bank_processed_date, bank_status, original_amount, original_currency,
+              charged_currency, txn_kind, installment_number, installment_total,
+              created_at, updated_at)
+           VALUES ($1,$2,$3,$4,$13,$5,$6,$7,$8,$9,$10,$11,$12,$14,$15,$16,$17,$18,$19,NOW(),NOW())
            ON CONFLICT (user_id, bank_sync_id)
              WHERE bank_sync_id IS NOT NULL
            DO UPDATE SET
@@ -120,6 +148,12 @@ async function ingestAccounts(client, userId, source, accounts) {
              transaction_datetime = EXCLUDED.transaction_datetime,
              bank_processed_date = COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date),
              bank_status         = COALESCE(EXCLUDED.bank_status, transactions.bank_status),
+             original_amount     = COALESCE(EXCLUDED.original_amount, transactions.original_amount),
+             original_currency   = COALESCE(EXCLUDED.original_currency, transactions.original_currency),
+             charged_currency    = COALESCE(EXCLUDED.charged_currency, transactions.charged_currency),
+             txn_kind            = COALESCE(EXCLUDED.txn_kind, transactions.txn_kind),
+             installment_number  = COALESCE(EXCLUDED.installment_number, transactions.installment_number),
+             installment_total   = COALESCE(EXCLUDED.installment_total, transactions.installment_total),
              raw_category        = COALESCE(transactions.raw_category, EXCLUDED.raw_category),
              notes               = CASE
                                      WHEN COALESCE(transactions.notes, '') = '' THEN EXCLUDED.notes
@@ -133,12 +167,21 @@ async function ingestAccounts(client, userId, source, accounts) {
               OR transactions.transaction_datetime IS DISTINCT FROM EXCLUDED.transaction_datetime
               OR transactions.bank_processed_date IS DISTINCT FROM COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date)
               OR transactions.bank_status IS DISTINCT FROM COALESCE(EXCLUDED.bank_status, transactions.bank_status)
+              OR transactions.original_amount IS DISTINCT FROM COALESCE(EXCLUDED.original_amount, transactions.original_amount)
+              OR transactions.original_currency IS DISTINCT FROM COALESCE(EXCLUDED.original_currency, transactions.original_currency)
+              OR transactions.charged_currency IS DISTINCT FROM COALESCE(EXCLUDED.charged_currency, transactions.charged_currency)
+              OR transactions.txn_kind IS DISTINCT FROM COALESCE(EXCLUDED.txn_kind, transactions.txn_kind)
+              OR transactions.installment_number IS DISTINCT FROM COALESCE(EXCLUDED.installment_number, transactions.installment_number)
+              OR transactions.installment_total IS DISTINCT FROM COALESCE(EXCLUDED.installment_total, transactions.installment_total)
               OR transactions.raw_category IS DISTINCT FROM COALESCE(transactions.raw_category, EXCLUDED.raw_category)
               OR (COALESCE(transactions.notes, '') = '' AND COALESCE(EXCLUDED.notes, '') <> '')
            RETURNING id, (xmax = 0) AS was_inserted`,
           [
             userId, amount, type, description, date, transactionDatetime,
             rawCategory, bankSyncId, source, acctNum, bankProcessedDate, bankStatus, bankNotes,
+            originalAmount, originalCurrency, chargedCurrency, txnKind,
+            validInstallments ? installmentNumber : null,
+            validInstallments ? installmentTotal : null,
           ],
         );
         result.rows[0]?.was_inserted ? inserted++ : skipped++;
@@ -171,6 +214,12 @@ async function ingestAccounts(client, userId, source, accounts) {
                bank_status         = COALESCE($8, bank_status),
                raw_category        = COALESCE(raw_category, $9),
                notes               = CASE WHEN COALESCE(notes, '') = '' THEN $10 ELSE notes END,
+               original_amount     = COALESCE($11, original_amount),
+               original_currency   = COALESCE($12, original_currency),
+               charged_currency    = COALESCE($13, charged_currency),
+               txn_kind            = COALESCE($14, txn_kind),
+               installment_number  = COALESCE($15, installment_number),
+               installment_total   = COALESCE($16, installment_total),
                updated_at          = NOW()
              WHERE id = $1
                AND (
@@ -183,23 +232,37 @@ async function ingestAccounts(client, userId, source, accounts) {
                  OR bank_status IS DISTINCT FROM COALESCE($8, bank_status)
                  OR raw_category IS DISTINCT FROM COALESCE(raw_category, $9)
                  OR (COALESCE(notes, '') = '' AND COALESCE($10, '') <> '')
+                 OR original_amount IS DISTINCT FROM COALESCE($11, original_amount)
+                 OR original_currency IS DISTINCT FROM COALESCE($12, original_currency)
+                 OR charged_currency IS DISTINCT FROM COALESCE($13, charged_currency)
+                 OR txn_kind IS DISTINCT FROM COALESCE($14, txn_kind)
+                 OR installment_number IS DISTINCT FROM COALESCE($15, installment_number)
+                 OR installment_total IS DISTINCT FROM COALESCE($16, installment_total)
                )`,
             [
               existing.rows[0].id, amount, type, description, date,
               transactionDatetime, bankProcessedDate, bankStatus, rawCategory, bankNotes,
+              originalAmount, originalCurrency, chargedCurrency, txnKind,
+              validInstallments ? installmentNumber : null,
+              validInstallments ? installmentTotal : null,
             ],
           );
           skipped++;
         } else {
           await client.query(
-            `INSERT INTO transactions
+             `INSERT INTO transactions
                (user_id, amount, type, description, notes, date, transaction_datetime,
                 raw_category, bank_source, bank_account_number,
-                bank_processed_date, bank_status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$12,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())`,
+                bank_processed_date, bank_status, original_amount, original_currency,
+                charged_currency, txn_kind, installment_number, installment_total,
+                created_at, updated_at)
+             VALUES ($1,$2,$3,$4,$12,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16,$17,$18,NOW(),NOW())`,
             [
               userId, amount, type, description, date, transactionDatetime,
               rawCategory, source, acctNum, bankProcessedDate, bankStatus, bankNotes,
+              originalAmount, originalCurrency, chargedCurrency, txnKind,
+              validInstallments ? installmentNumber : null,
+              validInstallments ? installmentTotal : null,
             ],
           );
           inserted++;
@@ -244,4 +307,7 @@ module.exports = {
   calendarDateInTz,
   normalizeProcessedDate,
   normalizeBankStatus,
+  normalizeOptionalAmount,
+  normalizeCurrency,
+  normalizePositiveInteger,
 };
