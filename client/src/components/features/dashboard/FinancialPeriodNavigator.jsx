@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 
 import { useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
@@ -30,15 +30,14 @@ export default function FinancialPeriodNavigator({
   const { t, isRTL } = useTranslation('dashboard');
   const offset = Number(period?.offset ?? periodOffset) || 0;
   const lookback = Math.abs(offset);
-  // Item 5 — never let the user page into cycles that hold no data. The server
-  // reports the earliest cycle with transactions as `minOffset` (≤ 0).
+  // Never let the user page into calendar months that hold no data.
   const minOffset = Math.min(0, Number(period?.minOffset ?? -24));
   const quickOffsets = [0, -1, -2].filter((v) => v >= minOffset);
   const title = offset === 0
-    ? t('period.current', { fallback: 'Current period' })
+    ? t('period.current', { fallback: 'Current month' })
     : offset === -1
-      ? t('period.previous', { fallback: 'Previous period' })
-      : t('period.periodsAgo', { count: lookback, fallback: `${lookback} periods ago` });
+      ? t('period.previous', { fallback: 'Previous month' })
+      : t('period.periodsAgo', { count: lookback, fallback: `${lookback} months ago` });
 
   const PreviousIcon = isRTL ? ChevronRight : ChevronLeft;
   const NextIcon = isRTL ? ChevronLeft : ChevronRight;
@@ -59,16 +58,6 @@ export default function FinancialPeriodNavigator({
         <div className="min-w-0 flex-1 text-center">
           <p className="text-sm font-bold text-gray-900 dark:text-white">{title}</p>
           <p className="truncate text-xs text-gray-500 dark:text-gray-400">{formatRange(period)}</p>
-          <p
-            className="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-indigo-600 dark:text-indigo-300"
-            title={t('period.cycleHint', {
-              day: period?.cycleDay,
-              fallback: `The window starts on cycle day ${period?.cycleDay}`,
-            })}
-          >
-            <CalendarDays className="h-3 w-3" />
-            {t('period.cycleDay', { day: period?.cycleDay, fallback: `Cycle day ${period?.cycleDay}` })}
-          </p>
         </div>
 
         <button
@@ -119,4 +108,3 @@ export default function FinancialPeriodNavigator({
     </section>
   );
 }
-

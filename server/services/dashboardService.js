@@ -1,14 +1,13 @@
 /**
  * Dashboard Service — builds the full dashboard payload for a user:
- * financial-period summary (billing_cycle_day based), category/pattern
+ * calendar-month summary, category/pattern
  * breakdown, bank costs, per-institution + per-account activity, and
  * recent transactions. Extracted from transactionController so the
  * controller stays a thin HTTP layer and the SQL lives in one place.
  *
  * Model notes (the whole app rests on this):
  *  - A bank account and a credit-card company are different kinds of source.
- *  - Card purchases are counted by statement/payment date for financial-cycle
- *    cash-flow views; the original purchase date remains on each transaction.
+ *  - Card purchases are counted by their factual purchase date.
  *    The bank's summarized
  *    card-payment withdrawal is EXCLUDED when the matching card's purchase
  *    detail is connected (no double counting), and counted otherwise.
@@ -17,8 +16,8 @@
 const db = require('../config/db');
 const { Transaction } = require('../models/Transaction');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
-const { getUserFinancialCycle } = require('./financialCycleService');
-const { getCurrentPeriod, getPeriodContaining } = require('../utils/financialPeriod');
+const { getCalendarPeriod } = require('../utils/calendarPeriod');
+const { buildMonth } = require('./monthlyAccountingService');
 
 // Half-open-cycle offset (≤ 0) of the earliest transaction relative to the
 // current cycle — so the client can stop users navigating to periods that
@@ -27,11 +26,15 @@ function periodIndex(ymdStr) {
   const [y, m] = ymdStr.split('-').map(Number);
   return y * 12 + (m - 1);
 }
-function computeMinOffset(cycleDay, earliestDate) {
+function computeMinOffset(earliestDate) {
   if (!earliestDate) return 0;
-  const current = getCurrentPeriod(cycleDay);
-  const earliest = getPeriodContaining(cycleDay, new Date(earliestDate));
-  const diff = periodIndex(earliest.start) - periodIndex(current.start);
+  const current = getCalendarPeriod(0);
+  const earliestMonth = earliestDate instanceof Date
+    ? new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit',
+    }).format(earliestDate)
+    : String(earliestDate).slice(0, 7);
+  const diff = periodIndex(`${earliestMonth}-01`) - periodIndex(current.start);
   return Math.max(-24, Math.min(0, diff));
 }
 
@@ -71,8 +74,8 @@ const BANK_CARD_SETTLEMENT_PATTERN =
  * @returns {Promise<object>} the `data` object for GET /transactions/dashboard
  */
 async function buildDashboardData(userId, requestedOffset = 0) {
-  const period = await getUserFinancialCycle(userId, requestedOffset);
-  const { cycleDay, start: periodStart, end: periodEnd } = period;
+  const period = getCalendarPeriod(requestedOffset);
+  const { start: periodStart, end: periodEnd } = period;
 
   const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult, perAccountResult, recurringResult] = await Promise.all([
     db.query(`
@@ -103,16 +106,8 @@ async function buildDashboardData(userId, requestedOffset = 0) {
          AND ba_filter.bank_source = t.bank_source
          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1
-          AND (CASE
-            WHEN t.bank_source = ANY($5::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) >= $2
-          AND (CASE
-            WHEN t.bank_source = ANY($5::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) < $3
+          AND t.date >= $2
+          AND t.date < $3
           AND t.deleted_at IS NULL
           AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
       ),
@@ -192,16 +187,8 @@ async function buildDashboardData(userId, requestedOffset = 0) {
          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
           AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
-          AND (CASE
-            WHEN t.bank_source = ANY($5::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) >= $2
-          AND (CASE
-            WHEN t.bank_source = ANY($5::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) < $3
+          AND t.date >= $2
+          AND t.date < $3
       ),
       flags AS (
         SELECT
@@ -274,18 +261,10 @@ async function buildDashboardData(userId, requestedOffset = 0) {
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
           AND t.type = 'expense' AND t.bank_source IS NOT NULL
           AND COALESCE(ba_filter.enabled, true) = true
-          AND (CASE
-            WHEN t.bank_source = ANY($4::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) >= $2
-          AND (CASE
-            WHEN t.bank_source = ANY($4::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) < $3
+          AND t.date >= $2
+          AND t.date < $3
       ) classified
-    `, [userId, periodStart, periodEnd, CREDIT_CARD_SOURCES]),
+    `, [userId, periodStart, periodEnd]),
     db.query(`
       SELECT
         t.bank_source,
@@ -299,18 +278,10 @@ async function buildDashboardData(userId, requestedOffset = 0) {
        AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
       WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.bank_source IS NOT NULL
         AND COALESCE(ba_filter.enabled, true) = true
-        AND (CASE
-          WHEN t.bank_source = ANY($4::text[])
-            THEN COALESCE(t.bank_processed_date, t.date)
-          ELSE t.date
-        END) >= $2
-        AND (CASE
-          WHEN t.bank_source = ANY($4::text[])
-            THEN COALESCE(t.bank_processed_date, t.date)
-          ELSE t.date
-        END) < $3
+        AND t.date >= $2
+        AND t.date < $3
       GROUP BY t.bank_source
-    `, [userId, periodStart, periodEnd, CREDIT_CARD_SOURCES]),
+    `, [userId, periodStart, periodEnd]),
     db.query(`
       SELECT
         bank_source,
@@ -345,28 +316,16 @@ async function buildDashboardData(userId, requestedOffset = 0) {
           COALESCE(SUM(CASE WHEN type='income'  THEN amount ELSE 0 END), 0) AS income,
           COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) AS expenses,
           COUNT(*) AS count,
-          MAX(CASE
-            WHEN bank_source = ANY($4::text[])
-              THEN COALESCE(bank_processed_date, date)
-            ELSE date
-          END) AS last_transaction_at
+          MAX(date) AS last_transaction_at
         FROM transactions
         WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
-          AND (CASE
-            WHEN bank_source = ANY($4::text[])
-              THEN COALESCE(bank_processed_date, date)
-            ELSE date
-          END) >= $2
-          AND (CASE
-            WHEN bank_source = ANY($4::text[])
-              THEN COALESCE(bank_processed_date, date)
-            ELSE date
-          END) < $3
+          AND date >= $2
+          AND date < $3
         GROUP BY bank_source, COALESCE(bank_account_number, '')
       ) act ON act.bank_source = ba.bank_source AND act.account_number = ba.account_number
       WHERE ba.user_id = $1
       ORDER BY ba.bank_source, ba.account_number
-    `, [userId, periodStart, periodEnd, CREDIT_CARD_SOURCES]),
+    `, [userId, periodStart, periodEnd]),
     // Repeated merchant patterns across multiple calendar months. This is
     // intentionally presented as a detected pattern, not a guaranteed bill.
     db.query(`
@@ -374,9 +333,9 @@ async function buildDashboardData(userId, requestedOffset = 0) {
              MIN(t.raw_category) FILTER (WHERE t.raw_category IS NOT NULL AND t.raw_category <> '') AS category,
              MIN(t.bank_source) AS bank_source,
              COUNT(*)::int AS occurrences,
-             COUNT(DISTINCT DATE_TRUNC('month', COALESCE(t.bank_processed_date, t.date)))::int AS active_months,
+             COUNT(DISTINCT DATE_TRUNC('month', t.date))::int AS active_months,
              ROUND(AVG(t.amount)::numeric, 2) AS average_amount,
-             MAX(COALESCE(t.bank_processed_date, t.date)) AS last_seen
+             MAX(t.date) AS last_seen
       FROM transactions t
       LEFT JOIN bank_accounts ba_filter
         ON ba_filter.user_id = t.user_id
@@ -384,10 +343,10 @@ async function buildDashboardData(userId, requestedOffset = 0) {
        AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
       WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
         AND COALESCE(ba_filter.enabled, true) = true
-        AND COALESCE(t.bank_processed_date, t.date) >= CURRENT_DATE - INTERVAL '7 months'
+        AND t.date >= CURRENT_DATE - INTERVAL '7 months'
         AND LENGTH(TRIM(t.description)) > 2
       GROUP BY LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
-      HAVING COUNT(DISTINCT DATE_TRUNC('month', COALESCE(t.bank_processed_date, t.date))) >= 2
+      HAVING COUNT(DISTINCT DATE_TRUNC('month', t.date)) >= 2
       ORDER BY active_months DESC, occurrences DESC, average_amount DESC
       LIMIT 12
     `, [userId]),
@@ -495,20 +454,23 @@ async function buildDashboardData(userId, requestedOffset = 0) {
 
   // Earliest transaction → how far back navigation is meaningful.
   const earliestResult = await db.query(
-    `SELECT MIN(COALESCE(bank_processed_date, date)) AS earliest
+    `SELECT MIN(date) AS earliest
        FROM transactions
       WHERE user_id = $1 AND deleted_at IS NULL`,
     [userId],
     'dashboard_earliest_txn'
   );
-  const minOffset = computeMinOffset(cycleDay, earliestResult.rows[0]?.earliest);
+  const minOffset = computeMinOffset(earliestResult.rows[0]?.earliest);
+  const monthly = await buildMonth(userId, period.offset);
+
+  summary.total_income = monthly.income.actual;
+  summary.total_expenses = monthly.spending.committed;
+  summary.net_balance = monthly.net.actual;
 
   return {
     period: {
       start: periodStart,
       end: periodEnd,
-      cycleDay,
-      cycleDaySet: true,
       offset: period.offset,
       isCurrent: period.isCurrent,
       minOffset,

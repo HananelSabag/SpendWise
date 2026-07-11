@@ -22,27 +22,10 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
   const { t } = useTranslation('onboarding');
 
   /**
-   * Complete onboarding process: save the financial-cycle day, then mark
-   * onboarding complete.
+   * Complete onboarding process.
    */
   const completeOnboarding = useCallback(async () => {
     try {
-      const billingCycleDay = stepData?.billingCycle?.billingCycleDay;
-
-      if (billingCycleDay) {
-        try {
-          await api.users.updateProfile({ billing_cycle_day: billingCycleDay });
-        } catch (error) {
-          console.error('❌ Saving financial cycle day failed:', error);
-          addNotification(
-            t('completion.billingCycleFailed') || 'Could not save your financial cycle day, but onboarding will continue.',
-            'warning'
-          );
-          // Don't fail the whole onboarding if this fails — the user can
-          // still set it later from profile settings.
-        }
-      }
-
       // Complete onboarding
       const response = await api.onboarding.complete({
         steps_completed: Object.keys(stepData || {}).length,
@@ -146,4 +129,4 @@ export const useOnboardingCompletion = (stepData, options = {}) => {
     hasErrors: false,
     canRetry: false
   };
-}; 
+};

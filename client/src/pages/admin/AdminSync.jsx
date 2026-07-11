@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, RefreshCw, Landmark, CreditCard,
-  AlertTriangle, CheckCircle2, Clock, CalendarClock,
+  AlertTriangle, CheckCircle2, Clock,
 } from 'lucide-react';
 import { useTranslation } from '../../stores';
 import { api } from '../../api';
@@ -180,7 +180,6 @@ const AdminSync = () => {
                               </span>
                             </td>
                             <td className="px-3 py-2.5 text-sm text-gray-500 dark:text-gray-400">
-                              <span className="inline-flex items-center gap-1"><CalendarClock className="w-3 h-3" />{c.billing_cycle_day ?? '—'}</span>
                             </td>
                             <td className="px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{fmt(c.last_sync_at)}</td>
                             <td className="px-3 py-2.5 text-xs text-red-500 max-w-[220px] truncate" title={c.last_error || ''}>{c.last_error || '—'}</td>

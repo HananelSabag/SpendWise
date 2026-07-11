@@ -222,25 +222,6 @@ export const authAPI = {
     }
   },
 
-  // ✅ Update Profile
-  async getFinancialCycle() {
-    try {
-      const response = await api.client.get("/users/financial-cycle");
-      const period = response?.data?.data || response?.data || null;
-      return { success: true, data: period };
-    } catch (error) {
-      const apiError = normalizeAuthError(
-        error,
-        "Failed to load financial cycle",
-        "FINANCIAL_CYCLE_ERROR",
-      );
-      return {
-        success: false,
-        error: apiError,
-      };
-    }
-  },
-
   async updateProfile(updates) {
     try {
       const response = await api.client.put("/users/profile", updates);

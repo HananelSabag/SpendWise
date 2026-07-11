@@ -9,13 +9,14 @@ process.env.DB_POOL_MAX ||= '1';
 
 const db = require('../config/db');
 const { buildDashboardData } = require('../services/dashboardService');
+const { buildOverview: buildMonthlyAccounting } = require('../services/monthlyAccountingService');
 
 async function main() {
   const identifier = process.argv[2];
   if (!identifier) throw new Error('user id or username is required');
 
   const userResult = await db.query(
-    `SELECT id, username, billing_cycle_day
+    `SELECT id, username
        FROM users
       WHERE id = CASE WHEN $1 ~ '^\\d+$' THEN $1::int ELSE -1 END
          OR username = $1
@@ -65,6 +66,7 @@ async function main() {
     }));
 
   const dashboard = await buildDashboardData(user.id);
+  const monthlyAccounting = await buildMonthlyAccounting(user.id);
   const retentionResult = await db.query(`
     SELECT
       to_regprocedure('public.preview_data_retention()') IS NOT NULL AS installed,
@@ -87,6 +89,7 @@ async function main() {
       bankCosts: dashboard.bankCosts,
       sources: dashboard.sources,
     },
+    monthlyAccounting,
     retention,
   }, null, 2)}\n`);
 }

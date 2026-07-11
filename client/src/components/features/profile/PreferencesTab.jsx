@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, Loader2, CalendarClock } from 'lucide-react';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth, useTranslation, useTranslationStore } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import queryClient from '../../../config/queryClient';
@@ -40,7 +40,6 @@ export const PreferencesTab = ({ user, authToasts }) => {
     language_preference: u?.language_preference  || 'en',
     theme_preference:    u?.theme_preference      || 'system',
     default_home:        resolveDefaultHome(u),
-    billing_cycle_day:   Number(u?.billing_cycle_day) || 1,
   });
 
   const [prefs, setPrefs]       = useState(() => buildPrefs(user));
@@ -50,7 +49,7 @@ export const PreferencesTab = ({ user, authToasts }) => {
     const p = buildPrefs(user);
     setPrefs(p);
     setOriginal(p);
-  }, [user?.language_preference, user?.theme_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page, user?.billing_cycle_day]);
+  }, [user?.language_preference, user?.theme_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page]);
 
   const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
 
@@ -157,53 +156,6 @@ export const PreferencesTab = ({ user, authToasts }) => {
             })}
           </div>
         </div>
-      </div>
-
-      {/* Financial cycle — the fixed day the financial month starts on. This is
-          a top-level profile field (billing_cycle_day), saved with the button
-          below via the same dirty-tracking. Drives dashboard "this period". */}
-      <div className={cn(
-        'bg-white dark:bg-gray-800 rounded-2xl border-2 shadow-sm px-5 py-4 transition-colors duration-200',
-        isDirty ? 'border-indigo-200 dark:border-indigo-700/60' : 'border-gray-100 dark:border-gray-700'
-      )}>
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
-            <CalendarClock className="w-5 h-5 text-white" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900 dark:text-white">
-              {t('preferences.financialCycle.title') || 'Financial cycle'}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-              {t('preferences.financialCycle.subtitle') || 'The day your financial month starts.'}
-            </p>
-          </div>
-        </div>
-
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
-          {t('preferences.financialCycle.dayLabel') || 'Cycle day'}
-        </p>
-        <div className="grid grid-cols-7 gap-1.5">
-          {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-            <button
-              key={day}
-              type="button"
-              onClick={() => setPrefs(p => ({ ...p, billing_cycle_day: day }))}
-              className={cn(
-                'aspect-square rounded-lg text-xs font-medium transition-all flex items-center justify-center',
-                prefs.billing_cycle_day === day
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-gray-50 dark:bg-gray-900/40 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-              )}
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg px-3 py-2 mt-3">
-          {t('preferences.financialCycle.selected', { day: prefs.billing_cycle_day })
-            || `Your month runs from day ${prefs.billing_cycle_day} to day ${prefs.billing_cycle_day} of the next month`}
-        </p>
       </div>
 
       <button

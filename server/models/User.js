@@ -98,8 +98,7 @@ class User {
           website, birthday, preferences,
           language_preference, theme_preference, currency_preference,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
-          onboarding_completed, login_attempts, locked_until, verification_token,
-          billing_cycle_day
+          onboarding_completed, login_attempts, locked_until, verification_token
         FROM users
         WHERE id = $1 AND is_active = true
       `;
@@ -176,8 +175,7 @@ class User {
           website, birthday, preferences, login_attempts, locked_until,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
           onboarding_completed, verification_token,
-          language_preference, theme_preference, currency_preference,
-          billing_cycle_day
+          language_preference, theme_preference, currency_preference
         FROM users
         WHERE email = $1
       `;
@@ -346,8 +344,7 @@ class User {
         'website', 'birthday', 'preferences', 'is_active', 'last_login_at',
         'login_attempts', 'locked_until', 'google_id', 'oauth_provider',
         'oauth_provider_id', 'profile_picture_url', 'onboarding_completed',
-        'language_preference', 'theme_preference', 'currency_preference',
-        'billing_cycle_day'
+        'language_preference', 'theme_preference', 'currency_preference'
       ];
 
       const updates = {};
@@ -371,7 +368,7 @@ class User {
                   first_name, last_name, avatar, phone, bio, location,
                   website, birthday, preferences, created_at, updated_at,
                   onboarding_completed, language_preference, theme_preference, currency_preference,
-                  billing_cycle_day, google_id, oauth_provider, oauth_provider_id, profile_picture_url
+                  google_id, oauth_provider, oauth_provider_id, profile_picture_url
            FROM users WHERE id = $1`,
           [userId]
         );
@@ -400,7 +397,7 @@ class User {
                  first_name, last_name, avatar, phone, bio, location,
                  website, birthday, preferences, created_at, updated_at,
                  onboarding_completed, language_preference, theme_preference, currency_preference,
-                 billing_cycle_day, google_id, oauth_provider, oauth_provider_id, profile_picture_url
+                 google_id, oauth_provider, oauth_provider_id, profile_picture_url
       `;
 
       values.push(userId);

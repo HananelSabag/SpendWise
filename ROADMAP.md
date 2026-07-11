@@ -1,8 +1,14 @@
 # SpendWise — Roadmap & Decisions
 
+> **2026-07-11 model decision:** the fixed billing-cycle window is being replaced
+> as the primary dashboard model by calendar-month accounting. Delayed salary is
+> attributed to the previous work month; connected-card settlements reconcile the
+> previous month's itemized purchases and are never counted twice. The exact
+> approved specification is in `MONTHLY_ACCOUNTING_SPEC.md`.
+
 Living plan for the financial-model rebuild. The **heart** is one honest answer:
-*"this cycle, how much came in vs went out, and where is it heading?"* — layered
-over the real picture (balances, real transactions).
+*"for this calendar month, what actually entered, left and was committed?"* —
+layered over real balances and ledger facts, with no salary forecast.
 
 Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
 
@@ -12,15 +18,16 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
 
 Layered, not one number:
 
-1. **Real picture (always true):** account balances + total (hero), how much sits
-   in the bank, how much was charged on cards this cycle. No interpretation.
-2. **The coveted number (cycle):** money **in vs out of the bank** (+ manual),
-   anchored on the **salary** so income is always captured. The card **bill** is
-   counted once as a bank outflow; itemized card purchases are the **breakdown**,
-   never re-added. Shown as running ("so far") with a projection.
-3. **Projection:** for the running cycle, estimate the end from known salary/charge
-   dates + history. Clearly labelled "שערוך / estimate".
-4. **Insights = retro center:** full history, per-cycle, per-day, breakdowns.
+1. **Real picture (always true):** bank balances and every ledger transaction on
+   its real local date. No attribution changes these facts.
+2. **Accounting month:** activity is grouped by calendar purchase/bank date.
+   Salary paid next month is attributed back to the work month. Connected-card
+   settlements are reconciliation events, never a second expense.
+3. **Current month:** actual spending and non-salary income from the 1st through
+   today. Salary is never estimated; next month's real salary closes this month.
+4. **Previous month:** actual salary + itemized/direct spending + card settlement
+   reconciliation, with closed/provisional/review status.
+5. **Insights:** calendar-month history, transaction detail and reconciliation.
 
 ---
 
@@ -36,7 +43,8 @@ Layered, not one number:
 - **UX wave:** LiquidTabs (Profile/BankSync fit one row, Admin scrolls), Help center
   split from onboarding, onboarding mobile-cutoff fix, transaction detail sheet,
   FAB → Insights, localization, valid-period bound.
-- **cycle_day** for user 1 set to 8 → revisit to 9 after the TZ fix (real salary = 9th).
+- Historical note: cycle day was temporarily used as a workaround. The new model
+  is calendar-month only and the obsolete column is removed after deployment.
 
 ---
 
@@ -76,10 +84,11 @@ Everything date-based sits on this.
 - First sync (~32d) → ask once: *"Which of these income transactions is your salary?"*
   Store a **signature** (normalized description + account). Match future salaries by
   **description**, not date (robust to weekends/holidays, job changes, net+30).
-- Two same-description incomes in one cycle → ask ("bonus?").
+- Two same-description incomes attributed to one accounting month → ask ("bonus?").
 - **Not income:** loan disbursements ("העמדת הלואה"), own-investment/securities
   transfers ("גלש\"ן שווקים"). Exclude from the coveted number.
-- Unlocks: correct income, the previous-cycle row, and the projection.
+- Unlocks: actual previous-month income; current month remains factual until the
+  next salary arrives.
 
 ### D. 🧊 Loans sector + scraper upgrade (separate, large)
 - israeli-bank-scrapers returns only txns for Leumi/Max/Cal — **no loan metadata**
@@ -96,10 +105,14 @@ Everything date-based sits on this.
   *all from this merchant · above amount · exact amount*. Feeds a "watched" view.
   (User example: ₪500 Bit/PayBox.)
 
-### F. ⏳ Previous-cycle row + projection (dashboard)
-- Dashboard shows **previous cycle (real/closed)** + **current cycle (so far + projection)**.
-- Blocked on A (TZ) + C (income classification) + a longer backfill — otherwise old
-  cycles show loan/investment as income and miss the real salary (1-month scrape).
+### F. ✅ Previous/current calendar-month accounting (dashboard)
+- `MONTHLY_ACCOUNTING_SPEC.md` implemented with factual purchase dates.
+- Dashboard shows **current month to date first** and a **previous month summary
+  underneath**, including daily averages and reconciliation state.
+- No salary estimate. Salary selection stores a description/account signature and
+  attributes future matches to the prior work month.
+- Connected card settlements reconcile only; unconnected cards use a clearly
+  labelled bank-settlement fallback.
 
 ---
 
@@ -115,15 +128,15 @@ Everything date-based sits on this.
   caveat → its own task.
 - **Per-tab content polish:** Profile tabs (personal/preferences/security) + BankSync
   tab bodies → bank-sync card design.
-- **billing_cycle_day placement:** currently Profile→Preferences; consider moving to
-  BankSync. Low priority.
+- `billing_cycle_day` has been removed from application code and UX; the final DB
+  drop migration runs only after the new server deployment is healthy.
 
 ---
 
 ## 4. Edge cases & decisions
-- **Salary by description, not date** — the anchor. Survives weekends/holidays, job
-  changes (old employer signature stops matching), and net+30 (the txn belongs to the
-  cycle it lands in — that's what the user manages by).
+- **Salary by description/account, not date** — the anchor. Survives
+  weekends/holidays and job changes. Default attribution is the previous calendar
+  work month, configurable when an employer pays differently.
 - **Job change (real):** "גלש\"ן שווקים" = previous employer, "הורייזן טכנו" = current.
 - **Loan as income:** technically money in, but excluded from the coveted number;
   belongs in the Loans sector.

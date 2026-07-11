@@ -6,7 +6,6 @@ export const FINANCIAL_QUERY_ROOTS = [
   'bankSyncStats',
   'bankBalances',
   'transactions',
-  'financialCycle',
 ];
 
 export async function invalidateFinancialQueries(queryClient) {
@@ -45,4 +44,3 @@ export function useFinancialDataSync() {
     return () => events.forEach((event) => window.removeEventListener(event, handleRefresh));
   }, [refreshFinancialData]);
 }
-

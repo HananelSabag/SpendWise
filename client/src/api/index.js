@@ -27,7 +27,6 @@ export const api = {
   users: {
     // Backward-compatibility wrapper
     async getProfile() { return authAPI.getProfile(); },
-    async getFinancialCycle() { return authAPI.getFinancialCycle(); },
     async updateProfile(updates) { return authAPI.updateProfile(updates); },
     async verifyEmail(data) { return authAPI.verifyEmail?.(data?.token || data); },
     async resendVerificationEmail(data) { return authAPI.resendVerification?.(data?.email || data); },

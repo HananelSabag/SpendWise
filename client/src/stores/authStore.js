@@ -325,7 +325,6 @@ export const useAuthStore = create(
 
           // Update user profile
           updateProfile: async (updates) => {
-            const previousCycleDay = Number(get().user?.billing_cycle_day) || 1;
             set((state) => {
               state.isLoading = true;
               state.error = null;
@@ -335,7 +334,6 @@ export const useAuthStore = create(
               const result = await authAPI.updateProfile(updates);
               
               if (result.success) {
-                const nextCycleDay = Number(result.user?.billing_cycle_day ?? updates?.billing_cycle_day) || previousCycleDay;
                 // Update user data in store
                 set((state) => {
                   state.user = { ...state.user, ...result.user };
@@ -346,13 +344,7 @@ export const useAuthStore = create(
                 // Sync updated preferences
                 get().actions.syncUserPreferences(result.user);
 
-                if (nextCycleDay !== previousCycleDay) {
-                  queryClient.removeQueries({ queryKey: ['dashboard'] });
-                  queryClient.removeQueries({ queryKey: ['financialCycle'] });
-                } else {
-                  queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-                  queryClient.invalidateQueries({ queryKey: ['financialCycle'] });
-                }
+                queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 
                 return { success: true, user: result.user };
               } else {

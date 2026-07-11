@@ -90,7 +90,6 @@ const auth = async (req, res, next) => {
           language_preference,
           currency_preference,
           theme_preference,
-          billing_cycle_day,
           last_login_at
         FROM users
         WHERE id = $1`,

@@ -68,7 +68,6 @@ const adminUsersController = {
           u.last_login_at,
           u.language_preference,
           u.currency_preference,
-          u.billing_cycle_day,
           u.avatar,
           COALESCE(t_stats.transaction_count, 0) as total_transactions,
           COALESCE(t_stats.total_amount, 0) as total_amount,

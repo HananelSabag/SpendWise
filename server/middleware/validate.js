@@ -471,7 +471,7 @@ const validate = {
   profileUpdate: (req, res, next) => {
     const {
       username, email, first_name, last_name, firstName, lastName, phone, bio,
-      location, website, birthday, preferences, billing_cycle_day
+      location, website, birthday, preferences
     } = req.body;
 
     // ✅ NORMALIZE: Handle both camelCase and snake_case field names
@@ -556,20 +556,6 @@ const validate = {
         'INVALID_BIRTHDAY',
         'Birthday must be a valid date'
       ));
-    }
-
-    // Validate billing_cycle_day if provided — the day of the month that
-    // starts the user's financial period (e.g. salary day), used instead of
-    // a rolling calendar-day window for dashboard calculations.
-    if (billing_cycle_day !== undefined) {
-      const day = Number(billing_cycle_day);
-      if (!Number.isInteger(day) || day < 1 || day > 31) {
-        return res.status(400).json(createValidationError(
-          'INVALID_BILLING_CYCLE_DAY',
-          'billing_cycle_day must be an integer between 1 and 31'
-        ));
-      }
-      req.body.billing_cycle_day = day;
     }
 
     // Validate preferences if provided

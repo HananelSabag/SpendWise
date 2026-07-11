@@ -31,7 +31,7 @@ const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
 const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
 const { VALID_SOURCES, INSTITUTIONS, institutionKind } = require('../config/institutions');
-const { getUserFinancialCycle } = require('../services/financialCycleService');
+const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
@@ -158,7 +158,7 @@ router.get('/stats', auth, async (req, res) => {
     // Money figures (income/expense) are scoped to the user's current
     // financial period so this page and the dashboard tell the same story;
     // transaction COUNTS stay all-time — they're sync-health, not money.
-    const period = await getUserFinancialCycle(userId, req.query.periodOffset);
+    const period = getCalendarPeriod(req.query.periodOffset);
     const result = await db.query(
       `WITH sources AS (
          SELECT DISTINCT bank_source AS source
@@ -172,11 +172,7 @@ router.get('/stats', auth, async (req, res) => {
        tx AS (
          SELECT
            t.*,
-           CASE
-             WHEN t.bank_source = ANY($4::text[])
-               THEN COALESCE(t.bank_processed_date, t.date)
-             ELSE t.date
-           END AS activity_date
+           t.date AS activity_date
          FROM transactions t
          LEFT JOIN bank_accounts ba_filter
            ON ba_filter.user_id = t.user_id
@@ -264,7 +260,6 @@ router.get('/stats', auth, async (req, res) => {
       period: {
         start: period.start,
         end: period.end,
-        cycleDay: period.cycleDay,
         offset: period.offset,
         isCurrent: period.isCurrent,
       },

@@ -13,9 +13,10 @@ Claude session. The user does not want to repeat the history.
 First read these files completely:
 
 1. `C:\CodingProjects\SpendWise\ROADMAP.md`
-2. `C:\CodingProjects\SpendWise\CLAUDE_HANDOFF.md`
-3. `C:\CodingProjects\SpendWise\docs\bank-sync-architecture-map.md`
-4. `C:\CodingProjects\spendwise-agent\README.md`
+2. `C:\CodingProjects\SpendWise\MONTHLY_ACCOUNTING_SPEC.md`
+3. `C:\CodingProjects\SpendWise\CLAUDE_HANDOFF.md`
+4. `C:\CodingProjects\SpendWise\docs\bank-sync-architecture-map.md`
+5. `C:\CodingProjects\spendwise-agent\README.md`
 
 There are two connected repositories:
 
@@ -70,7 +71,7 @@ ZIP bundles.
 - [x] Add reusable RAW reconciliation tool:
       `spendwise-agent/tools/reconcile-raw-to-db.js` (preview by default).
 
-### Dashboard/cycle work already done
+### Historical dashboard/cycle groundwork already done
 
 - [x] Period totals use honest bank cash flow, avoiding double-counting the bank
       card settlement plus itemized card purchases.
@@ -79,7 +80,9 @@ ZIP bundles.
 - [x] Period tooltip shows bank movement, bank card bill and manual entries.
 - [x] Period tooltip now also shows itemized Max/Cal charges as reconciliation
       detail, explicitly not added twice.
-- [x] Bank/credit-card sources use `bank_processed_date` for cycle membership.
+- [!] Legacy period queries use `bank_processed_date` for card membership. The
+      approved calendar-month model explicitly replaces this assumption: purchase
+      month comes from purchase `date`; processed date is reconciliation metadata.
 - [x] Dashboard DB pool now leaves Supabase connection headroom (`DB_POOL_MAX`,
       default 8) instead of allowing one process to consume all 15 sessions.
 
@@ -117,20 +120,38 @@ ZIP bundles.
 
 ## Pending checklist — continue in this order
 
+### Calendar-month model completed by Codex (2026-07-11)
+
+- [x] Replaced primary cycle-day accounting with calendar months.
+- [x] Dashboard shows current month first and previous month directly underneath.
+- [x] Current month uses actual income only; salary and net are never estimated.
+- [x] Salary paid next month is attributed to the previous work month by a
+      confirmed description+account signature.
+- [x] Added compact salary-candidate selection for users awaiting classification.
+- [x] Purchase `date` determines card month; `processedDate` remains metadata.
+- [x] Connected-card bank settlement is reconciliation only and never another
+      expense; unconnected cards receive a labelled settlement fallback.
+- [x] Added daily income/spending averages and month completion/review statuses.
+- [x] Removed cycle-day settings/onboarding/server reads and prepared migration 22
+      to drop `users.billing_cycle_day` after the new deployment is healthy.
+- [x] Production shadow result for user 1: July income ₪0, committed spending
+      ₪7,612.74, net −₪7,612.74; June actual income ₪13,497.66, spending
+      ₪15,388.89, reconciliation mismatch ₪2,951.47 (visible as needs review).
+- [x] Server 144/144 tests pass and client production build passes.
+
 ### P0 — finish the financial model
 
-- [ ] Build salary identity onboarding: after first sync, ask which positive bank
+- [x] Build salary identity onboarding: after first sync, ask which positive bank
       transaction is salary; store normalized description + account signature.
-- [ ] Match salary by description/account, never by a fixed calendar date.
-- [ ] Handle two matching incomes in one cycle (salary vs bonus prompt).
-- [ ] Exclude loan disbursements such as `העמדת הלואה` and own
+- [x] Match salary by description/account, never by a fixed calendar date.
+- [ ] Handle two matching incomes attributed to one month (salary vs bonus prompt).
+- [x] Exclude loan disbursements such as `העמדת הלואה` and own
       investment/securities transfers such as `גלש"ן שווקים` from the coveted
       salary/net number.
-- [ ] Add previous closed cycle + current “so far” + projection only after salary
-      classification is trustworthy.
-- [ ] Keep cycle navigation limited to periods that actually contain data.
-- [ ] Audit day-before/day-after cycle changes, cycle-day edits, month lengths,
-      DST and pending→completed card transitions.
+- [x] Implement `MONTHLY_ACCOUNTING_SPEC.md`: previous-month finalization and
+      current calendar month to date, only after salary classification is trustworthy.
+- [ ] Keep month navigation limited to months that actually contain data.
+- [ ] Audit month boundaries, DST and pending→completed card transitions.
 
 ### P1 — Loans sector (explicit user requirement)
 
@@ -170,7 +191,7 @@ ZIP bundles.
 
 ### P2 — Dashboard full audit (all earlier user requests)
 
-- [ ] Every dashboard widget must consume the same selected cycle and refresh after
+- [ ] Every dashboard widget must consume the same selected calendar month and refresh after
       sync via query invalidation/hooks; remove duplicate dashboard requests/cards.
 - [ ] Hero balance: if one bank, show it clearly; if multiple banks/accounts, show
       each separately and a total bank balance. Credit companies never have balance.
@@ -181,7 +202,7 @@ ZIP bundles.
 - [ ] Rename/explain “bank costs” clearly; loans/fees/cash must be understandable.
 - [ ] Keep recent transactions, spending type/breakdown and useful insights only.
 - [ ] Put full historical analytics and period navigation on Insights, not a crowded
-      current-cycle Dashboard.
+      current-month Dashboard.
 - [ ] Do not show empty older-period tabs when data does not exist.
 - [ ] Ensure SpendWise logo is visible on mobile header/footer/FAB as appropriate.
 
@@ -199,8 +220,8 @@ ZIP bundles.
 - [ ] Fix Agent tab lag and scroll-jump-to-bottom bug.
 - [ ] Help/onboarding gets its own clear tab/content.
 - [ ] Polish each tab body and add real bank/credit-company logos from local assets.
-- [ ] Keep `billing_cycle_day` near the financial sync/cycle context if that is more
-      understandable than Profile preferences.
+- [ ] Remove `billing_cycle_day` from primary UX after the monthly model is verified;
+      keep it temporarily only for compatibility/rollback.
 
 ### P2 — General Agent distribution
 

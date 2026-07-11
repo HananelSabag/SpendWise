@@ -17,7 +17,7 @@ import BrandMark from '../components/common/BrandMark';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
-import PeriodSummary from '../components/features/dashboard/PeriodSummary';
+import MonthlyAccountingSummary from '../components/features/dashboard/MonthlyAccountingSummary';
 import BankCosts from '../components/features/dashboard/BankCosts';
 import SpendingBreakdown from '../components/features/dashboard/SpendingBreakdown';
 import GreetingHeader from '../components/features/dashboard/GreetingHeader';
@@ -110,11 +110,7 @@ export default function ModernDashboard() {
 
           <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-3">
             <div className="space-y-4 lg:space-y-6 xl:col-span-2">
-              <PeriodSummary
-                dashboardData={dashboardData}
-                formatCurrency={formatCurrency}
-                t={t}
-              />
+              <MonthlyAccountingSummary data={dashboardData.monthlyAccounting} formatCurrency={formatCurrency} />
               <ModernRecentTransactionsWidget
                 onViewAll={() => navigate('/transactions')}
                 maxItems={isMobile ? 6 : 8}

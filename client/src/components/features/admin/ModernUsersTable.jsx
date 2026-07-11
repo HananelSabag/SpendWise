@@ -470,7 +470,6 @@ const ModernUsersTable = ({
                       {user.connections_count || 0}
                     </div>
                     <div className="text-xs text-gray-400 whitespace-nowrap">
-                      {t('fields.cycleDay', { fallback: 'cycle' })} {user.billing_cycle_day ?? '—'}
                     </div>
                   </td>
 

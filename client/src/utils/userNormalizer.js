@@ -39,11 +39,6 @@ export const normalizeUserData = (user) => {
     onboarding_completed: user.onboarding_completed || user.onboardingCompleted || false,
     preferences: user.preferences || {},
 
-    // ✅ Financial period — the fixed day the financial month starts on.
-    // Must survive normalization or the Profile cycle-day picker (and the
-    // dashboard cycle chip) would reset to day 1 after every profile refetch.
-    billing_cycle_day: Number(user.billing_cycle_day ?? user.billingCycleDay) || 1,
-    
     // ✅ Timestamps
     created_at: user.created_at || user.createdAt || new Date().toISOString(),
     createdAt: user.created_at || user.createdAt || new Date().toISOString(),

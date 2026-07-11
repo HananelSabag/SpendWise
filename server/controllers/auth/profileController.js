@@ -10,19 +10,9 @@ const { normalizeUserData } = require('../../utils/userNormalizer');
 const errorCodes = require('../../utils/errorCodes');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const logger = require('../../utils/logger');
-const { getUserFinancialCycle } = require('../../services/financialCycleService');
 const db = require('../../config/db');
 
 const profileController = {
-  getFinancialCycle: asyncHandler(async (req, res) => {
-    const period = await getUserFinancialCycle(req.user.id, req.query.periodOffset);
-    res.json({
-      success: true,
-      data: period,
-      timestamp: new Date().toISOString()
-    });
-  }),
-
   /**
    * 🚀 Get user profile with smart caching
    * @route GET /api/v1/users/profile
@@ -84,9 +74,8 @@ const profileController = {
     try {
       const user = await User.update(userId, updates);
 
-      // Invalidate the auth cache so changed preferences (e.g.
-      // billing_cycle_day, which drives the dashboard financial period) take
-      // effect on the very next request instead of after the 10-min TTL.
+      // Invalidate the auth cache so changed preferences take effect on the
+      // very next request instead of after the 10-min TTL.
       clearUserCache(userId);
 
       const duration = Date.now() - start;

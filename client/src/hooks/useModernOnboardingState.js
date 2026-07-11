@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import {
-  User, GraduationCap, Zap, Check, Landmark
+  User, GraduationCap, Check, Landmark
 } from 'lucide-react';
 
 // ✅ Import stores and components
@@ -16,7 +16,6 @@ import { useTranslation, useAuth } from '../stores';
 // Import NEW modern step components
 import ModernProfileStep from '../components/features/onboarding/steps/ModernProfileStep';
 import ModernEducationStep from '../components/features/onboarding/steps/ModernEducationStep';
-import BillingCycleStep from '../components/features/onboarding/steps/BillingCycleStep';
 import ConnectSourcesStep from '../components/features/onboarding/steps/ConnectSourcesStep';
 
 /**
@@ -76,11 +75,7 @@ export const useModernOnboardingState = (options = {}) => {
       understoodBalancePanel: false,
       selectedExamples: []
     },
-    // Step 3: Financial cycle (billing/salary day)
-    billingCycle: {
-      billingCycleDay: 1
-    },
-    // Step 4: Connect bank/card sources
+    // Step 3: Connect bank/card sources
     connectSources: {
       wantsToConnect: true
     }
@@ -107,16 +102,6 @@ export const useModernOnboardingState = (options = {}) => {
       canSkip: false,
       required: false,
       estimatedTime: 2
-    },
-    {
-      id: 'billingCycle',
-      component: BillingCycleStep,
-      title: t('steps.billingCycle.title') || 'Financial Cycle',
-      subtitle: t('steps.billingCycle.subtitle') || 'Tell us when your financial month starts',
-      icon: Zap,
-      canSkip: false,
-      required: true,
-      estimatedTime: 1
     },
     {
       id: 'connectSources',
@@ -192,12 +177,6 @@ export const useModernOnboardingState = (options = {}) => {
 
       case 'education':
         // Education step is optional - no validation required
-        break;
-
-      case 'billingCycle':
-        if (!data.billingCycleDay || data.billingCycleDay < 1 || data.billingCycleDay > 31) {
-          errors.push('A valid financial cycle day (1-31) is required');
-        }
         break;
 
       case 'connectSources':
@@ -287,9 +266,6 @@ export const useModernOnboardingState = (options = {}) => {
         understoodBalancePanel: false,
         selectedExamples: []
       },
-      billingCycle: {
-        billingCycleDay: 1
-      },
       connectSources: {
         wantsToConnect: true
       }
@@ -329,8 +305,6 @@ export const useModernOnboardingState = (options = {}) => {
         return Boolean(data.firstName?.trim() || data.lastName?.trim() || data.language || data.currency);
       case 'education':
         return Boolean(data.understoodTransactionTypes || data.understoodBalancePanel);
-      case 'billingCycle':
-        return Boolean(data.billingCycleDay);
       case 'connectSources':
         return true;
       default:

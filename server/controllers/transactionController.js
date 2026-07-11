@@ -11,13 +11,80 @@ const logger = require('../utils/logger');
 const db = require('../config/db');
 const { INSTITUTIONS } = require('../config/institutions');
 const { buildDashboardData } = require('../services/dashboardService');
-const { getUserFinancialCycle } = require('../services/financialCycleService');
+const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAccountingService');
+const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
   .map(([source]) => source);
 
 const transactionController = {
+  getSalaryCandidates: asyncHandler(async (req, res) => {
+    const result = await db.query(`
+      SELECT DISTINCT ON (
+        t.bank_source,
+        COALESCE(t.bank_account_number, ''),
+        LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
+      )
+        t.id,
+        t.amount,
+        t.description,
+        t.date,
+        t.bank_source,
+        t.bank_account_number
+      FROM transactions t
+      WHERE t.user_id=$1
+        AND t.deleted_at IS NULL
+        AND t.type='income'
+        AND t.bank_source IS NOT NULL
+        AND NOT (t.bank_source = ANY($2::text[]))
+        AND NOT (t.description ~* $3)
+        AND t.date >= CURRENT_DATE - INTERVAL '90 days'
+      ORDER BY
+        t.bank_source,
+        COALESCE(t.bank_account_number, ''),
+        LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g')),
+        t.date DESC
+      LIMIT 12
+    `, [req.user.id, CREDIT_CARD_SOURCES, '(העמדת הלוא|קבלת הלוא|גלש"ן שווקים)']);
+    res.json({ success: true, data: result.rows });
+  }),
+
+  createSalarySignature: asyncHandler(async (req, res) => {
+    const transactionId = Number(req.body?.transactionId);
+    if (!Number.isInteger(transactionId) || transactionId <= 0) {
+      return res.status(400).json({ success: false, error: { message: 'Valid transactionId is required' } });
+    }
+    const candidate = await db.query(`
+      SELECT id, bank_source, bank_account_number, description,
+        LOWER(REGEXP_REPLACE(TRIM(description), '\\s+', ' ', 'g')) AS normalized_description
+      FROM transactions
+      WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL AND type='income'
+        AND bank_source IS NOT NULL AND NOT (bank_source = ANY($3::text[]))
+      LIMIT 1
+    `, [transactionId, req.user.id, CREDIT_CARD_SOURCES]);
+    if (!candidate.rows[0]) {
+      return res.status(404).json({ success: false, error: { message: 'Salary candidate not found' } });
+    }
+    const row = candidate.rows[0];
+    const saved = await db.query(`
+      INSERT INTO salary_signatures (
+        user_id, bank_source, bank_account_number, normalized_description,
+        display_description, month_offset, created_from_transaction_id
+      ) VALUES ($1,$2,$3,$4,$5,-1,$6)
+      ON CONFLICT (
+        user_id, bank_source, COALESCE(bank_account_number, ''), normalized_description
+      ) WHERE active=true
+      DO UPDATE SET display_description=EXCLUDED.display_description, updated_at=NOW()
+      RETURNING id, bank_source, bank_account_number, display_description, month_offset
+    `, [req.user.id, row.bank_source, row.bank_account_number, row.normalized_description, row.description, row.id]);
+    res.status(201).json({ success: true, data: saved.rows[0] });
+  }),
+
+  getMonthlyAccounting: asyncHandler(async (req, res) => {
+    const data = await buildMonthlyOverview(req.user.id);
+    res.json({ success: true, data });
+  }),
   /**
    * Get dashboard data: financial-period summary, category/pattern
    * breakdown, bank costs, per-institution activity, recent transactions.
@@ -57,7 +124,7 @@ const transactionController = {
     const amountMax = Number.isFinite(parseFloat(req.query.amountMax)) ? parseFloat(req.query.amountMax) : null;
 
     const financialPeriod = req.query.periodOffset !== undefined
-      ? await getUserFinancialCycle(userId, req.query.periodOffset)
+      ? getCalendarPeriod(req.query.periodOffset)
       : null;
     const filters = {
       type: req.query.type || null,

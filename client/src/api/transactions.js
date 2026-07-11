@@ -141,6 +141,34 @@ const transactionAPI = {
     }
   },
 
+  async getMonthlyAccounting() {
+    try {
+      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
+      const response = await apiClient.client.get('/transactions/monthly-accounting');
+      return { success: true, data: response.data?.data || response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  async getSalaryCandidates() {
+    try {
+      const response = await apiClient.client.get('/transactions/salary-candidates');
+      return { success: true, data: response.data?.data || [] };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  async createSalarySignature(transactionId) {
+    try {
+      const response = await apiClient.client.post('/transactions/salary-signatures', { transactionId });
+      return { success: true, data: response.data?.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
   // NOTE: removed dead methods (0 callers, verified 2026-07-03):
   //   getSummary, getCategoryBreakdown, search, getBalanceDetails,
   //   getBalanceHistory, createExpense, createIncome — their server routes

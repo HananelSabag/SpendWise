@@ -295,7 +295,6 @@ const adminOverviewController = {
           u.email               AS user_email,
           u.first_name          AS user_first_name,
           u.last_name           AS user_last_name,
-          u.billing_cycle_day,
           bc.bank_source,
           bc.display_name,
           bc.status,

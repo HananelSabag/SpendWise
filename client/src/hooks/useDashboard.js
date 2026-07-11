@@ -1,8 +1,7 @@
 /**
  * 📊 useDashboard Hook
  *
- * Consumes GET /transactions/dashboard, which now returns a financial-period
- * summary (based on the user's billing_cycle_day, not a rolling day window),
+ * Consumes the factual dashboard plus calendar-month accounting,
  * a category/pattern breakdown, bank costs (fees/interest/loans/cash), and
  * per-institution activity — see transactionController.getDashboardData.
  */
@@ -35,16 +34,16 @@ const EMPTY_DASHBOARD = {
   sources: [],
   recentTransactions: [],
   recurringPatterns: [],
+  monthlyAccounting: null,
   isEmpty: true,
 };
 
 export const useDashboard = ({ periodOffset = 0 } = {}) => {
   const { isAuthenticated, user } = useAuthStore();
   const queryClient = useQueryClient();
-  const userCycleDay = Number(user?.billing_cycle_day) || 1;
   const queryKey = useMemo(
-    () => ['dashboard', user?.id, userCycleDay, periodOffset],
-    [user?.id, userCycleDay, periodOffset]
+    () => ['dashboard', user?.id, periodOffset],
+    [user?.id, periodOffset]
   );
 
   const dashboardQuery = useQuery({
@@ -52,9 +51,13 @@ export const useDashboard = ({ periodOffset = 0 } = {}) => {
     enabled: isAuthenticated && !!getAccessToken(),
     queryFn: async () => {
       if (!getAccessToken()) return null;
-      const result = await api.transactions.getDashboardData({ periodOffset });
-      if (!result.success) throw new Error(result.error?.message || 'Failed to fetch dashboard data');
-      return result.data?.data ?? result.data;
+      const [legacy, monthly] = await Promise.all([
+        api.transactions.getDashboardData({ periodOffset }),
+        api.transactions.getMonthlyAccounting(),
+      ]);
+      if (!legacy.success) throw new Error(legacy.error?.message || 'Failed to fetch dashboard data');
+      const raw = legacy.data?.data ?? legacy.data;
+      return { ...raw, monthlyAccounting: monthly.success ? monthly.data : null };
     },
     ...queryConfigs.dashboard,
     retry: (failureCount, error) => {
@@ -89,6 +92,7 @@ export const useDashboard = ({ periodOffset = 0 } = {}) => {
         sources: raw.sources || [],
         recentTransactions,
         recurringPatterns: raw.recurringPatterns || [],
+        monthlyAccounting: raw.monthlyAccounting || null,
         isEmpty: recentTransactions.length === 0 && (parseInt(summary.total_transactions) || 0) === 0,
       };
     }, []),

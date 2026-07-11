@@ -36,6 +36,22 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
+router.get('/monthly-accounting',
+  getSummaryLimiter,
+  routeLogger('MONTHLY_ACCOUNTING'),
+  transactionController.getMonthlyAccounting
+);
+
+router.get('/salary-candidates',
+  getSummaryLimiter,
+  transactionController.getSalaryCandidates
+);
+
+router.post('/salary-signatures',
+  createTransactionLimiter,
+  transactionController.createSalarySignature
+);
+
 
 /**
  * Transaction Query Routes

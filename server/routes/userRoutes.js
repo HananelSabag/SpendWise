@@ -141,11 +141,6 @@ router.post('/logout', authController.logout);
  * @desc    Get user profile (cached for performance)
  * @access  Private
  */
-router.get('/financial-cycle',
-  auth,
-  profileController.getFinancialCycle
-);
-
 router.get('/profile',
   auth,
   profileController.getProfile

@@ -47,7 +47,7 @@ export default function InsightsPage() {
           </button>
           <BrandMark size="sm" />
           <div>
-            <h1 className="text-lg font-bold text-gray-950 dark:text-white">{he ? 'מחזורים ותובנות' : 'Cycles & insights'}</h1>
+            <h1 className="text-lg font-bold text-gray-950 dark:text-white">{he ? 'חודשים ותובנות' : 'Months & insights'}</h1>
             <p className="text-xs text-gray-500">{he ? 'כל הסיפור הפיננסי, בלי להעמיס על הדשבורד' : 'Your full financial story, away from the home dashboard'}</p>
           </div>
         </div>
