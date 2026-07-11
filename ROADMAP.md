@@ -85,15 +85,22 @@ Everything date-based sits on this.
   Store a **signature** (normalized description + account). Match future salaries by
   **description**, not date (robust to weekends/holidays, job changes, net+30).
 - Two same-description incomes attributed to one accounting month → ask ("bonus?").
-- **Not income:** loan disbursements ("העמדת הלואה"), own-investment/securities
-  transfers ("גלש\"ן שווקים"). Exclude from the coveted number.
+- **Not income:** loan disbursements ("העמדת הלואה") and confirmed
+  own-investment/securities transfers. Never hardcode an employer name as an
+  investment pattern; גלש"ן was Hananel's previous employer and is salary.
 - Unlocks: actual previous-month income; current month remains factual until the
   next salary arrives.
 - **2026-07-11 foundation complete:** pure classification now separates salary,
   other income, financing, securities, confirmed internal transfers, bank-direct,
   debit-primary, card itemized/enrichment and settlement evidence. Production
-  preview reproduces the forensic June totals exactly. Remaining work is wiring
-  it into `monthlyAccountingService` and the user-facing confirmation UX.
+  preview reproduces the forensic June totals exactly.
+- **2026-07-11 INTEGRATED into `monthlyAccountingService`:** `buildMonth` now
+  drives calendar income/spend/net and the spending breakdown from the classifier
+  + reconciliation engine (not the old regex). Salary attributed by signature
+  offset. Debit-card identity derived from all history. Verified on production:
+  June income 13,497.66 / committed 15,476.89 / net −1,979.23; July committed
+  8,066.74. 161/161 server tests pass. Remaining: the "two same-description
+  incomes → bonus?" prompt.
 
 ### D. 🧊 Loans sector + scraper upgrade (separate, large)
 - israeli-bank-scrapers returns only txns for Leumi/Max/Cal — **no loan metadata**
@@ -110,7 +117,7 @@ Everything date-based sits on this.
   *all from this merchant · above amount · exact amount*. Feeds a "watched" view.
   (User example: ₪500 Bit/PayBox.)
 
-### F. 🔜 Previous/current calendar-month accounting (dashboard integration)
+### F. ✅ Previous/current calendar-month accounting (dashboard integration)
 - `MONTHLY_ACCOUNTING_SPEC.md` baseline uses factual purchase dates.
 - Dashboard shows **current month to date first** and a **previous month summary
   underneath**, including daily averages and reconciliation state.
@@ -118,11 +125,38 @@ Everything date-based sits on this.
   attributes future matches to the prior work month.
 - Connected card settlements reconcile only; unconnected cards use a clearly
   labelled bank-settlement fallback.
-- **Correction pending:** the currently deployed `monthlyAccountingService` still
-  uses the old broad settlement regex and artificial month-M/month-M+1 difference.
-  The reviewed classification/reconciliation foundation is ready, but must be
-  integrated before the UI may call a month “reconciled”. See
-  `CLAUDE_CLASSIFICATION_HANDOFF.md`.
+- **2026-07-11 DONE:** `monthlyAccountingService.buildMonth` rewired to the
+  classification + reconciliation engine. The artificial month-M/month-M+1
+  difference and the broad settlement regex are gone; the ₪2,951.47 false
+  `needs_review` no longer exists. The dashboard PeriodSummary hero, the
+  MonthlyAccountingSummary cards, and the SpendingBreakdown all consume the same
+  engine (breakdown reconciles to the headline; no settlement/debit double-count).
+  Reconciliation is kept separate and only surfaces a discrepancy when a captured
+  statement is final. Client needed no change (reads the same API fields). See
+  `CLAUDE_MONTHLY_INTEGRATION_HANDOFF.md`.
+- **Still legacy:** dashboard `bankCosts`, `sources` and `recurringPatterns` SQL
+  still use the old patterns (secondary widgets; migrate next).
+
+### G. 🔜 Runway / daily-balance cycle (the "coveted number")
+The number Hananel wanted since day one: salary-to-salary, "since my last paycheck
+how much left the checking, and how am I doing." A separate lens from the calendar
+month; anchored on the SALARY date (the refill), not the 1st.
+- **2026-07-12 DONE (backend + card):** `cycleRunwayService.buildCycle` — cycle
+  window anchored on the most recent salary deposit; sums money out (each expense
+  once, via the engine) and money in EXCLUDING salary; pairs with the REAL checking
+  balance (current cycle only). `GET /transactions/cycle` + `RunwayCard` on the
+  dashboard. Verified: current cycle [09/07→today] balance −1,715, committed-out
+  2,240.44; previous cycle [09/06→09/07] real (anchored on the two salaries).
+- **2026-07-12 גלש"ן two-employer fix:** removed the hardcoded employer name from
+  the securities pattern; a user-confirmed salary signature now beats any text
+  guess. גלש"ן (previous employer) marked as salary (signature id 2) → recognised
+  as income, attributed to its work month; June income unchanged (13,497.66) and it
+  gave the 09/06 anchor for the previous runway cycle.
+- **Next:** projection toggle (expected salary + a manual expected-charge for the
+  "salary on the 1st, card charge on the 15th, no connected card" case), and the
+  per-day in/out history in Insights.
+- Edge case handled: an unconnected card company's bank charge counts as real spend
+  (not just reconciliation) — the classifier takes `connectedCardSources`.
 
 ---
 

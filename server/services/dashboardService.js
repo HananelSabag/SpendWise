@@ -352,7 +352,11 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     `, [userId]),
   ]);
 
-  const categoryBreakdown = categoriesResult.rows.map(r => ({
+  // Legacy SQL breakdown kept only as a fallback; the classifier-based breakdown
+  // from buildMonth (below) is preferred because it counts every economic expense
+  // once — excluding card settlements and debit-card enrichment copies, and never
+  // relying on the backwards brand-name settlement regex.
+  let categoryBreakdown = categoriesResult.rows.map(r => ({
     name: r.name,
     source: r.source,
     amount: parseFloat(r.amount),
@@ -466,6 +470,9 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   summary.total_income = monthly.income.actual;
   summary.total_expenses = monthly.spending.committed;
   summary.net_balance = monthly.net.actual;
+  if (Array.isArray(monthly.breakdown) && monthly.breakdown.length) {
+    categoryBreakdown = monthly.breakdown;
+  }
 
   return {
     period: {

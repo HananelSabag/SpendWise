@@ -35,6 +35,7 @@ const EMPTY_DASHBOARD = {
   recentTransactions: [],
   recurringPatterns: [],
   monthlyAccounting: null,
+  runway: null,
   isEmpty: true,
 };
 
@@ -51,13 +52,18 @@ export const useDashboard = ({ periodOffset = 0 } = {}) => {
     enabled: isAuthenticated && !!getAccessToken(),
     queryFn: async () => {
       if (!getAccessToken()) return null;
-      const [legacy, monthly] = await Promise.all([
+      const [legacy, monthly, cycle] = await Promise.all([
         api.transactions.getDashboardData({ periodOffset }),
         api.transactions.getMonthlyAccounting(),
+        api.transactions.getCycleRunway(),
       ]);
       if (!legacy.success) throw new Error(legacy.error?.message || 'Failed to fetch dashboard data');
       const raw = legacy.data?.data ?? legacy.data;
-      return { ...raw, monthlyAccounting: monthly.success ? monthly.data : null };
+      return {
+        ...raw,
+        monthlyAccounting: monthly.success ? monthly.data : null,
+        runway: cycle.success ? cycle.data : null,
+      };
     },
     ...queryConfigs.dashboard,
     retry: (failureCount, error) => {
@@ -93,6 +99,7 @@ export const useDashboard = ({ periodOffset = 0 } = {}) => {
         recentTransactions,
         recurringPatterns: raw.recurringPatterns || [],
         monthlyAccounting: raw.monthlyAccounting || null,
+        runway: raw.runway || null,
         isEmpty: recentTransactions.length === 0 && (parseInt(summary.total_transactions) || 0) === 0,
       };
     }, []),

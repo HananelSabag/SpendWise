@@ -56,8 +56,18 @@ describe('financial classification', () => {
       .toMatchObject({ economicRole: 'income', salary: true, monthOffset: -1, calendarInclusion: 'include' });
     expect(classifyTransaction(row({ type: 'income', description: 'העמדת הלואה' })))
       .toMatchObject({ economicRole: 'loan', calendarInclusion: 'exclude' });
-    expect(classifyTransaction(row({ type: 'income', description: 'גלש"ן שווקים-י' })))
+    expect(classifyTransaction(row({ type: 'income', description: 'העברת ניירות ערך' })))
       .toMatchObject({ economicRole: 'security', calendarInclusion: 'exclude' });
+    // A former employer's salary must NOT be hardcoded as "securities": unmarked it
+    // is ordinary income, and a user salary signature makes it salary (job change).
+    expect(classifyTransaction(row({ type: 'income', description: 'גלש"ן שווקים-י' })))
+      .toMatchObject({ economicRole: 'income', salary: false, calendarInclusion: 'include' });
+    expect(classifyTransaction(row({ type: 'income', description: 'גלש"ן שווקים-י' }), {
+      salarySignatures: [{
+        id: 2, bank_source: 'leumi', bank_account_number: '797-43483_78',
+        normalized_description: 'גלש"ן שווקים-י', month_offset: -1,
+      }],
+    })).toMatchObject({ economicRole: 'income', salary: true, monthOffset: -1 });
     expect(classifyTransaction(row({ type: 'income', description: 'העברה שלי' }), {
       internalTransferSignatures: [{ bank_source: 'leumi', description: 'העברה שלי' }],
     })).toMatchObject({ economicRole: 'transfer', calendarInclusion: 'exclude' });

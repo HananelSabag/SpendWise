@@ -12,6 +12,7 @@ const db = require('../config/db');
 const { INSTITUTIONS } = require('../config/institutions');
 const { buildDashboardData } = require('../services/dashboardService');
 const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAccountingService');
+const { buildRunwayOverview } = require('../services/cycleRunwayService');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
@@ -46,7 +47,7 @@ const transactionController = {
         LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g')),
         t.date DESC
       LIMIT 12
-    `, [req.user.id, CREDIT_CARD_SOURCES, '(העמדת הלוא|קבלת הלוא|גלש"ן שווקים)']);
+    `, [req.user.id, CREDIT_CARD_SOURCES, '(העמדת הלוא|קבלת הלוא|ניירות ערך|תיק השקעות)']);
     res.json({ success: true, data: result.rows });
   }),
 
@@ -83,6 +84,16 @@ const transactionController = {
 
   getMonthlyAccounting: asyncHandler(async (req, res) => {
     const data = await buildMonthlyOverview(req.user.id);
+    res.json({ success: true, data });
+  }),
+
+  /**
+   * Salary-anchored cycle + runway: current cycle (since last salary) and the
+   * previous cycle, with the real checking balance. See cycleRunwayService.
+   * @route GET /api/v1/transactions/cycle
+   */
+  getCycleRunway: asyncHandler(async (req, res) => {
+    const data = await buildRunwayOverview(req.user.id);
     res.json({ success: true, data });
   }),
   /**

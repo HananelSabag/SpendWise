@@ -42,6 +42,13 @@ router.get('/monthly-accounting',
   transactionController.getMonthlyAccounting
 );
 
+// Salary-anchored spending cycle + real checking balance (the "runway" view).
+router.get('/cycle',
+  getSummaryLimiter,
+  routeLogger('CYCLE_RUNWAY'),
+  transactionController.getCycleRunway
+);
+
 router.get('/salary-candidates',
   getSummaryLimiter,
   transactionController.getSalaryCandidates

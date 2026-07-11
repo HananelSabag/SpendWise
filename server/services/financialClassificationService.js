@@ -42,7 +42,10 @@ const LOAN_REPAY_DESC = /(פרעון\s*הלוואה|החזר\s*הלוואה)/; /
 const FEE_INTEREST_DESC = /(ריבית|עמלה|עמל\.)/;          // bank fee / interest
 const TAX_DESC = /מס\s*הכנסה/;                            // tax
 const LOAN_DISBURSE_DESC = /(העמדת\s*הלוא|קבלת\s*הלוא)/;  // loan disbursement (income side)
-const SECURITY_DESC = /(גלש["״]?ן\s*שווקים|ניירות\s*ערך|תיק\s*השקעות)/; // securities/investment transfer
+// Generic securities/investment terms ONLY. Never hardcode an employer/business
+// name here — a former employer's salary (job change) must be recognised as income
+// via a user-confirmed salary signature, not silently excluded as "securities".
+const SECURITY_DESC = /(ניירות\s*ערך|תיק\s*השקעות|קרן\s*נאמנות)/;
 const CARD_LAST4_IN_MEMO = /המסתיים\s*ב[-\s]*(\d{3,4})/;  // "…card ending in 8345"
 const INSTALLMENT_IN_MEMO = /תשלום\s+(\d+)\s+מתוך\s+(\d+)/; // "payment X of Y"
 
@@ -233,6 +236,17 @@ function classifyTransaction(txn, context = {}) {
   // 3. Bank rows.
   if (isBank) {
     if (type === 'income') {
+      // A user-confirmed salary signature (or an explicit stored ledger class)
+      // ALWAYS wins over a text-pattern guess. This is what lets a former
+      // employer's salary (job change) be recognised as real income once marked —
+      // instead of a hardcoded name silently excluding it as "securities".
+      const salary = matchesSalarySignature(txn, context.salarySignatures);
+      if (salary || txn.ledger_class === 'salary') {
+        return { ...base, economicRole: 'income', sourceRole: 'bank_primary', settlementRole: 'none',
+          calendarInclusion: 'include', direction: 'income', salary: true,
+          monthOffset: Number.isInteger(salary?.month_offset) ? salary.month_offset : -1,
+          confidence: 'high', reason: `salary (${salary ? `signature ${salary.id ?? 'match'}` : 'stored ledger class'})` };
+      }
       if (regexTest(financingPattern, description) || txn.ledger_class === 'loan_disbursement') {
         return { ...base, economicRole: 'loan', sourceRole: 'bank_primary', settlementRole: 'none',
           calendarInclusion: 'exclude', direction: 'neutral', confidence: 'high',
@@ -242,13 +256,6 @@ function classifyTransaction(txn, context = {}) {
         return { ...base, economicRole: 'security', sourceRole: 'bank_primary', settlementRole: 'none',
           calendarInclusion: 'exclude', direction: 'neutral', confidence: 'high',
           reason: 'securities/investment transfer — not earned income' };
-      }
-      const salary = matchesSalarySignature(txn, context.salarySignatures);
-      if (salary || txn.ledger_class === 'salary') {
-        return { ...base, economicRole: 'income', sourceRole: 'bank_primary', settlementRole: 'none',
-          calendarInclusion: 'include', direction: 'income', salary: true,
-          monthOffset: Number.isInteger(salary?.month_offset) ? salary.month_offset : -1,
-          confidence: 'high', reason: `salary (${salary ? `signature ${salary.id ?? 'match'}` : 'stored ledger class'})` };
       }
       if (txn.ledger_class === 'internal_transfer'
         || matchesTransactionSignature(txn, context.internalTransferSignatures)
@@ -289,6 +296,19 @@ function classifyTransaction(txn, context = {}) {
       // Other settlement references are opaque bank identifiers, not card numbers.
       const inferredMaxAccount = txn.bank_source === 'leumi' && resolvedSource === 'max'
         ? cardAccountFromSyncId(txn.bank_sync_id) : null;
+      // Unconnected-card edge case: when the caller tells us which card companies
+      // are connected and this settlement's company is NOT among them, there is no
+      // itemized purchase detail — so the bank charge IS the real spend (spec §2.3
+      // fallback), not just reconciliation. Only applied when connectedCardSources
+      // is explicitly provided; otherwise default to reconciliation-only exclusion.
+      const connected = context.connectedCardSources;
+      const cardConnected = !Array.isArray(connected) || !resolvedSource || connected.includes(resolvedSource);
+      if (!cardConnected) {
+        return { ...base, economicRole: 'expense', sourceRole: 'bank_primary', settlementRole: 'card_settlement',
+          calendarInclusion: 'include', direction: 'spend', confidence: 'high',
+          reason: `card settlement (${resolvedSource}) counted as spend — card company not connected (no itemized detail)`,
+          reconciliation: { include: false, side: 'none', cardSource: resolvedSource, cardAccount: null } };
+      }
       return { ...base, economicRole: 'transfer', sourceRole: 'bank_primary', settlementRole: 'card_settlement',
         calendarInclusion: 'exclude', direction: 'neutral', confidence: resolvedSource ? 'high' : 'medium',
         reason: `card settlement (${resolvedSource || 'unresolved provider'}) — reconciliation evidence, not calendar spend`,
@@ -393,9 +413,54 @@ function summarizeCalendar(rows, context = {}) {
   return { totals: acc, classified };
 }
 
+// Friendly bucket for an auto-classified bank-direct spend row (no provider
+// category). Mirrors the legacy dashboard labels so the UI stays consistent.
+function autoBucket(classification) {
+  if (classification.settlementRole === 'debit_direct') return 'Card Spending';
+  if (classification.loanRepayment || classification.economicRole === 'loan') return 'Loan Payments';
+  switch (classification.reason) {
+    case 'ATM / cash withdrawal — bank-direct spending': return 'Cash Withdrawals';
+    case 'bank fee / interest': return 'Bank Fees & Interest';
+    case 'tax': return 'Tax';
+    default: return 'Other';
+  }
+}
+
+/**
+ * Spending breakdown that counts every economic expense once, consistent with
+ * `summarizeCalendar`. Settlements, debit-card *enrichment* copies, income and
+ * refunds are excluded. Card itemized rows bucket by their provider category;
+ * bank-direct rows bucket by a friendly auto label. Pure.
+ *
+ * @param {Array<object>} rows
+ * @param {object} [context]
+ * @param {number} [limit=12]
+ * @returns {Array<{name:string, source:'source'|'auto', amount:number, count:number}>}
+ */
+function spendingBreakdown(rows, context = {}, limit = 12) {
+  const buckets = new Map();
+  for (const row of rows) {
+    const c = classifyTransaction(row, context);
+    if (c.calendarInclusion !== 'include' || c.direction !== 'spend') continue;
+    const rawCategory = String(row.raw_category || '').trim();
+    const name = rawCategory || autoBucket(c);
+    const source = rawCategory ? 'source' : 'auto';
+    const key = `${name}|${source}`;
+    const bucket = buckets.get(key) || { name, source, amount: 0, count: 0 };
+    bucket.amount += Math.abs(Number(row.amount) || 0);
+    bucket.count += 1;
+    buckets.set(key, bucket);
+  }
+  return [...buckets.values()]
+    .map((b) => ({ ...b, amount: Math.round((b.amount + Number.EPSILON) * 100) / 100 }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, limit);
+}
+
 module.exports = {
   classifyTransaction,
   summarizeCalendar,
+  spendingBreakdown,
   // exported for reconciliation + tests
   normalizeDescription,
   cardAccountFromSyncId,
