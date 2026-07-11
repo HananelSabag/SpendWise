@@ -128,8 +128,8 @@ Everything date-based sits on this.
   caveat → its own task.
 - **Per-tab content polish:** Profile tabs (personal/preferences/security) + BankSync
   tab bodies → bank-sync card design.
-- `billing_cycle_day` has been removed from application code and UX; the final DB
-  drop migration runs only after the new server deployment is healthy.
+- `billing_cycle_day` has been removed from application code, UX and production
+  Supabase. Migration 22 ran only after Render was live on `7918d58`.
 
 ---
 

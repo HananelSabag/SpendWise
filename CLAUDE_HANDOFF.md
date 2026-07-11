@@ -132,8 +132,9 @@ ZIP bundles.
 - [x] Connected-card bank settlement is reconciliation only and never another
       expense; unconnected cards receive a labelled settlement fallback.
 - [x] Added daily income/spending averages and month completion/review statuses.
-- [x] Removed cycle-day settings/onboarding/server reads and prepared migration 22
-      to drop `users.billing_cycle_day` after the new deployment is healthy.
+- [x] Removed cycle-day settings/onboarding/server reads. Render and Vercel reached
+      healthy production state on `7918d58`, then migration 22 removed
+      `users.billing_cycle_day` from production Supabase.
 - [x] Production shadow result for user 1: July income ₪0, committed spending
       ₪7,612.74, net −₪7,612.74; June actual income ₪13,497.66, spending
       ₪15,388.89, reconciliation mismatch ₪2,951.47 (visible as needs review).
