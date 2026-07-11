@@ -1,0 +1,88 @@
+const {
+  classifyTransaction,
+  summarizeCalendar,
+} = require('../services/financialClassificationService');
+
+const row = (overrides = {}) => ({
+  id: 1,
+  bank_source: 'leumi',
+  bank_account_number: '797-43483_78',
+  amount: 100,
+  type: 'expense',
+  description: 'ordinary movement',
+  date: '2026-07-01',
+  bank_status: 'completed',
+  ...overrides,
+});
+
+describe('financial classification', () => {
+  test('maps Leumi Max and Cal settlements without treating debit as settlement', () => {
+    const max = classifyTransaction(row({
+      description: 'לאומי ויזה', bank_sync_id: 'leumi:acct:122254', amount: 12744.22,
+    }));
+    expect(max.settlementRole).toBe('card_settlement');
+    expect(max.calendarInclusion).toBe('exclude');
+    expect(max.reconciliation).toMatchObject({ cardSource: 'max', cardAccount: '2254' });
+
+    const cal = classifyTransaction(row({
+      description: 'כרטיסי אשראי-י', bank_sync_id: 'leumi:acct:987654', amount: 4734.66,
+    }));
+    expect(cal.reconciliation).toMatchObject({ cardSource: 'visa_cal', cardAccount: null });
+
+    const debit = classifyTransaction(row({
+      description: 'כרטיס דביט', notes: 'בכרטיס המסתיים ב-8345', amount: 88,
+    }));
+    expect(debit).toMatchObject({
+      economicRole: 'expense', sourceRole: 'bank_primary', settlementRole: 'debit_direct',
+      calendarInclusion: 'include', direction: 'spend',
+    });
+  });
+
+  test('uses bank debit as primary and the connected Max copy as enrichment only', () => {
+    const card = classifyTransaction(row({
+      bank_source: 'max', bank_account_number: '8345', description: 'ALIEXPRESS', amount: 240.98,
+    }), { debitCardAccounts: [{ source: 'max', account: '8345' }] });
+    expect(card).toMatchObject({
+      sourceRole: 'card_enrichment', settlementRole: 'debit_direct', calendarInclusion: 'exclude',
+    });
+  });
+
+  test('classifies salary, financing, securities, and confirmed internal transfers separately', () => {
+    const salaryContext = { salarySignatures: [{
+      id: 1, bank_source: 'leumi', bank_account_number: '797-43483_78',
+      normalized_description: 'הורייזן טכנו-י', month_offset: -1,
+    }] };
+    expect(classifyTransaction(row({ type: 'income', description: 'הורייזן טכנו-י' }), salaryContext))
+      .toMatchObject({ economicRole: 'income', salary: true, monthOffset: -1, calendarInclusion: 'include' });
+    expect(classifyTransaction(row({ type: 'income', description: 'העמדת הלואה' })))
+      .toMatchObject({ economicRole: 'loan', calendarInclusion: 'exclude' });
+    expect(classifyTransaction(row({ type: 'income', description: 'גלש"ן שווקים-י' })))
+      .toMatchObject({ economicRole: 'security', calendarInclusion: 'exclude' });
+    expect(classifyTransaction(row({ type: 'income', description: 'העברה שלי' }), {
+      internalTransferSignatures: [{ bank_source: 'leumi', description: 'העברה שלי' }],
+    })).toMatchObject({ economicRole: 'transfer', calendarInclusion: 'exclude' });
+  });
+
+  test('ordinary bank cash/direct expenses count, while unknown sources remain visible', () => {
+    expect(classifyTransaction(row({ description: 'משיכת מזומן' })))
+      .toMatchObject({ calendarInclusion: 'include', direction: 'spend' });
+    expect(classifyTransaction(row({ description: 'פרעון הלוואה' })))
+      .toMatchObject({ economicRole: 'loan', loanRepayment: true, calendarInclusion: 'include' });
+    expect(classifyTransaction(row({ bank_source: 'mystery_bank' })))
+      .toMatchObject({ economicRole: 'unknown', calendarInclusion: 'needs_review' });
+  });
+
+  test('refunds reduce card spend and pending affects committed, not actual', () => {
+    const summary = summarizeCalendar([
+      row({ id: 1, bank_source: 'max', bank_account_number: '2254', amount: 100 }),
+      row({ id: 2, bank_source: 'max', bank_account_number: '2254', amount: 20, type: 'income' }),
+      row({ id: 3, bank_source: 'max', bank_account_number: '2254', amount: 30, bank_status: 'pending' }),
+      row({ id: 4, amount: 50, type: 'income', description: 'gift' }),
+    ]).totals;
+    expect(summary.cardRefunds).toBe(20);
+    expect(summary.spendActual).toBe(80);
+    expect(summary.spendCommitted).toBe(110);
+    expect(summary.netActual).toBe(-30);
+    expect(summary.netCommitted).toBe(-60);
+  });
+});

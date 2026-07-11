@@ -80,7 +80,7 @@ Everything date-based sits on this.
   description, local date, statement date and status instead of freezing the
   first version forever.
 
-### C. ⏳ Salary identity + income classification
+### C. 🔜 Salary identity + income classification integration
 - First sync (~32d) → ask once: *"Which of these income transactions is your salary?"*
   Store a **signature** (normalized description + account). Match future salaries by
   **description**, not date (robust to weekends/holidays, job changes, net+30).
@@ -89,6 +89,11 @@ Everything date-based sits on this.
   transfers ("גלש\"ן שווקים"). Exclude from the coveted number.
 - Unlocks: actual previous-month income; current month remains factual until the
   next salary arrives.
+- **2026-07-11 foundation complete:** pure classification now separates salary,
+  other income, financing, securities, confirmed internal transfers, bank-direct,
+  debit-primary, card itemized/enrichment and settlement evidence. Production
+  preview reproduces the forensic June totals exactly. Remaining work is wiring
+  it into `monthlyAccountingService` and the user-facing confirmation UX.
 
 ### D. 🧊 Loans sector + scraper upgrade (separate, large)
 - israeli-bank-scrapers returns only txns for Leumi/Max/Cal — **no loan metadata**
@@ -105,14 +110,19 @@ Everything date-based sits on this.
   *all from this merchant · above amount · exact amount*. Feeds a "watched" view.
   (User example: ₪500 Bit/PayBox.)
 
-### F. ✅ Previous/current calendar-month accounting (dashboard)
-- `MONTHLY_ACCOUNTING_SPEC.md` implemented with factual purchase dates.
+### F. 🔜 Previous/current calendar-month accounting (dashboard integration)
+- `MONTHLY_ACCOUNTING_SPEC.md` baseline uses factual purchase dates.
 - Dashboard shows **current month to date first** and a **previous month summary
   underneath**, including daily averages and reconciliation state.
 - No salary estimate. Salary selection stores a description/account signature and
   attributes future matches to the prior work month.
 - Connected card settlements reconcile only; unconnected cards use a clearly
   labelled bank-settlement fallback.
+- **Correction pending:** the currently deployed `monthlyAccountingService` still
+  uses the old broad settlement regex and artificial month-M/month-M+1 difference.
+  The reviewed classification/reconciliation foundation is ready, but must be
+  integrated before the UI may call a month “reconciled”. See
+  `CLAUDE_CLASSIFICATION_HANDOFF.md`.
 
 ---
 
