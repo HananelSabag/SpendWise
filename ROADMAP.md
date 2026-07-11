@@ -51,6 +51,11 @@ Everything date-based sits on this.
   one-time backfill of existing rows (needs explicit go — it moves transaction dates);
   audit all business logic (period boundaries already use `PERIOD_TZ`, verify the rest).
 - Render/Supabase/Vercel all differ — normalize to Israel before any logic.
+- **2026-07-11 progress:** live RAW + Supabase comparison proved the exact legacy
+  shift (salary `2026-07-08T21:00Z` = July 9 Israel, stored `date` = July 8).
+  Ingest and dedup now derive Israel dates and refresh corrected bank facts on
+  re-sync. The one-time historical row repair + user 1 cycle day 8 → 9 still
+  require an explicit production apply after the deploy is verified.
 
 ### B. 🔜 Raw scrape validation (see the truth first)
 - Tool built: `spendwise-agent/tools/raw-scrape-report.js` → RAW HTML report, no
@@ -58,6 +63,13 @@ Everything date-based sits on this.
   which fields exist, `date` vs `processedDate`, whether loans/installments/memo
   appear, description reliability, per provider.
 - Reminder: **scrape time ≠ transaction time** (first sync ≈ 30–32 days back).
+- **2026-07-11 captured:** Leumi 23 txns, Max 101 across two cards, Visa Cal 9.
+  Leumi exposes real salary/transfer detail in `memo` and loan repayments only
+  (no principal/term/remaining balance). Max exposes provider categories and
+  some installment metadata. Agent mapping now preserves `memo` as bank notes.
+  Pending bank amounts can change between scrapes; dedup now refreshes amount,
+  description, local date, statement date and status instead of freezing the
+  first version forever.
 
 ### C. ⏳ Salary identity + income classification
 - First sync (~32d) → ask once: *"Which of these income transactions is your salary?"*

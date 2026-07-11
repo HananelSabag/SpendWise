@@ -64,7 +64,9 @@ const dbConfig = {
   ...baseConfig,
 
   // 🎯 Optimized for Render + Supabase limits
-  max: 15,                        // Reduced from 20 (Render connection limits)
+  // Leave headroom in Supabase's 15-session pool. Concurrent dashboard
+  // queries wait in pg's local queue instead of exhausting the whole role.
+  max: Math.max(1, Math.min(15, parseInt(process.env.DB_POOL_MAX || '8', 10) || 8)),
 
   // ⚡ Timeouts
   connectionTimeoutMillis: 20000,

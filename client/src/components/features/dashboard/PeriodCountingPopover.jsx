@@ -50,6 +50,8 @@ export default function PeriodCountingPopover({ summary, formatCurrency, t }) {
     },
   ].filter((row) => row.value > 0);
 
+  const cardPurchases = Math.abs(Number(summary?.card_charges) || 0);
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -92,9 +94,27 @@ export default function PeriodCountingPopover({ summary, formatCurrency, t }) {
               </div>
             ))}
           </div>
+
+          {cardPurchases > 0 && (
+            <div className="mt-3 border-t border-gray-100 pt-3 dark:border-gray-800">
+              <div className="flex items-center gap-2 rounded-xl bg-violet-50/70 px-3 py-2 dark:bg-violet-950/20">
+                <CreditCard className="h-4 w-4 shrink-0 text-violet-500" />
+                <span className="min-w-0 flex-1 text-xs font-medium text-gray-700 dark:text-gray-200">
+                  {t('moneyModel.cardPurchases', { fallback: 'Itemized card purchases' })}
+                </span>
+                <span className="shrink-0 text-xs font-bold tabular-nums text-violet-700 dark:text-violet-300">
+                  {formatCurrency(cardPurchases)}
+                </span>
+              </div>
+              <p className="mt-1.5 text-[10px] leading-snug text-gray-400 dark:text-gray-500">
+                {t('moneyModel.cardPurchasesHint', {
+                  fallback: 'Shown for reconciliation; not added again because the bank card bill is already counted above.',
+                })}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-

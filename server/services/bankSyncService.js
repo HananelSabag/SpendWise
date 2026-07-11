@@ -92,6 +92,7 @@ async function ingestAccounts(client, userId, source, accounts) {
       const date = calendarDateInTz(txnDate);
       const transactionDatetime = txnDate.toISOString();
       const description = (txn.description || '').trim().slice(0, 500);
+      const bankNotes = (txn.notes || '').toString().trim().slice(0, 2000);
       // Source-provided category text (Max sends one; banks usually don't).
       // null when absent — we never guess a category at ingest time.
       const rawCategory = (txn.raw_category || '').toString().trim().slice(0, 200) || null;
@@ -108,21 +109,36 @@ async function ingestAccounts(client, userId, source, accounts) {
              (user_id, amount, type, description, notes, date, transaction_datetime,
               raw_category, bank_sync_id, bank_source, bank_account_number,
               bank_processed_date, bank_status, created_at, updated_at)
-           VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
+           VALUES ($1,$2,$3,$4,$13,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
            ON CONFLICT (user_id, bank_sync_id)
              WHERE bank_sync_id IS NOT NULL
            DO UPDATE SET
+             amount              = EXCLUDED.amount,
+             type                = EXCLUDED.type,
+             description         = EXCLUDED.description,
+             date                = EXCLUDED.date,
+             transaction_datetime = EXCLUDED.transaction_datetime,
              bank_processed_date = COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date),
              bank_status         = COALESCE(EXCLUDED.bank_status, transactions.bank_status),
              raw_category        = COALESCE(transactions.raw_category, EXCLUDED.raw_category),
+             notes               = CASE
+                                     WHEN COALESCE(transactions.notes, '') = '' THEN EXCLUDED.notes
+                                     ELSE transactions.notes
+                                   END,
              updated_at          = NOW()
-           WHERE transactions.bank_processed_date IS DISTINCT FROM COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date)
+           WHERE transactions.amount IS DISTINCT FROM EXCLUDED.amount
+              OR transactions.type IS DISTINCT FROM EXCLUDED.type
+              OR transactions.description IS DISTINCT FROM EXCLUDED.description
+              OR transactions.date IS DISTINCT FROM EXCLUDED.date
+              OR transactions.transaction_datetime IS DISTINCT FROM EXCLUDED.transaction_datetime
+              OR transactions.bank_processed_date IS DISTINCT FROM COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date)
               OR transactions.bank_status IS DISTINCT FROM COALESCE(EXCLUDED.bank_status, transactions.bank_status)
               OR transactions.raw_category IS DISTINCT FROM COALESCE(transactions.raw_category, EXCLUDED.raw_category)
+              OR (COALESCE(transactions.notes, '') = '' AND COALESCE(EXCLUDED.notes, '') <> '')
            RETURNING id, (xmax = 0) AS was_inserted`,
           [
             userId, amount, type, description, date, transactionDatetime,
-            rawCategory, bankSyncId, source, acctNum, bankProcessedDate, bankStatus,
+            rawCategory, bankSyncId, source, acctNum, bankProcessedDate, bankStatus, bankNotes,
           ],
         );
         result.rows[0]?.was_inserted ? inserted++ : skipped++;
@@ -131,29 +147,47 @@ async function ingestAccounts(client, userId, source, accounts) {
         // Deliberately INCLUDES tombstoned rows (deleted_at set): a user-deleted
         // bank transaction must keep blocking re-import, not resurrect here.
         const existing = await client.query(
-          `SELECT id, bank_processed_date, bank_status, raw_category FROM transactions
-           WHERE user_id=$1 AND bank_source=$2 AND date=$3
-             AND amount=$4 AND description=$5
+          `SELECT id, bank_processed_date, bank_status, raw_category, notes FROM transactions
+           WHERE user_id=$1 AND bank_source=$2
              AND bank_account_number IS NOT DISTINCT FROM $6
+             AND (
+               (date=$3 AND amount=$4 AND description=$5)
+               OR (transaction_datetime=$7 AND description=$5)
+             )
            LIMIT 1`,
-          [userId, source, date, amount, description, acctNum],
+          [userId, source, date, amount, description, acctNum, transactionDatetime],
         );
         if (existing.rows.length > 0) {
           // A deduped re-sync can still enrich an old row with statement date
           // and status metadata introduced after that row was first imported.
           await client.query(
             `UPDATE transactions SET
-               bank_processed_date = COALESCE($2, bank_processed_date),
-               bank_status         = COALESCE($3, bank_status),
-               raw_category        = COALESCE(raw_category, $4),
+               amount              = $2,
+               type                = $3,
+               description         = $4,
+               date                = $5,
+               transaction_datetime = $6,
+               bank_processed_date = COALESCE($7, bank_processed_date),
+               bank_status         = COALESCE($8, bank_status),
+               raw_category        = COALESCE(raw_category, $9),
+               notes               = CASE WHEN COALESCE(notes, '') = '' THEN $10 ELSE notes END,
                updated_at          = NOW()
              WHERE id = $1
                AND (
-                 bank_processed_date IS DISTINCT FROM COALESCE($2, bank_processed_date)
-                 OR bank_status IS DISTINCT FROM COALESCE($3, bank_status)
-                 OR raw_category IS DISTINCT FROM COALESCE(raw_category, $4)
+                 amount IS DISTINCT FROM $2
+                 OR type IS DISTINCT FROM $3
+                 OR description IS DISTINCT FROM $4
+                 OR date IS DISTINCT FROM $5
+                 OR transaction_datetime IS DISTINCT FROM $6
+                 OR bank_processed_date IS DISTINCT FROM COALESCE($7, bank_processed_date)
+                 OR bank_status IS DISTINCT FROM COALESCE($8, bank_status)
+                 OR raw_category IS DISTINCT FROM COALESCE(raw_category, $9)
+                 OR (COALESCE(notes, '') = '' AND COALESCE($10, '') <> '')
                )`,
-            [existing.rows[0].id, bankProcessedDate, bankStatus, rawCategory],
+            [
+              existing.rows[0].id, amount, type, description, date,
+              transactionDatetime, bankProcessedDate, bankStatus, rawCategory, bankNotes,
+            ],
           );
           skipped++;
         } else {
@@ -162,10 +196,10 @@ async function ingestAccounts(client, userId, source, accounts) {
                (user_id, amount, type, description, notes, date, transaction_datetime,
                 raw_category, bank_source, bank_account_number,
                 bank_processed_date, bank_status, created_at, updated_at)
-             VALUES ($1,$2,$3,$4,'',$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())`,
+             VALUES ($1,$2,$3,$4,$12,$5,$6,$7,$8,$9,$10,$11,NOW(),NOW())`,
             [
               userId, amount, type, description, date, transactionDatetime,
-              rawCategory, source, acctNum, bankProcessedDate, bankStatus,
+              rawCategory, source, acctNum, bankProcessedDate, bankStatus, bankNotes,
             ],
           );
           inserted++;
