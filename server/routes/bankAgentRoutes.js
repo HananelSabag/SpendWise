@@ -94,7 +94,7 @@ router.use(agentLimiter, agentAuth);
 // job with its connection's encrypted credentials (sealed box ciphertext).
 //
 // This is also the scheduler tick: the agent's poll is the only moment jobs
-// are ever consumed, so due scheduled jobs (07:00/18:00 Israel targets) are
+// are ever consumed, so due scheduled jobs (07:00/19:00 Israel targets) are
 // enqueued right here, immediately before claiming. See
 // services/syncSchedulingService.js for why in-process cron was removed.
 router.post('/jobs/claim', async (req, res) => {

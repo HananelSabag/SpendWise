@@ -13,8 +13,8 @@
  * enqueue whatever is due right before claiming. No cron, no keep-alive
  * dependency, no timezone drift.
  *
- * "Due" means: the most recent daily target time (07:00 / 18:00
- * Asia/Jerusalem by default, override with SYNC_TARGET_HOURS="7,18") has
+ * "Due" means: the most recent daily target time (07:00 / 19:00
+ * Asia/Jerusalem by default, override with SYNC_TARGET_HOURS="7,19") has
  * passed, and the connection hasn't completed a sync since that instant.
  * A brand-new connection (never synced) is due immediately.
  *
@@ -27,11 +27,11 @@ const logger = require('../utils/logger');
 const SYNC_TIMEZONE = process.env.SYNC_TIMEZONE || 'Asia/Jerusalem';
 
 function targetHours() {
-  const raw = process.env.SYNC_TARGET_HOURS || '7,18';
+  const raw = process.env.SYNC_TARGET_HOURS || '7,19';
   const hours = raw.split(',')
     .map((h) => parseInt(h.trim(), 10))
     .filter((h) => Number.isInteger(h) && h >= 0 && h <= 23);
-  return hours.length > 0 ? hours : [7, 18];
+  return hours.length > 0 ? hours : [7, 19];
 }
 
 // Offset (ms) of `timeZone` relative to UTC at the given instant.
@@ -50,10 +50,23 @@ function tzOffsetMs(date, timeZone) {
   return asUTC - date.getTime();
 }
 
+// Convert a target-zone wall time to UTC. Re-evaluating the offset on the
+// candidate keeps yesterday's target correct across Israel DST transitions.
+function zonedWallTimeToUtc(year, month, day, hour, timeZone) {
+  const wallClockAsUtc = Date.UTC(year, month, day, hour, 0, 0);
+  let candidate = new Date(wallClockAsUtc);
+  for (let i = 0; i < 3; i += 1) {
+    const adjusted = wallClockAsUtc - tzOffsetMs(candidate, timeZone);
+    if (adjusted === candidate.getTime()) break;
+    candidate = new Date(adjusted);
+  }
+  return candidate;
+}
+
 /**
  * The most recent target instant (as a UTC Date) that has already passed.
- * E.g. with targets [7, 18]: at 06:30 Israel time → yesterday 18:00;
- * at 07:05 → today 07:00; at 19:00 → today 18:00.
+ * E.g. with targets [7, 19]: at 06:30 Israel time → yesterday 19:00;
+ * at 07:05 → today 07:00; at 19:05 → today 19:00.
  */
 function lastTargetInstant(now = new Date()) {
   const offset = tzOffsetMs(now, SYNC_TIMEZONE);
@@ -66,7 +79,7 @@ function lastTargetInstant(now = new Date()) {
   for (const dayShift of [0, -1]) {
     for (const h of targetHours()) {
       // Wall time (y, m, d+dayShift, h:00) in the target tz → UTC instant
-      candidates.push(new Date(Date.UTC(y, m, d + dayShift, h, 0, 0) - offset));
+      candidates.push(zonedWallTimeToUtc(y, m, d + dayShift, h, SYNC_TIMEZONE));
     }
   }
   const passed = candidates.filter((c) => c.getTime() <= now.getTime());
@@ -131,4 +144,4 @@ async function enqueueDueJobs(now = new Date()) {
   }
 }
 
-module.exports = { enqueueDueJobs, lastTargetInstant, tzOffsetMs };
+module.exports = { enqueueDueJobs, lastTargetInstant, tzOffsetMs, zonedWallTimeToUtc };

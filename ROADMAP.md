@@ -42,7 +42,7 @@ Layered, not one number:
 
 ## 2. Roadmap (dependency-ordered)
 
-### A. 🔜 Timezone normalization — Asia/Jerusalem everywhere (FOUNDATION)
+### A. ✅ Timezone normalization — Asia/Jerusalem everywhere (FOUNDATION)
 Everything date-based sits on this.
 - **Confirmed bug:** salary hit at 2026-07-09 00:00 Israel (= 07-08 21:00 UTC); the
   `date` column was truncated in **UTC** → stored 07-**08**. `bank_processed_date`
@@ -55,9 +55,10 @@ Everything date-based sits on this.
   shift (salary `2026-07-08T21:00Z` = July 9 Israel, stored `date` = July 8).
   Ingest and dedup now derive Israel dates and refresh corrected bank facts on
   re-sync. The one-time historical row repair + user 1 cycle day 8 → 9 still
-  require an explicit production apply after the deploy is verified.
+  were applied after deploy verification: 136 legacy bank rows repaired across
+  users 1 and 34, and user 1 cycle day restored from workaround 8 to salary day 9.
 
-### B. 🔜 Raw scrape validation (see the truth first)
+### B. ✅ Raw scrape validation (see the truth first)
 - Tool built: `spendwise-agent/tools/raw-scrape-report.js` → RAW HTML report, no
   mapping/POST. Hananel runs Leumi + Max + Cal locally; we inspect together:
   which fields exist, `date` vs `processedDate`, whether loans/installments/memo
