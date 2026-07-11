@@ -1,7 +1,9 @@
 # Classification and Reconciliation Foundation Handoff
 
-Date: 2026-07-11  
-Scope: deterministic, read-only financial classification and card reconciliation foundation.  
+Date: 2026-07-11
+
+Scope: deterministic, read-only financial classification and card reconciliation foundation.
+
 Authors: Claude created the initial services; Codex reviewed, corrected, tested, and verified them against production.
 
 ## Status
