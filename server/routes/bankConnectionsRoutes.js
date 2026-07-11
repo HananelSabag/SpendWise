@@ -321,21 +321,25 @@ router.post('/:id/sync', async (req, res) => {
     //  - gap: 3h since the last COMPLETED sync. A failed/expired attempt
     //    doesn't block an immediate retry — that was the "worked once,
     //    never again" complaint.
-    const quota = await db.query(
-      `SELECT
-         COUNT(*) FILTER (WHERE trigger = 'manual'
-                            AND requested_at > NOW() - INTERVAL '24 hours'
-                            AND started_at IS NOT NULL)::int AS manual_today,
-         MAX(finished_at) FILTER (WHERE status = 'done') AS last_done
-       FROM bank_sync_jobs WHERE connection_id = $1`,
-      [id],
-    );
-    const { manual_today, last_done } = quota.rows[0];
-    if (manual_today >= MANUAL_SYNCS_PER_DAY) {
-      return res.status(429).json({ error: 'Daily manual sync limit reached', code: 'SYNC_QUOTA' });
-    }
-    if (last_done && Date.now() - new Date(last_done).getTime() < MANUAL_SYNC_GAP_HOURS * 3600_000) {
-      return res.status(429).json({ error: `Minimum ${MANUAL_SYNC_GAP_HOURS}h between syncs`, code: 'SYNC_TOO_SOON' });
+    // Admins/super-admins are exempt: trusted power users who knowingly accept
+    // the lockout risk (diagnostics / backfills). Regular users stay protected.
+    if (!req.user.isAdmin) {
+      const quota = await db.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE trigger = 'manual'
+                              AND requested_at > NOW() - INTERVAL '24 hours'
+                              AND started_at IS NOT NULL)::int AS manual_today,
+           MAX(finished_at) FILTER (WHERE status = 'done') AS last_done
+         FROM bank_sync_jobs WHERE connection_id = $1`,
+        [id],
+      );
+      const { manual_today, last_done } = quota.rows[0];
+      if (manual_today >= MANUAL_SYNCS_PER_DAY) {
+        return res.status(429).json({ error: 'Daily manual sync limit reached', code: 'SYNC_QUOTA' });
+      }
+      if (last_done && Date.now() - new Date(last_done).getTime() < MANUAL_SYNC_GAP_HOURS * 3600_000) {
+        return res.status(429).json({ error: `Minimum ${MANUAL_SYNC_GAP_HOURS}h between syncs`, code: 'SYNC_TOO_SOON' });
+      }
     }
 
     const job = await db.query(

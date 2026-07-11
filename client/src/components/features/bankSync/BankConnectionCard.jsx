@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../../hooks/useToast';
+import { useIsAdmin } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import bankConnectionsApi from '../../../api/bankConnections';
 import { bankBrand, formatDateTime } from './bankSyncMeta';
@@ -28,6 +29,7 @@ const SYNC_ERROR_KEYS = {
 export default function BankConnectionCard({ conn, t, lang, onUpdateCredentials }) {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const isAdmin = useIsAdmin();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [purgeData, setPurgeData] = useState(false);
 
@@ -47,7 +49,9 @@ export default function BankConnectionCard({ conn, t, lang, onUpdateCredentials 
     if (!conn.next_manual_sync_at) return null;
     return new Date(conn.next_manual_sync_at);
   }, [conn.next_manual_sync_at]);
-  const inCooldown = Boolean(nextSyncAt && nextSyncAt.getTime() > Date.now());
+  // Admins are exempt from the manual-sync cooldown (server exempts them too),
+  // so the button never short-circuits for them.
+  const inCooldown = !isAdmin && Boolean(nextSyncAt && nextSyncAt.getTime() > Date.now());
 
   const syncMutation = useMutation({
     mutationFn: () => bankConnectionsApi.syncNow(conn.id),
