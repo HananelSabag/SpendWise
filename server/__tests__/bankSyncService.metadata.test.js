@@ -142,4 +142,35 @@ describe('bank sync statement metadata', () => {
     expect(calls.some(({ sql }) => sql.includes('UPDATE transactions SET'))).toBe(false);
     expect(result).toEqual({ inserted: 1, skipped: 0 });
   });
+
+  test('keeps simultaneous bank pending rows with the same provider identifier distinct', async () => {
+    const calls = [];
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('INSERT INTO transactions')) return { rows: [{ was_inserted: true }] };
+        return { rows: [] };
+      }),
+    };
+
+    await ingestAccounts(client, 1, 'leumi', [{
+      account_number: '797-43483_78',
+      txns: [
+        { charged_amount: -1086.44, date: '2026-07-10T12:00:00.000Z',
+          description: 'פרעון הלוואה', status: 'pending', identifier: 43483 },
+        { charged_amount: -1046.45, date: '2026-07-12T12:00:00.000Z',
+          description: 'פרעון הלוואה', status: 'pending', identifier: 43483 },
+      ],
+    }]);
+
+    const ids = calls.filter(({ sql }) => sql.includes('INSERT INTO transactions'))
+      .map(({ params }) => params[7]);
+    expect(ids).toEqual([
+      'leumi:797-43483_78:2026-07-10:43483',
+      'leumi:797-43483_78:2026-07-12:43483',
+    ]);
+    expect(new Set(ids).size).toBe(2);
+    expect(calls.filter(({ sql }) => sql.includes('promote legacy pending bank id'))).toHaveLength(2);
+  });
 });

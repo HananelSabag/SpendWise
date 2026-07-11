@@ -149,11 +149,49 @@ async function ingestAccounts(client, userId, source, accounts) {
       const installmentTotal = normalizePositiveInteger(txn.installment_total);
       const validInstallments = installmentNumber && installmentTotal
         && installmentNumber <= installmentTotal;
-      const bankSyncId = txn.identifier ? `${source}:${acctKey}:${txn.identifier}` : null;
+      const rawIdentifier = txn.identifier == null ? null : String(txn.identifier);
+      const legacyBankSyncId = rawIdentifier ? `${source}:${acctKey}:${rawIdentifier}` : null;
+      // Leumi can reuse one generic identifier for multiple simultaneous pending
+      // movements (proven with two distinct loan repayments both reported as
+      // identifier 43483). Qualifying bank-pending ids by their local due date
+      // keeps both facts while retaining the raw identifier as the final suffix,
+      // so pending→settled suffix reconciliation continues to work.
+      const bankSyncId = rawIdentifier
+        ? (!isCreditCompany && bankStatus === 'pending'
+          ? `${source}:${acctKey}:${date}:${rawIdentifier}`
+          : legacyBankSyncId)
+        : null;
 
       const acctNum = acctKey === 'default' ? null : acctKey;
 
       if (bankSyncId) {
+        // One-time compatibility for pending rows stored before date-qualified
+        // ids existed. Promote only an exact legacy fact; when two provider rows
+        // share the legacy id, the non-matching one inserts independently.
+        if (legacyBankSyncId !== bankSyncId) {
+          await client.query(
+            `/* promote legacy pending bank id */
+             UPDATE transactions legacy
+                SET bank_sync_id = $2, updated_at = NOW()
+              WHERE legacy.user_id = $1
+                AND legacy.bank_sync_id = $3
+                AND legacy.bank_source = $4
+                AND legacy.bank_account_number IS NOT DISTINCT FROM $5
+                AND legacy.amount = $6
+                AND legacy.type = $7
+                AND LOWER(REGEXP_REPLACE(TRIM(legacy.description), '\\s+', ' ', 'g'))
+                    = LOWER(REGEXP_REPLACE(TRIM($8), '\\s+', ' ', 'g'))
+                AND legacy.date = $9::date
+                AND legacy.deleted_at IS NULL
+                AND (legacy.bank_status IS NULL OR legacy.bank_status = 'pending')
+                AND NOT EXISTS (
+                  SELECT 1 FROM transactions current
+                   WHERE current.user_id = $1 AND current.bank_sync_id = $2
+                )`,
+            [userId, bankSyncId, legacyBankSyncId, source, acctNum, amount, type, description, date],
+          );
+        }
+
         // Some banks re-key the same movement when it settles (Leumi has been
         // observed changing 45061616 → 61616 and shifting the date by 2 days).
         // Before inserting a completed bank row, look for exactly one stale
