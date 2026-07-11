@@ -144,11 +144,16 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       )
       SELECT
         COUNT(*)::int AS total_transactions,
-        COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) AS total_income,
-        COALESCE(SUM(amount) FILTER (
-          WHERE type = 'expense'
-            AND NOT excluded_card_settlement
-        ), 0) AS total_expenses,
+        -- Cash-flow model (2026-07): the headline period totals are what
+        -- actually moved through the bank account (+ manual entries the user
+        -- logged). Credit-card ITEMIZED charges are NOT re-counted here — the
+        -- real card settlement already shows up as a bank outflow, so counting
+        -- both double-counts (and the old pattern-based "exclude the settlement"
+        -- was fragile: it broke whenever a bank's generic label like "לאומי
+        -- ויזה" didn't map to a specific card company and the user had >1 card).
+        -- The itemized charges still power the spending breakdown below.
+        COALESCE(SUM(amount) FILTER (WHERE type = 'income'  AND source_kind <> 'credit_card'), 0) AS total_income,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'expense' AND source_kind <> 'credit_card'), 0) AS total_expenses,
         COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND type = 'income'), 0) AS bank_income,
         COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND type = 'expense' AND NOT is_card_settlement), 0) AS bank_direct_expenses,
         COALESCE(SUM(amount) FILTER (WHERE source_kind = 'bank' AND is_card_settlement), 0) AS bank_card_settlements,

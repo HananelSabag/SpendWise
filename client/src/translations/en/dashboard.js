@@ -303,6 +303,8 @@ export default {
   moneyModel: {
     title: "How this period is counted",
     subtitle: "Banks show real account cash flow. Credit companies show purchase detail. SpendWise avoids counting the same card bill twice.",
+    cashflowSubtitle: "We count money that actually moved through your bank — including your credit-card bill. Individual card purchases show in the breakdown, not added again.",
+    cardBill: "Credit-card bill (paid from bank)",
     bankDirect: "Bank account movement",
     bankDirectHint: "Cash flow that really left or entered your bank account.",
     statementSubtitle: "Cards use their payment date. Bank card settlements are excluded when itemized card detail is available.",

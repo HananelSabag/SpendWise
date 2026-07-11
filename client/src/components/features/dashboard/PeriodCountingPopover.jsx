@@ -23,6 +23,9 @@ export default function PeriodCountingPopover({ summary, formatCurrency, t }) {
     };
   }, [open]);
 
+  // Cash-flow model: expenses = money that actually left the bank (direct
+  // debits + the credit-card bill) + manual entries. Individual card purchases
+  // are breakdown detail, not re-counted here.
   const rows = [
     {
       key: 'bank',
@@ -32,10 +35,10 @@ export default function PeriodCountingPopover({ summary, formatCurrency, t }) {
       tint: 'text-blue-600 dark:text-blue-300',
     },
     {
-      key: 'card',
+      key: 'cardBill',
       icon: CreditCard,
-      label: t('moneyModel.cardPurchases', { fallback: 'Credit-card statement charges' }),
-      value: Math.abs(Number(summary?.card_charges) || 0),
+      label: t('moneyModel.cardBill', { fallback: 'Credit-card bill (paid from bank)' }),
+      value: Math.abs(Number(summary?.bank_card_settlements) || 0),
       tint: 'text-violet-600 dark:text-violet-300',
     },
     {
@@ -45,7 +48,7 @@ export default function PeriodCountingPopover({ summary, formatCurrency, t }) {
       value: Math.abs(Number(summary?.manual_expenses) || 0),
       tint: 'text-gray-600 dark:text-gray-300',
     },
-  ];
+  ].filter((row) => row.value > 0);
 
   return (
     <div ref={containerRef} className="relative">
@@ -70,8 +73,8 @@ export default function PeriodCountingPopover({ summary, formatCurrency, t }) {
                 {t('moneyModel.title', { fallback: 'How this period is counted' })}
               </p>
               <p className="mt-1 text-[11px] leading-snug text-gray-500 dark:text-gray-400">
-                {t('moneyModel.statementSubtitle', {
-                  fallback: 'Cards use their payment date. Bank card settlements are excluded when itemized card detail is available.',
+                {t('moneyModel.cashflowSubtitle', {
+                  fallback: 'We count money that actually moved through your bank — including your credit-card bill. Individual card purchases show in the breakdown, not added again.',
                 })}
               </p>
             </div>
