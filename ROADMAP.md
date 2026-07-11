@@ -134,8 +134,11 @@ Everything date-based sits on this.
   Reconciliation is kept separate and only surfaces a discrepancy when a captured
   statement is final. Client needed no change (reads the same API fields). See
   `CLAUDE_MONTHLY_INTEGRATION_HANDOFF.md`.
-- **Still legacy:** dashboard `bankCosts`, `sources` and `recurringPatterns` SQL
-  still use the old patterns (secondary widgets; migrate next).
+- **2026-07-12 secondary widgets migrated:** dashboard `bankCosts`, per-source
+  activity and `recurringPatterns` now use the same classifier and unique-economic-
+  fact rules as the headline. Settlements/debit enrichment are not counted twice;
+  salary attribution matches the selected accounting month; generic settlements,
+  loans, cash and fees no longer masquerade as recurring merchants.
 
 ### G. 🔜 Runway / daily-balance cycle (the "coveted number")
 The number Hananel wanted since day one: salary-to-salary, "since my last paycheck

@@ -18,6 +18,7 @@ const { Transaction } = require('../models/Transaction');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 const { buildMonth } = require('./monthlyAccountingService');
+const { buildDashboardClassifierWidgets } = require('./dashboardClassifierWidgetsService');
 
 // Half-open-cycle offset (≤ 0) of the earliest transaction relative to the
 // current cycle — so the client can stop users navigating to periods that
@@ -77,7 +78,7 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   const period = getCalendarPeriod(requestedOffset);
   const { start: periodStart, end: periodEnd } = period;
 
-  const [summaryResult, recentTransactions, categoriesResult, bankCostsResult, sourcesResult, balancesResult, perAccountResult, recurringResult] = await Promise.all([
+  const [summaryResult, recentTransactions, categoriesResult, sourcesResult, balancesResult, perAccountResult] = await Promise.all([
     db.query(`
       WITH scoped AS (
         SELECT
@@ -179,7 +180,7 @@ async function buildDashboardData(userId, requestedOffset = 0) {
             WHEN t.description ~* $8 THEN 'visa_cal'
             WHEN t.description ~* $9 THEN 'max'
             ELSE NULL
-          END AS settlement_card_source
+          END AS inferred_settlement_card_source
         FROM transactions t
         LEFT JOIN bank_accounts ba_filter
           ON ba_filter.user_id = t.user_id
@@ -217,8 +218,10 @@ async function buildDashboardData(userId, requestedOffset = 0) {
             AND NOT (t.bank_source = ANY($5::text[]))
             AND t.description ~* $4
             AND (
-              (t.settlement_card_source IS NOT NULL AND t.settlement_card_source = ANY(flags.card_sources))
-              OR (t.settlement_card_source IS NULL AND flags.card_source_count = 1)
+              (COALESCE(t.settlement_card_source, t.inferred_settlement_card_source) IS NOT NULL
+                AND COALESCE(t.settlement_card_source, t.inferred_settlement_card_source) = ANY(flags.card_sources))
+              OR (COALESCE(t.settlement_card_source, t.inferred_settlement_card_source) IS NULL
+                AND flags.card_source_count = 1)
             )
           )
       )
@@ -238,33 +241,6 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       CARD_SETTLEMENT_SOURCE_PATTERNS.visa_cal,
       CARD_SETTLEMENT_SOURCE_PATTERNS.max,
     ]),
-    db.query(`
-      SELECT
-        COALESCE(SUM(amount) FILTER (WHERE bucket = 'fees'), 0)  AS fees_interest,
-        COALESCE(SUM(amount) FILTER (WHERE bucket = 'loan'),  0) AS loan_payments,
-        COALESCE(SUM(amount) FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawn,
-        COALESCE(COUNT(*)    FILTER (WHERE bucket = 'cash'),  0) AS cash_withdrawal_count
-      FROM (
-        SELECT
-          t.amount,
-          CASE
-            WHEN t.description ~* '(ריבית|עמלה|עמל\\.)' THEN 'fees'
-            WHEN t.description ~* '(פרעון הלוואה|הלוואה)' AND t.type = 'expense' THEN 'loan'
-            WHEN t.description ~* '(משיכת מזומן|משיכה עם קוד)' THEN 'cash'
-            ELSE 'other'
-          END AS bucket
-        FROM transactions t
-        LEFT JOIN bank_accounts ba_filter
-          ON ba_filter.user_id = t.user_id
-         AND ba_filter.bank_source = t.bank_source
-         AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
-        WHERE t.user_id = $1 AND t.deleted_at IS NULL
-          AND t.type = 'expense' AND t.bank_source IS NOT NULL
-          AND COALESCE(ba_filter.enabled, true) = true
-          AND t.date >= $2
-          AND t.date < $3
-      ) classified
-    `, [userId, periodStart, periodEnd]),
     db.query(`
       SELECT
         t.bank_source,
@@ -326,30 +302,6 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       WHERE ba.user_id = $1
       ORDER BY ba.bank_source, ba.account_number
     `, [userId, periodStart, periodEnd]),
-    // Repeated merchant patterns across multiple calendar months. This is
-    // intentionally presented as a detected pattern, not a guaranteed bill.
-    db.query(`
-      SELECT MIN(t.description) AS description,
-             MIN(t.raw_category) FILTER (WHERE t.raw_category IS NOT NULL AND t.raw_category <> '') AS category,
-             MIN(t.bank_source) AS bank_source,
-             COUNT(*)::int AS occurrences,
-             COUNT(DISTINCT DATE_TRUNC('month', t.date))::int AS active_months,
-             ROUND(AVG(t.amount)::numeric, 2) AS average_amount,
-             MAX(t.date) AS last_seen
-      FROM transactions t
-      LEFT JOIN bank_accounts ba_filter
-        ON ba_filter.user_id = t.user_id
-       AND ba_filter.bank_source = t.bank_source
-       AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
-      WHERE t.user_id = $1 AND t.deleted_at IS NULL AND t.type = 'expense'
-        AND COALESCE(ba_filter.enabled, true) = true
-        AND t.date >= CURRENT_DATE - INTERVAL '7 months'
-        AND LENGTH(TRIM(t.description)) > 2
-      GROUP BY LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
-      HAVING COUNT(DISTINCT DATE_TRUNC('month', t.date)) >= 2
-      ORDER BY active_months DESC, occurrences DESC, average_amount DESC
-      LIMIT 12
-    `, [userId]),
   ]);
 
   // Legacy SQL breakdown kept only as a fallback; the classifier-based breakdown
@@ -380,23 +332,14 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     has_card_detail: sr.has_card_detail === true,
   };
 
-  const bc = bankCostsResult.rows[0] || {};
   const bankCosts = {
-    feesInterest: parseFloat(bc.fees_interest || 0),
-    loanPayments: parseFloat(bc.loan_payments || 0),
-    cashWithdrawn: parseFloat(bc.cash_withdrawn || 0),
-    cashWithdrawalCount: parseInt(bc.cash_withdrawal_count || 0),
+    feesInterest: 0,
+    loanPayments: 0,
+    cashWithdrawn: 0,
+    cashWithdrawalCount: 0,
   };
 
-  const recurringPatterns = recurringResult.rows.map((row) => ({
-    description: row.description,
-    category: row.category,
-    bank_source: row.bank_source,
-    occurrences: parseInt(row.occurrences) || 0,
-    active_months: parseInt(row.active_months) || 0,
-    average_amount: parseFloat(row.average_amount) || 0,
-    last_seen: row.last_seen,
-  }));
+  const recurringPatterns = [];
 
   // Per-source account facts (balance + freshness) keyed by bank_source.
   const acctBySource = Object.fromEntries(
@@ -465,7 +408,10 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     'dashboard_earliest_txn'
   );
   const minOffset = computeMinOffset(earliestResult.rows[0]?.earliest);
-  const monthly = await buildMonth(userId, period.offset);
+  const [monthly, classifierWidgets] = await Promise.all([
+    buildMonth(userId, period.offset),
+    buildDashboardClassifierWidgets(userId, periodStart, periodEnd),
+  ]);
 
   summary.total_income = monthly.income.actual;
   summary.total_expenses = monthly.spending.committed;
@@ -473,6 +419,19 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   if (Array.isArray(monthly.breakdown) && monthly.breakdown.length) {
     categoryBreakdown = monthly.breakdown;
   }
+
+  Object.assign(bankCosts, classifierWidgets.bankCosts);
+  recurringPatterns.splice(0, recurringPatterns.length, ...classifierWidgets.recurringPatterns);
+  const classifiedActivity = Object.fromEntries(
+    classifierWidgets.sourceActivity.map((activity) => [activity.bank_source, activity]),
+  );
+  for (const source of sources) {
+    const activity = classifiedActivity[source.bankSource];
+    source.income = activity?.income || 0;
+    source.expenses = activity?.expenses || 0;
+    source.count = activity?.count || 0;
+  }
+  sources.sort((a, b) => b.expenses - a.expenses);
 
   return {
     period: {
