@@ -9,19 +9,17 @@ import { RefreshCw } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
+import { useFinancialCycle } from '../hooks/useFinancialCycle';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
-import { formatFinancialPeriod } from '../utils/financialPeriod';
 import { PageSkeleton } from '../components/ui';
 
 import BrandMark from '../components/common/BrandMark';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
-import MonthlyAccountingSummary from '../components/features/dashboard/MonthlyAccountingSummary';
-import RunwayCard from '../components/features/dashboard/RunwayCard';
-import BankCosts from '../components/features/dashboard/BankCosts';
-import SpendingBreakdown from '../components/features/dashboard/SpendingBreakdown';
+import CalendarActivityCard from '../components/features/dashboard/CalendarActivityCard';
+import RunwaySnapshot from '../components/features/dashboard/RunwaySnapshot';
 import GreetingHeader from '../components/features/dashboard/GreetingHeader';
 import DashboardError from '../components/features/dashboard/DashboardError';
 import { usePullToRefresh } from '../components/features/dashboard/usePullToRefresh';
@@ -46,7 +44,7 @@ const useGreeting = (user, t) =>
   }, [user, t]);
 
 export default function ModernDashboard() {
-  const { t, currentLanguage } = useTranslation('dashboard');
+  const { t } = useTranslation('dashboard');
   const { user } = useAuth();
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
@@ -60,13 +58,9 @@ export default function ModernDashboard() {
     isRefetching,
     refresh: refreshDashboard,
   } = useDashboard({ periodOffset: 0 });
+  const { data: financialCycle } = useFinancialCycle();
 
   const greeting = useGreeting(user, t);
-  const calendarPeriodLabel = useMemo(
-    () => formatFinancialPeriod(dashboardData?.period, currentLanguage),
-    [dashboardData?.period, currentLanguage],
-  );
-
   const handleRefresh = useCallback(async () => {
     const result = await refreshDashboard();
     if (!result.success) {
@@ -114,10 +108,12 @@ export default function ModernDashboard() {
         <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:space-y-6 lg:px-8 lg:py-6">
           <ModernBalancePanel />
 
-          <div className="grid grid-cols-1 gap-4 lg:gap-6 xl:grid-cols-3">
-            <div className="space-y-4 lg:space-y-6 xl:col-span-2">
-              <RunwayCard data={dashboardData.runway} formatCurrency={formatCurrency} />
-              <MonthlyAccountingSummary data={dashboardData.monthlyAccounting} formatCurrency={formatCurrency} />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)] lg:gap-6">
+            <CalendarActivityCard activity={dashboardData.calendarActivity} formatCurrency={formatCurrency} />
+            <aside>
+              <RunwaySnapshot runway={financialCycle} formatCurrency={formatCurrency} onOpen={() => navigate('/insights')} />
+            </aside>
+            <div className="lg:col-start-1">
               <ModernRecentTransactionsWidget
                 onViewAll={() => navigate('/transactions')}
                 maxItems={isMobile ? 6 : 8}
@@ -125,16 +121,6 @@ export default function ModernDashboard() {
                 preloadedLoading={isRefetching}
               />
             </div>
-
-            <aside className="space-y-4 lg:space-y-6 xl:col-span-1">
-              <SpendingBreakdown
-                categoryBreakdown={dashboardData.categoryBreakdown}
-                formatCurrency={formatCurrency}
-                t={t}
-                periodLabel={calendarPeriodLabel}
-              />
-              <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} periodLabel={calendarPeriodLabel} />
-            </aside>
           </div>
         </main>
       </div>

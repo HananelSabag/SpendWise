@@ -241,4 +241,10 @@ async function buildOverview(userId) {
   return { previous, current, timezone: TZ };
 }
 
-module.exports = { buildMonth, buildMonthFromData, buildOverview, monthForOffset };
+module.exports = {
+  buildMonth,
+  buildMonthFromData,
+  buildOverview,
+  loadAccountingData,
+  monthForOffset,
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Area, Bar, CartesianGrid, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 import { useTranslation } from '../../../stores';
@@ -37,17 +37,16 @@ function FlowTooltip({ active, payload, label, language, formatCurrency, t }) {
     <div className="rounded-xl border border-gray-200 bg-white/95 p-3 text-xs shadow-xl backdrop-blur dark:border-gray-700 dark:bg-gray-900/95">
       <p className="mb-2 font-bold text-gray-900 dark:text-white">{formatDate(label, language)}</p>
       <p className="text-rose-600">{t('dailyFlow.outToday')}: {formatCurrency(values.spentCommitted || 0)}</p>
-      <p className="text-emerald-600">{t('dailyFlow.inToday')}: {formatCurrency(values.incomeExSalary || 0)}</p>
-      <p className="mt-1 text-indigo-600">{t('dailyFlow.cumulativeNet')}: {formatCurrency(values.cumulativeNetExSalary || 0)}</p>
+      <p className="text-emerald-600">{t('dailyFlow.inToday')}: {formatCurrency(values.totalIncome || 0)}</p>
+      <p className="mt-1 text-indigo-600">{t('dailyFlow.cumulativeNet')}: {formatCurrency(values.cumulativeNetIncludingSalary || 0)}</p>
     </div>
   );
 }
 
-export default function DailyFlowHistory({ runway, formatCurrency, language = 'he' }) {
+export default function DailyFlowHistory({ runway, selectedCycle = 'current', formatCurrency, language = 'he' }) {
   const { t } = useTranslation('dashboard');
-  const [selected, setSelected] = useState('current');
   const he = language === 'he';
-  const cycle = runway?.[selected];
+  const cycle = runway?.[selectedCycle];
   const history = cycle?.dailyHistory || [];
   const activeDays = history
     .filter((day) => day.transactionCount || day.salaryIncome || day.needsReviewCount)
@@ -68,19 +67,6 @@ export default function DailyFlowHistory({ runway, formatCurrency, language = 'h
             <p className="mt-1 text-xs text-gray-500">{t('dailyFlow.subtitle')}</p>
           </div>
 
-          <div className="inline-flex rounded-2xl bg-gray-100 p-1 dark:bg-gray-800">
-            {['current', 'previous'].map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSelected(key)}
-                aria-pressed={selected === key}
-                className={`rounded-xl px-3 py-2 text-xs font-bold transition ${selected === key ? 'bg-white text-indigo-600 shadow-sm dark:bg-gray-700 dark:text-indigo-300' : 'text-gray-500'}`}
-              >
-                {t(key === 'current' ? 'dailyFlow.current' : 'dailyFlow.previous')}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
@@ -94,8 +80,8 @@ export default function DailyFlowHistory({ runway, formatCurrency, language = 'h
       <div className="p-4 sm:p-5">
         <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <Metric icon={TrendingDown} label={t('dailyFlow.out')} value={cycle?.money?.spentCommitted} tone="red" formatCurrency={formatCurrency} />
-          <Metric icon={TrendingUp} label={t('dailyFlow.incomeExSalary')} value={cycle?.money?.incomeExSalary} tone="green" formatCurrency={formatCurrency} />
-          <Metric icon={Wallet} label={t('dailyFlow.cycleNet')} value={cycle?.money?.netExSalaryCommitted} tone="indigo" formatCurrency={formatCurrency} />
+          <Metric icon={TrendingUp} label={t('cycleDashboard.totalIncome')} value={cycle?.money?.totalIncome} tone="green" formatCurrency={formatCurrency} />
+          <Metric icon={Wallet} label={t('dailyFlow.cycleNet')} value={cycle?.money?.netIncludingSalaryCommitted} tone="indigo" formatCurrency={formatCurrency} />
         </div>
 
         <div className="mt-5 h-64 w-full" dir="ltr">
@@ -106,15 +92,15 @@ export default function DailyFlowHistory({ runway, formatCurrency, language = 'h
               <YAxis tickFormatter={(value) => compactMoney(value, language)} tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={42} />
               <Tooltip content={<FlowTooltip language={language} formatCurrency={formatCurrency} t={t} />} />
               <Bar dataKey="spentCommitted" name="spentCommitted" fill="#fb7185" radius={[5, 5, 0, 0]} maxBarSize={22} />
-              <Bar dataKey="incomeExSalary" name="incomeExSalary" fill="#34d399" radius={[5, 5, 0, 0]} maxBarSize={22} />
-              <Area dataKey="cumulativeNetExSalary" name="cumulativeNetExSalary" type="monotone" stroke="#6366f1" fill="#6366f1" fillOpacity={0.08} strokeWidth={2.5} />
+              <Bar dataKey="totalIncome" name="totalIncome" fill="#34d399" radius={[5, 5, 0, 0]} maxBarSize={22} />
+              <Area dataKey="cumulativeNetIncludingSalary" name="cumulativeNetIncludingSalary" type="monotone" stroke="#6366f1" fill="#6366f1" fillOpacity={0.08} strokeWidth={2.5} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-3 text-[11px] text-gray-500">
           <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-rose-400" />{t('dailyFlow.dailyOut')}</span>
-          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-400" />{t('dailyFlow.dailyIncomeExSalary')}</span>
+          <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-sm bg-emerald-400" />{t('cycleDashboard.totalIncome')}</span>
           <span className="flex items-center gap-1"><i className="h-0.5 w-3 bg-indigo-500" />{t('dailyFlow.cumulativeNet')}</span>
         </div>
 

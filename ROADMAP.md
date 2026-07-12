@@ -1,5 +1,26 @@
 # SpendWise — Roadmap & Decisions
 
+> **2026-07-12 final presentation decision (supersedes the older Dashboard/Insights
+> wording below):** Dashboard shows factual calendar activity on each transaction's
+> real local date. Insights is the salary-anchored Financial Cycle Dashboard.
+> Economic salary attribution remains available for accounting reports, but never
+> changes the Dashboard month in which the money actually arrived.
+
+## 2026-07-12 Dashboard / Insights redesign completed
+
+- Dashboard answers “what is happening right now?” with balance, accounts/cards,
+  calendar-month income, spending, transfers, important events and recent activity.
+- July real-data audit now reports income `₪13,327.75`, committed spend `₪9,873.09`
+  and net `₪3,454.66`; the old economic-month view incorrectly showed income `0`.
+- Dashboard Runway is a compact snapshot. Full analysis lives only in Insights.
+- Insights answers “how am I doing in this salary cycle?” with total income including
+  salary, total expenses, net, card billing groups, remaining-known expenses,
+  expected end balance and daily history.
+- Expected end balance is real checking balance minus bank pending items, card
+  charges not yet settled and an optional planned charge. The next salary begins
+  the next cycle and is not added to the current cycle's end balance.
+- Explanations are collapsed by default and open/close on demand.
+
 > **2026-07-11 model decision:** the fixed billing-cycle window is being replaced
 > as the primary dashboard model by calendar-month accounting. Delayed salary is
 > attributed to the previous work month; connected-card settlements reconcile the

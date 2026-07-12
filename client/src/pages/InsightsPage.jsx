@@ -1,124 +1,51 @@
-import React, { useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Repeat2, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { useCurrency, useTranslation } from '../stores';
-import { useDashboard } from '../hooks/useDashboard';
-import { useFinancialPeriodSelection } from '../hooks/useFinancialPeriodSelection';
-import { formatFinancialPeriod, nearestAvailablePeriodOffset, normalizeAvailablePeriodOffsets } from '../utils/financialPeriod';
-import transactionAPI from '../api/transactions';
-import FinancialPeriodNavigator from '../components/features/dashboard/FinancialPeriodNavigator';
-import PeriodSummary from '../components/features/dashboard/PeriodSummary';
-import SpendingBreakdown from '../components/features/dashboard/SpendingBreakdown';
-import SourcesOverview from '../components/features/dashboard/SourcesOverview';
-import BankCosts from '../components/features/dashboard/BankCosts';
-import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
+import { useFinancialCycle } from '../hooks/useFinancialCycle';
 import BrandMark from '../components/common/BrandMark';
+import FinancialCycleSummary from '../components/features/insights/FinancialCycleSummary';
+import CardBillingCycles from '../components/features/insights/CardBillingCycles';
 import DailyFlowHistory from '../components/features/insights/DailyFlowHistory';
 import RunwayProjectionPlanner from '../components/features/insights/RunwayProjectionPlanner';
-import WatchedMerchants from '../components/features/insights/WatchedMerchants';
 
 export default function InsightsPage() {
   const navigate = useNavigate();
   const { currentLanguage, t } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
-  const { periodOffset, setPeriodOffset } = useFinancialPeriodSelection();
-  const { data, isLoading, refresh } = useDashboard({ periodOffset });
-  const availableOffsets = useMemo(
-    () => normalizeAvailablePeriodOffsets(data?.period),
-    [data?.period],
-  );
+  const { data: runway, isLoading, isFetching, refresh } = useFinancialCycle();
+  const [selected, setSelected] = useState('current');
+  const cycle = runway?.[selected];
 
-  useEffect(() => {
-    if (!data?.period?.availableOffsets || availableOffsets.includes(periodOffset)) return;
-    setPeriodOffset(nearestAvailablePeriodOffset(periodOffset, availableOffsets));
-  }, [availableOffsets, data?.period?.availableOffsets, periodOffset, setPeriodOffset]);
-
-  const periodTransactions = useQuery({
-    queryKey: ['transactions', 'financial-period', periodOffset],
-    queryFn: async () => {
-      const result = await transactionAPI.getAll({ periodOffset, limit: 100, page: 1 });
-      if (!result.success) throw new Error(result.error?.message || 'Failed to load period transactions');
-      return result.data?.data || result.data;
-    },
-    staleTime: 60_000,
-  });
-
-  if (isLoading && !data) return <div className="min-h-screen animate-pulse bg-gray-50 dark:bg-gray-950" />;
-
-  const transactions = periodTransactions.data?.transactions || [];
-  const patterns = data?.recurringPatterns || [];
-  const calendarPeriodLabel = formatFinancialPeriod(data?.period, currentLanguage);
+  if (isLoading && !runway) return <div className="min-h-screen animate-pulse bg-gray-50 dark:bg-gray-950" />;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
-      <header className="sticky top-0 z-20 border-b border-gray-200/70 bg-white/85 backdrop-blur dark:border-gray-800 dark:bg-gray-900/85">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:px-8">
-          <button onClick={() => navigate('/')} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('insightsPage.back')}>
-            <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
-          </button>
+      <header className="sticky top-0 z-20 border-b border-gray-200/70 bg-white/90 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
+        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 lg:px-8">
+          <button type="button" onClick={() => navigate('/')} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('insightsPage.back')}><ArrowLeft className="h-5 w-5 rtl:rotate-180" /></button>
           <BrandMark size="sm" />
-          <div>
-            <h1 className="text-lg font-bold text-gray-950 dark:text-white">{t('insightsPage.title')}</h1>
-            <p className="text-xs text-gray-500">{t('insightsPage.subtitle')}</p>
-          </div>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-lg font-black text-gray-950 dark:text-white">{t('cycleDashboard.title')}</h1><p className="truncate text-xs text-gray-500">{t('cycleDashboard.subtitle')}</p></div>
+          <button type="button" onClick={refresh} disabled={isFetching} className="rounded-xl p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800" aria-label={t('refresh')}><RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} /></button>
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl space-y-5 px-4 py-5 lg:px-8">
-        <FinancialPeriodNavigator period={data?.period} periodOffset={periodOffset} onPeriodOffsetChange={setPeriodOffset} />
-        <PeriodSummary dashboardData={data} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
-        <DailyFlowHistory runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} />
-        <RunwayProjectionPlanner runway={data?.runway} formatCurrency={formatCurrency} onSaved={refresh} />
-        <WatchedMerchants formatCurrency={formatCurrency} />
-
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SpendingBreakdown categoryBreakdown={data?.categoryBreakdown || []} formatCurrency={formatCurrency} t={t} periodLabel={calendarPeriodLabel} />
-          <SourcesOverview sources={data?.sources || []} formatCurrency={formatCurrency} t={t} lang={currentLanguage} navigate={navigate} />
+      <main className="mx-auto max-w-6xl space-y-4 px-4 py-5 lg:px-8">
+        <div className="inline-flex rounded-2xl bg-gray-200/70 p-1 dark:bg-gray-800">
+          {['current', 'previous'].map((key) => (
+            <button key={key} type="button" onClick={() => setSelected(key)} aria-pressed={selected === key} className={`rounded-xl px-4 py-2 text-xs font-bold transition ${selected === key ? 'bg-white text-indigo-600 shadow-sm dark:bg-gray-700 dark:text-indigo-300' : 'text-gray-500'}`}>{t(key === 'current' ? 'cycleDashboard.current' : 'cycleDashboard.previous')}</button>
+          ))}
         </div>
 
-        <BankCosts bankCosts={data?.bankCosts} formatCurrency={formatCurrency} t={t} periodLabel={calendarPeriodLabel} />
-
-        <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
-          <div className="mb-3 flex items-center gap-2">
-            <Repeat2 className="h-5 w-5 text-violet-500" />
-            <div>
-              <h2 className="font-bold text-gray-950 dark:text-white">{t('insightsPage.recurringTitle')}</h2>
-              <p className="text-xs text-gray-500">{t('insightsPage.recurringSubtitle')}</p>
-            </div>
-          </div>
-          {patterns.length ? (
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {patterns.map((pattern) => (
-                <div key={`${pattern.description}-${pattern.bank_source}`} className="rounded-xl bg-violet-50/70 p-3 dark:bg-violet-950/25">
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{pattern.description}</p>
-                      <p className="text-xs text-gray-500">{pattern.category || pattern.bank_sources?.join(', ') || pattern.bank_source} · {t('insightsPage.months', { count: pattern.active_months })}</p>
-                      <p className="mt-1 text-sm font-bold text-violet-700 dark:text-violet-300">~{formatCurrency(pattern.average_amount)} {t('insightsPage.perMonth')}</p>
-                      <p className="text-[10px] text-gray-400">{t(`insightsPage.${pattern.amount_stability === 'stable' ? 'stableAmount' : 'variableAmount'}`)}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : <p className="py-4 text-center text-sm text-gray-500">{t('insightsPage.noPatterns')}</p>}
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-end justify-between gap-3">
-            <div>
-              <h2 className="font-bold text-gray-950 dark:text-white">{t('insightsPage.transactionsTitle')}</h2>
-              <p className="text-xs text-gray-500">{t('insightsPage.transactionCount', { count: periodTransactions.data?.pagination?.total || transactions.length })}</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            {transactions.map((transaction) => <ModernTransactionCard key={transaction.id} transaction={transaction} />)}
-            {!periodTransactions.isLoading && !transactions.length && <p className="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 dark:bg-gray-900">{t('insightsPage.noTransactions')}</p>}
-          </div>
-        </section>
+        <FinancialCycleSummary cycle={cycle} formatCurrency={formatCurrency} />
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CardBillingCycles cycles={cycle?.cardBillingCycles || []} formatCurrency={formatCurrency} />
+          {selected === 'current' ? <RunwayProjectionPlanner runway={runway} formatCurrency={formatCurrency} onSaved={refresh} /> : (
+            <section className="rounded-3xl border border-gray-200 bg-white p-5 text-sm text-gray-500 shadow-sm dark:border-gray-800 dark:bg-gray-900">{t('cycleDashboard.closedCycle')}</section>
+          )}
+        </div>
+        <DailyFlowHistory runway={runway} selectedCycle={selected} formatCurrency={formatCurrency} language={currentLanguage} />
       </main>
     </div>
   );

@@ -26,6 +26,7 @@ const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
 const {
   classifyTransaction,
   summarizeCalendar,
+  spendingBreakdown,
   withoutSupersededPendingBankRows,
 } = require('./financialClassificationService');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
@@ -102,23 +103,66 @@ function buildDailyHistory(rows, context, cycleStart, cycleEndExclusive) {
 
   let cumulativeSpent = 0;
   let cumulativeIncome = 0;
+  let cumulativeTotalIncome = 0;
   return [...byDate.values()].map((day) => {
     day.spentActual = round2(day.spentActual);
     day.spentCommitted = round2(day.spentCommitted);
     day.spentPending = round2(day.spentCommitted - day.spentActual);
     day.incomeExSalary = round2(day.incomeExSalary);
     day.salaryIncome = round2(day.salaryIncome);
+    day.totalIncome = round2(day.salaryIncome + day.incomeExSalary);
     day.netExSalaryActual = round2(day.incomeExSalary - day.spentActual);
     day.netExSalaryCommitted = round2(day.incomeExSalary - day.spentCommitted);
     cumulativeSpent = round2(cumulativeSpent + day.spentCommitted);
     cumulativeIncome = round2(cumulativeIncome + day.incomeExSalary);
+    cumulativeTotalIncome = round2(cumulativeTotalIncome + day.totalIncome);
     return {
       ...day,
       cumulativeSpent,
       cumulativeIncome,
+      cumulativeTotalIncome,
+      cumulativeNetIncludingSalary: round2(cumulativeTotalIncome - cumulativeSpent),
       cumulativeNetExSalary: round2(cumulativeIncome - cumulativeSpent),
     };
   });
+}
+
+function buildCardBillingCycles(rows, context) {
+  const groups = new Map();
+  for (const row of withoutSupersededPendingBankRows(rows)) {
+    const classification = classifyTransaction(row, context);
+    if (classification.sourceRole !== 'card_itemized') continue;
+    if (classification.direction !== 'spend' && classification.direction !== 'refund') continue;
+    const billingDate = dateKey(row.bank_processed_date) || null;
+    const source = String(row.bank_source || 'unknown');
+    const account = String(row.bank_account_number || '');
+    const key = `${source}|${account}|${billingDate || 'unassigned'}`;
+    const group = groups.get(key) || {
+      bankSource: source,
+      accountNumber: account,
+      billingDate,
+      posted: 0,
+      pending: 0,
+      refunds: 0,
+      count: 0,
+    };
+    const amount = Math.abs(Number(row.amount) || 0);
+    if (classification.direction === 'refund') group.refunds += amount;
+    else group[classification.pending ? 'pending' : 'posted'] += amount;
+    group.count += 1;
+    groups.set(key, group);
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      posted: round2(group.posted),
+      pending: round2(group.pending),
+      refunds: round2(group.refunds),
+      total: round2(Math.max(0, group.posted + group.pending - group.refunds)),
+    }))
+    .sort((a, b) => String(a.billingDate || '9999').localeCompare(String(b.billingDate || '9999'))
+      || a.bankSource.localeCompare(b.bankSource)
+      || a.accountNumber.localeCompare(b.accountNumber));
 }
 
 /**
@@ -222,6 +266,15 @@ function buildCycleFromData(data, offset = 0) {
   const spentActual = totals.spendActual;
   const spentCommitted = totals.spendCommitted;
   const incomeExSalary = totals.otherIncome;
+  const totalIncome = totals.earnedIncome;
+  const cardBillingCycles = buildCardBillingCycles(windowRows, context);
+  const remainingCardCharges = offset === 0 ? round2(cardBillingCycles.reduce((sum, group) => {
+    if (group.billingDate && group.billingDate > today) return sum + group.total;
+    return sum + group.pending;
+  }, 0)) : 0;
+  const remainingKnown = offset === 0
+    ? round2(totals.bankDirectPending + remainingCardCharges)
+    : 0;
 
   return {
     offset,
@@ -243,6 +296,9 @@ function buildCycleFromData(data, offset = 0) {
       spentPending: round2(spentCommitted - spentActual),
       incomeExSalary,
       salaryInWindow: totals.salaryIncome,
+      totalIncome,
+      netIncludingSalaryActual: round2(totalIncome - spentActual),
+      netIncludingSalaryCommitted: round2(totalIncome - spentCommitted),
       netExSalaryActual: round2(incomeExSalary - spentActual),
       netExSalaryCommitted: round2(incomeExSalary - spentCommitted),
     },
@@ -250,7 +306,14 @@ function buildCycleFromData(data, offset = 0) {
       spent: round2(spentCommitted / daysElapsed),
       income: round2(incomeExSalary / daysElapsed),
     },
+    expected: {
+      bankPending: offset === 0 ? totals.bankDirectPending : 0,
+      cardChargesNotYetSettled: remainingCardCharges,
+      remainingKnown,
+    },
     dailyHistory,
+    cardBillingCycles,
+    spendingBreakdown: spendingBreakdown(windowRows, context),
     needsReview: totals.needsReview,
   };
 }
@@ -305,15 +368,21 @@ function buildProjection(current, rawSettings = {}) {
       label: settings.expectedChargeLabel || 'Expected charge',
     }
     : null;
-  const canProject = settings.enabled && current.checkingBalance !== null;
+  const knownPending = current.expected?.remainingKnown ?? current.money.spentPending ?? 0;
+  const plannedExpenses = settings.enabled ? (expectedCharge?.amount || 0) : 0;
+  const expectedRemainingExpenses = round2(knownPending + plannedExpenses);
+  const canProject = current.checkingBalance !== null;
   const projectedCheckingBalance = canProject
-    ? round2(current.checkingBalance + (expectedSalary?.amount || 0) - (expectedCharge?.amount || 0))
+    ? round2(current.checkingBalance - expectedRemainingExpenses)
     : null;
   return {
     settings,
     suggestedSalary,
     expectedSalary,
     expectedCharge,
+    knownPending,
+    plannedExpenses,
+    expectedRemainingExpenses,
     projectedCheckingBalance,
     factsAsOf: current.lastDay,
     isPlanningOnly: true,
@@ -339,5 +408,6 @@ module.exports = {
   buildCycleFromData,
   buildRunwayOverview,
   buildDailyHistory,
+  buildCardBillingCycles,
   buildProjection,
 };

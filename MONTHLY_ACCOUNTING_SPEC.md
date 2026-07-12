@@ -1,5 +1,20 @@
 # SpendWise Calendar-Month Accounting — Product and Engineering Specification
 
+> **2026-07-12 presentation boundary:** this document's economic attribution rules
+> remain valid for accounting reports, not for factual Dashboard activity.
+> Dashboard uses actual transaction dates; Insights uses salary dates only as
+> financial-cycle boundaries.
+
+## 0. Dashboard and Financial Cycle boundary
+
+- Dashboard uses actual local dates from the 1st through month end.
+- A salary received July 9 is July Dashboard income even if an accounting report
+  attributes it to June work.
+- Insights uses matched salary dates to define salary-to-salary cycles.
+- Card `processedDate` groups billing cycles but never changes purchase-date totals.
+- Dashboard API owns `calendarActivity`; cycle API owns Runway and forecasting.
+- The client must not merge these two period models under one navigator.
+
 Status: approved direction, implementation in progress  
 Replaces the fixed `billing_cycle_day` model as the primary dashboard model.  
 Ledger facts remain immutable; attribution is a separate calculation layer.

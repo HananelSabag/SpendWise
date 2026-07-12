@@ -1,6 +1,7 @@
 const {
   buildCycleFromData,
   buildDailyHistory,
+  buildCardBillingCycles,
   buildProjection,
 } = require('../services/cycleRunwayService');
 
@@ -67,14 +68,28 @@ describe('cycle runway daily history', () => {
       checkingBalance: 2500,
       salaryDate: '2026-07-09',
       lastDay: '2026-07-12',
-      money: { salaryInWindow: 10000 },
+      money: { salaryInWindow: 10000, spentPending: 200 },
+      expected: { remainingKnown: 350 },
     };
     const projection = buildProjection(current, { enabled: true, expectedCharge: 3000, expectedChargeLabel: 'Card bill' });
     expect(projection.expectedSalary).toEqual({ amount: 10000, date: '2026-08-09', source: 'last_salary' });
     expect(projection.expectedCharge).toEqual({ amount: 3000, date: null, label: 'Card bill' });
-    expect(projection.projectedCheckingBalance).toBe(9500);
+    expect(projection.expectedRemainingExpenses).toBe(3350);
+    expect(projection.projectedCheckingBalance).toBe(-850);
     expect(projection.isPlanningOnly).toBe(true);
     expect(current.checkingBalance).toBe(2500);
+  });
+
+  test('groups card purchases by provider billing cycle without changing cycle totals', () => {
+    const groups = buildCardBillingCycles([
+      row({ id: 1, bank_source: 'max', bank_account_number: '2254', amount: 100, bank_processed_date: '2026-08-10' }),
+      row({ id: 2, bank_source: 'max', bank_account_number: '2254', amount: 30, bank_status: 'pending', bank_processed_date: '2026-08-10' }),
+      row({ id: 3, bank_source: 'max', bank_account_number: '2254', amount: 10, type: 'income', bank_processed_date: '2026-08-10' }),
+    ], {});
+    expect(groups).toEqual([expect.objectContaining({
+      bankSource: 'max', accountNumber: '2254', billingDate: '2026-08-10',
+      posted: 100, pending: 30, refunds: 10, total: 120, count: 3,
+    })]);
   });
 
   test('derives current and previous cycles from one shared ledger snapshot', () => {
