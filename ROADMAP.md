@@ -120,11 +120,17 @@ Everything date-based sits on this.
   loans section) Yahav-style (capture HTML → extractor → our patch). A loan is like a
   one-time income (disbursement) then a recurring expense (repayment).
 
-### E. 🧊 Merchant monitoring rules (FAB)
+### E. ✅ Merchant monitoring rules (FAB / Insights)
 - Description ≈ merchant name; auto-categorization is unreliable (random business
   names). Let the user click a transaction (detail sheet) → create a rule:
   *all from this merchant · above amount · exact amount*. Feeds a "watched" view.
   (User example: ₪500 Bit/PayBox.)
+- **2026-07-12 DONE:** transaction details now create an explicit watch from the
+  real ledger description, with all/above/exact matching and an editable amount.
+  Insights shows active rules and their latest matching transactions; rules can
+  be removed there. Migration 24 stores user-owned, auditable rules linked to the
+  source transaction. Monitoring never edits categories, transactions or any
+  financial total.
 
 ### F. ✅ Previous/current calendar-month accounting (dashboard integration)
 - `MONTHLY_ACCOUNTING_SPEC.md` baseline uses factual purchase dates.

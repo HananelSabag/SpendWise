@@ -207,6 +207,33 @@ const transactionAPI = {
     }
   },
 
+  async getMerchantWatches() {
+    try {
+      const response = await apiClient.client.get('/transactions/merchant-watches');
+      return { success: true, data: response.data?.data || { rules: [], matches: [] } };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  async createMerchantWatch(rule) {
+    try {
+      const response = await apiClient.client.post('/transactions/merchant-watches', rule);
+      return { success: true, data: response.data?.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  async deleteMerchantWatch(ruleId) {
+    try {
+      const response = await apiClient.client.delete(`/transactions/merchant-watches/${ruleId}`);
+      return { success: true, data: response.data?.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
   // NOTE: removed dead methods (0 callers, verified 2026-07-03):
   //   getSummary, getCategoryBreakdown, search, getBalanceDetails,
   //   getBalanceHistory, createExpense, createIncome — their server routes

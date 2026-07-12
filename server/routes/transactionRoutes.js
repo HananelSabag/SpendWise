@@ -75,6 +75,21 @@ router.put('/salary-review',
   transactionController.updateSalaryReview
 );
 
+router.get('/merchant-watches',
+  getSummaryLimiter,
+  transactionController.getMerchantWatches
+);
+
+router.post('/merchant-watches',
+  createTransactionLimiter,
+  transactionController.createMerchantWatch
+);
+
+router.delete('/merchant-watches/:id',
+  createTransactionLimiter,
+  transactionController.deleteMerchantWatch
+);
+
 
 /**
  * Transaction Query Routes

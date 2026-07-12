@@ -16,6 +16,7 @@ import ModernTransactionCard from '../components/features/transactions/ModernTra
 import BrandMark from '../components/common/BrandMark';
 import DailyFlowHistory from '../components/features/insights/DailyFlowHistory';
 import RunwayProjectionPlanner from '../components/features/insights/RunwayProjectionPlanner';
+import WatchedMerchants from '../components/features/insights/WatchedMerchants';
 
 export default function InsightsPage() {
   const navigate = useNavigate();
@@ -60,6 +61,7 @@ export default function InsightsPage() {
         <PeriodSummary dashboardData={data} formatCurrency={formatCurrency} t={t} />
         <DailyFlowHistory runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} />
         <RunwayProjectionPlanner runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} onSaved={refresh} />
+        <WatchedMerchants language={currentLanguage} formatCurrency={formatCurrency} />
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SpendingBreakdown categoryBreakdown={data?.categoryBreakdown || []} formatCurrency={formatCurrency} t={t} />

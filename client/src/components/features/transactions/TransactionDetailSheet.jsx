@@ -19,6 +19,7 @@ import { useTranslation, useCurrency } from '../../../stores';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { cn } from '../../../utils/helpers';
 import BottomSheet from '../../common/BottomSheet';
+import MerchantWatchControl from './MerchantWatchControl';
 import {
   institutionLabel,
   institutionIcon,
@@ -138,6 +139,8 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         <Field label={t('detail.addedOn', { fallback: 'Added on' })} value={createdLabel} />
         <Field label={t('detail.id', { fallback: 'Reference' })} value={transaction.id} mono />
       </div>
+
+      <MerchantWatchControl key={transaction.id} transaction={transaction} language={currentLanguage} />
 
       {/* Actions */}
       {(canEdit || canDuplicate || canDelete) && (

@@ -14,6 +14,7 @@ const { buildDashboardData } = require('../services/dashboardService');
 const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAccountingService');
 const { buildRunwayOverview } = require('../services/cycleRunwayService');
 const { buildSalaryReview, saveSalaryReview } = require('../services/salaryReviewService');
+const { createWatch, removeWatch, getWatched } = require('../services/merchantWatchService');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
@@ -21,6 +22,21 @@ const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .map(([source]) => source);
 
 const transactionController = {
+  getMerchantWatches: asyncHandler(async (req, res) => {
+    const data = await getWatched(req.user.id);
+    res.json({ success: true, data });
+  }),
+
+  createMerchantWatch: asyncHandler(async (req, res) => {
+    const data = await createWatch(req.user.id, req.body);
+    res.status(201).json({ success: true, data });
+  }),
+
+  deleteMerchantWatch: asyncHandler(async (req, res) => {
+    const data = await removeWatch(req.user.id, req.params.id);
+    res.json({ success: true, data });
+  }),
+
   getSalaryCandidates: asyncHandler(async (req, res) => {
     const result = await db.query(`
       SELECT DISTINCT ON (
