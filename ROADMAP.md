@@ -177,12 +177,14 @@ month; anchored on the SALARY date (the refill), not the 1st.
 ---
 
 ## 3. Deferred UI polish (from live review) 🧊
-- **BankSync overview:** the big per-connection cards are low-info / eat the screen —
-  rework; the more useful stats live below.
-- **Move the sync ENABLE toggles** (per account/card) from the overview tab → the
-  **accounts** tab (that's the management surface).
-- **Agent tab render bug:** selecting the "agent" tab animates laggy AND the page
-  jumps to the bottom (only that tab) — investigate SyncMethodPanel focus/scroll.
+- **✅ BankSync overview compacted (2026-07-12):** the oversized repeated cards
+  are now one compact operational summary plus one row per connection, with last
+  sync/new/processed/status information and a direct path to management.
+- **✅ Sync ENABLE toggles moved (2026-07-12):** per-account/card controls now live
+  inside each connection on the **accounts** tab, not in the read-only overview.
+- **✅ Agent tab jump fixed (2026-07-12):** tab changes deliberately restore the
+  page to the top after the shorter panel renders, preventing browser scroll
+  clamping from leaving the Agent content at its bottom edge.
 - **Real bank/credit-company logos** instead of the default icon, everywhere
   (connect, transactions, details, settings). Store in a project folder. Trademark
   caveat → its own task.

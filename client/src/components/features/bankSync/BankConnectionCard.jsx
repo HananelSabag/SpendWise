@@ -15,6 +15,7 @@ import { cn } from '../../../utils/helpers';
 import bankConnectionsApi from '../../../api/bankConnections';
 import { bankBrand, formatDateTime } from './bankSyncMeta';
 import { BankIcon, StatusBadge } from './BankBits';
+import BankAccountRow from './BankAccountRow';
 
 const SYNC_ERROR_KEYS = {
   SYNC_QUOTA: 'syncQuotaReached',
@@ -26,7 +27,7 @@ const SYNC_ERROR_KEYS = {
 // Mirrors MANUAL_SYNC_GAP_HOURS in server/routes/bankConnectionsRoutes.js.
 // Used only to show the user WHEN they'll be able to sync again — the
 // server is the actual source of truth/enforcement.
-export default function BankConnectionCard({ conn, t, lang, onUpdateCredentials }) {
+export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCredentials }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const isAdmin = useIsAdmin();
@@ -117,6 +118,8 @@ export default function BankConnectionCard({ conn, t, lang, onUpdateCredentials 
   const isError = conn.status === 'error';
   const isPending = conn.latest_job_status === 'pending';
   const isRunning = conn.latest_job_status === 'running';
+  const accounts = stat?.accounts || [];
+  const isCreditCard = stat?.kind === 'credit_card';
 
   return (
     <motion.div
@@ -221,6 +224,29 @@ export default function BankConnectionCard({ conn, t, lang, onUpdateCredentials 
           <Clock className="w-3 h-3" />
           <span>{t('lastSyncLabel')}: {conn.last_sync_at ? formatDateTime(conn.last_sync_at, lang) : t('neverSynced')}</span>
         </div>
+
+        {accounts.length > 0 && (
+          <div className="mt-3 rounded-xl border border-gray-200/70 bg-white/70 px-3 py-2 dark:border-gray-700/70 dark:bg-gray-900/40">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                {isCreditCard ? t('cardActivity', { fallback: 'Cards' }) : t('accounts')}
+              </p>
+              <p className="text-[10px] text-gray-400">{t('accountSyncToggleHint', { fallback: 'Choose what enters your dashboard' })}</p>
+            </div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+              {accounts.map((account) => (
+                <BankAccountRow
+                  key={account.account_number || 'main'}
+                  account={account}
+                  connectionId={conn.id}
+                  t={t}
+                  lang={lang}
+                  hideBalance={isCreditCard}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="mt-3 flex gap-2">
