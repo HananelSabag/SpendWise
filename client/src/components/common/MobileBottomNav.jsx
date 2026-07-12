@@ -188,7 +188,7 @@ const FullNav = () => {
     },
     {
       key: 'exchange',
-      label: t('nav.exchange') || 'Exchange',
+      label: currentLanguage === 'he' ? 'המרת מטבע' : 'Exchange',
       icon: Calculator,
       iconTint: 'text-amber-500 dark:text-amber-400',
       action: () => { handleClose(); dispatch('open-exchange'); },
@@ -207,7 +207,7 @@ const FullNav = () => {
       iconTint: 'text-yellow-600 dark:text-yellow-400',
       action: () => closeAndGo('/admin'),
     }] : []),
-  ], [t, isAdmin, dispatch, handleClose, closeAndGo, loadedModulesCount]); // eslint-disable-line
+  ], [t, currentLanguage, isAdmin, dispatch, handleClose, closeAndGo, loadedModulesCount]); // eslint-disable-line
 
   // ─────────────────────────────────────────────────────────────────────────
   return (

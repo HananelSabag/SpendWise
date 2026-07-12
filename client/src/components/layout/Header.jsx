@@ -176,7 +176,7 @@ const Header = () => {
   const toolItems = useMemo(() => ([
     {
       key: 'exchange',
-      label: t('nav.exchange') || 'Exchange',
+      label: currentLanguage === 'he' ? 'המרת מטבע' : 'Exchange',
       icon: Calculator,
       onClick: () => openModal('exchange')
     },
@@ -186,7 +186,7 @@ const Header = () => {
       icon: HelpCircle,
       onClick: () => openModal('onboarding')
     }
-  ]), [openModal, t]);
+  ]), [currentLanguage, openModal, t]);
 
   const NavButton = ({ item }) => {
     const Icon = item.icon;
