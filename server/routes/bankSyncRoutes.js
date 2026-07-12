@@ -33,10 +33,6 @@ const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
 const { VALID_SOURCES, INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
-const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
-  .filter(([, meta]) => meta.kind === 'credit_card')
-  .map(([source]) => source);
-
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
 // one trusted machine, so 20 requests per hour per IP is generous.
@@ -247,7 +243,7 @@ router.get('/stats', auth, async (req, res) => {
        LEFT JOIN tx_stats ts ON ts.source = s.source
        LEFT JOIN acct_stats ast ON ast.source = s.source
        ORDER BY last_sync DESC`,
-      [userId, period.start, period.end, CREDIT_CARD_SOURCES],
+      [userId, period.start, period.end],
     );
     const sources = result.rows.map((r) => ({
       ...r,
