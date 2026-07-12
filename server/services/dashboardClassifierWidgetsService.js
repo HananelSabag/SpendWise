@@ -69,15 +69,20 @@ function buildWidgets(periodRows, historyRows, context) {
     const item = recurring.get(normalized) || {
       description: String(row.description || '').trim(),
       category: String(row.raw_category || '').trim() || null,
-      bank_source: row.bank_source,
+      bank_sources: new Set(),
       amounts: [],
+      monthlyAmounts: new Map(),
       months: new Set(),
       last_seen: null,
     };
-    item.amounts.push(Math.abs(Number(row.amount) || 0));
+    const amount = Math.abs(Number(row.amount) || 0);
+    item.amounts.push(amount);
+    if (row.bank_source) item.bank_sources.add(row.bank_source);
     const key = dateKey(row.date);
     if (key) {
-      item.months.add(key.slice(0, 7));
+      const month = key.slice(0, 7);
+      item.months.add(month);
+      item.monthlyAmounts.set(month, (item.monthlyAmounts.get(month) || 0) + amount);
       if (!item.last_seen || key > item.last_seen) item.last_seen = key;
     }
     recurring.set(normalized, item);
@@ -85,15 +90,23 @@ function buildWidgets(periodRows, historyRows, context) {
 
   const recurringPatterns = [...recurring.values()]
     .filter((item) => item.months.size >= 2)
-    .map((item) => ({
-      description: item.description,
-      category: item.category,
-      bank_source: item.bank_source,
-      occurrences: item.amounts.length,
-      active_months: item.months.size,
-      average_amount: round2(item.amounts.reduce((sum, amount) => sum + amount, 0) / item.amounts.length),
-      last_seen: item.last_seen,
-    }))
+    .map((item) => {
+      const monthlyAmounts = [...item.monthlyAmounts.values()];
+      const averageMonthly = monthlyAmounts.reduce((sum, amount) => sum + amount, 0) / monthlyAmounts.length;
+      const range = Math.max(...monthlyAmounts) - Math.min(...monthlyAmounts);
+      const sources = [...item.bank_sources].sort();
+      return {
+        description: item.description,
+        category: item.category,
+        bank_source: sources.length === 1 ? sources[0] : null,
+        bank_sources: sources,
+        occurrences: item.amounts.length,
+        active_months: item.months.size,
+        average_amount: round2(averageMonthly),
+        amount_stability: range <= Math.max(5, averageMonthly * 0.2) ? 'stable' : 'variable',
+        last_seen: item.last_seen,
+      };
+    })
     .sort((a, b) => b.active_months - a.active_months
       || b.occurrences - a.occurrences
       || b.average_amount - a.average_amount)

@@ -54,7 +54,7 @@ export default {
   },
   insightsPage: {
     back: "Back", title: "Months & insights", subtitle: "Your full financial story, away from the home dashboard",
-    recurringTitle: "Recurring patterns", recurringSubtitle: "Merchants seen in at least two months — a useful signal, not a guaranteed bill.",
+    recurringTitle: "Recurring patterns", recurringSubtitle: "Merchants seen in at least two months — a useful signal, not a guaranteed bill.", perMonth: "/ month", stableAmount: "Similar monthly amount", variableAmount: "Monthly amount varies",
     months: "{{count}} months", noPatterns: "Not enough history to detect patterns yet.", transactionsTitle: "Transactions in this calendar month",
     transactionCount: "{{count}} transactions by factual purchase or bank date", noTransactions: "No transactions in this calendar month."
   },

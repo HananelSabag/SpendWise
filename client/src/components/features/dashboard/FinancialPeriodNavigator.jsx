@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 
 import { useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
+import { normalizeAvailablePeriodOffsets } from '../../../utils/financialPeriod';
 
 function parseCalendarDate(value) {
   return value ? new Date(`${value}T12:00:00`) : null;
@@ -30,9 +31,11 @@ export default function FinancialPeriodNavigator({
   const { t, isRTL } = useTranslation('dashboard');
   const offset = Number(period?.offset ?? periodOffset) || 0;
   const lookback = Math.abs(offset);
-  // Never let the user page into calendar months that hold no data.
-  const minOffset = Math.min(0, Number(period?.minOffset ?? -24));
-  const quickOffsets = [0, -1, -2].filter((v) => v >= minOffset);
+  // Skip calendar months with no ledger facts instead of rendering empty tabs.
+  const availableOffsets = normalizeAvailablePeriodOffsets(period);
+  const olderOffset = availableOffsets.find((value) => value < offset) ?? null;
+  const newerOffset = [...availableOffsets].reverse().find((value) => value > offset) ?? null;
+  const quickOffsets = availableOffsets.slice(0, 3);
   const title = offset === 0
     ? t('period.current', { fallback: 'Current month' })
     : offset === -1
@@ -47,8 +50,8 @@ export default function FinancialPeriodNavigator({
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => onPeriodOffsetChange(offset - 1)}
-          disabled={offset <= minOffset}
+          onClick={() => onPeriodOffsetChange(olderOffset)}
+          disabled={olderOffset === null}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           aria-label={t('period.older', { fallback: 'Older month' })}
         >
@@ -62,8 +65,8 @@ export default function FinancialPeriodNavigator({
 
         <button
           type="button"
-          onClick={() => onPeriodOffsetChange(offset + 1)}
-          disabled={offset >= 0}
+          onClick={() => onPeriodOffsetChange(newerOffset)}
+          disabled={newerOffset === null}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
           aria-label={t('period.newer', { fallback: 'Newer month' })}
         >
@@ -89,7 +92,7 @@ export default function FinancialPeriodNavigator({
                 ? t('period.now', { fallback: 'Now' })
                 : value === -1
                   ? t('period.last', { fallback: 'Last' })
-                  : t('period.twoAgo', { fallback: '2 ago' })}
+                  : t('period.periodsAgo', { count: Math.abs(value), fallback: `${Math.abs(value)} months ago` })}
             </button>
           ))}
         </div>

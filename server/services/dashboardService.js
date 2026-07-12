@@ -17,27 +17,9 @@ const db = require('../config/db');
 const { Transaction } = require('../models/Transaction');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
+const { computeAvailablePeriodOffsets } = require('../utils/calendarPeriodAvailability');
 const { buildMonth } = require('./monthlyAccountingService');
 const { buildDashboardClassifierWidgets } = require('./dashboardClassifierWidgetsService');
-
-// Half-open-cycle offset (≤ 0) of the earliest transaction relative to the
-// current cycle — so the client can stop users navigating to periods that
-// never had any data (item 5). 0 = data only exists in the current cycle.
-function periodIndex(ymdStr) {
-  const [y, m] = ymdStr.split('-').map(Number);
-  return y * 12 + (m - 1);
-}
-function computeMinOffset(earliestDate) {
-  if (!earliestDate) return 0;
-  const current = getCalendarPeriod(0);
-  const earliestMonth = earliestDate instanceof Date
-    ? new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit',
-    }).format(earliestDate)
-    : String(earliestDate).slice(0, 7);
-  const diff = periodIndex(`${earliestMonth}-01`) - periodIndex(current.start);
-  return Math.max(-24, Math.min(0, diff));
-}
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
@@ -399,15 +381,12 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     };
   }).sort((a, b) => b.expenses - a.expenses);
 
-  // Earliest transaction → how far back navigation is meaningful.
-  const earliestResult = await db.query(
-    `SELECT MIN(date) AS earliest
-       FROM transactions
-      WHERE user_id = $1 AND deleted_at IS NULL`,
-    [userId],
-    'dashboard_earliest_txn'
+  // Only months that actually contain ledger facts are navigable. Current is
+  // always included so a new user still sees a truthful empty month.
+  const availableOffsets = computeAvailablePeriodOffsets(
+    await Transaction.getAvailableMonths(userId, 36),
   );
-  const minOffset = computeMinOffset(earliestResult.rows[0]?.earliest);
+  const minOffset = Math.min(...availableOffsets);
   const [monthly, classifierWidgets] = await Promise.all([
     buildMonth(userId, period.offset),
     buildDashboardClassifierWidgets(userId, periodStart, periodEnd),
@@ -440,6 +419,7 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       offset: period.offset,
       isCurrent: period.isCurrent,
       minOffset,
+      availableOffsets,
     },
     summary,
     // Exact classifier-backed composition for the selected calendar month.

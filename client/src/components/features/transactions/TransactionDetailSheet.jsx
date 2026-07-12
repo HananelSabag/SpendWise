@@ -18,6 +18,7 @@ import { X, Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTranslation, useCurrency } from '../../../stores';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { cn } from '../../../utils/helpers';
+import { getForeignExchangeMetadata } from '../../../utils/financialMetadata';
 import BottomSheet from '../../common/BottomSheet';
 import MerchantWatchControl from './MerchantWatchControl';
 import {
@@ -90,6 +91,24 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })} ${transaction.original_currency}`
+    : null;
+  const fx = getForeignExchangeMetadata(transaction);
+  const chargedAmountLabel = fx
+    ? `${fx.chargedAmount.toLocaleString(currentLanguage === 'he' ? 'he-IL' : 'en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} ${fx.chargedCurrency}`
+    : null;
+  const effectiveRateLabel = fx
+    ? t('detail.effectiveRateValue', {
+        originalCurrency: fx.originalCurrency,
+        chargedCurrency: fx.chargedCurrency,
+        rate: fx.effectiveRate.toLocaleString(currentLanguage === 'he' ? 'he-IL' : 'en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 4,
+        }),
+        fallback: `1 ${fx.originalCurrency} ≈ ${fx.effectiveRate.toFixed(4)} ${fx.chargedCurrency}`,
+      })
     : null;
 
   const sourceLabel = isBankSynced
@@ -169,6 +188,8 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         <Field label={t('detail.category', { fallback: 'Category' })} value={(transaction.raw_category || '').trim()} />
         <Field label={t('detail.installment', { fallback: 'Installment' })} value={installmentLabel} />
         <Field label={t('detail.originalAmount', { fallback: 'Original amount' })} value={originalAmountLabel} />
+        <Field label={t('detail.chargedAmount', { fallback: 'Charged amount' })} value={chargedAmountLabel} />
+        <Field label={t('detail.effectiveRate', { fallback: 'Effective conversion' })} value={effectiveRateLabel} />
         <Field label={t('detail.transactionKind', { fallback: 'Provider type' })} value={transaction.txn_kind} />
         <Field label={t('detail.notes', { fallback: 'Notes' })} value={(transaction.notes || '').trim()} />
         <Field label={t('detail.origin', { fallback: 'Origin' })} value={originLabel} />

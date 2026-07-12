@@ -454,6 +454,11 @@ monthly expense.
 - Transaction detail must retain the factual purchase date while separately
   showing provider processed date, pending/completed state, original currency,
   transaction kind and installment position when captured.
+- Historical navigation uses the distinct calendar months that contain ledger
+  facts and skips gaps; current month remains available even when it is empty.
+- Boundary coverage includes Israel-local month selection across UTC/DST, year
+  rollover and leap February. `transactions.date` remains the factual SQL `DATE`;
+  `transaction_datetime` preserves the source instant separately.
 
 ## 16. Definition of done
 

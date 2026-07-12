@@ -24,3 +24,22 @@ export function formatFinancialPeriod(period, language = 'en', now = new Date())
   });
   return `${formatter.format(start)} – ${formatter.format(end)}`;
 }
+
+export function normalizeAvailablePeriodOffsets(period) {
+  const provided = Array.isArray(period?.availableOffsets)
+    ? period.availableOffsets.filter((value) => Number.isInteger(value) && value <= 0)
+    : [];
+  if (provided.length) return [...new Set([0, ...provided])].sort((a, b) => b - a);
+
+  const minOffset = Math.min(0, Number(period?.minOffset ?? 0));
+  return Array.from({ length: Math.abs(minOffset) + 1 }, (_, index) => -index);
+}
+
+export function nearestAvailablePeriodOffset(requestedOffset, availableOffsets) {
+  const requested = Number(requestedOffset) || 0;
+  const offsets = [...new Set(availableOffsets || [0])];
+  return offsets.sort((a, b) => {
+    const distance = Math.abs(a - requested) - Math.abs(b - requested);
+    return distance || b - a;
+  })[0] ?? 0;
+}

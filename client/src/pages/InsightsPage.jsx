@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Repeat2, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrency, useTranslation } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useFinancialPeriodSelection } from '../hooks/useFinancialPeriodSelection';
-import { formatFinancialPeriod } from '../utils/financialPeriod';
+import { formatFinancialPeriod, nearestAvailablePeriodOffset, normalizeAvailablePeriodOffsets } from '../utils/financialPeriod';
 import transactionAPI from '../api/transactions';
 import FinancialPeriodNavigator from '../components/features/dashboard/FinancialPeriodNavigator';
 import PeriodSummary from '../components/features/dashboard/PeriodSummary';
@@ -25,6 +25,15 @@ export default function InsightsPage() {
   const { formatCurrency } = useCurrency();
   const { periodOffset, setPeriodOffset } = useFinancialPeriodSelection();
   const { data, isLoading, refresh } = useDashboard({ periodOffset });
+  const availableOffsets = useMemo(
+    () => normalizeAvailablePeriodOffsets(data?.period),
+    [data?.period],
+  );
+
+  useEffect(() => {
+    if (!data?.period?.availableOffsets || availableOffsets.includes(periodOffset)) return;
+    setPeriodOffset(nearestAvailablePeriodOffset(periodOffset, availableOffsets));
+  }, [availableOffsets, data?.period?.availableOffsets, periodOffset, setPeriodOffset]);
 
   const periodTransactions = useQuery({
     queryKey: ['transactions', 'financial-period', periodOffset],
@@ -87,8 +96,9 @@ export default function InsightsPage() {
                     <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{pattern.description}</p>
-                      <p className="text-xs text-gray-500">{pattern.category || pattern.bank_source} · {t('insightsPage.months', { count: pattern.active_months })}</p>
-                      <p className="mt-1 text-sm font-bold text-violet-700 dark:text-violet-300">~{formatCurrency(pattern.average_amount)}</p>
+                      <p className="text-xs text-gray-500">{pattern.category || pattern.bank_sources?.join(', ') || pattern.bank_source} · {t('insightsPage.months', { count: pattern.active_months })}</p>
+                      <p className="mt-1 text-sm font-bold text-violet-700 dark:text-violet-300">~{formatCurrency(pattern.average_amount)} {t('insightsPage.perMonth')}</p>
+                      <p className="text-[10px] text-gray-400">{t(`insightsPage.${pattern.amount_stability === 'stable' ? 'stableAmount' : 'variableAmount'}`)}</p>
                     </div>
                   </div>
                 </div>

@@ -205,6 +205,34 @@ month; anchored on the SALARY date (the refill), not the 1st.
 - `billing_cycle_day` has been removed from application code, UX and production
   Supabase. Migration 22 ran only after Render was live on `7918d58`.
 
+### 2026-07-12 hardening completion
+
+- `npm audit` is clean across client, server and agent (zero vulnerabilities at
+  every severity). The two GitHub push warnings are not reproduced by any current
+  lockfile tree, so no blind dependency upgrade was applied.
+- Salary-versus-bonus ambiguity is already end-to-end: dashboard prompt, auditable
+  override API and tests. It remains real income without creating a false Runway
+  salary anchor.
+- Insights navigation now receives the actual transaction-bearing month offsets,
+  skips gaps, and always keeps the current month available for a new user.
+- Calendar tests cover Israel-local UTC boundaries, year rollover, leap February,
+  factual purchase dates and pending→completed reconciliation/dedup behavior.
+- Production FX audit found 15 captured Max USD charges. Transaction details now
+  show original amount, charged amount and the provider-observed effective
+  conversion; no market rate is invented.
+- Recurring signals now average spend per active month (not per transaction),
+  preserve multiple card sources and label amount stability. They remain clearly
+  described as signals rather than guaranteed bills.
+- Accounts-tab polling no longer remounts cards or replays entry animations.
+
+Still intentionally separate from core stabilization:
+
+- Loans research/product work (principal, term, payment N/M and Leumi portal).
+- Official institution logo assets pending a deliberate trademark/source review;
+  current branded colors and bank/card glyphs remain the safe fallback.
+- Trusted Windows code-signing certificate and signed release ZIPs. The active
+  Default Worker is current, but existing distribution ZIPs remain untouched.
+
 ---
 
 ## 4. Edge cases & decisions

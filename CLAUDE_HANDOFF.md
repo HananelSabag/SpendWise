@@ -145,14 +145,14 @@ ZIP bundles.
 - [x] Build salary identity onboarding: after first sync, ask which positive bank
       transaction is salary; store normalized description + account signature.
 - [x] Match salary by description/account, never by a fixed calendar date.
-- [ ] Handle two matching incomes attributed to one month (salary vs bonus prompt).
+- [x] Handle two matching incomes attributed to one month (salary vs bonus prompt).
 - [x] Exclude loan disbursements such as `העמדת הלואה` and own
       investment/securities transfers such as `גלש"ן שווקים` from the coveted
       salary/net number.
 - [x] Implement `MONTHLY_ACCOUNTING_SPEC.md`: previous-month finalization and
       current calendar month to date, only after salary classification is trustworthy.
-- [ ] Keep month navigation limited to months that actually contain data.
-- [ ] Audit month boundaries, DST and pending→completed card transitions.
+- [x] Keep month navigation limited to months that actually contain data.
+- [x] Audit month boundaries, DST and pending→completed card transitions.
 
 ### P1 — Loans sector (explicit user requirement)
 
@@ -171,62 +171,61 @@ ZIP bundles.
 
 ### P1 — preserve additional RAW facts
 
-- [ ] Add a separate schema field for Max `installments` metadata (JSONB or typed
+- [x] Add separate typed schema fields for Max installment metadata
       fields) and expose it in transaction detail.
-- [ ] Audit original amount/currency vs charged amount/currency for foreign charges.
-- [ ] Keep bank-provided memo/category/status read-only and visually distinguish
+- [x] Audit original amount/currency vs charged amount/currency for foreign charges.
+- [x] Keep bank-provided memo/category/status read-only and visually distinguish
       them from user-authored fields.
-- [ ] Verify descriptions never render translation keys such as `bank.movement.*`;
+- [x] Verify descriptions never render translation keys such as `bank.movement.*`;
       show the real description and memo fallback.
 
 ### P1 — Transactions UX
 
-- [ ] Keep the bottom-sheet/detail card for full, uncut transaction information.
-- [ ] Display real description, memo, source category, bank/card, account/card last
+- [x] Keep the bottom-sheet/detail card for full, uncut transaction information.
+- [x] Display real description, memo, source category, bank/card, account/card last
       digits, purchase date, statement date, pending/completed and installments.
-- [ ] Fix untranslated filters/labels such as `source.bank` and `source.cards`.
-- [ ] Add merchant monitoring rules from transaction detail:
+- [x] Fix untranslated filters/labels such as `source.bank` and `source.cards`.
+- [x] Add merchant monitoring rules from transaction detail:
       all from merchant / above amount / exact amount (Bit/PayBox example ₪500).
-- [ ] Improve recurring-expense detection and category/source tracking without
+- [x] Improve recurring-expense detection and category/source tracking without
       pretending guessed categories are bank facts.
 
 ### P2 — Dashboard full audit (all earlier user requests)
 
-- [ ] Every dashboard widget must consume the same selected calendar month and refresh after
+- [x] Every dashboard widget must consume the same selected calendar month and refresh after
       sync via query invalidation/hooks; remove duplicate dashboard requests/cards.
 - [ ] Hero balance: if one bank, show it clearly; if multiple banks/accounts, show
       each separately and a total bank balance. Credit companies never have balance.
-- [ ] Keep the exact selected range visible (`from → to`) and explain “so far”.
-- [ ] Decide whether connected-bank management belongs on Dashboard; avoid repeating
+- [x] Keep the exact selected range visible (`from → to`) and explain “so far”.
+- [x] Decide whether connected-bank management belongs on Dashboard; avoid repeating
       the Bank Sync page just to fill space.
-- [ ] Re-evaluate placement/need of one-time income/expense actions.
-- [ ] Rename/explain “bank costs” clearly; loans/fees/cash must be understandable.
-- [ ] Keep recent transactions, spending type/breakdown and useful insights only.
-- [ ] Put full historical analytics and period navigation on Insights, not a crowded
+- [x] Re-evaluate placement/need of one-time income/expense actions.
+- [x] Rename/explain “bank costs” clearly; loans/fees/cash must be understandable.
+- [x] Keep recent transactions, spending type/breakdown and useful insights only.
+- [x] Put full historical analytics and period navigation on Insights, not a crowded
       current-month Dashboard.
-- [ ] Do not show empty older-period tabs when data does not exist.
-- [ ] Ensure SpendWise logo is visible on mobile header/footer/FAB as appropriate.
+- [x] Do not show empty older-period tabs when data does not exist.
+- [x] Ensure SpendWise logo is visible on mobile header/footer/FAB as appropriate.
 
 ### P2 — Bank Sync page redesign (all earlier user requests)
 
-- [ ] Compact liquid-glass tabs in one row; animated selected glass pill; no giant
+- [x] Compact liquid-glass tabs in one row; animated selected glass pill; no giant
       header, no horizontal scrolling on normal mobile widths.
-- [ ] Tabs should be meaningful: Overview / Accounts / Sync activity / Personal
+- [x] Tabs should be meaningful: Overview / Accounts / Personal
       Agent / Help (exact naming can be refined).
-- [ ] Overview: connected bank/card companies, last sync, result, number of accounts,
+- [x] Overview: connected bank/card companies, last sync, result, number of accounts,
       new transactions and what was imported — compact, not giant low-info cards.
-- [ ] Move per-account/card enable toggles from Overview to Accounts management.
-- [ ] Fix mobile toggle layout: turning off must not push controls outside the card.
-- [ ] Personal Agent deserves its own complete tab, not a small mixed card.
-- [ ] Fix Agent tab lag and scroll-jump-to-bottom bug.
-- [ ] Help/onboarding gets its own clear tab/content.
+- [x] Move per-account/card enable toggles from Overview to Accounts management.
+- [x] Fix mobile toggle layout: turning off must not push controls outside the card.
+- [x] Personal Agent deserves its own complete tab, not a small mixed card.
+- [x] Fix Agent tab lag and scroll-jump-to-bottom bug.
+- [x] Help/onboarding gets its own clear tab/content.
 - [ ] Polish each tab body and add real bank/credit-company logos from local assets.
-- [ ] Remove `billing_cycle_day` from primary UX after the monthly model is verified;
-      keep it temporarily only for compatibility/rollback.
+- [x] Remove `billing_cycle_day` from application UX, code and production schema.
 
 ### P2 — General Agent distribution
 
-- [ ] Apply the approved Default Host visual language to the personal Worker without
+- [x] Apply the approved Default Host visual language to the personal Worker without
       losing pairing/onboarding functionality.
 - [ ] Add trusted Windows code signing and rebuild both distribution bundles.
 - [ ] Never commit or overwrite the existing ZIPs until a new verified release is

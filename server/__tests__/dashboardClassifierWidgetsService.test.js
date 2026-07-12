@@ -35,6 +35,21 @@ describe('dashboard classifier widgets', () => {
     const result = buildWidgets(history, history, {});
     expect(result.recurringPatterns).toEqual([expect.objectContaining({
       description: 'NETFLIX', occurrences: 2, active_months: 2, average_amount: 56,
+      amount_stability: 'stable', bank_sources: ['max'],
     })]);
+  });
+
+  test('recurring averages describe monthly spend and preserve multiple sources', () => {
+    const history = [
+      row({ id: 1, bank_source: 'max', description: 'PAYBOX', amount: 100, date: '2026-06-01' }),
+      row({ id: 2, bank_source: 'visa_cal', description: 'PAYBOX', amount: 50, date: '2026-06-15' }),
+      row({ id: 3, bank_source: 'max', description: 'PAYBOX', amount: 300, date: '2026-07-01' }),
+    ];
+    expect(buildWidgets(history, history, {}).recurringPatterns[0]).toMatchObject({
+      average_amount: 225,
+      amount_stability: 'variable',
+      bank_source: null,
+      bank_sources: ['max', 'visa_cal'],
+    });
   });
 });

@@ -56,7 +56,7 @@ export default {
   },
   insightsPage: {
     back: "חזרה", title: "חודשים ותובנות", subtitle: "כל הסיפור הפיננסי, בלי להעמיס על הדשבורד",
-    recurringTitle: "דפוסים שחוזרים", recurringSubtitle: "זיהוי חכם של בתי עסק שהופיעו לפחות בשני חודשים — כהמלצה לבדיקה, לא כחיוב ודאי.",
+    recurringTitle: "דפוסים שחוזרים", recurringSubtitle: "זיהוי חכם של בתי עסק שהופיעו לפחות בשני חודשים — כהמלצה לבדיקה, לא כחיוב ודאי.", perMonth: "/ חודש", stableAmount: "סכום חודשי דומה", variableAmount: "הסכום החודשי משתנה",
     months: "{{count}} חודשים", noPatterns: "עדיין אין מספיק היסטוריה לזיהוי דפוסים.", transactionsTitle: "עסקאות בחודש הקלנדרי הזה",
     transactionCount: "{{count}} עסקאות לפי תאריך הקנייה או התנועה בבנק", noTransactions: "אין עסקאות בחודש הקלנדרי הזה."
   },
