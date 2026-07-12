@@ -167,8 +167,8 @@ const transactionController = {
     };
     const settings = {
       enabled: input.enabled === true,
-      expectedSalary: amount(input.expectedSalary, 'expectedSalary'),
-      expectedSalaryDate: date(input.expectedSalaryDate, 'expectedSalaryDate'),
+      expectedIncome: amount(input.expectedIncome ?? input.expectedSalary, 'expectedIncome'),
+      expectedIncomeDate: date(input.expectedIncomeDate ?? input.expectedSalaryDate, 'expectedIncomeDate'),
       expectedCharge: amount(input.expectedCharge, 'expectedCharge'),
       expectedChargeDate: date(input.expectedChargeDate, 'expectedChargeDate'),
       expectedChargeLabel: String(input.expectedChargeLabel || '').trim().slice(0, 80),

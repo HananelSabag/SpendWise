@@ -1,84 +1,85 @@
 /**
- * Calendar activity is the factual "what happened this month" model.
+ * Factual calendar-month cash flow.
  *
- * Unlike monthly accounting, transaction dates are never economically shifted:
- * a salary received on July 9 is July activity. The shared classifier still
- * prevents duplicate card settlements and debit enrichment copies.
+ * The headline is deliberately bank-only: every imported bank income and bank
+ * expense on its real local date. Itemized card activity and manual activity are
+ * reported separately and never added to bank cash flow.
  */
 
+const db = require('../config/db');
+const { institutionKind } = require('../config/institutions');
 const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
-const {
-  classifyTransaction,
-  summarizeCalendar,
-  spendingBreakdown,
-  withoutSupersededPendingBankRows,
-} = require('./financialClassificationService');
-const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
-const { loadAccountingData } = require('./monthlyAccountingService');
+const { dateKey } = require('./cardReconciliationService');
+const { withoutSupersededPendingBankRows } = require('./financialClassificationService');
+
+const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type,
+  description, notes, date, transaction_datetime, bank_processed_date,
+  bank_status, bank_sync_id, raw_category, ledger_class,
+  settlement_card_source, settlement_card_account`;
 
 const round2 = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100) / 100;
 
-function emptyEventGroups() {
+function emptyFlow() {
+  return { income: 0, expenses: 0, pendingIncome: 0, pendingExpenses: 0, count: 0 };
+}
+
+function addRaw(flow, row) {
+  const amount = Math.abs(Number(row.amount) || 0);
+  if (row.type === 'income') {
+    flow.income += amount;
+    if (row.bank_status === 'pending') flow.pendingIncome += amount;
+  } else if (row.type === 'expense') {
+    flow.expenses += amount;
+    if (row.bank_status === 'pending') flow.pendingExpenses += amount;
+  } else {
+    return;
+  }
+  flow.count += 1;
+}
+
+function finishFlow(flow, { refundsReduceExpenses = false } = {}) {
+  const income = round2(flow.income);
+  const expenses = round2(refundsReduceExpenses ? Math.max(0, flow.expenses - income) : flow.expenses);
   return {
-    cardCharges: { posted: 0, pending: 0, refunds: 0, count: 0 },
-    bankPayments: { posted: 0, pending: 0, count: 0 },
-    debitCardPayments: { posted: 0, pending: 0, count: 0 },
-    transfers: { incoming: 0, outgoing: 0, count: 0 },
-    loanPayments: { posted: 0, pending: 0, count: 0 },
-    cashWithdrawals: { posted: 0, pending: 0, count: 0 },
-    feesAndTax: { posted: 0, pending: 0, count: 0 },
+    income,
+    expenses,
+    net: round2(income - flow.expenses),
+    pendingIncome: round2(flow.pendingIncome),
+    pendingExpenses: round2(flow.pendingExpenses),
+    count: flow.count,
   };
 }
 
-function addSpend(group, amount, pending) {
-  group[pending ? 'pending' : 'posted'] += amount;
-  group.count += 1;
-}
-
-function buildCalendarActivityFromData(data, offset = 0, now = new Date()) {
+function buildCalendarActivityFromRows(rows, offset = 0, now = new Date()) {
   const period = getCalendarPeriod(offset, now);
-  const rows = data.rows.filter((row) => {
+  const windowRows = withoutSupersededPendingBankRows(rows).filter((row) => {
     const key = dateKey(row.date);
     return key && key >= period.start && key < period.end;
   });
-  const context = {
-    salarySignatures: data.salarySignatures,
-    debitCardAccounts: deriveDebitCardAccounts(data.debitScopeRows),
-    connectedCardSources: data.connectedCardSources,
-    transactionOverrides: data.transactionOverrides,
+  const bank = emptyFlow();
+  const cards = emptyFlow();
+  const manual = emptyFlow();
+  const other = emptyFlow();
+
+  for (const row of windowRows) {
+    const kind = institutionKind(row.bank_source);
+    if (kind === 'bank') addRaw(bank, row);
+    else if (kind === 'credit_card') addRaw(cards, row);
+    else if (row.bank_source == null) addRaw(manual, row);
+    else addRaw(other, row);
+  }
+
+  const bankCashFlow = finishFlow(bank);
+  const cardRaw = finishFlow(cards);
+  const manualActivity = finishFlow(manual);
+  const otherActivity = finishFlow(other);
+  const cardActivity = {
+    charges: cardRaw.expenses,
+    refunds: cardRaw.income,
+    netCharges: round2(Math.max(0, cardRaw.expenses - cardRaw.income)),
+    pendingCharges: cardRaw.pendingExpenses,
+    count: cardRaw.count,
   };
-  const { totals } = summarizeCalendar(rows, context);
-  const events = emptyEventGroups();
-
-  for (const row of withoutSupersededPendingBankRows(rows)) {
-    const classification = classifyTransaction(row, context);
-    const amount = Math.abs(Number(row.amount) || 0);
-
-    if (classification.economicRole === 'transfer' && classification.settlementRole !== 'card_settlement') {
-      events.transfers[row.type === 'income' ? 'incoming' : 'outgoing'] += amount;
-      events.transfers.count += 1;
-      continue;
-    }
-    if (classification.calendarInclusion !== 'include') continue;
-
-    if (classification.sourceRole === 'card_itemized') {
-      if (classification.direction === 'refund') events.cardCharges.refunds += amount;
-      else addSpend(events.cardCharges, amount, classification.pending);
-      continue;
-    }
-    if (classification.direction !== 'spend') continue;
-    if (classification.loanRepayment) addSpend(events.loanPayments, amount, classification.pending);
-    else if (classification.settlementRole === 'debit_direct') addSpend(events.debitCardPayments, amount, classification.pending);
-    else if (/cash withdrawal/i.test(classification.reason)) addSpend(events.cashWithdrawals, amount, classification.pending);
-    else if (/fee|interest|tax/i.test(classification.reason)) addSpend(events.feesAndTax, amount, classification.pending);
-    else if (classification.sourceRole === 'bank_primary') addSpend(events.bankPayments, amount, classification.pending);
-  }
-
-  for (const group of Object.values(events)) {
-    for (const [key, value] of Object.entries(group)) {
-      if (key !== 'count') group[key] = round2(value);
-    }
-  }
 
   return {
     period: {
@@ -91,31 +92,32 @@ function buildCalendarActivityFromData(data, offset = 0, now = new Date()) {
       daysInMonth: period.daysInMonth,
       timezone: TZ,
     },
-    income: {
-      total: totals.earnedIncome,
-      salary: totals.salaryIncome,
-      other: totals.otherIncome,
-    },
-    spending: {
-      posted: totals.spendActual,
-      pending: round2(totals.spendCommitted - totals.spendActual),
-      committed: totals.spendCommitted,
-    },
-    net: {
-      posted: totals.netActual,
-      committed: totals.netCommitted,
-    },
-    events,
-    breakdown: spendingBreakdown(rows, context),
-    transactionCount: rows.length,
-    needsReview: totals.needsReview,
+    bankCashFlow,
+    cardActivity,
+    manualActivity,
+    otherActivity,
+    transactionCount: windowRows.length,
   };
 }
 
 async function buildCalendarActivity(userId, offset = 0) {
   const period = getCalendarPeriod(offset);
-  const data = await loadAccountingData(userId, period.start, period.end);
-  return buildCalendarActivityFromData(data, offset);
+  const result = await db.query(
+    `SELECT ${SELECT_COLUMNS}
+       FROM transactions t
+      WHERE t.user_id = $1 AND t.deleted_at IS NULL
+        AND t.date >= $2 AND t.date < $3
+        AND (t.bank_source IS NULL OR NOT EXISTS (
+          SELECT 1 FROM bank_accounts ba
+           WHERE ba.user_id = t.user_id
+             AND ba.bank_source = t.bank_source
+             AND ba.account_number = COALESCE(t.bank_account_number, '')
+             AND ba.enabled = false
+        ))
+      ORDER BY t.date, t.id`,
+    [userId, period.start, period.end],
+  );
+  return buildCalendarActivityFromRows(result.rows, offset);
 }
 
-module.exports = { buildCalendarActivity, buildCalendarActivityFromData };
+module.exports = { buildCalendarActivity, buildCalendarActivityFromRows };

@@ -24,6 +24,7 @@ export default function FinancialCycleSummary({ cycle, formatCurrency }) {
         <div>
           <h2 className="text-lg font-black text-gray-950 dark:text-white">{t('cycleDashboard.summaryTitle')}</h2>
           <p className="mt-1 flex items-center gap-1 text-xs text-gray-500"><CalendarRange className="h-3.5 w-3.5" />{cycle.cycleStart} — {cycle.lastDay}</p>
+          {cycle.billing?.openedAfterBillingDate && <p className="mt-1 text-[11px] text-indigo-500">{t('cycleDashboard.openedAfterBilling', { date: cycle.billing.openedAfterBillingDate })} · {t('cycleDashboard.nextBilling', { date: cycle.billing.nextBillingDate || '—' })}</p>}
         </div>
         <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-600 dark:bg-indigo-950/30 dark:text-indigo-300">{cycle.daysElapsed} {t('cycleDashboard.days')}</span>
       </div>

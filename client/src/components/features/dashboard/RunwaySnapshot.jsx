@@ -14,7 +14,7 @@ export default function RunwaySnapshot({ runway, formatCurrency, onOpen }) {
           <Gauge className="h-4 w-4 shrink-0 text-indigo-600" />
           <div className="min-w-0">
             <h2 className="truncate text-sm font-bold text-gray-950 dark:text-white">{t('runwaySnapshot.title')}</h2>
-            <p className="truncate text-[11px] text-gray-500">{cycle.cycleStart} — {cycle.lastDay}</p>
+            <p className="truncate text-[11px] text-gray-500">{cycle.billing?.openedAfterBillingDate ? `${t('runwaySnapshot.afterBilling')} ${cycle.billing.openedAfterBillingDate}` : `${cycle.cycleStart} — ${cycle.lastDay}`}</p>
           </div>
         </div>
         <button type="button" onClick={onOpen} className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-bold text-indigo-600 shadow-sm dark:bg-gray-900">

@@ -75,7 +75,7 @@ export default function RunwayCard({ data, formatCurrency }) {
         <span>{t('runway.dailyAvgSpent')}: {formatCurrency(cycle.dailyAverage.spent)}</span>
         <span>{t('runway.daysInCycle', { n: daysElapsed })}</span>
         {money.salaryInWindow > 0 && <span>{t('runway.salaryReceived')}: {formatCurrency(money.salaryInWindow)}</span>}
-        <Link to="/insights" className="ms-auto inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300">
+        <Link to="/financial-cycle" className="ms-auto inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300">
           <History className="h-3.5 w-3.5" />{t('runway.dailyHistory')}<ArrowLeft className="h-3.5 w-3.5 rtl:rotate-0 ltr:rotate-180" />
         </Link>
       </div>

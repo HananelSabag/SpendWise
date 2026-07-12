@@ -180,11 +180,11 @@ const FullNav = () => {
 
   const toolActions = useMemo(() => [
     {
-      key: 'insights',
-      label: t('nav.insights') || (currentLanguage === 'he' ? 'תובנות' : 'Insights'),
+      key: 'financial-cycle',
+      label: t('nav.financialCycle') || (currentLanguage === 'he' ? 'מחזור פיננסי' : 'Financial Cycle'),
       icon: BarChart3,
       iconTint: 'text-indigo-500 dark:text-indigo-400',
-      action: () => closeAndGo('/insights'),
+      action: () => closeAndGo('/financial-cycle'),
     },
     {
       key: 'exchange',

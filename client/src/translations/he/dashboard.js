@@ -41,21 +41,21 @@ export default {
     storedHint: "הבחירה נשמרת עם העסקה וניתנת לשינוי בעתיד.", save: "שמור סיווג", saveFailed: "השמירה נכשלה."
   },
   dailyFlow: {
-    eyebrow: "משכורת למשכורת", title: "מה קרה בכל יום במחזור", subtitle: "עובדות בלבד — בלי תחזית ובלי לספור חיוב אשראי פעמיים.",
-    current: "נוכחי", previous: "קודם", days: "{{count}} ימים", out: "יצא", incomeExSalary: "נכנס בלי שכר", cycleNet: "נטו במחזור",
-    outToday: "יצא היום", inToday: "נכנס היום", cumulativeNet: "נטו מצטבר", dailyOut: "יצא ביום", dailyIncomeExSalary: "נכנס בלי משכורת",
+    eyebrow: "מחזור חיוב", title: "מה קרה בכל יום במחזור", subtitle: "פעילות גולמית בחלון החיוב, עם חיוב אשראי מחובר שנספר פעם אחת בלבד.",
+    current: "נוכחי", previous: "קודם", days: "{{count}} ימים", out: "יצא", incomeExSalary: "הכנסות", cycleNet: "נטו במחזור",
+    outToday: "יצא היום", inToday: "נכנס היום", cumulativeNet: "נטו מצטבר", dailyOut: "יצא ביום", dailyIncomeExSalary: "הכנסה יומית",
     ledger: "יומן יומי", items: "{{count}} תנועות", salaryReceived: "נכנסה משכורת", stillPending: "{{amount}} עדיין ממתין",
     needsReview: "{{count}} דורש בדיקה", refund: "החזר", noActivity: "אין פעילות במחזור הזה."
   },
   projection: {
     eyebrow: "תכנון אופציונלי", title: "מה יישאר אחרי מה שצפוי", subtitle: "השכבה הזאת לא משנה עסקאות ולא נכנסת לחישובים האמיתיים. היא רק מאפשרת לך לבדוק תרחיש.",
     enable: "הפעל תכנון", factualHint: "המאזן הנוכחי נשאר עובדה מהבנק; המספר המתוכנן מסומן תמיד בנפרד.",
-    expectedSalary: "משכורת צפויה", manualCharge: "חיוב צפוי ידני", amount: "סכום", date: "תאריך", chargeLabel: "שם החיוב", chargePlaceholder: "למשל: כרטיס לא מחובר",
+    expectedIncome: "הכנסה צפויה", expectedSalary: "הכנסה צפויה", manualCharge: "חיוב צפוי ידני", amount: "סכום", date: "תאריך", chargeLabel: "שם החיוב", chargePlaceholder: "למשל: כרטיס לא מחובר",
     salarySuggestion: "אם תשאיר ריק, נשתמש רק לתכנון במשכורת האחרונה: {{amount}}", realBalance: "מאזן אמיתי עכשיו", expectedNet: "צפוי להיכנס פחות לצאת", plannedBalance: "מאזן מתוכנן",
     saved: "התכנון נשמר.", saveFailed: "לא הצלחנו לשמור.", saving: "שומר…", save: "שמור תכנון"
   },
   insightsPage: {
-    back: "חזרה", title: "חודשים ותובנות", subtitle: "כל הסיפור הפיננסי, בלי להעמיס על הדשבורד",
+    back: "חזרה", title: "מחזור פיננסי", subtitle: "התמונה הכספית בין חיוב אשראי לחיוב אשראי",
     recurringTitle: "דפוסים שחוזרים", recurringSubtitle: "זיהוי חכם של בתי עסק שהופיעו לפחות בשני חודשים — כהמלצה לבדיקה, לא כחיוב ודאי.", perMonth: "/ חודש", stableAmount: "סכום חודשי דומה", variableAmount: "הסכום החודשי משתנה",
     months: "{{count}} חודשים", noPatterns: "עדיין אין מספיק היסטוריה לזיהוי דפוסים.", transactionsTitle: "עסקאות בחודש הקלנדרי הזה",
     transactionCount: "{{count}} עסקאות לפי תאריך הקנייה או התנועה בבנק", noTransactions: "אין עסקאות בחודש הקלנדרי הזה."
@@ -64,7 +64,7 @@ export default {
     title: "בתי עסק במעקב", subtitle: "חוקים שבחרת מתוך עסקאות אמיתיות. הם מסמנים התאמות בלבד ולא משנים את החישובים.",
     watch: "עקוב אחרי בית העסק", close: "סגור", chooseRule: "בחר חוק", exactDescriptionHint: "נזהה רק את אותו תיאור עסקה. המעקב לא משנה קטגוריות או סכומים.",
     all: "כל עסקה", above: "מעל סכום", exact: "סכום מדויק", amountIls: "סכום בש״ח", save: "שמור מעקב",
-    created: "המעקב נוסף לתובנות", createFailed: "לא הצלחנו להוסיף מעקב", removeFailed: "לא הצלחנו להסיר את המעקב", loadFailed: "לא הצלחנו לטעון את המעקב.",
+    created: "המעקב נוסף למחזור הפיננסי", createFailed: "לא הצלחנו להוסיף מעקב", removeFailed: "לא הצלחנו להסיר את המעקב", loadFailed: "לא הצלחנו לטעון את המעקב.",
     ruleAbove: "מעל {{amount}}", ruleExact: "בדיוק {{amount}}", matches: "{{count}} התאמות", remove: "הסר מעקב",
     recentMatches: "התאמות אחרונות", noMatches: "אין עדיין עסקאות שמתאימות לחוקים האלה."
   },
@@ -367,8 +367,21 @@ export default {
     settlementsCounted: "{{amount}} של חיובי אשראי נספרים מהבנק, כי לא מחובר פירוט קניות מחברת האשראי."
   },
   calendarActivity: {
-    title: "החודש הקלנדרי הנוכחי",
+    title: "חודש קלנדרי",
     subtitle: "עובדות מה־1 בחודש ועד היום",
+    rawSubtitle: "תזרים בנק גולמי",
+    previousMonth: "החודש הקלנדרי הקודם",
+    nextMonth: "החודש הקלנדרי הבא",
+    bankIncome: "נכנס בבנק",
+    bankExpenses: "יצא מהבנק",
+    bankNet: "נטו בבנק",
+    cardActivity: "פעילות אשראי בנפרד",
+    details: "פרטים",
+    bankPending: "הוצאות בנק בהמתנה",
+    cardCharges: "חיובי אשראי",
+    cardRefunds: "זיכויי אשראי",
+    rawRows: "תנועות גולמיות",
+    rawExplanation: "סיכומי הבנק כוללים כל הפקדה ומשיכה לפי התאריך האמיתי שלהן. פעילות האשראי המפורטת מוצגת בנפרד ואינה מתווספת לתזרים הבנק.",
     events: "אירועים",
     income: "הכנסות",
     spending: "הוצאות מחויבות",
@@ -391,11 +404,12 @@ export default {
     expenses: "הוצאות",
     expected: "יתרה צפויה",
     what: "מה זה?",
-    explanation: "תמצית קומפקטית ממשכורת למשכורת. החישוב המלא, מחזורי החיוב והתחזית נמצאים ב־Insights."
+    afterBilling: "נפתח אחרי חיוב",
+    explanation: "תמצית קומפקטית מחיוב אשראי לחיוב אשראי. החישוב הגולמי, מחזורי הכרטיסים והתחזית נמצאים במחזור הפיננסי."
   },
   cycleDashboard: {
     title: "המחזור הפיננסי",
-    subtitle: "איך המצב הכספי שלך ממשכורת למשכורת",
+    subtitle: "איך המצב הכספי שלך בין מועדי חיוב האשראי",
     current: "המחזור הנוכחי",
     previous: "המחזור הקודם",
     summaryTitle: "סיכום המחזור",
@@ -405,7 +419,9 @@ export default {
     cycleNet: "נטו במחזור",
     currentBalance: "יתרה נוכחית",
     howCalculated: "איך זה מחושב?",
-    summaryExplanation: "המחזור מתחיל בתאריך המשכורת המזוהה. ההכנסות כוללות משכורת והכנסות אחרות; ההוצאות סופרות כל הוצאה כלכלית פעם אחת, כולל התחייבויות בהמתנה.",
+    openedAfterBilling: "המחזור נפתח אחרי חיוב האשראי ב־{{date}}",
+    nextBilling: "החיוב הבא {{date}}",
+    summaryExplanation: "המחזור מתחיל יום אחרי מועד חיוב האשראי האחרון שנצפה. כל הכנסה והוצאה גולמית בחלון נספרת; חיוב אשראי מרוכז בבנק מוחרג רק כאשר פירוט עסקאות הכרטיס מחובר.",
     cardCycles: "מחזורי חיוב אשראי",
     cardCyclesSubtitle: "רכישות מקובצות לפי תאריך החיוב של החברה",
     billingDateUnknown: "תאריך חיוב לא זמין",
@@ -415,12 +431,12 @@ export default {
     whatBillingMeans: "איך עובד הקיבוץ לפי חיוב?",
     billingExplanation: "סך המחזור מחושב לפי תאריכי הרכישה. הקיבוץ כאן הוא תצוגה נוספת לפי תאריך החיוב של חברת האשראי ואינו מוסיף את הרכישות שוב.",
     outlook: "תחזית להמשך המחזור",
-    outlookSubtitle: "התחייבויות ידועות עד המחזור הבא",
+    outlookSubtitle: "יתרה נוכחית, חיובי אשראי קרובים והנחות מפורשות",
     balanceNow: "יתרה עכשיו",
     remaining: "עוד צפוי לרדת",
     expectedEnd: "יתרה צפויה בסוף",
     adjustForecast: "התאמת הנחות אופציונליות",
-    forecastExplanation: "היתרה הצפויה שווה ליתרת העו״ש האמיתית פחות הוצאות ידועות שבהמתנה ופחות חיוב אופציונלי שהזנת. המשכורת הבאה פותחת את המחזור הבא ולכן אינה מתווספת ליתרת סוף המחזור הזה.",
+    forecastExplanation: "היתרה הצפויה שווה ליתרת העו״ש האמיתית, ועוד הכנסה צפויה שהזנת, פחות חיובי אשראי קרובים, הוצאות בנק בהמתנה וחיוב אופציונלי שהזנת.",
     closedCycle: "המחזור הזה נסגר. תחזית זמינה רק עבור המחזור הנוכחי."
   },
   mainAccount: "חשבון ראשי",

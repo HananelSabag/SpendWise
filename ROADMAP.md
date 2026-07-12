@@ -1,24 +1,29 @@
 # SpendWise — Roadmap & Decisions
 
-> **2026-07-12 final presentation decision (supersedes the older Dashboard/Insights
-> wording below):** Dashboard shows factual calendar activity on each transaction's
-> real local date. Insights is the salary-anchored Financial Cycle Dashboard.
-> Economic salary attribution remains available for accounting reports, but never
-> changes the Dashboard month in which the money actually arrived.
+> **2026-07-13 final simplification decision (supersedes the older models below):**
+> Dashboard shows raw calendar-month bank cash flow on each movement's real local
+> date. Itemized credit-card activity is shown separately and never merged into the
+> bank headline. The former Insights page is now Financial Cycle, anchored one day
+> after the latest observed card billing date. Loans remain deferred for a separate
+> product and data-model study.
 
-## 2026-07-12 Dashboard / Insights redesign completed
+## 2026-07-13 Dashboard / Financial Cycle simplification
 
-- Dashboard answers “what is happening right now?” with balance, accounts/cards,
-  calendar-month income, spending, transfers, important events and recent activity.
-- July real-data audit now reports income `₪13,327.75`, committed spend `₪9,873.09`
-  and net `₪3,454.66`; the old economic-month view incorrectly showed income `0`.
-- Dashboard Runway is a compact snapshot. Full analysis lives only in Insights.
-- Insights answers “how am I doing in this salary cycle?” with total income including
-  salary, total expenses, net, card billing groups, remaining-known expenses,
-  expected end balance and daily history.
-- Expected end balance is real checking balance minus bank pending items, card
-  charges not yet settled and an optional planned charge. The next salary begins
-  the next cycle and is not added to the current cycle's end balance.
+- Dashboard answers “what happened in this calendar month?” with every raw bank
+  income and expense from the 1st through month end. Previous/next arrows navigate
+  calendar months, and next stops at the current month.
+- Itemized card charges/refunds are a separate fact block. They are not added to
+  raw bank cash flow.
+- Dashboard Runway remains a compact snapshot. Full analysis lives only in
+  Financial Cycle (`/financial-cycle`; `/insights` redirects for compatibility).
+- Financial Cycle answers “how am I doing since the last card bill?” The boundary
+  is derived from each provider/account's dominant processed date, preserving real
+  weekend/holiday shifts, and the cycle starts the following day.
+- The cycle counts all raw income and expenses in the window. The only business
+  exclusion is a summarized bank card settlement when connected itemized card
+  purchases already represent it.
+- Expected end balance is checking balance + explicit expected income − upcoming
+  card charges − pending bank expenses − an optional planned charge.
 - Explanations are collapsed by default and open/close on demand.
 
 > **2026-07-11 model decision:** the fixed billing-cycle window is being replaced

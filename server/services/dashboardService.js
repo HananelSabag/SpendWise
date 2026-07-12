@@ -9,23 +9,19 @@ const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 const { computeAvailablePeriodOffsets } = require('../utils/calendarPeriodAvailability');
 const { buildCalendarActivity } = require('./calendarActivityService');
-const { buildDashboardClassifierWidgets } = require('./dashboardClassifierWidgetsService');
 
 async function buildDashboardData(userId, requestedOffset = 0) {
   const period = getCalendarPeriod(requestedOffset);
   const { start, end } = period;
 
-  // Each financial builder already loads a small parallel snapshot. Run those
-  // snapshots in bounded phases so one dashboard request cannot burst past the
-  // Supabase session-pool limit when other app instances are also connected.
-  const calendarActivity = await buildCalendarActivity(userId, period.offset);
-  const classifierWidgets = await buildDashboardClassifierWidgets(userId, start, end);
   const [
+    calendarActivity,
     recentTransactions,
     balancesResult,
     perAccountResult,
     availableMonths,
   ] = await Promise.all([
+    buildCalendarActivity(userId, period.offset),
     Transaction.getRecentForPeriod(userId, start, end, 10),
     db.query(`
       SELECT bank_source,
@@ -62,9 +58,6 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     Transaction.getAvailableMonths(userId, 36),
   ]);
 
-  const activityBySource = Object.fromEntries(
-    classifierWidgets.sourceActivity.map((row) => [row.bank_source, row]),
-  );
   const accountFacts = Object.fromEntries(
     balancesResult.rows.map((row) => [row.bank_source, {
       balance: row.has_balance ? Number(row.balance) : null,
@@ -91,33 +84,32 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   const sourceKeys = new Set([
     ...Object.keys(accountFacts),
     ...Object.keys(accountsBySource),
-    ...Object.keys(activityBySource),
   ]);
   const sources = [...sourceKeys].map((key) => {
     const kind = institutionKind(key);
-    const activity = activityBySource[key] || {};
+    const accountRows = accountsBySource[key] || [];
     const account = accountFacts[key] || {};
     const isBank = kind === 'bank';
     return {
       bankSource: key,
       kind,
       label: INSTITUTIONS[key]?.label || key,
-      income: Number(activity.income) || 0,
-      expenses: Number(activity.expenses) || 0,
-      count: Number(activity.count) || 0,
+      income: roundAccounts(accountRows, 'income'),
+      expenses: roundAccounts(accountRows, 'expenses'),
+      count: accountRows.reduce((sum, row) => sum + row.count, 0),
       balance: isBank && account.hasBalance ? account.balance : null,
       hasBalance: isBank ? account.hasBalance === true : false,
       lastSyncedAt: account.lastSyncedAt || null,
-      accounts: accountsBySource[key] || [],
+      accounts: accountRows,
     };
   }).sort((a, b) => b.expenses - a.expenses);
 
   const availableOffsets = computeAvailablePeriodOffsets(availableMonths);
   const summary = {
     total_transactions: calendarActivity.transactionCount,
-    total_income: calendarActivity.income.total,
-    total_expenses: calendarActivity.spending.committed,
-    net_balance: calendarActivity.net.committed,
+    total_income: calendarActivity.bankCashFlow.income,
+    total_expenses: calendarActivity.bankCashFlow.expenses,
+    net_balance: calendarActivity.bankCashFlow.net,
   };
 
   return {
@@ -128,13 +120,17 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     },
     summary,
     calendarActivity,
-    categoryBreakdown: calendarActivity.breakdown,
-    bankCosts: classifierWidgets.bankCosts,
-    recurringPatterns: classifierWidgets.recurringPatterns,
+    categoryBreakdown: [],
+    bankCosts: { feesInterest: 0, loanPayments: 0, cashWithdrawn: 0, cashWithdrawalCount: 0 },
+    recurringPatterns: [],
     sources,
     recent_transactions: recentTransactions,
-    metadata: { generated_at: new Date().toISOString(), model: 'calendar_activity_v1' },
+    metadata: { generated_at: new Date().toISOString(), model: 'raw_bank_cash_flow_v1' },
   };
+}
+
+function roundAccounts(rows, key) {
+  return Math.round((rows.reduce((sum, row) => sum + (Number(row[key]) || 0), 0) + Number.EPSILON) * 100) / 100;
 }
 
 module.exports = { buildDashboardData };

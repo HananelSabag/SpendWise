@@ -32,6 +32,7 @@ export default {
   favorites: "Favorites",
   exchange: "Exchange",
   insights: "Insights",
+  financialCycle: "Financial Cycle",
   recurring: "Recurring",
   alerts: "Alerts",
   notifications: "Notifications",

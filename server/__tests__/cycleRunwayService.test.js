@@ -1,8 +1,8 @@
 const {
   buildCycleFromData,
-  buildDailyHistory,
-  buildCardBillingCycles,
   buildProjection,
+  deriveBillingBoundaries,
+  resolveCycleWindow,
 } = require('../services/cycleRunwayService');
 
 const row = (overrides = {}) => ({
@@ -11,117 +11,90 @@ const row = (overrides = {}) => ({
   bank_account_number: 'bank',
   amount: 100,
   type: 'expense',
-  description: 'ordinary bank expense',
-  date: '2026-07-09',
+  description: 'ordinary bank row',
+  date: '2026-07-12',
   bank_status: 'completed',
+  bank_processed_date: null,
   ...overrides,
 });
 
-describe('cycle runway daily history', () => {
-  test('fills empty days and counts each economic fact once', () => {
+const card = (id, date, billingDate, overrides = {}) => row({
+  id,
+  bank_source: 'max',
+  bank_account_number: '2254',
+  description: `merchant ${id}`,
+  date,
+  bank_processed_date: billingDate,
+  ...overrides,
+});
+
+const accounts = [
+  { bank_source: 'leumi', account_number: 'bank', balance: 5000, enabled: true },
+  { bank_source: 'max', account_number: '2254', balance: null, enabled: true },
+  { bank_source: 'visa_cal', account_number: '9962', balance: null, enabled: true },
+];
+
+describe('card-billing financial cycle', () => {
+  test('chooses the dominant processed date per card/month and the last provider date as boundary', () => {
     const rows = [
-      row({ id: 1, type: 'income', description: 'SALARY', amount: 10000 }),
-      row({ id: 2, amount: 50 }),
-      row({ id: 3, date: '2026-07-10', amount: 25, bank_status: 'pending' }),
-      row({ id: 4, date: '2026-07-10', description: 'לאומי ויזה', amount: 5000, bank_sync_id: 'leumi:x:2254' }),
-      row({ id: 5, date: '2026-07-11', bank_source: 'max', bank_account_number: '2254', amount: 40 }),
+      card(1, '2026-05-20', '2026-06-10'),
+      card(2, '2026-05-21', '2026-06-10'),
+      card(3, '2026-06-20', '2026-07-10'),
+      card(4, '2026-06-21', '2026-07-10'),
+      card(5, '2026-07-11', '2026-07-12'),
+      row({ id: 6, bank_source: 'visa_cal', bank_account_number: '9962', date: '2026-06-22', bank_processed_date: '2026-07-11' }),
+      row({ id: 7, bank_source: 'visa_cal', bank_account_number: '9962', date: '2026-06-23', bank_processed_date: '2026-07-11' }),
     ];
-    const context = {
-      salarySignatures: [{ id: 1, bank_source: 'leumi', bank_account_number: 'bank', normalized_description: 'salary', month_offset: -1 }],
-      connectedCardSources: ['max'],
+    const boundaries = deriveBillingBoundaries(rows);
+    expect(boundaries.map((item) => item.billingDate)).toEqual(['2026-06-10', '2026-07-11']);
+    expect(resolveCycleWindow(boundaries, 0, '2026-07-13')).toMatchObject({
+      cycleStart: '2026-07-12',
+      lastDay: '2026-07-13',
+      openedAfterBillingDate: '2026-07-11',
+    });
+    expect(resolveCycleWindow(boundaries, -1, '2026-07-13')).toMatchObject({
+      cycleStart: '2026-06-11',
+      lastDay: '2026-07-11',
+    });
+  });
+
+  test('counts all raw income and expenses while excluding only duplicate card settlements', () => {
+    const data = {
+      accounts,
+      rows: [
+        card(1, '2026-05-20', '2026-06-10'),
+        card(2, '2026-06-20', '2026-07-10'),
+        card(3, '2026-07-12', '2026-08-10', { amount: 300 }),
+        row({ id: 4, date: '2026-07-12', type: 'income', amount: 1000, description: 'any income' }),
+        row({ id: 5, date: '2026-07-12', type: 'income', amount: 500, description: 'loan money' }),
+        row({ id: 6, date: '2026-07-12', amount: 200, ledger_class: 'internal_transfer' }),
+        row({ id: 7, date: '2026-07-12', amount: 900, description: 'לאומי ויזה' }),
+        row({ id: 8, date: '2026-07-13', amount: 50, bank_status: 'pending' }),
+      ],
     };
-    const history = buildDailyHistory(rows, context, '2026-07-09', '2026-07-13');
-
-    expect(history).toHaveLength(4);
-    expect(history[0]).toEqual(expect.objectContaining({
-      salaryIncome: 10000, incomeExSalary: 0, spentActual: 50, cumulativeSpent: 50,
-    }));
-    expect(history[1]).toEqual(expect.objectContaining({
-      spentActual: 0, spentCommitted: 25, spentPending: 25, transactionCount: 1,
-    }));
-    expect(history[2]).toEqual(expect.objectContaining({
-      spentActual: 40, spentCommitted: 40, cumulativeSpent: 115,
-    }));
-    expect(history[3]).toEqual(expect.objectContaining({
-      spentActual: 0, spentCommitted: 0, cumulativeNetExSalary: -115,
-    }));
+    const cycle = buildCycleFromData(data, 0, '2026-07-13');
+    expect(cycle.cycleStart).toBe('2026-07-11');
+    expect(cycle.money).toMatchObject({
+      totalIncome: 1500,
+      bankExpenses: 250,
+      cardActivity: 300,
+      spentCommitted: 550,
+      netIncludingSalaryCommitted: 950,
+      excludedCardSettlements: 900,
+    });
+    expect(cycle.expected).toEqual({ bankPending: 50, cardChargesNotYetSettled: 300, remainingKnown: 350 });
   });
 
-  test('refunds reduce spend and other income increases the cycle net', () => {
-    const rows = [
-      row({ id: 1, bank_source: 'max', bank_account_number: '2254', amount: 120 }),
-      row({ id: 2, date: '2026-07-10', bank_source: 'max', bank_account_number: '2254', type: 'income', amount: 20 }),
-      row({ id: 3, date: '2026-07-10', type: 'income', description: 'PAYBOX', amount: 30 }),
-    ];
-    const history = buildDailyHistory(rows, { connectedCardSources: ['max'] }, '2026-07-09', '2026-07-11');
-    expect(history[1]).toEqual(expect.objectContaining({
-      spentActual: -20,
-      incomeExSalary: 30,
-      cumulativeSpent: 100,
-      cumulativeIncome: 30,
-      cumulativeNetExSalary: -70,
-    }));
-  });
-
-  test('projection stays separate from facts and falls back to the last salary', () => {
+  test('projection adds only explicit expected income and subtracts transparent remaining costs', () => {
     const current = {
       checkingBalance: 2500,
-      salaryDate: '2026-07-09',
-      lastDay: '2026-07-12',
-      money: { salaryInWindow: 10000, spentPending: 200 },
-      expected: { remainingKnown: 350 },
+      lastDay: '2026-07-13',
+      expected: { remainingKnown: 600, cardChargesNotYetSettled: 500, bankPending: 100 },
+      money: {},
     };
-    const projection = buildProjection(current, { enabled: true, expectedCharge: 3000, expectedChargeLabel: 'Card bill' });
-    expect(projection.expectedSalary).toEqual({ amount: 10000, date: '2026-08-09', source: 'last_salary' });
-    expect(projection.expectedCharge).toEqual({ amount: 3000, date: null, label: 'Card bill' });
-    expect(projection.expectedRemainingExpenses).toBe(3350);
-    expect(projection.projectedCheckingBalance).toBe(-850);
-    expect(projection.isPlanningOnly).toBe(true);
-    expect(current.checkingBalance).toBe(2500);
-  });
-
-  test('groups card purchases by provider billing cycle without changing cycle totals', () => {
-    const groups = buildCardBillingCycles([
-      row({ id: 1, bank_source: 'max', bank_account_number: '2254', amount: 100, bank_processed_date: '2026-08-10' }),
-      row({ id: 2, bank_source: 'max', bank_account_number: '2254', amount: 30, bank_status: 'pending', bank_processed_date: '2026-08-10' }),
-      row({ id: 3, bank_source: 'max', bank_account_number: '2254', amount: 10, type: 'income', bank_processed_date: '2026-08-10' }),
-    ], {});
-    expect(groups).toEqual([expect.objectContaining({
-      bankSource: 'max', accountNumber: '2254', billingDate: '2026-08-10',
-      posted: 100, pending: 30, refunds: 10, total: 120, count: 3,
-    })]);
-  });
-
-  test('derives current and previous cycles from one shared ledger snapshot', () => {
-    const data = {
-      rows: [
-        row({ id: 1, date: '2026-06-09', type: 'income', description: 'SALARY', amount: 9000 }),
-        row({ id: 2, date: '2026-06-10', amount: 100 }),
-        row({ id: 3, date: '2026-07-09', type: 'income', description: 'SALARY', amount: 10000 }),
-        row({ id: 4, date: '2026-07-10', amount: 50 }),
-      ],
-      salarySignatures: [{
-        id: 1,
-        bank_source: 'leumi',
-        bank_account_number: 'bank',
-        normalized_description: 'salary',
-        month_offset: -1,
-      }],
-      accounts: [{ bank_source: 'leumi', account_number: 'bank', balance: 2500, enabled: true }],
-      transactionOverrides: [],
-    };
-
-    const current = buildCycleFromData(data, 0);
-    const previous = buildCycleFromData(data, -1);
-
-    expect(current).toEqual(expect.objectContaining({
-      anchor: 'salary', cycleStart: '2026-07-09', checkingBalance: 2500,
-    }));
-    expect(current.money).toEqual(expect.objectContaining({ salaryInWindow: 10000, spentCommitted: 50 }));
-    expect(previous).toEqual(expect.objectContaining({
-      anchor: 'salary', cycleStart: '2026-06-09', checkingBalance: null,
-    }));
-    expect(previous.money).toEqual(expect.objectContaining({ salaryInWindow: 9000, spentCommitted: 100 }));
-    expect(data.rows).toHaveLength(4);
+    const projection = buildProjection(current, { enabled: true, expectedIncome: 1000, expectedCharge: 300 });
+    expect(projection.expectedRemainingExpenses).toBe(900);
+    expect(projection.projectedCheckingBalance).toBe(2600);
+    expect(projection.warning).toBe('ok');
   });
 });

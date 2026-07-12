@@ -6,8 +6,8 @@ import { useTranslation } from '../../../stores';
 
 const emptySettings = {
   enabled: false,
-  expectedSalary: '',
-  expectedSalaryDate: '',
+  expectedIncome: '',
+  expectedIncomeDate: '',
   expectedCharge: '',
   expectedChargeDate: '',
   expectedChargeLabel: '',
@@ -16,8 +16,8 @@ const emptySettings = {
 function toDraft(settings = {}) {
   return {
     enabled: settings.enabled === true,
-    expectedSalary: settings.expectedSalary ?? '',
-    expectedSalaryDate: settings.expectedSalaryDate || '',
+    expectedIncome: settings.expectedIncome ?? '',
+    expectedIncomeDate: settings.expectedIncomeDate || '',
     expectedCharge: settings.expectedCharge ?? '',
     expectedChargeDate: settings.expectedChargeDate || '',
     expectedChargeLabel: settings.expectedChargeLabel || '',
@@ -44,7 +44,8 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, onSave
   useEffect(() => setDraft(toDraft(projection?.settings)), [projection?.settings]);
   const planned = draft.enabled ? Number(draft.expectedCharge) || 0 : 0;
   const expectedRemaining = (current?.expected?.remainingKnown ?? current?.money?.spentPending ?? 0) + planned;
-  const preview = useMemo(() => current?.checkingBalance == null ? null : current.checkingBalance - expectedRemaining, [current?.checkingBalance, expectedRemaining]);
+  const expectedIncome = draft.enabled ? Number(draft.expectedIncome) || 0 : 0;
+  const preview = useMemo(() => current?.checkingBalance == null ? null : current.checkingBalance + expectedIncome - expectedRemaining, [current?.checkingBalance, expectedIncome, expectedRemaining]);
   if (!current || !projection) return null;
 
   const update = (key, value) => setDraft((previous) => ({ ...previous, [key]: value }));
@@ -53,7 +54,7 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, onSave
     setMessage('');
     const result = await transactionAPI.updateCycleProjection({
       ...draft,
-      expectedSalary: draft.expectedSalary === '' ? null : Number(draft.expectedSalary),
+      expectedIncome: draft.expectedIncome === '' ? null : Number(draft.expectedIncome),
       expectedCharge: draft.expectedCharge === '' ? null : Number(draft.expectedCharge),
     });
     setMessage(result.success ? t('projection.saved') : (result.error?.message || t('projection.saveFailed')));
@@ -76,8 +77,8 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, onSave
         <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-gray-500">{t('cycleDashboard.adjustForecast')}<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="col-span-full inline-flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={draft.enabled} onChange={(event) => update('enabled', event.target.checked)} className="h-4 w-4 accent-indigo-600" />{t('projection.enable')}</label>
-          <Field label={t('projection.expectedSalary')} type="number" min="0" step="0.01" value={draft.expectedSalary} onChange={(value) => update('expectedSalary', value)} />
-          <Field label={t('projection.date')} type="date" value={draft.expectedSalaryDate} onChange={(value) => update('expectedSalaryDate', value)} />
+          <Field label={t('projection.expectedIncome')} type="number" min="0" step="0.01" value={draft.expectedIncome} onChange={(value) => update('expectedIncome', value)} />
+          <Field label={t('projection.date')} type="date" value={draft.expectedIncomeDate} onChange={(value) => update('expectedIncomeDate', value)} />
           <Field label={t('projection.manualCharge')} type="number" min="0" step="0.01" value={draft.expectedCharge} onChange={(value) => update('expectedCharge', value)} />
           <Field label={t('projection.date')} type="date" value={draft.expectedChargeDate} onChange={(value) => update('expectedChargeDate', value)} />
           <div className="sm:col-span-2"><Field label={t('projection.chargeLabel')} value={draft.expectedChargeLabel} onChange={(value) => update('expectedChargeLabel', value)} /></div>

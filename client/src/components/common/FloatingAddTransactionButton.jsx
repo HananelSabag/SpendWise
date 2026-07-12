@@ -59,11 +59,11 @@ const FloatingAddTransactionButton = ({ title }) => {
       onClick: () => dispatch('income'),
     },
     {
-      key: 'insights',
-      label: he ? 'חודשים ותובנות' : 'Months & insights',
+      key: 'financial-cycle',
+      label: he ? 'מחזור פיננסי' : 'Financial Cycle',
       icon: BarChart3,
       ring: 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/30',
-      onClick: () => go('/insights'),
+      onClick: () => go('/financial-cycle'),
     },
   ];
 

@@ -9,6 +9,7 @@ describe('resolveAuthReturnPath', () => {
 
   it('supports legacy string state', () => {
     expect(resolveAuthReturnPath('/insights')).toBe('/insights');
+    expect(resolveAuthReturnPath('/financial-cycle')).toBe('/financial-cycle');
   });
 
   it('rejects external and protocol-relative redirects', () => {
@@ -16,4 +17,3 @@ describe('resolveAuthReturnPath', () => {
     expect(resolveAuthReturnPath('//example.com')).toBe('/');
   });
 });
-

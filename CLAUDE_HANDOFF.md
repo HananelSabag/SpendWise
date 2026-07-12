@@ -1,16 +1,20 @@
 # SpendWise — continuation prompt for Claude
 
-## Current architecture — 2026-07-12
+## Current architecture — 2026-07-13
 
-- Dashboard is factual calendar activity (`calendarActivityService`), including
-  salary in the calendar month in which it arrived.
-- Insights is the Financial Cycle Dashboard (`cycleRunwayService`): salary-to-salary
-  totals, provider billing groups, remaining-known expenses and end-cycle forecast.
-- Do not restore the old Insights calendar navigator or large Dashboard Runway.
-- User-facing cycle net includes salary: use `totalIncome` and
-  `netIncludingSalaryCommitted`.
-- End-cycle forecast does not add the next salary. It subtracts bank pending, card
-  charges not yet settled and an optional planned charge from real checking balance.
+- Dashboard is raw calendar-month bank cash flow (`calendarActivityService`). It
+  counts every bank deposit/withdrawal on the real date and shows itemized card
+  activity separately. Its arrows navigate previous/next calendar months.
+- The former Insights page is named Financial Cycle everywhere and uses
+  `/financial-cycle`; `/insights` only redirects for compatibility.
+- Financial Cycle (`cycleRunwayService`) is billing-to-billing. It starts the day
+  after the last observed dominant provider billing date, not on salary day.
+- Count every raw income and expense in the window. Exclude only a summarized bank
+  card settlement when connected itemized purchases would duplicate it.
+- End-cycle forecast is checking balance + explicit expected income − upcoming
+  cards − bank pending − optional planned expense.
+- Do not restore salary attribution, `month_offset`, or classification patches to
+  these two user-facing calculations. Loans are explicitly deferred.
 - Long explanations belong in collapsed `<details>` panels, closed by default.
 
 Copy the prompt below into a new Claude session. Do not restart the project or

@@ -134,11 +134,11 @@ const Header = () => {
       active: location.pathname.startsWith('/transactions')
     },
     {
-      key: 'insights',
-      label: currentLanguage === 'he' ? 'תובנות' : 'Insights',
-      href: '/insights',
+      key: 'financial-cycle',
+      label: currentLanguage === 'he' ? 'מחזור פיננסי' : 'Financial Cycle',
+      href: '/financial-cycle',
       icon: BarChart3,
-      active: location.pathname.startsWith('/insights')
+      active: location.pathname.startsWith('/financial-cycle') || location.pathname.startsWith('/insights')
     },
     {
       key: 'bank-sync',

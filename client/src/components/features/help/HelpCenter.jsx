@@ -36,14 +36,14 @@ const HelpCenter = ({ isOpen, onClose }) => {
     { icon: LayoutDashboard, title: he ? 'דשבורד' : 'Dashboard',        desc: he ? 'יתרת עו״ש + סיכום החודש הקלנדרי' : "Checking balance + this calendar month's summary", where: he ? 'טאב הבית' : 'Home tab' },
     { icon: Receipt,         title: he ? 'עסקאות' : 'Transactions',      desc: he ? 'כל העסקאות — הקש על עסקה לפרטים מלאים' : 'All transactions — tap one for full details', where: he ? 'טאב העסקאות' : 'Transactions tab' },
     { icon: Building2,       title: he ? 'סנכרון בנקים' : 'Bank Sync',   desc: he ? 'חיבור וניהול חשבונות בנק וכרטיסי אשראי' : 'Connect & manage bank + card accounts',    where: he ? 'טאב הבנק' : 'Bank tab' },
-    { icon: BarChart3,       title: he ? 'תובנות' : 'Insights',          desc: he ? 'חודשים קודמים, דפוסים חוזרים ופילוח' : 'Past months, recurring patterns & breakdown', where: he ? 'תפריט ה־+' : 'The + (FAB) menu' },
+    { icon: BarChart3,       title: he ? 'מחזור פיננסי' : 'Financial Cycle', desc: he ? 'מחזור חיוב, תוצאה ותחזית שקופה' : 'Billing cycle, result and transparent forecast', where: he ? 'תפריט ה־+' : 'The + (FAB) menu' },
     { icon: PlusCircle,      title: he ? 'הוספה מהירה' : 'Quick add',    desc: he ? 'הכנסה או הוצאה חד־פעמית' : 'A one-time income or expense',                          where: he ? 'תפריט ה־+' : 'The + (FAB)' },
     { icon: User,            title: he ? 'פרופיל' : 'Profile',           desc: he ? 'פרטים, העדפות, אבטחה וייצוא' : 'Details, preferences, security & export',            where: he ? 'טאב הפרופיל' : 'Profile tab' },
   ];
 
   const steps = [
     { icon: Building2,     title: he ? 'חברו חשבון' : 'Connect an account',   desc: he ? 'בטאב הבנק — חשבון בנק לתזרים ויתרה, חברת אשראי לפירוט קניות. או פשוט הוסיפו עסקאות ידנית.' : 'On the Bank tab — a bank account for cash flow & balance, a credit company for itemized purchases. Or just add transactions manually.' },
-    { icon: CalendarClock, title: he ? 'בדקו את חלון המשכורת' : 'Review the salary window', desc: he ? 'החודש הקלנדרי מסכם את החשבונות; חלון משכורת־למשכורת מופיע בנפרד כדי להסביר את קצב התזרים.' : 'Calendar months summarize your accounts; the separate salary-to-salary window explains cash-flow pace.' },
+    { icon: CalendarClock, title: he ? 'בדקו את המחזור הפיננסי' : 'Review the financial cycle', desc: he ? 'החודש הקלנדרי מציג תזרים בנק גולמי; המחזור הפיננסי נפתח יום אחרי חיוב האשראי האחרון.' : 'The calendar month shows raw bank cash flow; the financial cycle opens one day after the latest card billing date.' },
     { icon: LayoutDashboard, title: he ? 'עקבו בדשבורד' : 'Track on the dashboard', desc: he ? 'יתרת העו״ש וסיכום החודש תמיד מולכם. לתובנות עמוקות יותר — תפריט ה־+.' : 'Checking balance and the current calendar month stay front and centre. For deeper insight, open the + menu.' },
   ];
 

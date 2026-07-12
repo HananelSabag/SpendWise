@@ -39,21 +39,21 @@ export default {
     storedHint: "The choice is stored with the transaction and can be changed later.", save: "Save classification", saveFailed: "Save failed."
   },
   dailyFlow: {
-    eyebrow: "Salary to salary", title: "What happened each day", subtitle: "Facts only — no forecast and no double-counted card settlement.",
-    current: "Current", previous: "Previous", days: "{{count}} days", out: "Out", incomeExSalary: "In, ex salary", cycleNet: "Cycle net",
-    outToday: "Out today", inToday: "In today", cumulativeNet: "Cumulative net", dailyOut: "Daily out", dailyIncomeExSalary: "Income excluding salary",
+    eyebrow: "Billing cycle", title: "What happened each day", subtitle: "Raw activity in this billing window, with connected card settlements counted only once.",
+    current: "Current", previous: "Previous", days: "{{count}} days", out: "Out", incomeExSalary: "Income", cycleNet: "Cycle net",
+    outToday: "Out today", inToday: "In today", cumulativeNet: "Cumulative net", dailyOut: "Daily out", dailyIncomeExSalary: "Daily income",
     ledger: "Daily ledger", items: "{{count}} items", salaryReceived: "Salary received", stillPending: "{{amount}} still pending",
     needsReview: "{{count}} needs review", refund: "refund", noActivity: "No activity in this cycle."
   },
   projection: {
     eyebrow: "Optional planning", title: "What remains after expected events", subtitle: "This layer never changes transactions or factual totals. It only lets you test a scenario.",
     enable: "Enable planning", factualHint: "The current balance remains a bank fact; the planned number is always labelled separately.",
-    expectedSalary: "Expected salary", manualCharge: "Manual expected charge", amount: "Amount", date: "Date", chargeLabel: "Charge label", chargePlaceholder: "e.g. unconnected card",
+    expectedIncome: "Expected income", expectedSalary: "Expected income", manualCharge: "Manual expected charge", amount: "Amount", date: "Date", chargeLabel: "Charge label", chargePlaceholder: "e.g. unconnected card",
     salarySuggestion: "Leave blank to use the last salary for planning: {{amount}}", realBalance: "Real balance now", expectedNet: "Expected in minus out", plannedBalance: "Planned balance",
     saved: "Plan saved.", saveFailed: "Could not save.", saving: "Saving…", save: "Save plan"
   },
   insightsPage: {
-    back: "Back", title: "Months & insights", subtitle: "Your full financial story, away from the home dashboard",
+    back: "Back", title: "Financial Cycle", subtitle: "Your billing-to-billing financial picture",
     recurringTitle: "Recurring patterns", recurringSubtitle: "Merchants seen in at least two months — a useful signal, not a guaranteed bill.", perMonth: "/ month", stableAmount: "Similar monthly amount", variableAmount: "Monthly amount varies",
     months: "{{count}} months", noPatterns: "Not enough history to detect patterns yet.", transactionsTitle: "Transactions in this calendar month",
     transactionCount: "{{count}} transactions by factual purchase or bank date", noTransactions: "No transactions in this calendar month."
@@ -62,7 +62,7 @@ export default {
     title: "Watched merchants", subtitle: "Rules you created from real transactions. They flag matches without changing your totals.",
     watch: "Watch this merchant", close: "Close", chooseRule: "Choose rule", exactDescriptionHint: "Only the same transaction description will match. This never changes categories or totals.",
     all: "Every transaction", above: "Above amount", exact: "Exact amount", amountIls: "Amount (ILS)", save: "Save watch",
-    created: "Watch added to Insights", createFailed: "Could not add watch", removeFailed: "Could not remove watch", loadFailed: "Could not load watches.",
+    created: "Watch added to Financial Cycle", createFailed: "Could not add watch", removeFailed: "Could not remove watch", loadFailed: "Could not load watches.",
     ruleAbove: "Above {{amount}}", ruleExact: "Exactly {{amount}}", matches: "{{count}} matches", remove: "Remove watch",
     recentMatches: "Recent matches", noMatches: "No transactions match these rules yet."
   },
@@ -378,8 +378,21 @@ export default {
     settlementsCounted: "{{amount}} in card-payment withdrawals is counted from the bank because no card-company purchase detail is connected."
   },
   calendarActivity: {
-    title: "This calendar month",
+    title: "Calendar month",
     subtitle: "Facts from the 1st through today",
+    rawSubtitle: "Raw bank cash flow",
+    previousMonth: "Previous calendar month",
+    nextMonth: "Next calendar month",
+    bankIncome: "Bank income",
+    bankExpenses: "Bank expenses",
+    bankNet: "Bank net",
+    cardActivity: "Card activity (separate)",
+    details: "Details",
+    bankPending: "Pending bank expenses",
+    cardCharges: "Card charges",
+    cardRefunds: "Card refunds",
+    rawRows: "Raw rows",
+    rawExplanation: "Bank totals include every bank deposit and withdrawal on its actual date. Itemized card activity is displayed separately and is not added to bank cash flow.",
     events: "events",
     income: "Income",
     spending: "Committed",
@@ -402,11 +415,12 @@ export default {
     expenses: "Expenses",
     expected: "Expected end",
     what: "What is this?",
-    explanation: "A compact salary-to-salary view. The full calculation, billing cycles and forecast live in Insights."
+    afterBilling: "Opened after billing",
+    explanation: "A compact billing-to-billing view. The full raw calculation, card cycles and forecast live in Financial Cycle."
   },
   cycleDashboard: {
     title: "Financial Cycle",
-    subtitle: "How you are doing from salary to salary",
+    subtitle: "How you are doing between credit-card billing dates",
     current: "Current cycle",
     previous: "Previous cycle",
     summaryTitle: "Cycle summary",
@@ -416,7 +430,9 @@ export default {
     cycleNet: "Cycle net",
     currentBalance: "Current balance",
     howCalculated: "How is this calculated?",
-    summaryExplanation: "The cycle starts on the identified salary date. Income includes salary and other earned income; expenses count each economic purchase once, including pending commitments.",
+    openedAfterBilling: "Cycle opened after card billing on {{date}}",
+    nextBilling: "Next billing {{date}}",
+    summaryExplanation: "The cycle starts one day after the last observed card billing date. Every raw income and expense in the window is counted; a summarized bank card settlement is excluded only when its itemized card purchases are connected.",
     cardCycles: "Card billing cycles",
     cardCyclesSubtitle: "Purchases grouped by their provider billing date",
     billingDateUnknown: "Billing date unavailable",
@@ -426,12 +442,12 @@ export default {
     whatBillingMeans: "How billing grouping works",
     billingExplanation: "The cycle total uses purchase dates. This grouping is an additional view by the credit company's billing date and does not add the purchases again.",
     outlook: "Remaining outlook",
-    outlookSubtitle: "Known commitments before the next cycle",
+    outlookSubtitle: "Current balance, upcoming cards and explicit assumptions",
     balanceNow: "Balance now",
     remaining: "Still expected",
     expectedEnd: "Expected end balance",
     adjustForecast: "Adjust optional assumptions",
-    forecastExplanation: "Expected end balance equals the real checking balance minus known pending expenses and your optional planned charge. The next salary starts the next cycle and is not added to this cycle's end balance.",
+    forecastExplanation: "Expected end balance equals the real checking balance, plus explicit expected income, minus upcoming card charges, pending bank expenses and your optional planned charge.",
     closedCycle: "This cycle is closed. Forecasting is available only for the current cycle."
   },
   mainAccount: "Main account",

@@ -32,6 +32,7 @@ export default {
   favorites: "מועדפים",
   exchange: "המרת מטבעות",
   insights: "תובנות",
+  financialCycle: "מחזור פיננסי",
   recurring: "עסקאות חוזרות",
   alerts: "התראות",
   notifications: "התראות",

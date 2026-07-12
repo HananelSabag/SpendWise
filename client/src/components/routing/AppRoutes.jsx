@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import { RouteErrorBoundary } from './RouteErrorBoundary';
 import { RouteLoadingFallback } from './RouteLoadingFallback';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -76,13 +76,19 @@ export const AppRoutes = ({ isAuthenticated }) => (
       </ProtectedRoute>
     } />
 
-    <Route path="/insights" element={
+    <Route path="/financial-cycle" element={
       <ProtectedRoute>
-        <RouteErrorBoundary routeName="Insights">
-          <Suspense fallback={<RouteLoadingFallback route="insights" />}>
+        <RouteErrorBoundary routeName="Financial Cycle">
+          <Suspense fallback={<RouteLoadingFallback route="financial cycle" />}>
             <LazyComponents.InsightsPage />
           </Suspense>
         </RouteErrorBoundary>
+      </ProtectedRoute>
+    } />
+
+    <Route path="/insights" element={
+      <ProtectedRoute>
+        <Navigate replace to="/financial-cycle" />
       </ProtectedRoute>
     } />
 

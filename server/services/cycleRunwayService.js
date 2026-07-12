@@ -1,336 +1,38 @@
 /**
- * Cycle / Runway Service — the "how am I doing since my last paycheck" view.
+ * Financial cycle model anchored by observed credit-card billing dates.
  *
- * This is Hananel's original coveted number ("מאזן יומי"): a cycle is anchored on
- * the SALARY (the refill), not the calendar 1st. The current cycle runs from the
- * most recent salary deposit up to today; the previous cycle runs salary-to-salary.
- * Within the window we simply SUM — money out (every economic expense counted
- * once) and money in EXCLUDING salary — and pair it with the real checking balance.
- * No per-day allowance formula: just honest cumulative totals since the reset,
- * plus daily averages for retrospection.
- *
- * Reuses the proven `summarizeCalendar` engine so a shekel is never double-counted:
- * itemized card purchases count; monthly/immediate settlements don't; debit is the
- * bank-primary fact. Edge case handled: when a card company is NOT connected, its
- * bank charge is the real spend (no itemized detail) rather than mere reconciliation.
- *
- * Projection (expected next salary / expected manual charge) is a separate, opt-in
- * layer built on top of this — this service reports only actual facts + balance.
- *
- * @module services/cycleRunwayService
+ * One intentional dedupe rule exists: when itemized credit-card data is
+ * connected, the summarized bank settlement is excluded because the purchases
+ * are already counted. Everything else follows the raw transaction type/date.
  */
 
 const db = require('../config/db');
-const { INSTITUTIONS, institutionKind } = require('../config/institutions');
+const { institutionKind } = require('../config/institutions');
 const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
-const {
-  classifyTransaction,
-  summarizeCalendar,
-  spendingBreakdown,
-  withoutSupersededPendingBankRows,
-} = require('./financialClassificationService');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
+const { withoutSupersededPendingBankRows } = require('./financialClassificationService');
 
-const CARD_SOURCES = Object.entries(INSTITUTIONS).filter(([, x]) => x.kind === 'credit_card').map(([x]) => x);
-const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type, description, notes,
-  date, transaction_datetime, bank_processed_date, bank_status, bank_sync_id, raw_category,
-  original_amount, original_currency, charged_currency, txn_kind,
-  installment_number, installment_total, ledger_class,
+const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type,
+  description, notes, date, transaction_datetime, bank_processed_date,
+  bank_status, bank_sync_id, raw_category, ledger_class,
   settlement_card_source, settlement_card_account`;
-
-const round2 = (v) => Math.round(((Number(v) || 0) + Number.EPSILON) * 100) / 100;
+const CARD_SETTLEMENT_HINT = /(כרטיסי?\s*אשראי|לאומי\s*ויזה|ויזה|מקס|ישראכרט|כאל|אמריקן|credit\s*card|max|visa|isracard|amex|\bcal\b)/i;
+const round2 = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100) / 100;
 
 function todayKey() {
   return dateKey(new Date());
 }
 
-function daysBetween(startKey, endKey) {
-  const ms = Date.parse(`${endKey}T00:00:00Z`) - Date.parse(`${startKey}T00:00:00Z`);
-  return Math.max(1, Math.round(ms / 86400000));
-}
-
-/**
- * Daily economic flow for a salary cycle. This deliberately uses the same
- * classifier as the headline totals: settlements and debit enrichment copies
- * disappear, pending spend is committed but not actual, and salary stays
- * visible without inflating income-since-salary.
- */
-function buildDailyHistory(rows, context, cycleStart, cycleEndExclusive) {
-  const byDate = new Map();
-  let cursor = cycleStart;
-  let guard = 0;
-  while (cursor < cycleEndExclusive && guard < 370) {
-    byDate.set(cursor, {
-      date: cursor,
-      spentActual: 0,
-      spentCommitted: 0,
-      spentPending: 0,
-      incomeExSalary: 0,
-      salaryIncome: 0,
-      netExSalaryActual: 0,
-      netExSalaryCommitted: 0,
-      transactionCount: 0,
-      needsReviewCount: 0,
-    });
-    cursor = nextDay(cursor);
-    guard += 1;
-  }
-
-  for (const row of withoutSupersededPendingBankRows(rows)) {
-    const key = dateKey(row.date);
-    const day = key ? byDate.get(key) : null;
-    if (!day) continue;
-    const classification = classifyTransaction(row, context);
-    const amount = Math.abs(Number(row.amount) || 0);
-    if (classification.calendarInclusion === 'needs_review') {
-      day.needsReviewCount += 1;
-      continue;
-    }
-    if (classification.calendarInclusion !== 'include') continue;
-
-    day.transactionCount += 1;
-    if (classification.direction === 'spend') {
-      day.spentCommitted += amount;
-      if (!classification.pending) day.spentActual += amount;
-    } else if (classification.direction === 'refund') {
-      day.spentCommitted -= amount;
-      if (!classification.pending) day.spentActual -= amount;
-    } else if (classification.direction === 'income') {
-      if (classification.salary) day.salaryIncome += amount;
-      else day.incomeExSalary += amount;
-    }
-  }
-
-  let cumulativeSpent = 0;
-  let cumulativeIncome = 0;
-  let cumulativeTotalIncome = 0;
-  return [...byDate.values()].map((day) => {
-    day.spentActual = round2(day.spentActual);
-    day.spentCommitted = round2(day.spentCommitted);
-    day.spentPending = round2(day.spentCommitted - day.spentActual);
-    day.incomeExSalary = round2(day.incomeExSalary);
-    day.salaryIncome = round2(day.salaryIncome);
-    day.totalIncome = round2(day.salaryIncome + day.incomeExSalary);
-    day.netExSalaryActual = round2(day.incomeExSalary - day.spentActual);
-    day.netExSalaryCommitted = round2(day.incomeExSalary - day.spentCommitted);
-    cumulativeSpent = round2(cumulativeSpent + day.spentCommitted);
-    cumulativeIncome = round2(cumulativeIncome + day.incomeExSalary);
-    cumulativeTotalIncome = round2(cumulativeTotalIncome + day.totalIncome);
-    return {
-      ...day,
-      cumulativeSpent,
-      cumulativeIncome,
-      cumulativeTotalIncome,
-      cumulativeNetIncludingSalary: round2(cumulativeTotalIncome - cumulativeSpent),
-      cumulativeNetExSalary: round2(cumulativeIncome - cumulativeSpent),
-    };
-  });
-}
-
-function buildCardBillingCycles(rows, context) {
-  const groups = new Map();
-  for (const row of withoutSupersededPendingBankRows(rows)) {
-    const classification = classifyTransaction(row, context);
-    if (classification.sourceRole !== 'card_itemized') continue;
-    if (classification.direction !== 'spend' && classification.direction !== 'refund') continue;
-    const billingDate = dateKey(row.bank_processed_date) || null;
-    const source = String(row.bank_source || 'unknown');
-    const account = String(row.bank_account_number || '');
-    const key = `${source}|${account}|${billingDate || 'unassigned'}`;
-    const group = groups.get(key) || {
-      bankSource: source,
-      accountNumber: account,
-      billingDate,
-      posted: 0,
-      pending: 0,
-      refunds: 0,
-      count: 0,
-    };
-    const amount = Math.abs(Number(row.amount) || 0);
-    if (classification.direction === 'refund') group.refunds += amount;
-    else group[classification.pending ? 'pending' : 'posted'] += amount;
-    group.count += 1;
-    groups.set(key, group);
-  }
-  return [...groups.values()]
-    .map((group) => ({
-      ...group,
-      posted: round2(group.posted),
-      pending: round2(group.pending),
-      refunds: round2(group.refunds),
-      total: round2(Math.max(0, group.posted + group.pending - group.refunds)),
-    }))
-    .sort((a, b) => String(a.billingDate || '9999').localeCompare(String(b.billingDate || '9999'))
-      || a.bankSource.localeCompare(b.bankSource)
-      || a.accountNumber.localeCompare(b.accountNumber));
-}
-
-/**
- * Build a salary-anchored cycle for a user.
- *
- * @param {number} userId
- * @param {number} [offset=0] 0 = current cycle (last salary → today),
- *   -1 = previous cycle (prior salary → last salary), etc.
- * @returns {Promise<object>}
- */
-async function loadCycleData(userId) {
-  const [txnResult, signatureResult, balanceResult, overridesResult] = await Promise.all([
-    // 150 days is enough to hold the last few salary cycles for anchoring.
-    db.query(
-      `SELECT ${SELECT_COLUMNS}
-         FROM transactions t
-        WHERE t.user_id = $1 AND t.deleted_at IS NULL
-          AND t.date >= (CURRENT_DATE - INTERVAL '150 days')
-          AND (t.bank_source IS NULL OR NOT EXISTS (
-            SELECT 1
-              FROM bank_accounts ba_filter
-             WHERE ba_filter.user_id = t.user_id
-               AND ba_filter.bank_source = t.bank_source
-               AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
-               AND ba_filter.enabled = false
-          ))
-        ORDER BY t.date, t.id`,
-      [userId],
-    ),
-    db.query('SELECT * FROM salary_signatures WHERE user_id = $1 AND active = true', [userId]),
-    db.query(
-      `SELECT bank_source, account_number, balance, enabled
-         FROM bank_accounts WHERE user_id = $1`,
-      [userId],
-    ),
-    db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
-  ]);
-
-  return {
-    rows: txnResult.rows,
-    salarySignatures: signatureResult.rows,
-    accounts: balanceResult.rows,
-    transactionOverrides: overridesResult.rows,
-  };
-}
-
-function buildCycleFromData(data, offset = 0) {
-  const rows = data.rows;
-  const connectedCardSources = [...new Set(
-    data.accounts.filter((a) => a.enabled && institutionKind(a.bank_source) === 'credit_card')
-      .map((a) => a.bank_source),
-  )];
-  const context = {
-    salarySignatures: data.salarySignatures,
-    debitCardAccounts: deriveDebitCardAccounts(rows),
-    connectedCardSources,
-    transactionOverrides: data.transactionOverrides,
-  };
-
-  // Real checking balance = enabled bank-kind accounts only (cards never have one).
-  const bankAccounts = data.accounts.filter((a) => a.enabled && institutionKind(a.bank_source) === 'bank');
-  const knownBalances = bankAccounts.filter((a) => a.balance !== null && a.balance !== undefined);
-  const checkingBalance = knownBalances.length
-    ? round2(knownBalances.reduce((s, a) => s + Number(a.balance), 0)) : null;
-
-  // Salary deposit dates, newest first (distinct calendar days).
-  const salaryDates = [...new Set(
-    rows.filter((r) => classifyTransaction(r, context).salary)
-      .map((r) => dateKey(r.date)).filter(Boolean),
-  )].sort().reverse();
-
-  const today = todayKey();
-  let anchor = 'salary';
-  let cycleStart;
-  let cycleEnd;
-  let needsSalarySetup = false;
-
-  const idx = -offset; // offset 0 → most recent (index 0)
-  if (salaryDates.length > idx) {
-    cycleStart = salaryDates[idx];
-    cycleEnd = idx === 0 ? nextDay(today) : salaryDates[idx - 1];
-  } else {
-    // Not enough salary history to anchor this cycle → calendar-month fallback.
-    anchor = 'calendar_fallback';
-    needsSalarySetup = data.salarySignatures.length === 0;
-    const period = getCalendarPeriod(offset);
-    cycleStart = period.start;
-    cycleEnd = offset === 0 ? nextDay(today) : period.end;
-  }
-
-  const windowRows = rows.filter((r) => {
-    const k = dateKey(r.date);
-    return k && k >= cycleStart && k < cycleEnd;
-  });
-  const { totals } = summarizeCalendar(windowRows, context);
-  const dailyHistory = buildDailyHistory(windowRows, context, cycleStart, cycleEnd);
-
-  const lastDay = offset === 0 ? today : prevDay(cycleEnd);
-  const daysElapsed = daysBetween(cycleStart, offset === 0 ? nextDay(today) : cycleEnd);
-
-  const spentActual = totals.spendActual;
-  const spentCommitted = totals.spendCommitted;
-  const incomeExSalary = totals.otherIncome;
-  const totalIncome = totals.earnedIncome;
-  const cardBillingCycles = buildCardBillingCycles(windowRows, context);
-  const remainingCardCharges = offset === 0 ? round2(cardBillingCycles.reduce((sum, group) => {
-    if (group.billingDate && group.billingDate > today) return sum + group.total;
-    return sum + group.pending;
-  }, 0)) : 0;
-  const remainingKnown = offset === 0
-    ? round2(totals.bankDirectPending + remainingCardCharges)
-    : 0;
-
-  return {
-    offset,
-    anchor,
-    isCurrent: offset === 0,
-    needsSalarySetup,
-    cycleStart,
-    cycleEndExclusive: cycleEnd,
-    lastDay,
-    daysElapsed,
-    timezone: TZ,
-    // The live checking balance is a "now" fact — only meaningful for the current
-    // cycle. A closed cycle reports what moved, not today's balance.
-    checkingBalance: offset === 0 ? checkingBalance : null,
-    salaryDate: anchor === 'salary' ? cycleStart : null,
-    money: {
-      spentActual,
-      spentCommitted,
-      spentPending: round2(spentCommitted - spentActual),
-      incomeExSalary,
-      salaryInWindow: totals.salaryIncome,
-      totalIncome,
-      netIncludingSalaryActual: round2(totalIncome - spentActual),
-      netIncludingSalaryCommitted: round2(totalIncome - spentCommitted),
-      netExSalaryActual: round2(incomeExSalary - spentActual),
-      netExSalaryCommitted: round2(incomeExSalary - spentCommitted),
-    },
-    dailyAverage: {
-      spent: round2(spentCommitted / daysElapsed),
-      income: round2(incomeExSalary / daysElapsed),
-    },
-    expected: {
-      bankPending: offset === 0 ? totals.bankDirectPending : 0,
-      cardChargesNotYetSettled: remainingCardCharges,
-      remainingKnown,
-    },
-    dailyHistory,
-    cardBillingCycles,
-    spendingBreakdown: spendingBreakdown(windowRows, context),
-    needsReview: totals.needsReview,
-  };
-}
-
-async function buildCycle(userId, offset = 0) {
-  return buildCycleFromData(await loadCycleData(userId), offset);
-}
-
 function nextDay(key) {
-  const d = new Date(`${key}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  const date = new Date(`${key}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
 }
+
 function prevDay(key) {
-  const d = new Date(`${key}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
+  const date = new Date(`${key}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
 }
 
 function addMonth(key) {
@@ -342,65 +44,426 @@ function addMonth(key) {
   return target.toISOString().slice(0, 10);
 }
 
+function daysBetween(startKey, endExclusive) {
+  return Math.max(1, Math.round((Date.parse(`${endExclusive}T00:00:00Z`) - Date.parse(`${startKey}T00:00:00Z`)) / 86400000));
+}
+
+function debitKey(source, account) {
+  return `${source}:${String(account || '')}`;
+}
+
+function debitAccountSet(rows) {
+  return new Set(deriveDebitCardAccounts(rows).map((item) => debitKey(item.source, item.account)));
+}
+
+function isItemizedCreditCard(row, debitAccounts) {
+  return institutionKind(row.bank_source) === 'credit_card'
+    && !debitAccounts.has(debitKey(row.bank_source, row.bank_account_number));
+}
+
+function isBankCardSettlement(row, hasConnectedCardDetail) {
+  if (!hasConnectedCardDetail || institutionKind(row.bank_source) !== 'bank' || row.type !== 'expense') return false;
+  return row.ledger_class === 'card_settlement'
+    || Boolean(String(row.settlement_card_source || '').trim())
+    || CARD_SETTLEMENT_HINT.test(String(row.description || ''));
+}
+
+/**
+ * Per card/account and processed month, the dominant processed date is the
+ * provider billing date. This ignores one-off processing dates while preserving
+ * weekend/holiday shifts already present in the raw provider data.
+ */
+function deriveBillingBoundaries(rows, debitAccounts = debitAccountSet(rows)) {
+  const dateGroups = new Map();
+  for (const row of rows) {
+    if (!isItemizedCreditCard(row, debitAccounts) || row.type !== 'expense') continue;
+    const billingDate = dateKey(row.bank_processed_date);
+    if (!billingDate) continue;
+    const account = String(row.bank_account_number || '');
+    const month = billingDate.slice(0, 7);
+    const key = `${row.bank_source}|${account}|${month}|${billingDate}`;
+    const group = dateGroups.get(key) || {
+      bankSource: row.bank_source,
+      accountNumber: account,
+      month,
+      billingDate,
+      count: 0,
+      total: 0,
+    };
+    group.count += 1;
+    group.total += Math.abs(Number(row.amount) || 0);
+    dateGroups.set(key, group);
+  }
+
+  const dominantByAccountMonth = new Map();
+  for (const group of dateGroups.values()) {
+    const key = `${group.bankSource}|${group.accountNumber}|${group.month}`;
+    const current = dominantByAccountMonth.get(key);
+    if (!current || group.count > current.count || (group.count === current.count && group.total > current.total)) {
+      dominantByAccountMonth.set(key, group);
+    }
+  }
+
+  const byMonth = new Map();
+  for (const group of dominantByAccountMonth.values()) {
+    const boundary = byMonth.get(group.month) || {
+      month: group.month,
+      billingDate: group.billingDate,
+      sources: [],
+      count: 0,
+      total: 0,
+    };
+    if (group.billingDate > boundary.billingDate) boundary.billingDate = group.billingDate;
+    boundary.sources.push({
+      bankSource: group.bankSource,
+      accountNumber: group.accountNumber,
+      billingDate: group.billingDate,
+      count: group.count,
+      total: round2(group.total),
+    });
+    boundary.count += group.count;
+    boundary.total += group.total;
+    byMonth.set(group.month, boundary);
+  }
+  return [...byMonth.values()]
+    .map((boundary) => ({ ...boundary, total: round2(boundary.total) }))
+    .sort((a, b) => a.billingDate.localeCompare(b.billingDate));
+}
+
+function resolveCycleWindow(boundaries, offset = 0, today = todayKey()) {
+  const paid = boundaries.filter((boundary) => boundary.billingDate <= today);
+  if (offset === 0) {
+    const closingBoundary = paid[paid.length - 1];
+    if (closingBoundary) {
+      const nextObserved = boundaries.find((boundary) => boundary.billingDate > today);
+      return {
+        anchor: 'card_billing',
+        cycleStart: nextDay(closingBoundary.billingDate),
+        cycleEndExclusive: nextDay(today),
+        lastDay: today,
+        openedAfterBillingDate: closingBoundary.billingDate,
+        nextBillingDate: nextObserved?.billingDate || addMonth(closingBoundary.billingDate),
+        boundarySources: closingBoundary.sources,
+      };
+    }
+  } else {
+    const closingIndex = paid.length + offset;
+    const closingBoundary = paid[closingIndex];
+    const openingBoundary = paid[closingIndex - 1];
+    if (openingBoundary) {
+      return {
+        anchor: 'card_billing',
+        cycleStart: nextDay(openingBoundary.billingDate),
+        cycleEndExclusive: nextDay(closingBoundary.billingDate),
+        lastDay: closingBoundary.billingDate,
+        openedAfterBillingDate: openingBoundary.billingDate,
+        nextBillingDate: closingBoundary.billingDate,
+        boundarySources: closingBoundary.sources,
+      };
+    }
+  }
+
+  const fallback = getCalendarPeriod(offset, new Date(`${today}T12:00:00Z`));
+  return {
+    anchor: 'calendar_fallback',
+    cycleStart: fallback.start,
+    cycleEndExclusive: offset === 0 ? nextDay(today) : fallback.end,
+    lastDay: offset === 0 ? today : prevDay(fallback.end),
+    openedAfterBillingDate: null,
+    nextBillingDate: null,
+    boundarySources: [],
+  };
+}
+
+function reduceCycleRows(rows, accounts, window) {
+  const debitAccounts = debitAccountSet(rows);
+  const connectedCardSources = new Set(
+    accounts.filter((account) => account.enabled && institutionKind(account.bank_source) === 'credit_card')
+      .map((account) => account.bank_source),
+  );
+  const hasConnectedCardDetail = connectedCardSources.size > 0;
+  const totals = {
+    incomePosted: 0,
+    incomePending: 0,
+    bankExpensesPosted: 0,
+    bankExpensesPending: 0,
+    cardExpensesPosted: 0,
+    cardExpensesPending: 0,
+    cardRefunds: 0,
+    manualExpenses: 0,
+    excludedCardSettlements: 0,
+    transactionCount: 0,
+  };
+  const includedRows = [];
+
+  for (const row of withoutSupersededPendingBankRows(rows)) {
+    const key = dateKey(row.date);
+    if (!key || key < window.cycleStart || key >= window.cycleEndExclusive) continue;
+    totals.transactionCount += 1;
+    const amount = Math.abs(Number(row.amount) || 0);
+    const pending = row.bank_status === 'pending';
+    const kind = institutionKind(row.bank_source);
+
+    if (kind === 'bank') {
+      if (row.type === 'income') totals[pending ? 'incomePending' : 'incomePosted'] += amount;
+      else if (row.type === 'expense') {
+        if (isBankCardSettlement(row, hasConnectedCardDetail)) totals.excludedCardSettlements += amount;
+        else totals[pending ? 'bankExpensesPending' : 'bankExpensesPosted'] += amount;
+      }
+      includedRows.push(row);
+      continue;
+    }
+    if (kind === 'credit_card') {
+      if (!isItemizedCreditCard(row, debitAccounts)) continue;
+      if (row.type === 'income') totals.cardRefunds += amount;
+      else if (row.type === 'expense') totals[pending ? 'cardExpensesPending' : 'cardExpensesPosted'] += amount;
+      includedRows.push(row);
+      continue;
+    }
+    if (row.bank_source == null || kind === 'unknown') {
+      if (row.type === 'income') totals[pending ? 'incomePending' : 'incomePosted'] += amount;
+      else if (row.type === 'expense') totals.manualExpenses += amount;
+      includedRows.push(row);
+    }
+  }
+
+  for (const [key, value] of Object.entries(totals)) {
+    if (typeof value === 'number' && key !== 'transactionCount') totals[key] = round2(value);
+  }
+  const cardCommitted = round2(Math.max(0, totals.cardExpensesPosted + totals.cardExpensesPending - totals.cardRefunds));
+  const spentActual = round2(totals.bankExpensesPosted + Math.max(0, totals.cardExpensesPosted - totals.cardRefunds) + totals.manualExpenses);
+  const spentCommitted = round2(totals.bankExpensesPosted + totals.bankExpensesPending + cardCommitted + totals.manualExpenses);
+  const totalIncome = round2(totals.incomePosted + totals.incomePending);
+  return {
+    totals,
+    includedRows,
+    cardCommitted,
+    spentActual,
+    spentCommitted,
+    totalIncome,
+    netActual: round2(totals.incomePosted - spentActual),
+    netCommitted: round2(totalIncome - spentCommitted),
+    debitAccounts,
+  };
+}
+
+function buildCardBillingCycles(rows, debitAccounts = debitAccountSet(rows)) {
+  const groups = new Map();
+  for (const row of rows) {
+    if (!isItemizedCreditCard(row, debitAccounts)) continue;
+    if (row.type !== 'expense' && row.type !== 'income') continue;
+    const billingDate = dateKey(row.bank_processed_date);
+    const key = `${row.bank_source}|${row.bank_account_number || ''}|${billingDate || 'unassigned'}`;
+    const group = groups.get(key) || {
+      bankSource: row.bank_source,
+      accountNumber: String(row.bank_account_number || ''),
+      billingDate,
+      posted: 0,
+      pending: 0,
+      refunds: 0,
+      count: 0,
+    };
+    const amount = Math.abs(Number(row.amount) || 0);
+    if (row.type === 'income') group.refunds += amount;
+    else group[row.bank_status === 'pending' ? 'pending' : 'posted'] += amount;
+    group.count += 1;
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((group) => ({
+    ...group,
+    posted: round2(group.posted),
+    pending: round2(group.pending),
+    refunds: round2(group.refunds),
+    total: round2(Math.max(0, group.posted + group.pending - group.refunds)),
+  })).sort((a, b) => String(a.billingDate || '9999').localeCompare(String(b.billingDate || '9999')));
+}
+
+function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive) {
+  const reduced = reduceCycleRows(rows, accounts, { cycleStart, cycleEndExclusive });
+  const days = new Map();
+  for (let cursor = cycleStart; cursor < cycleEndExclusive; cursor = nextDay(cursor)) {
+    days.set(cursor, { date: cursor, spentActual: 0, spentCommitted: 0, spentPending: 0, totalIncome: 0, incomeExSalary: 0, salaryIncome: 0, transactionCount: 0, needsReviewCount: 0 });
+  }
+  const debitAccounts = reduced.debitAccounts;
+  const hasCardDetail = accounts.some((account) => account.enabled && institutionKind(account.bank_source) === 'credit_card');
+  for (const row of withoutSupersededPendingBankRows(rows)) {
+    const key = dateKey(row.date);
+    const day = days.get(key);
+    if (!day) continue;
+    const amount = Math.abs(Number(row.amount) || 0);
+    const kind = institutionKind(row.bank_source);
+    if (kind === 'bank' && row.type === 'expense' && isBankCardSettlement(row, hasCardDetail)) continue;
+    if (kind === 'credit_card' && !isItemizedCreditCard(row, debitAccounts)) continue;
+    day.transactionCount += 1;
+    if (row.type === 'income' && kind !== 'credit_card') day.totalIncome += amount;
+    else if (row.type === 'income' && kind === 'credit_card') {
+      day.spentActual -= amount;
+      day.spentCommitted -= amount;
+    } else if (row.type === 'expense') {
+      day.spentCommitted += amount;
+      if (row.bank_status !== 'pending') day.spentActual += amount;
+    }
+  }
+  let cumulativeSpent = 0;
+  let cumulativeIncome = 0;
+  return [...days.values()].map((day) => {
+    day.spentActual = round2(day.spentActual);
+    day.spentCommitted = round2(day.spentCommitted);
+    day.spentPending = round2(day.spentCommitted - day.spentActual);
+    day.totalIncome = round2(day.totalIncome);
+    day.incomeExSalary = day.totalIncome;
+    cumulativeSpent = round2(cumulativeSpent + day.spentCommitted);
+    cumulativeIncome = round2(cumulativeIncome + day.totalIncome);
+    return {
+      ...day,
+      cumulativeSpent,
+      cumulativeIncome,
+      cumulativeTotalIncome: cumulativeIncome,
+      cumulativeNetIncludingSalary: round2(cumulativeIncome - cumulativeSpent),
+      cumulativeNetExSalary: round2(cumulativeIncome - cumulativeSpent),
+    };
+  });
+}
+
+function buildCycleFromData(data, offset = 0, now = todayKey()) {
+  const rows = data.rows || [];
+  const accounts = data.accounts || [];
+  const debitAccounts = debitAccountSet(rows);
+  const boundaries = deriveBillingBoundaries(rows, debitAccounts);
+  const window = resolveCycleWindow(boundaries, offset, now);
+  const reduced = reduceCycleRows(rows, accounts, window);
+  const cardBillingCycles = buildCardBillingCycles(reduced.includedRows, debitAccounts);
+  const bankAccounts = accounts.filter((account) => account.enabled && institutionKind(account.bank_source) === 'bank' && account.balance != null);
+  const checkingBalance = bankAccounts.length ? round2(bankAccounts.reduce((sum, account) => sum + Number(account.balance), 0)) : null;
+  const daysElapsed = daysBetween(window.cycleStart, window.cycleEndExclusive);
+  const pendingBank = reduced.totals.bankExpensesPending;
+  const upcomingCards = offset === 0 ? reduced.cardCommitted : 0;
+
+  return {
+    offset,
+    anchor: window.anchor,
+    isCurrent: offset === 0,
+    needsBillingSetup: window.anchor !== 'card_billing',
+    cycleStart: window.cycleStart,
+    cycleEndExclusive: window.cycleEndExclusive,
+    lastDay: window.lastDay,
+    daysElapsed,
+    timezone: TZ,
+    checkingBalance: offset === 0 ? checkingBalance : null,
+    billing: {
+      openedAfterBillingDate: window.openedAfterBillingDate,
+      nextBillingDate: window.nextBillingDate,
+      boundarySources: window.boundarySources,
+      observedBoundaries: boundaries,
+    },
+    money: {
+      spentActual: reduced.spentActual,
+      spentCommitted: reduced.spentCommitted,
+      spentPending: round2(reduced.spentCommitted - reduced.spentActual),
+      totalIncome: reduced.totalIncome,
+      incomeExSalary: reduced.totalIncome,
+      salaryInWindow: 0,
+      netIncludingSalaryActual: reduced.netActual,
+      netIncludingSalaryCommitted: reduced.netCommitted,
+      netExSalaryActual: reduced.netActual,
+      netExSalaryCommitted: reduced.netCommitted,
+      bankExpenses: round2(reduced.totals.bankExpensesPosted + reduced.totals.bankExpensesPending),
+      cardActivity: reduced.cardCommitted,
+      manualExpenses: reduced.totals.manualExpenses,
+      excludedCardSettlements: reduced.totals.excludedCardSettlements,
+    },
+    dailyAverage: {
+      spent: round2(reduced.spentCommitted / daysElapsed),
+      income: round2(reduced.totalIncome / daysElapsed),
+    },
+    expected: {
+      bankPending: offset === 0 ? pendingBank : 0,
+      cardChargesNotYetSettled: upcomingCards,
+      remainingKnown: offset === 0 ? round2(pendingBank + upcomingCards) : 0,
+    },
+    dailyHistory: buildDailyHistory(rows, accounts, window.cycleStart, window.cycleEndExclusive),
+    cardBillingCycles,
+    needsReview: [],
+  };
+}
+
 function buildProjection(current, rawSettings = {}) {
   const settings = {
     enabled: rawSettings?.enabled === true,
-    expectedSalary: Number(rawSettings?.expectedSalary) > 0 ? round2(rawSettings.expectedSalary) : null,
-    expectedSalaryDate: dateKey(rawSettings?.expectedSalaryDate),
+    expectedIncome: Number(rawSettings?.expectedIncome ?? rawSettings?.expectedSalary) > 0
+      ? round2(rawSettings.expectedIncome ?? rawSettings.expectedSalary) : null,
+    expectedIncomeDate: dateKey(rawSettings?.expectedIncomeDate ?? rawSettings?.expectedSalaryDate),
     expectedCharge: Number(rawSettings?.expectedCharge) > 0 ? round2(rawSettings.expectedCharge) : null,
     expectedChargeDate: dateKey(rawSettings?.expectedChargeDate),
     expectedChargeLabel: String(rawSettings?.expectedChargeLabel || '').trim().slice(0, 80),
   };
-  const suggestedSalary = current.money.salaryInWindow > 0
-    ? { amount: current.money.salaryInWindow, date: addMonth(current.salaryDate) }
-    : null;
-  const expectedSalary = settings.enabled
-    ? {
-      amount: settings.expectedSalary || suggestedSalary?.amount || 0,
-      date: settings.expectedSalaryDate || suggestedSalary?.date || null,
-      source: settings.expectedSalary ? 'manual' : 'last_salary',
-    }
-    : null;
-  const expectedCharge = settings.enabled && settings.expectedCharge
-    ? {
-      amount: settings.expectedCharge,
-      date: settings.expectedChargeDate,
-      label: settings.expectedChargeLabel || 'Expected charge',
-    }
-    : null;
-  const knownPending = current.expected?.remainingKnown ?? current.money.spentPending ?? 0;
-  const plannedExpenses = settings.enabled ? (expectedCharge?.amount || 0) : 0;
+  const expectedIncome = settings.enabled ? settings.expectedIncome || 0 : 0;
+  const plannedExpenses = settings.enabled ? settings.expectedCharge || 0 : 0;
+  const knownPending = current.expected?.remainingKnown || 0;
   const expectedRemainingExpenses = round2(knownPending + plannedExpenses);
-  const canProject = current.checkingBalance !== null;
-  const projectedCheckingBalance = canProject
-    ? round2(current.checkingBalance - expectedRemainingExpenses)
-    : null;
+  const projectedCheckingBalance = current.checkingBalance == null ? null
+    : round2(current.checkingBalance + expectedIncome - expectedRemainingExpenses);
+  const warning = projectedCheckingBalance == null ? 'unavailable'
+    : projectedCheckingBalance < 0 ? 'negative'
+      : projectedCheckingBalance < 1000 ? 'low' : 'ok';
   return {
     settings,
-    suggestedSalary,
-    expectedSalary,
-    expectedCharge,
+    expectedIncome: settings.enabled ? { amount: expectedIncome, date: settings.expectedIncomeDate } : null,
+    expectedCharge: settings.enabled && settings.expectedCharge ? {
+      amount: settings.expectedCharge,
+      date: settings.expectedChargeDate,
+      label: settings.expectedChargeLabel || 'Expected expense',
+    } : null,
     knownPending,
+    upcomingCardCharges: current.expected?.cardChargesNotYetSettled || 0,
+    pendingBankExpenses: current.expected?.bankPending || 0,
     plannedExpenses,
     expectedRemainingExpenses,
     projectedCheckingBalance,
+    warning,
     factsAsOf: current.lastDay,
     isPlanningOnly: true,
   };
 }
 
+async function loadCycleData(userId) {
+  const [transactions, accounts] = await Promise.all([
+    db.query(
+      `SELECT ${SELECT_COLUMNS} FROM transactions t
+        WHERE t.user_id=$1 AND t.deleted_at IS NULL
+          AND t.date >= CURRENT_DATE - INTERVAL '180 days'
+          AND (t.bank_source IS NULL OR NOT EXISTS (
+                SELECT 1 FROM bank_accounts ba_filter
+                 WHERE ba_filter.user_id=t.user_id AND ba_filter.bank_source=t.bank_source
+                   AND ba_filter.account_number=COALESCE(t.bank_account_number, '') AND ba_filter.enabled=false
+          ))
+        ORDER BY t.date, t.id`,
+      [userId],
+    ),
+    db.query('SELECT bank_source, account_number, balance, enabled FROM bank_accounts WHERE user_id=$1', [userId]),
+  ]);
+  return { rows: transactions.rows, accounts: accounts.rows };
+}
+
+async function buildCycle(userId, offset = 0) {
+  return buildCycleFromData(await loadCycleData(userId), offset);
+}
+
 async function buildRunwayOverview(userId) {
-  // Load ledger/context once, then derive both cycles from the same immutable
-  // snapshot. The previous implementation loaded four query groups per cycle
-  // in parallel, needlessly doubling DB connections on every dashboard visit.
-  const [cycleData, preferencesResult] = await Promise.all([
+  const [data, preferences] = await Promise.all([
     loadCycleData(userId),
     db.query('SELECT preferences FROM users WHERE id=$1', [userId]),
   ]);
-  const current = buildCycleFromData(cycleData, 0);
-  const previous = buildCycleFromData(cycleData, -1);
-  const settings = preferencesResult.rows[0]?.preferences?.runway_projection || {};
-  return { current, previous, projection: buildProjection(current, settings), timezone: TZ };
+  const current = buildCycleFromData(data, 0);
+  const previous = buildCycleFromData(data, -1);
+  const settings = preferences.rows[0]?.preferences?.runway_projection || {};
+  return {
+    current,
+    previous,
+    projection: buildProjection(current, settings),
+    billing: current.billing,
+    timezone: TZ,
+  };
 }
 
 module.exports = {
@@ -410,4 +473,8 @@ module.exports = {
   buildDailyHistory,
   buildCardBillingCycles,
   buildProjection,
+  deriveBillingBoundaries,
+  resolveCycleWindow,
+  reduceCycleRows,
+  isBankCardSettlement,
 };

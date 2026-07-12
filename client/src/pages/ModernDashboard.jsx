@@ -3,7 +3,7 @@
  * same dashboard payload and selected calendar-month window.
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 
@@ -50,6 +50,7 @@ export default function ModernDashboard() {
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [periodOffset, setPeriodOffset] = useState(0);
 
   const {
     data: dashboardData,
@@ -57,7 +58,7 @@ export default function ModernDashboard() {
     isError,
     isRefetching,
     refresh: refreshDashboard,
-  } = useDashboard({ periodOffset: 0 });
+  } = useDashboard({ periodOffset });
   const { data: financialCycle } = useFinancialCycle();
 
   const greeting = useGreeting(user, t);
@@ -109,9 +110,16 @@ export default function ModernDashboard() {
           <ModernBalancePanel />
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)] lg:gap-6">
-            <CalendarActivityCard activity={dashboardData.calendarActivity} formatCurrency={formatCurrency} />
+            <CalendarActivityCard
+              activity={dashboardData.calendarActivity}
+              formatCurrency={formatCurrency}
+              canPrevious={dashboardData.period?.availableOffsets?.includes(periodOffset - 1)}
+              canNext={periodOffset < 0 && dashboardData.period?.availableOffsets?.includes(periodOffset + 1)}
+              onPrevious={() => setPeriodOffset((value) => value - 1)}
+              onNext={() => setPeriodOffset((value) => Math.min(0, value + 1))}
+            />
             <aside>
-              <RunwaySnapshot runway={financialCycle} formatCurrency={formatCurrency} onOpen={() => navigate('/insights')} />
+              <RunwaySnapshot runway={financialCycle} formatCurrency={formatCurrency} onOpen={() => navigate('/financial-cycle')} />
             </aside>
             <div className="lg:col-start-1">
               <ModernRecentTransactionsWidget
