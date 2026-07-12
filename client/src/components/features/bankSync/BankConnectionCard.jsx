@@ -122,10 +122,7 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
   const isCreditCard = stat?.kind === 'credit_card';
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+    <div
       className={cn(
         'rounded-xl border border-gray-200/70 dark:border-gray-700/70 shadow-sm overflow-hidden',
         tint,
@@ -342,6 +339,6 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 }

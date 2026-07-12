@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertCircle, Bot, CreditCard, HelpCircle, Landmark, Plus, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, Bot, HelpCircle, Landmark, RefreshCw } from 'lucide-react';
 
 import { useAuth, useTranslation } from '../stores';
 import apiClient from '../api/client';
@@ -8,7 +8,7 @@ import bankConnectionsApi from '../api/bankConnections';
 import { cn } from '../utils/helpers';
 import BrandMark from '../components/common/BrandMark';
 import { LiquidTabs } from '../components/ui';
-import BankConnectionCard from '../components/features/bankSync/BankConnectionCard';
+import BankConnectionGroup from '../components/features/bankSync/BankConnectionGroup';
 import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
 import SyncMethodPanel from '../components/features/bankSync/SyncMethodPanel';
 import HowItWorksPanel from '../components/features/bankSync/HowItWorksPanel';
@@ -61,11 +61,11 @@ export default function BankSyncPageV2() {
     return summary;
   }, { added: 0, issues: 0, working: 0, ready: 0, lastSync: null }), [connections]);
 
-  const openConnect = (bank = null, kind = null) => {
+  const openConnect = useCallback((bank = null, kind = null) => {
     setInitialBank(bank);
     setConnectKind(kind);
     setShowConnect(true);
-  };
+  }, []);
   const refresh = () => Promise.all([connectionsQuery.refetch(), statsQuery.refetch()]);
   const handleTabChange = useCallback((nextTab) => {
     setTab(nextTab);
@@ -78,27 +78,6 @@ export default function BankSyncPageV2() {
     agent: he ? 'סוכן פרטי' : 'Private agent',
     help: he ? 'עזרה' : 'Help',
   }[key]);
-
-  const ConnectionGroup = ({ kind, items }) => {
-    const isCard = kind === 'credit_card';
-    const Icon = isCard ? CreditCard : Landmark;
-    return (
-      <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 font-bold text-gray-950 dark:text-white"><Icon className="h-4 w-4" />{isCard ? (he ? 'חברות אשראי' : 'Credit companies') : (he ? 'חשבונות בנק' : 'Bank accounts')}</h2>
-            <p className="text-xs text-gray-500">{isCard ? t('cardsProvide') : t('banksProvide')}</p>
-          </div>
-          <button onClick={() => openConnect(null, kind)} className={cn('flex shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold text-white', isCard ? 'bg-violet-600' : 'bg-indigo-600')}>
-            <Plus className="h-3.5 w-3.5" />{isCard ? t('addCard') : t('addBank')}
-          </button>
-        </div>
-        {items.length ? items.map((conn) => <BankConnectionCard key={conn.id} conn={conn} stat={sources.find((source) => source.source === conn.bank_source)} t={t} lang={currentLanguage} onUpdateCredentials={(bank) => openConnect(bank, kind)} />) : (
-          <button onClick={() => openConnect(null, kind)} className="w-full rounded-2xl border-2 border-dashed border-gray-300 p-7 text-sm text-gray-500 dark:border-gray-700">{isCard ? t('cardSectionEmpty') : t('bankSectionEmpty')}</button>
-        )}
-      </section>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
@@ -204,7 +183,12 @@ export default function BankSyncPageV2() {
           </div>
         )}
 
-        {tab === 'accounts' && <div className="grid gap-7 lg:grid-cols-2"><ConnectionGroup kind="bank" items={groupedConnections.banks} /><ConnectionGroup kind="credit_card" items={groupedConnections.cards} /></div>}
+        {tab === 'accounts' && (
+          <div className="grid gap-7 lg:grid-cols-2">
+            <BankConnectionGroup kind="bank" items={groupedConnections.banks} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} />
+            <BankConnectionGroup kind="credit_card" items={groupedConnections.cards} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} />
+          </div>
+        )}
         {tab === 'agent' && <div className="mx-auto max-w-3xl"><SyncMethodPanel t={t} hasConnections={connections.length > 0} /></div>}
         {tab === 'help' && <div className="mx-auto max-w-3xl"><HowItWorksPanel t={t} defaultOpen /></div>}
       </main>
