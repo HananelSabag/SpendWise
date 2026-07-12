@@ -112,9 +112,10 @@ function MonthCard({ data, current, formatCurrency }) {
 export default function MonthlyAccountingSummary({ data, formatCurrency }) {
   if (!data) return null;
   return (
+    // Only the previous month here — the current summary is the salary-anchored
+    // RunwayCard above, so a second "current" card would just duplicate it.
     <section className="grid grid-cols-1 gap-4">
       <SalaryReviewPrompt formatCurrency={formatCurrency} />
-      <MonthCard data={data.current} current formatCurrency={formatCurrency} />
       <MonthCard data={data.previous} current={false} formatCurrency={formatCurrency} />
     </section>
   );

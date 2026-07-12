@@ -7,6 +7,22 @@
 export default {
   title: "Dashboard",
   overview: "Overview",
+  runway: {
+    currentTitle: "Current cycle",
+    inChecking: "in checking",
+    balanceUnavailable: "Balance unavailable",
+    sinceSalary: "Since paycheck · {{date}}",
+    byMonth: "By month",
+    spentSince: "Spent since",
+    incomeExSalary: "Income (excl. salary)",
+    pending: "Pending",
+    dailyAvgSpent: "Avg spend/day",
+    daysInCycle: "{{n}} days in cycle",
+    salaryReceived: "Salary received",
+    dailyHistory: "Daily history",
+    needsSalary: "No salary detected yet — mark it to anchor the cycle to your payday.",
+    fallbackNote: "Showing by calendar month until there's a prior salary to anchor on.",
+  },
   welcome: {
     goodMorning: "Good morning, {{name}}! 🌅",
     goodAfternoon: "Good afternoon, {{name}}! ☀️",
