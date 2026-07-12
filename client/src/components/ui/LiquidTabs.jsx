@@ -25,11 +25,14 @@ export default function LiquidTabs({
   className = '',
   size = 'md',
   fill = false,
+  mobileCompact = false,
 }) {
   // Unique per instance so two LiquidTabs on one page don't share (and fight
   // over) the same animated indicator.
   const layoutId = useId();
-  const pad = SIZES[size] || SIZES.md;
+  const pad = mobileCompact && size === 'sm'
+    ? 'px-1.5 py-1.5 text-[11px] sm:px-3 sm:text-xs'
+    : (SIZES[size] || SIZES.md);
 
   return (
     <div
@@ -54,7 +57,8 @@ export default function LiquidTabs({
             aria-selected={isActive}
             onClick={() => onChange?.(tab.id)}
             className={cn(
-              'relative flex items-center justify-center gap-1.5 rounded-xl font-semibold transition-colors focus:outline-none',
+              'relative flex items-center justify-center rounded-xl font-semibold transition-colors focus:outline-none',
+              mobileCompact ? 'gap-0.5 sm:gap-1.5' : 'gap-1.5',
               pad,
               // fill → shrink to share the row (min-w-0 lets the label truncate
               // instead of forcing a scroll). Non-fill → size to content.
@@ -71,7 +75,7 @@ export default function LiquidTabs({
                 className="absolute inset-0 rounded-xl bg-indigo-600 shadow-sm shadow-indigo-500/30"
               />
             )}
-            {Icon && <Icon className="relative z-10 h-4 w-4 shrink-0" />}
+            {Icon && <Icon className={cn('relative z-10 shrink-0', mobileCompact ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-4 w-4')} />}
             <span className={cn('relative z-10', fill ? 'truncate' : 'whitespace-nowrap')}>{tab.label}</span>
           </button>
         );

@@ -28,6 +28,8 @@ export default function BankAccountRow({ account, connectionId, t, lang, hideBal
       queryClient.invalidateQueries({ queryKey: ['bankSyncStats'] });
       queryClient.invalidateQueries({ queryKey: ['bankConnections'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['transactionMonths'] });
+      queryClient.invalidateQueries({ queryKey: ['salaryReview'] });
     },
     onError: (err) => toast.error(err?.message || t('loadError')),
   });

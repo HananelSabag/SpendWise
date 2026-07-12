@@ -459,6 +459,12 @@ monthly expense.
 - Boundary coverage includes Israel-local month selection across UTC/DST, year
   rollover and leap February. `transactions.date` remains the factual SQL `DATE`;
   `transaction_datetime` preserves the source instant separately.
+- A disabled bank account/card is absent from Dashboard totals, Runway cycles,
+  calendar accounting, salary setup/review and available-month navigation. Its
+  already-stored ledger rows remain read-only history and reappear if re-enabled.
+- Current and previous Runway/month summaries must be derived from one immutable
+  query snapshot per engine; duplicate client requests may not recompute the same
+  monthly overview or multiply database connection groups.
 
 ## 16. Definition of done
 

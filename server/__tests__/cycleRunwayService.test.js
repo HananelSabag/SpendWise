@@ -1,4 +1,8 @@
-const { buildDailyHistory, buildProjection } = require('../services/cycleRunwayService');
+const {
+  buildCycleFromData,
+  buildDailyHistory,
+  buildProjection,
+} = require('../services/cycleRunwayService');
 
 const row = (overrides = {}) => ({
   id: 1,
@@ -71,5 +75,38 @@ describe('cycle runway daily history', () => {
     expect(projection.projectedCheckingBalance).toBe(9500);
     expect(projection.isPlanningOnly).toBe(true);
     expect(current.checkingBalance).toBe(2500);
+  });
+
+  test('derives current and previous cycles from one shared ledger snapshot', () => {
+    const data = {
+      rows: [
+        row({ id: 1, date: '2026-06-09', type: 'income', description: 'SALARY', amount: 9000 }),
+        row({ id: 2, date: '2026-06-10', amount: 100 }),
+        row({ id: 3, date: '2026-07-09', type: 'income', description: 'SALARY', amount: 10000 }),
+        row({ id: 4, date: '2026-07-10', amount: 50 }),
+      ],
+      salarySignatures: [{
+        id: 1,
+        bank_source: 'leumi',
+        bank_account_number: 'bank',
+        normalized_description: 'salary',
+        month_offset: -1,
+      }],
+      accounts: [{ bank_source: 'leumi', account_number: 'bank', balance: 2500, enabled: true }],
+      transactionOverrides: [],
+    };
+
+    const current = buildCycleFromData(data, 0);
+    const previous = buildCycleFromData(data, -1);
+
+    expect(current).toEqual(expect.objectContaining({
+      anchor: 'salary', cycleStart: '2026-07-09', checkingBalance: 2500,
+    }));
+    expect(current.money).toEqual(expect.objectContaining({ salaryInWindow: 10000, spentCommitted: 50 }));
+    expect(previous).toEqual(expect.objectContaining({
+      anchor: 'salary', cycleStart: '2026-06-09', checkingBalance: null,
+    }));
+    expect(previous.money).toEqual(expect.objectContaining({ salaryInWindow: 9000, spentCommitted: 100 }));
+    expect(data.rows).toHaveLength(4);
   });
 });

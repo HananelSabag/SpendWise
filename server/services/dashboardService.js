@@ -18,7 +18,7 @@ const { Transaction } = require('../models/Transaction');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 const { computeAvailablePeriodOffsets } = require('../utils/calendarPeriodAvailability');
-const { buildMonth } = require('./monthlyAccountingService');
+const { buildMonth, buildOverview: buildMonthlyOverview } = require('./monthlyAccountingService');
 const { buildDashboardClassifierWidgets } = require('./dashboardClassifierWidgetsService');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
@@ -387,10 +387,12 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     await Transaction.getAvailableMonths(userId, 36),
   );
   const minOffset = Math.min(...availableOffsets);
-  const [monthly, classifierWidgets] = await Promise.all([
-    buildMonth(userId, period.offset),
+  const [monthlyResult, classifierWidgets] = await Promise.all([
+    period.offset === 0 ? buildMonthlyOverview(userId) : buildMonth(userId, period.offset),
     buildDashboardClassifierWidgets(userId, periodStart, periodEnd),
   ]);
+  const monthlyAccounting = period.offset === 0 ? monthlyResult : null;
+  const monthly = monthlyAccounting?.current || monthlyResult;
 
   summary.total_income = monthly.income.actual;
   summary.total_expenses = monthly.spending.committed;
@@ -425,6 +427,7 @@ async function buildDashboardData(userId, requestedOffset = 0) {
     // Exact classifier-backed composition for the selected calendar month.
     // This prevents historical explanations from accidentally using today.
     selectedAccounting: monthly,
+    monthlyAccounting,
     categoryBreakdown,
     bankCosts,
     recurringPatterns,

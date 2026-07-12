@@ -129,15 +129,23 @@ function buildDailyHistory(rows, context, cycleStart, cycleEndExclusive) {
  *   -1 = previous cycle (prior salary → last salary), etc.
  * @returns {Promise<object>}
  */
-async function buildCycle(userId, offset = 0) {
+async function loadCycleData(userId) {
   const [txnResult, signatureResult, balanceResult, overridesResult] = await Promise.all([
     // 150 days is enough to hold the last few salary cycles for anchoring.
     db.query(
       `SELECT ${SELECT_COLUMNS}
-         FROM transactions
-        WHERE user_id = $1 AND deleted_at IS NULL
-          AND date >= (CURRENT_DATE - INTERVAL '150 days')
-        ORDER BY date, id`,
+         FROM transactions t
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+          AND t.date >= (CURRENT_DATE - INTERVAL '150 days')
+          AND (t.bank_source IS NULL OR NOT EXISTS (
+            SELECT 1
+              FROM bank_accounts ba_filter
+             WHERE ba_filter.user_id = t.user_id
+               AND ba_filter.bank_source = t.bank_source
+               AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+               AND ba_filter.enabled = false
+          ))
+        ORDER BY t.date, t.id`,
       [userId],
     ),
     db.query('SELECT * FROM salary_signatures WHERE user_id = $1 AND active = true', [userId]),
@@ -149,20 +157,29 @@ async function buildCycle(userId, offset = 0) {
     db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
   ]);
 
-  const rows = txnResult.rows;
+  return {
+    rows: txnResult.rows,
+    salarySignatures: signatureResult.rows,
+    accounts: balanceResult.rows,
+    transactionOverrides: overridesResult.rows,
+  };
+}
+
+function buildCycleFromData(data, offset = 0) {
+  const rows = data.rows;
   const connectedCardSources = [...new Set(
-    balanceResult.rows.filter((a) => a.enabled && institutionKind(a.bank_source) === 'credit_card')
+    data.accounts.filter((a) => a.enabled && institutionKind(a.bank_source) === 'credit_card')
       .map((a) => a.bank_source),
   )];
   const context = {
-    salarySignatures: signatureResult.rows,
+    salarySignatures: data.salarySignatures,
     debitCardAccounts: deriveDebitCardAccounts(rows),
     connectedCardSources,
-    transactionOverrides: overridesResult.rows,
+    transactionOverrides: data.transactionOverrides,
   };
 
   // Real checking balance = enabled bank-kind accounts only (cards never have one).
-  const bankAccounts = balanceResult.rows.filter((a) => a.enabled && institutionKind(a.bank_source) === 'bank');
+  const bankAccounts = data.accounts.filter((a) => a.enabled && institutionKind(a.bank_source) === 'bank');
   const knownBalances = bankAccounts.filter((a) => a.balance !== null && a.balance !== undefined);
   const checkingBalance = knownBalances.length
     ? round2(knownBalances.reduce((s, a) => s + Number(a.balance), 0)) : null;
@@ -186,7 +203,7 @@ async function buildCycle(userId, offset = 0) {
   } else {
     // Not enough salary history to anchor this cycle → calendar-month fallback.
     anchor = 'calendar_fallback';
-    needsSalarySetup = signatureResult.rows.length === 0;
+    needsSalarySetup = data.salarySignatures.length === 0;
     const period = getCalendarPeriod(offset);
     cycleStart = period.start;
     cycleEnd = offset === 0 ? nextDay(today) : period.end;
@@ -236,6 +253,10 @@ async function buildCycle(userId, offset = 0) {
     dailyHistory,
     needsReview: totals.needsReview,
   };
+}
+
+async function buildCycle(userId, offset = 0) {
+  return buildCycleFromData(await loadCycleData(userId), offset);
 }
 
 function nextDay(key) {
@@ -300,13 +321,23 @@ function buildProjection(current, rawSettings = {}) {
 }
 
 async function buildRunwayOverview(userId) {
-  const [current, previous, preferencesResult] = await Promise.all([
-    buildCycle(userId, 0),
-    buildCycle(userId, -1),
+  // Load ledger/context once, then derive both cycles from the same immutable
+  // snapshot. The previous implementation loaded four query groups per cycle
+  // in parallel, needlessly doubling DB connections on every dashboard visit.
+  const [cycleData, preferencesResult] = await Promise.all([
+    loadCycleData(userId),
     db.query('SELECT preferences FROM users WHERE id=$1', [userId]),
   ]);
+  const current = buildCycleFromData(cycleData, 0);
+  const previous = buildCycleFromData(cycleData, -1);
   const settings = preferencesResult.rows[0]?.preferences?.runway_projection || {};
   return { current, previous, projection: buildProjection(current, settings), timezone: TZ };
 }
 
-module.exports = { buildCycle, buildRunwayOverview, buildDailyHistory, buildProjection };
+module.exports = {
+  buildCycle,
+  buildCycleFromData,
+  buildRunwayOverview,
+  buildDailyHistory,
+  buildProjection,
+};

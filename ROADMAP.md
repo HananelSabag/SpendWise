@@ -233,6 +233,30 @@ Still intentionally separate from core stabilization:
 - Trusted Windows code-signing certificate and signed release ZIPs. The active
   Default Worker is current, but existing distribution ZIPs remain untouched.
 
+### 2026-07-12 pre-Loans closure audit
+
+- Bank Sync Overview is now an actionable control center: overall health, next
+  automatic sync, last completed sync, connected sources, included-account scope,
+  latest imports, source-level status and a direct route to account management.
+- Account/card toggles now drive every financial engine consistently: Dashboard,
+  Runway, calendar-month accounting, salary discovery/review and available-month
+  navigation. Turning a source off stops future imports and excludes its saved
+  rows from totals while retaining the historical ledger for audit/re-enable.
+- Runway loads one immutable ledger snapshot and derives both current and previous
+  salary cycles from it. Monthly accounting likewise reuses one snapshot for the
+  current/previous summaries, and Dashboard no longer requests the same monthly
+  overview through a duplicate endpoint.
+- Protected deep-links now preserve their original path through login. Refreshing
+  or opening `/bank-sync` and `/insights` no longer lands an admin on `/admin`.
+- The current balance hero already lists multiple enabled bank accounts separately,
+  totals only real bank balances, and never treats credit-company activity as cash.
+- Mobile Bank Sync tabs fit on a 390px viewport without horizontal scrolling or
+  truncated labels; the personal-computer section is named `Agent` / `סוכן`.
+
+The pre-Loans product/accounting scope is now closed. Two distribution/brand items
+remain externally gated rather than application defects: approved trademark logo
+assets, and a publicly trusted Windows code-signing identity for release ZIPs.
+
 ---
 
 ## 4. Edge cases & decisions

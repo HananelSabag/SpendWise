@@ -56,22 +56,22 @@ function economicMonthKey(row, classification) {
   return ym;
 }
 
-async function buildMonth(userId, offset = 0) {
-  const period = monthForOffset(offset);
-  const nextMonth = addMonthKey(period.month, 1);
-
-  // Window: the month itself, one before (debit/statement context) and up to two
-  // after (salary attributed back from a later month, and its settlement).
-  const windowStart = `${addMonthKey(period.month, -1)}-01`;
-  const windowEnd = `${addMonthKey(period.month, 3)}-01`;
-
+async function loadAccountingData(userId, windowStart, windowEnd) {
   const [txnResult, signatureResult, cardAccountResult, debitScopeResult, overridesResult] = await Promise.all([
     db.query(
       `SELECT ${SELECT_COLUMNS}
-         FROM transactions
-        WHERE user_id = $1 AND deleted_at IS NULL
-          AND date >= $2 AND date < $3
-        ORDER BY date, id`,
+         FROM transactions t
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+          AND t.date >= $2 AND t.date < $3
+          AND (t.bank_source IS NULL OR NOT EXISTS (
+            SELECT 1
+              FROM bank_accounts ba_filter
+             WHERE ba_filter.user_id = t.user_id
+               AND ba_filter.bank_source = t.bank_source
+               AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+               AND ba_filter.enabled = false
+          ))
+        ORDER BY t.date, t.id`,
       [userId, windowStart, windowEnd],
     ),
     db.query('SELECT * FROM salary_signatures WHERE user_id = $1 AND active = true', [userId]),
@@ -84,20 +84,48 @@ async function buildMonth(userId, offset = 0) {
     // last-4 in the memo, and that memo may fall in a different month than the one
     // being viewed. Deriving it globally keeps classification stable per month.
     db.query(
-      `SELECT bank_source, bank_account_number, type, description, notes
-         FROM transactions
-        WHERE user_id = $1 AND deleted_at IS NULL
-          AND (bank_source = ANY($2::text[]) OR description LIKE '%דביט%')`,
+      `SELECT t.bank_source, t.bank_account_number, t.type, t.description, t.notes
+         FROM transactions t
+        WHERE t.user_id = $1 AND t.deleted_at IS NULL
+          AND (t.bank_source = ANY($2::text[]) OR t.description LIKE '%דביט%')
+          AND (t.bank_source IS NULL OR NOT EXISTS (
+            SELECT 1
+              FROM bank_accounts ba_filter
+             WHERE ba_filter.user_id = t.user_id
+               AND ba_filter.bank_source = t.bank_source
+               AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+               AND ba_filter.enabled = false
+          ))`,
       [userId, CARD_SOURCES],
     ),
     db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
   ]);
 
-  const windowRows = txnResult.rows;
-  const context = {
+  return {
+    rows: txnResult.rows,
     salarySignatures: signatureResult.rows,
-    debitCardAccounts: deriveDebitCardAccounts(debitScopeResult.rows),
+    connectedCardSources: cardAccountResult.rows.map((row) => row.bank_source),
+    debitScopeRows: debitScopeResult.rows,
     transactionOverrides: overridesResult.rows,
+  };
+}
+
+function buildMonthFromData(data, offset = 0) {
+  const period = monthForOffset(offset);
+  const nextMonth = addMonthKey(period.month, 1);
+  // Window: the month itself, one before (debit/statement context) and up to two
+  // after (salary attributed back from a later month, and its settlement).
+  const windowStart = `${addMonthKey(period.month, -1)}-01`;
+  const windowEnd = `${addMonthKey(period.month, 3)}-01`;
+
+  const windowRows = data.rows.filter((row) => {
+    const key = dateKey(row.date);
+    return key && key >= windowStart && key < windowEnd;
+  });
+  const context = {
+    salarySignatures: data.salarySignatures,
+    debitCardAccounts: deriveDebitCardAccounts(data.debitScopeRows),
+    transactionOverrides: data.transactionOverrides,
   };
 
   // Rows whose ECONOMIC month is this period (salary shifted by its offset).
@@ -117,7 +145,7 @@ async function buildMonth(userId, offset = 0) {
 
   // Card spend: itemized when a card of that company is connected, else a
   // clearly-labelled bank-settlement fallback (spec §2.3), never both.
-  const connectedCardSources = new Set(cardAccountResult.rows.map((row) => row.bank_source));
+  const connectedCardSources = new Set(data.connectedCardSources);
   const fallbackCardSpend = !period.isCurrent ? round2(windowRows
     .filter((row) => {
       const key = dateKey(row.date);
@@ -190,13 +218,27 @@ async function buildMonth(userId, offset = 0) {
   };
 }
 
+async function buildMonth(userId, offset = 0) {
+  const period = monthForOffset(offset);
+  const windowStart = `${addMonthKey(period.month, -1)}-01`;
+  const windowEnd = `${addMonthKey(period.month, 3)}-01`;
+  return buildMonthFromData(await loadAccountingData(userId, windowStart, windowEnd), offset);
+}
+
 function round2(value) {
   return Math.round(((Number(value) || 0) + Number.EPSILON) * 100) / 100;
 }
 
 async function buildOverview(userId) {
-  const [previous, current] = await Promise.all([buildMonth(userId, -1), buildMonth(userId, 0)]);
+  const currentPeriod = monthForOffset(0);
+  // Previous and current windows overlap almost completely. Load one immutable
+  // snapshot instead of opening two identical five-query groups in parallel.
+  const windowStart = `${addMonthKey(currentPeriod.month, -2)}-01`;
+  const windowEnd = `${addMonthKey(currentPeriod.month, 3)}-01`;
+  const data = await loadAccountingData(userId, windowStart, windowEnd);
+  const previous = buildMonthFromData(data, -1);
+  const current = buildMonthFromData(data, 0);
   return { previous, current, timezone: TZ };
 }
 
-module.exports = { buildMonth, buildOverview, monthForOffset };
+module.exports = { buildMonth, buildMonthFromData, buildOverview, monthForOffset };

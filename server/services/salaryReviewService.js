@@ -74,10 +74,18 @@ async function loadReviewData(userId) {
   const [rowsResult, signaturesResult, overridesResult] = await Promise.all([
     db.query(
       `SELECT ${SELECT_COLUMNS}
-         FROM transactions
-        WHERE user_id=$1 AND deleted_at IS NULL AND type='income'
-          AND date >= CURRENT_DATE - INTERVAL '180 days'
-        ORDER BY date, id`,
+         FROM transactions t
+        WHERE t.user_id=$1 AND t.deleted_at IS NULL AND t.type='income'
+          AND t.date >= CURRENT_DATE - INTERVAL '180 days'
+          AND (t.bank_source IS NULL OR NOT EXISTS (
+            SELECT 1
+              FROM bank_accounts ba_filter
+             WHERE ba_filter.user_id = t.user_id
+               AND ba_filter.bank_source = t.bank_source
+               AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+               AND ba_filter.enabled = false
+          ))
+        ORDER BY t.date, t.id`,
       [userId],
     ),
     db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true', [userId]),

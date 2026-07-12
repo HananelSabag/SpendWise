@@ -57,6 +57,14 @@ const transactionController = {
         AND t.bank_source IS NOT NULL
         AND NOT (t.bank_source = ANY($2::text[]))
         AND NOT (t.description ~* $3)
+        AND NOT EXISTS (
+          SELECT 1
+            FROM bank_accounts ba_filter
+           WHERE ba_filter.user_id = t.user_id
+             AND ba_filter.bank_source = t.bank_source
+             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+             AND ba_filter.enabled = false
+        )
         AND t.date >= CURRENT_DATE - INTERVAL '90 days'
       ORDER BY
         t.bank_source,
@@ -76,9 +84,17 @@ const transactionController = {
     const candidate = await db.query(`
       SELECT id, bank_source, bank_account_number, description,
         LOWER(REGEXP_REPLACE(TRIM(description), '\\s+', ' ', 'g')) AS normalized_description
-      FROM transactions
-      WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL AND type='income'
-        AND bank_source IS NOT NULL AND NOT (bank_source = ANY($3::text[]))
+      FROM transactions t
+      WHERE t.id=$1 AND t.user_id=$2 AND t.deleted_at IS NULL AND t.type='income'
+        AND t.bank_source IS NOT NULL AND NOT (t.bank_source = ANY($3::text[]))
+        AND NOT EXISTS (
+          SELECT 1
+            FROM bank_accounts ba_filter
+           WHERE ba_filter.user_id = t.user_id
+             AND ba_filter.bank_source = t.bank_source
+             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+             AND ba_filter.enabled = false
+        )
       LIMIT 1
     `, [transactionId, req.user.id, CREDIT_CARD_SOURCES]);
     if (!candidate.rows[0]) {

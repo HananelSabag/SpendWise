@@ -208,9 +208,17 @@ class Transaction {
   static async getAvailableMonths(userId, limit = 36) {
     try {
       const result = await db.query(
-        `SELECT DISTINCT TO_CHAR(date, 'YYYY-MM') AS month
-         FROM transactions
-         WHERE user_id = $1 AND deleted_at IS NULL
+        `SELECT DISTINCT TO_CHAR(t.date, 'YYYY-MM') AS month
+         FROM transactions t
+         WHERE t.user_id = $1 AND t.deleted_at IS NULL
+           AND (t.bank_source IS NULL OR NOT EXISTS (
+             SELECT 1
+               FROM bank_accounts ba_filter
+              WHERE ba_filter.user_id = t.user_id
+                AND ba_filter.bank_source = t.bank_source
+                AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+                AND ba_filter.enabled = false
+           ))
          ORDER BY month DESC
          LIMIT $2`,
         [userId, limit],

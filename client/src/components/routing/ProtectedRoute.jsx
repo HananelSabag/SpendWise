@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth, useTranslation } from '../../stores';
 import TopProgressBar from '../common/TopProgressBar.jsx';
 
@@ -7,6 +7,7 @@ export const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = f
   const { isAuthenticated, isLoading, user, isAdmin, isSuperAdmin } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Loading state: keep route area light and non-blocking
   if (isLoading) {
@@ -20,7 +21,13 @@ export const ProtectedRoute = ({ children, adminOnly = false, superAdminOnly = f
 
   // Not authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: { pathname: location.pathname, search: location.search } }}
+      />
+    );
   }
 
   // Check super admin permission

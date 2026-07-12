@@ -53,16 +53,15 @@ export const useDashboard = ({ periodOffset = 0 } = {}) => {
     enabled: isAuthenticated && !!getAccessToken(),
     queryFn: async () => {
       if (!getAccessToken()) return null;
-      const [legacy, monthly, cycle] = await Promise.all([
+      const [legacy, cycle] = await Promise.all([
         api.transactions.getDashboardData({ periodOffset }),
-        api.transactions.getMonthlyAccounting(),
         api.transactions.getCycleRunway(),
       ]);
       if (!legacy.success) throw new Error(legacy.error?.message || 'Failed to fetch dashboard data');
       const raw = legacy.data?.data ?? legacy.data;
       return {
         ...raw,
-        monthlyAccounting: monthly.success ? monthly.data : null,
+        monthlyAccounting: raw.monthlyAccounting || null,
         runway: cycle.success ? cycle.data : null,
       };
     },

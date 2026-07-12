@@ -194,7 +194,7 @@ ZIP bundles.
 
 - [x] Every dashboard widget must consume the same selected calendar month and refresh after
       sync via query invalidation/hooks; remove duplicate dashboard requests/cards.
-- [ ] Hero balance: if one bank, show it clearly; if multiple banks/accounts, show
+- [x] Hero balance: if one bank, show it clearly; if multiple banks/accounts, show
       each separately and a total bank balance. Credit companies never have balance.
 - [x] Keep the exact selected range visible (`from → to`) and explain “so far”.
 - [x] Decide whether connected-bank management belongs on Dashboard; avoid repeating
@@ -220,7 +220,9 @@ ZIP bundles.
 - [x] Personal Agent deserves its own complete tab, not a small mixed card.
 - [x] Fix Agent tab lag and scroll-jump-to-bottom bug.
 - [x] Help/onboarding gets its own clear tab/content.
-- [ ] Polish each tab body and add real bank/credit-company logos from local assets.
+- [x] Polish every Bank Sync tab body; Overview is a useful health/scope/actions
+      center and Accounts owns per-account/card inclusion toggles.
+- [ ] Add real bank/credit-company logos only from approved local trademark assets.
 - [x] Remove `billing_cycle_day` from application UX, code and production schema.
 
 ### P2 — General Agent distribution

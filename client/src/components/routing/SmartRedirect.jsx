@@ -1,15 +1,15 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../stores';
+import { resolveAuthReturnPath } from '../../utils/authReturnPath';
 
 // Used only at /login and /register for admin deep-links
 export const SmartRedirect = () => {
-  const { user } = useAuth();
   const location = useLocation();
 
-  // Admin deep-link: if admin was redirected to /login from an admin route, send back there
-  if (user?.isAdmin && location.state?.from?.startsWith('/admin')) {
-    return <Navigate to={location.state.from} replace />;
+  const returnPath = resolveAuthReturnPath(location.state?.from);
+  // Preserve any safe protected deep-link, for admins and regular users alike.
+  if (returnPath !== '/') {
+    return <Navigate to={returnPath} replace />;
   }
 
   // Everything else goes to "/" which handles home preference logic

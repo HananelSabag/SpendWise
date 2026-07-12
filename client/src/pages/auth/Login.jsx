@@ -24,6 +24,7 @@ import { api, authAPI } from '../../api';
 import { takePendingGoogleCredential } from '../../services/simpleGoogleAuth';
 import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
+import { resolveAuthReturnPath } from '../../utils/authReturnPath';
 
 const Login = () => {
   const { login, isAuthenticated, googleLogin } = useAuth();
@@ -57,7 +58,7 @@ const Login = () => {
   // Redirect if already authenticated (handles page-reload-while-logged-in case)
   useEffect(() => {
     if (isAuthenticated && !navigatingRef.current) {
-      const from = location.state?.from?.pathname || '/';
+      const from = resolveAuthReturnPath(location.state?.from);
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
@@ -105,7 +106,7 @@ const Login = () => {
         // Let the isAuthenticated effect handle navigation so the button spinner
         // stays visible until the component actually unmounts.
         navigatingRef.current = true;
-        const from = location.state?.from?.pathname || '/';
+        const from = resolveAuthReturnPath(location.state?.from);
         navigate(from, { replace: true });
       } else {
         setIsSubmitting(false);
@@ -212,7 +213,7 @@ const Login = () => {
         // Belt-and-suspenders: also navigate here in case the effect fired
         // before setUser updated the store.
         navigatingRef.current = true;
-        const from = location.state?.from?.pathname || '/';
+        const from = resolveAuthReturnPath(location.state?.from);
         navigate(from, { replace: true });
       } else {
         const code   = result.error?.code || '';
