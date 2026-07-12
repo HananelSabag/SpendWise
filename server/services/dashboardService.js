@@ -15,16 +15,17 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   const period = getCalendarPeriod(requestedOffset);
   const { start, end } = period;
 
+  // Each financial builder already loads a small parallel snapshot. Run those
+  // snapshots in bounded phases so one dashboard request cannot burst past the
+  // Supabase session-pool limit when other app instances are also connected.
+  const calendarActivity = await buildCalendarActivity(userId, period.offset);
+  const classifierWidgets = await buildDashboardClassifierWidgets(userId, start, end);
   const [
-    calendarActivity,
-    classifierWidgets,
     recentTransactions,
     balancesResult,
     perAccountResult,
     availableMonths,
   ] = await Promise.all([
-    buildCalendarActivity(userId, period.offset),
-    buildDashboardClassifierWidgets(userId, start, end),
     Transaction.getRecentForPeriod(userId, start, end, 10),
     db.query(`
       SELECT bank_source,
