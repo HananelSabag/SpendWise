@@ -13,6 +13,7 @@ const { INSTITUTIONS } = require('../config/institutions');
 const { buildDashboardData } = require('../services/dashboardService');
 const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAccountingService');
 const { buildRunwayOverview } = require('../services/cycleRunwayService');
+const { buildSalaryReview, saveSalaryReview } = require('../services/salaryReviewService');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
@@ -80,6 +81,16 @@ const transactionController = {
       RETURNING id, bank_source, bank_account_number, display_description, month_offset
     `, [req.user.id, row.bank_source, row.bank_account_number, row.normalized_description, row.description, row.id]);
     res.status(201).json({ success: true, data: saved.rows[0] });
+  }),
+
+  getSalaryReview: asyncHandler(async (req, res) => {
+    const data = await buildSalaryReview(req.user.id);
+    res.json({ success: true, data });
+  }),
+
+  updateSalaryReview: asyncHandler(async (req, res) => {
+    const data = await saveSalaryReview(req.user.id, req.body?.decisions);
+    res.json({ success: true, data });
   }),
 
   getMonthlyAccounting: asyncHandler(async (req, res) => {

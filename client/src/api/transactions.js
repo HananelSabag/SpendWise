@@ -189,6 +189,24 @@ const transactionAPI = {
     }
   },
 
+  async getSalaryReview() {
+    try {
+      const response = await apiClient.client.get('/transactions/salary-review');
+      return { success: true, data: response.data?.data || { conflicts: [] } };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
+  async updateSalaryReview(decisions) {
+    try {
+      const response = await apiClient.client.put('/transactions/salary-review', { decisions });
+      return { success: true, data: response.data?.data || { conflicts: [] } };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
   // NOTE: removed dead methods (0 callers, verified 2026-07-03):
   //   getSummary, getCategoryBreakdown, search, getBalanceDetails,
   //   getBalanceHistory, createExpense, createIncome — their server routes

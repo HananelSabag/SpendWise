@@ -139,6 +139,18 @@ function matchesTransactionSignature(txn, signatures) {
     && normalizeDescription(s.normalized_description || s.display_description || s.description) === desc) || null;
 }
 
+function transactionOverride(txn, overrides) {
+  if (!overrides) return null;
+  if (overrides instanceof Map) return overrides.get(Number(txn.id)) || overrides.get(String(txn.id)) || null;
+  if (Array.isArray(overrides)) return overrides.find((item) => Number(item.transaction_id) === Number(txn.id)) || null;
+  return overrides[txn.id] || overrides[String(txn.id)] || null;
+}
+
+function monthKeyFromOverride(value) {
+  const match = String(value || '').match(/^(\d{4}-\d{2})/);
+  return match ? match[1] : null;
+}
+
 /**
  * Classify one transaction row. Pure — returns a new object, never mutates.
  *
@@ -173,6 +185,7 @@ function classifyTransaction(txn, context = {}) {
   const financingPattern = context.financingPattern || LOAN_DISBURSE_DESC;
   const securityPattern = context.securityPattern || SECURITY_DESC;
   const installment = isCard ? installmentPosition(txn) : null;
+  const override = transactionOverride(txn, context.transactionOverrides);
 
   const base = {
     id: txn.id,
@@ -236,6 +249,28 @@ function classifyTransaction(txn, context = {}) {
   // 3. Bank rows.
   if (isBank) {
     if (type === 'income') {
+      if (override?.classification === 'salary') {
+        return { ...base, economicRole: 'income', sourceRole: 'bank_primary', settlementRole: 'none',
+          calendarInclusion: 'include', direction: 'income', salary: true,
+          economicMonth: monthKeyFromOverride(override.economic_month), confidence: 'high',
+          reason: 'salary (user-reviewed transaction override)' };
+      }
+      if (override?.classification === 'bonus' || override?.classification === 'other') {
+        return { ...base, economicRole: 'income', sourceRole: 'bank_primary', settlementRole: 'none',
+          calendarInclusion: 'include', direction: 'income', salary: false,
+          economicMonth: monthKeyFromOverride(override.economic_month), confidence: 'high',
+          reason: `${override.classification} (user-reviewed transaction override)` };
+      }
+      if (override?.classification === 'financing') {
+        return { ...base, economicRole: 'loan', sourceRole: 'bank_primary', settlementRole: 'none',
+          calendarInclusion: 'exclude', direction: 'neutral', confidence: 'high',
+          reason: 'financing (user-reviewed transaction override)' };
+      }
+      if (override?.classification === 'transfer') {
+        return { ...base, economicRole: 'transfer', sourceRole: 'bank_primary', settlementRole: 'none',
+          calendarInclusion: 'exclude', direction: 'neutral', confidence: 'high',
+          reason: 'transfer (user-reviewed transaction override)' };
+      }
       // A user-confirmed salary signature (or an explicit stored ledger class)
       // ALWAYS wins over a text-pattern guess. This is what lets a former
       // employer's salary (job change) be recognised as real income once marked —
@@ -468,6 +503,7 @@ module.exports = {
   isDebitCardRow,
   matchesSalarySignature,
   matchesTransactionSignature,
+  transactionOverride,
   regexTest,
   BANK_SETTLEMENT_DESCRIPTORS,
   DEBIT_CARD_DESC,

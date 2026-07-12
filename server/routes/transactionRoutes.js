@@ -65,6 +65,16 @@ router.post('/salary-signatures',
   transactionController.createSalarySignature
 );
 
+router.get('/salary-review',
+  getSummaryLimiter,
+  transactionController.getSalaryReview
+);
+
+router.put('/salary-review',
+  createTransactionLimiter,
+  transactionController.updateSalaryReview
+);
+
 
 /**
  * Transaction Query Routes

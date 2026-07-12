@@ -49,6 +49,7 @@ function addMonthKey(ym, n) {
 
 /** Economic month a row belongs to: salary is attributed by its signature offset. */
 function economicMonthKey(row, classification) {
+  if (classification.economicMonth) return classification.economicMonth;
   const key = dateKey(row.date);
   const ym = key ? key.slice(0, 7) : 'unknown';
   if (classification.salary) return addMonthKey(ym, Number.isInteger(classification.monthOffset) ? classification.monthOffset : -1);
@@ -64,7 +65,7 @@ async function buildMonth(userId, offset = 0) {
   const windowStart = `${addMonthKey(period.month, -1)}-01`;
   const windowEnd = `${addMonthKey(period.month, 3)}-01`;
 
-  const [txnResult, signatureResult, cardAccountResult, debitScopeResult] = await Promise.all([
+  const [txnResult, signatureResult, cardAccountResult, debitScopeResult, overridesResult] = await Promise.all([
     db.query(
       `SELECT ${SELECT_COLUMNS}
          FROM transactions
@@ -89,12 +90,14 @@ async function buildMonth(userId, offset = 0) {
           AND (bank_source = ANY($2::text[]) OR description LIKE '%דביט%')`,
       [userId, CARD_SOURCES],
     ),
+    db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
   ]);
 
   const windowRows = txnResult.rows;
   const context = {
     salarySignatures: signatureResult.rows,
     debitCardAccounts: deriveDebitCardAccounts(debitScopeResult.rows),
+    transactionOverrides: overridesResult.rows,
   };
 
   // Rows whose ECONOMIC month is this period (salary shifted by its offset).

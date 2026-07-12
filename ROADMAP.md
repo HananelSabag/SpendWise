@@ -83,7 +83,7 @@ Everything date-based sits on this.
   description, local date, statement date and status instead of freezing the
   first version forever.
 
-### C. 🔜 Salary identity + income classification integration
+### C. ✅ Salary identity + income classification integration
 - First sync (~32d) → ask once: *"Which of these income transactions is your salary?"*
   Store a **signature** (normalized description + account). Match future salaries by
   **description**, not date (robust to weekends/holidays, job changes, net+30).
@@ -102,8 +102,14 @@ Everything date-based sits on this.
   + reconciliation engine (not the old regex). Salary attributed by signature
   offset. Debit-card identity derived from all history. Verified on production:
   June income 13,497.66 / committed 15,476.89 / net −1,979.23; July committed
-  8,066.74. 167/167 server tests pass. Remaining: the "two same-description
-  incomes → bonus?" prompt.
+  8,066.74. 171/171 server tests pass.
+- **2026-07-12 duplicate-income review complete:** when the same confirmed
+  employer produces multiple deposits for one economic month, the dashboard asks
+  the user to classify every deposit as salary, bonus/addition or other income.
+  Decisions are stored as auditable records in `transaction_month_overrides`; a bonus remains
+  real income in the selected work month but no longer creates a false salary
+  anchor for Runway. Explicitly confirming both as salaries also resolves the
+  prompt without silently guessing.
 
 ### D. 🧊 Loans sector + scraper upgrade (separate, large)
 - israeli-bank-scrapers returns only txns for Leumi/Max/Cal — **no loan metadata**

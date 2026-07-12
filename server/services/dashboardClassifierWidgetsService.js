@@ -108,7 +108,7 @@ function buildWidgets(periodRows, historyRows, context) {
 }
 
 async function buildDashboardClassifierWidgets(userId, periodStart, periodEnd) {
-  const [rowsResult, signaturesResult, accountsResult] = await Promise.all([
+  const [rowsResult, signaturesResult, accountsResult, overridesResult] = await Promise.all([
     db.query(
       `SELECT ${SELECT_COLUMNS}, COALESCE(ba.enabled, true) AS account_enabled
          FROM transactions t
@@ -122,6 +122,7 @@ async function buildDashboardClassifierWidgets(userId, periodStart, periodEnd) {
     ),
     db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true', [userId]),
     db.query('SELECT bank_source, account_number, enabled FROM bank_accounts WHERE user_id=$1', [userId]),
+    db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
   ]);
   const enabledRows = rowsResult.rows.filter((row) => row.bank_source == null || row.account_enabled !== false);
   const connectedCardSources = [...new Set(accountsResult.rows
@@ -131,16 +132,17 @@ async function buildDashboardClassifierWidgets(userId, periodStart, periodEnd) {
     salarySignatures: signaturesResult.rows,
     debitCardAccounts: deriveDebitCardAccounts(enabledRows),
     connectedCardSources,
+    transactionOverrides: overridesResult.rows,
   };
   const periodMonth = periodStart.slice(0, 7);
   const periodRows = enabledRows.filter((row) => {
     const key = dateKey(row.date);
     if (!key) return false;
     const classification = classifyTransaction(row, context);
-    const economicMonth = classification.salary
+    const economicMonth = classification.economicMonth || (classification.salary
       ? addMonthKey(key.slice(0, 7), Number.isInteger(classification.monthOffset)
         ? classification.monthOffset : -1)
-      : key.slice(0, 7);
+      : key.slice(0, 7));
     return economicMonth === periodMonth;
   });
   return buildWidgets(periodRows, enabledRows, context);

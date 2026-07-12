@@ -2,6 +2,7 @@ import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle2, Clock3, Loader2 } from 'lucide-react';
 import { api } from '../../../api';
+import SalaryReviewPrompt from './SalaryReviewPrompt';
 
 const STATUS = {
   open: ['חודש פתוח', Clock3, 'text-blue-600 bg-blue-50 dark:bg-blue-950/30'],
@@ -112,6 +113,7 @@ export default function MonthlyAccountingSummary({ data, formatCurrency }) {
   if (!data) return null;
   return (
     <section className="grid grid-cols-1 gap-4">
+      <SalaryReviewPrompt formatCurrency={formatCurrency} />
       <MonthCard data={data.current} current formatCurrency={formatCurrency} />
       <MonthCard data={data.previous} current={false} formatCurrency={formatCurrency} />
     </section>

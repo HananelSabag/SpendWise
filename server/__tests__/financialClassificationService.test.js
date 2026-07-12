@@ -82,6 +82,23 @@ describe('financial classification', () => {
       .toMatchObject({ economicRole: 'unknown', calendarInclusion: 'needs_review' });
   });
 
+  test('a reviewed bonus remains income but no longer creates a salary anchor', () => {
+    const context = {
+      salarySignatures: [{
+        id: 1, bank_source: 'leumi', bank_account_number: '797-43483_78',
+        normalized_description: 'acme salary', month_offset: -1,
+      }],
+      transactionOverrides: [{
+        transaction_id: 7, classification: 'bonus', economic_month: '2026-06-01',
+      }],
+    };
+    expect(classifyTransaction(row({ id: 7, type: 'income', description: 'ACME SALARY' }), context))
+      .toMatchObject({
+        economicRole: 'income', salary: false, direction: 'income',
+        economicMonth: '2026-06', calendarInclusion: 'include',
+      });
+  });
+
   test('refunds reduce card spend and pending affects committed, not actual', () => {
     const summary = summarizeCalendar([
       row({ id: 1, bank_source: 'max', bank_account_number: '2254', amount: 100 }),

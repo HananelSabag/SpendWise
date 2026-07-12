@@ -126,7 +126,7 @@ function buildDailyHistory(rows, context, cycleStart, cycleEndExclusive) {
  * @returns {Promise<object>}
  */
 async function buildCycle(userId, offset = 0) {
-  const [txnResult, signatureResult, balanceResult] = await Promise.all([
+  const [txnResult, signatureResult, balanceResult, overridesResult] = await Promise.all([
     // 150 days is enough to hold the last few salary cycles for anchoring.
     db.query(
       `SELECT ${SELECT_COLUMNS}
@@ -142,6 +142,7 @@ async function buildCycle(userId, offset = 0) {
          FROM bank_accounts WHERE user_id = $1`,
       [userId],
     ),
+    db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
   ]);
 
   const rows = txnResult.rows;
@@ -153,6 +154,7 @@ async function buildCycle(userId, offset = 0) {
     salarySignatures: signatureResult.rows,
     debitCardAccounts: deriveDebitCardAccounts(rows),
     connectedCardSources,
+    transactionOverrides: overridesResult.rows,
   };
 
   // Real checking balance = enabled bank-kind accounts only (cards never have one).
