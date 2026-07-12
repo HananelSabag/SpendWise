@@ -1,5 +1,6 @@
 import React from 'react';
-import { Wallet, TrendingDown, TrendingUp, Clock3, AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Wallet, TrendingDown, TrendingUp, Clock3, ArrowLeft, History } from 'lucide-react';
 
 /**
  * RunwayCard — the salary-anchored "how am I doing since my last paycheck" view.
@@ -29,6 +30,7 @@ function Stat({ label, value, tone, Icon, formatCurrency }) {
 export default function RunwayCard({ data, formatCurrency }) {
   const cycle = data?.current;
   if (!cycle) return null;
+  const previous = data?.previous;
 
   const { money, checkingBalance, salaryDate, daysElapsed, anchor, needsSalarySetup } = cycle;
   const balanceKnown = checkingBalance !== null && checkingBalance !== undefined;
@@ -61,6 +63,18 @@ export default function RunwayCard({ data, formatCurrency }) {
         <span>{daysElapsed} ימים במחזור</span>
         {money.salaryInWindow > 0 && <span>משכורת שנכנסה: {formatCurrency(money.salaryInWindow)}</span>}
       </div>
+
+      {previous && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2.5 text-[11px] dark:bg-gray-800/60">
+          <span className="flex items-center gap-1.5 text-gray-500">
+            <History className="h-3.5 w-3.5" />
+            במחזור הקודם יצא {formatCurrency(previous.money.spentCommitted)} · {formatCurrency(previous.dailyAverage.spent)} ליום
+          </span>
+          <Link to="/insights" className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300">
+            היסטוריה יומית <ArrowLeft className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
       {anchor === 'calendar_fallback' && (
         <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-700 dark:bg-amber-950/25 dark:text-amber-300">

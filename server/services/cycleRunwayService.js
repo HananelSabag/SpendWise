@@ -45,6 +45,79 @@ function daysBetween(startKey, endKey) {
 }
 
 /**
+ * Daily economic flow for a salary cycle. This deliberately uses the same
+ * classifier as the headline totals: settlements and debit enrichment copies
+ * disappear, pending spend is committed but not actual, and salary stays
+ * visible without inflating income-since-salary.
+ */
+function buildDailyHistory(rows, context, cycleStart, cycleEndExclusive) {
+  const byDate = new Map();
+  let cursor = cycleStart;
+  let guard = 0;
+  while (cursor < cycleEndExclusive && guard < 370) {
+    byDate.set(cursor, {
+      date: cursor,
+      spentActual: 0,
+      spentCommitted: 0,
+      spentPending: 0,
+      incomeExSalary: 0,
+      salaryIncome: 0,
+      netExSalaryActual: 0,
+      netExSalaryCommitted: 0,
+      transactionCount: 0,
+      needsReviewCount: 0,
+    });
+    cursor = nextDay(cursor);
+    guard += 1;
+  }
+
+  for (const row of rows) {
+    const key = dateKey(row.date);
+    const day = key ? byDate.get(key) : null;
+    if (!day) continue;
+    const classification = classifyTransaction(row, context);
+    const amount = Math.abs(Number(row.amount) || 0);
+    if (classification.calendarInclusion === 'needs_review') {
+      day.needsReviewCount += 1;
+      continue;
+    }
+    if (classification.calendarInclusion !== 'include') continue;
+
+    day.transactionCount += 1;
+    if (classification.direction === 'spend') {
+      day.spentCommitted += amount;
+      if (!classification.pending) day.spentActual += amount;
+    } else if (classification.direction === 'refund') {
+      day.spentCommitted -= amount;
+      if (!classification.pending) day.spentActual -= amount;
+    } else if (classification.direction === 'income') {
+      if (classification.salary) day.salaryIncome += amount;
+      else day.incomeExSalary += amount;
+    }
+  }
+
+  let cumulativeSpent = 0;
+  let cumulativeIncome = 0;
+  return [...byDate.values()].map((day) => {
+    day.spentActual = round2(day.spentActual);
+    day.spentCommitted = round2(day.spentCommitted);
+    day.spentPending = round2(day.spentCommitted - day.spentActual);
+    day.incomeExSalary = round2(day.incomeExSalary);
+    day.salaryIncome = round2(day.salaryIncome);
+    day.netExSalaryActual = round2(day.incomeExSalary - day.spentActual);
+    day.netExSalaryCommitted = round2(day.incomeExSalary - day.spentCommitted);
+    cumulativeSpent = round2(cumulativeSpent + day.spentCommitted);
+    cumulativeIncome = round2(cumulativeIncome + day.incomeExSalary);
+    return {
+      ...day,
+      cumulativeSpent,
+      cumulativeIncome,
+      cumulativeNetExSalary: round2(cumulativeIncome - cumulativeSpent),
+    };
+  });
+}
+
+/**
  * Build a salary-anchored cycle for a user.
  *
  * @param {number} userId
@@ -118,6 +191,7 @@ async function buildCycle(userId, offset = 0) {
     return k && k >= cycleStart && k < cycleEnd;
   });
   const { totals } = summarizeCalendar(windowRows, context);
+  const dailyHistory = buildDailyHistory(windowRows, context, cycleStart, cycleEnd);
 
   const lastDay = offset === 0 ? today : prevDay(cycleEnd);
   const daysElapsed = daysBetween(cycleStart, offset === 0 ? nextDay(today) : cycleEnd);
@@ -153,6 +227,7 @@ async function buildCycle(userId, offset = 0) {
       spent: round2(spentCommitted / daysElapsed),
       income: round2(incomeExSalary / daysElapsed),
     },
+    dailyHistory,
     needsReview: totals.needsReview,
   };
 }
@@ -168,9 +243,64 @@ function prevDay(key) {
   return d.toISOString().slice(0, 10);
 }
 
-async function buildRunwayOverview(userId) {
-  const [current, previous] = await Promise.all([buildCycle(userId, 0), buildCycle(userId, -1)]);
-  return { current, previous, timezone: TZ };
+function addMonth(key) {
+  if (!key) return null;
+  const [year, month, day] = key.split('-').map(Number);
+  const target = new Date(Date.UTC(year, month, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(day, lastDay));
+  return target.toISOString().slice(0, 10);
 }
 
-module.exports = { buildCycle, buildRunwayOverview };
+function buildProjection(current, rawSettings = {}) {
+  const settings = {
+    enabled: rawSettings?.enabled === true,
+    expectedSalary: Number(rawSettings?.expectedSalary) > 0 ? round2(rawSettings.expectedSalary) : null,
+    expectedSalaryDate: dateKey(rawSettings?.expectedSalaryDate),
+    expectedCharge: Number(rawSettings?.expectedCharge) > 0 ? round2(rawSettings.expectedCharge) : null,
+    expectedChargeDate: dateKey(rawSettings?.expectedChargeDate),
+    expectedChargeLabel: String(rawSettings?.expectedChargeLabel || '').trim().slice(0, 80),
+  };
+  const suggestedSalary = current.money.salaryInWindow > 0
+    ? { amount: current.money.salaryInWindow, date: addMonth(current.salaryDate) }
+    : null;
+  const expectedSalary = settings.enabled
+    ? {
+      amount: settings.expectedSalary || suggestedSalary?.amount || 0,
+      date: settings.expectedSalaryDate || suggestedSalary?.date || null,
+      source: settings.expectedSalary ? 'manual' : 'last_salary',
+    }
+    : null;
+  const expectedCharge = settings.enabled && settings.expectedCharge
+    ? {
+      amount: settings.expectedCharge,
+      date: settings.expectedChargeDate,
+      label: settings.expectedChargeLabel || 'Expected charge',
+    }
+    : null;
+  const canProject = settings.enabled && current.checkingBalance !== null;
+  const projectedCheckingBalance = canProject
+    ? round2(current.checkingBalance + (expectedSalary?.amount || 0) - (expectedCharge?.amount || 0))
+    : null;
+  return {
+    settings,
+    suggestedSalary,
+    expectedSalary,
+    expectedCharge,
+    projectedCheckingBalance,
+    factsAsOf: current.lastDay,
+    isPlanningOnly: true,
+  };
+}
+
+async function buildRunwayOverview(userId) {
+  const [current, previous, preferencesResult] = await Promise.all([
+    buildCycle(userId, 0),
+    buildCycle(userId, -1),
+    db.query('SELECT preferences FROM users WHERE id=$1', [userId]),
+  ]);
+  const settings = preferencesResult.rows[0]?.preferences?.runway_projection || {};
+  return { current, previous, projection: buildProjection(current, settings), timezone: TZ };
+}
+
+module.exports = { buildCycle, buildRunwayOverview, buildDailyHistory, buildProjection };

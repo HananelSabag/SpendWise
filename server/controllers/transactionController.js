@@ -96,6 +96,53 @@ const transactionController = {
     const data = await buildRunwayOverview(req.user.id);
     res.json({ success: true, data });
   }),
+
+  updateCycleProjection: asyncHandler(async (req, res) => {
+    const input = req.body || {};
+    const amount = (value, field) => {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000000) {
+        const error = new Error(`${field} must be between 0 and 100,000,000`);
+        error.statusCode = 400;
+        throw error;
+      }
+      return Math.round((parsed + Number.EPSILON) * 100) / 100;
+    };
+    const date = (value, field) => {
+      if (!value) return null;
+      const text = String(value);
+      const parsed = new Date(`${text}T00:00:00Z`);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)
+        || Number.isNaN(parsed.getTime())
+        || parsed.toISOString().slice(0, 10) !== text) {
+        const error = new Error(`${field} must be a valid YYYY-MM-DD date`);
+        error.statusCode = 400;
+        throw error;
+      }
+      return text;
+    };
+    const settings = {
+      enabled: input.enabled === true,
+      expectedSalary: amount(input.expectedSalary, 'expectedSalary'),
+      expectedSalaryDate: date(input.expectedSalaryDate, 'expectedSalaryDate'),
+      expectedCharge: amount(input.expectedCharge, 'expectedCharge'),
+      expectedChargeDate: date(input.expectedChargeDate, 'expectedChargeDate'),
+      expectedChargeLabel: String(input.expectedChargeLabel || '').trim().slice(0, 80),
+    };
+    const result = await db.query(`
+      UPDATE users
+         SET preferences = jsonb_set(
+           COALESCE(preferences, '{}'::jsonb),
+           '{runway_projection}',
+           $2::jsonb,
+           true
+         ), updated_at=NOW()
+       WHERE id=$1
+       RETURNING preferences->'runway_projection' AS settings
+    `, [req.user.id, JSON.stringify(settings)]);
+    res.json({ success: true, data: result.rows[0]?.settings || settings });
+  }),
   /**
    * Get dashboard data: financial-period summary, category/pattern
    * breakdown, bank costs, per-institution activity, recent transactions.

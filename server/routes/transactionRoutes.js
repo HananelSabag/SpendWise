@@ -49,6 +49,12 @@ router.get('/cycle',
   transactionController.getCycleRunway
 );
 
+router.put('/cycle/projection',
+  createTransactionLimiter,
+  routeLogger('CYCLE_PROJECTION'),
+  transactionController.updateCycleProjection
+);
+
 router.get('/salary-candidates',
   getSummaryLimiter,
   transactionController.getSalaryCandidates

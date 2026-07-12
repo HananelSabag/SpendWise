@@ -14,13 +14,15 @@ import SourcesOverview from '../components/features/dashboard/SourcesOverview';
 import BankCosts from '../components/features/dashboard/BankCosts';
 import ModernTransactionCard from '../components/features/transactions/ModernTransactionCard';
 import BrandMark from '../components/common/BrandMark';
+import DailyFlowHistory from '../components/features/insights/DailyFlowHistory';
+import RunwayProjectionPlanner from '../components/features/insights/RunwayProjectionPlanner';
 
 export default function InsightsPage() {
   const navigate = useNavigate();
   const { currentLanguage, t } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
   const { periodOffset, setPeriodOffset } = useFinancialPeriodSelection();
-  const { data, isLoading } = useDashboard({ periodOffset });
+  const { data, isLoading, refresh } = useDashboard({ periodOffset });
   const he = currentLanguage === 'he';
 
   const periodTransactions = useQuery({
@@ -56,6 +58,8 @@ export default function InsightsPage() {
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-5 lg:px-8">
         <FinancialPeriodNavigator period={data?.period} periodOffset={periodOffset} onPeriodOffsetChange={setPeriodOffset} />
         <PeriodSummary dashboardData={data} formatCurrency={formatCurrency} t={t} />
+        <DailyFlowHistory runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} />
+        <RunwayProjectionPlanner runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} onSaved={refresh} />
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SpendingBreakdown categoryBreakdown={data?.categoryBreakdown || []} formatCurrency={formatCurrency} t={t} />

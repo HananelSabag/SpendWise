@@ -43,6 +43,9 @@ Layered, not one number:
 - **UX wave:** LiquidTabs (Profile/BankSync fit one row, Admin scrolls), Help center
   split from onboarding, onboarding mobile-cutoff fix, transaction detail sheet,
   FAB → Insights, localization, valid-period bound.
+- **Worker distribution cleanup (2026-07-12):** one self-contained personal
+  Windows edition with pairing, bundled Node/Chrome and a clean release ZIP;
+  Hananel's managed Default Worker keeps its private operator profile outside Git.
 - Historical note: cycle day was temporarily used as a workaround. The new model
   is calendar-month only and the obsolete column is removed after deployment.
 
@@ -99,7 +102,7 @@ Everything date-based sits on this.
   + reconciliation engine (not the old regex). Salary attributed by signature
   offset. Debit-card identity derived from all history. Verified on production:
   June income 13,497.66 / committed 15,476.89 / net −1,979.23; July committed
-  8,066.74. 161/161 server tests pass. Remaining: the "two same-description
+  8,066.74. 167/167 server tests pass. Remaining: the "two same-description
   incomes → bonus?" prompt.
 
 ### D. 🧊 Loans sector + scraper upgrade (separate, large)
@@ -140,7 +143,7 @@ Everything date-based sits on this.
   salary attribution matches the selected accounting month; generic settlements,
   loans, cash and fees no longer masquerade as recurring merchants.
 
-### G. 🔜 Runway / daily-balance cycle (the "coveted number")
+### G. ✅ Runway / daily-balance cycle (the "coveted number")
 The number Hananel wanted since day one: salary-to-salary, "since my last paycheck
 how much left the checking, and how am I doing." A separate lens from the calendar
 month; anchored on the SALARY date (the refill), not the 1st.
@@ -155,9 +158,13 @@ month; anchored on the SALARY date (the refill), not the 1st.
   guess. גלש"ן (previous employer) marked as salary (signature id 2) → recognised
   as income, attributed to its work month; June income unchanged (13,497.66) and it
   gave the 09/06 anchor for the previous runway cycle.
-- **Next:** projection toggle (expected salary + a manual expected-charge for the
-  "salary on the 1st, card charge on the 15th, no connected card" case), and the
-  per-day in/out history in Insights.
+- **2026-07-12 DONE (history + planning):** every salary cycle now exposes a
+  classifier-backed daily ledger (actual/committed out, non-salary income,
+  salary, pending, cumulative net and review count), including empty days.
+  Insights renders current/previous cycles as a daily chart and ledger. An
+  explicitly opt-in planning layer stores an expected salary and one manual
+  expected charge in user preferences, shows a separately labelled projected
+  checking balance, and never changes factual transactions or accounting totals.
 - Edge case handled: an unconnected card company's bank charge counts as real spend
   (not just reconciliation) — the classifier takes `connectedCardSources`.
 
