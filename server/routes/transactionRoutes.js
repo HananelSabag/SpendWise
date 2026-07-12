@@ -36,6 +36,12 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
+router.get('/calendar-month-summary',
+  getSummaryLimiter,
+  routeLogger('CALENDAR_MONTH_SUMMARY'),
+  transactionController.getCalendarMonthSummary
+);
+
 router.get('/monthly-accounting',
   getSummaryLimiter,
   routeLogger('MONTHLY_ACCOUNTING'),

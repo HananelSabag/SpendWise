@@ -10,6 +10,7 @@ import { RefreshCw } from 'lucide-react';
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useFinancialCycle } from '../hooks/useFinancialCycle';
+import { useCalendarMonthSummary } from '../hooks/useCalendarMonthSummary';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
 import { PageSkeleton } from '../components/ui';
@@ -58,16 +59,22 @@ export default function ModernDashboard() {
     isError,
     isRefetching,
     refresh: refreshDashboard,
-  } = useDashboard({ periodOffset });
+  } = useDashboard();
+  const {
+    data: calendarMonth,
+    isFetching: isCalendarFetching,
+    isError: isCalendarError,
+    refetch: refreshCalendarMonth,
+  } = useCalendarMonthSummary(periodOffset);
   const { data: financialCycle } = useFinancialCycle();
 
   const greeting = useGreeting(user, t);
   const handleRefresh = useCallback(async () => {
-    const result = await refreshDashboard();
+    const [result] = await Promise.all([refreshDashboard(), refreshCalendarMonth()]);
     if (!result.success) {
       addNotification({ type: 'error', message: t('refreshError'), duration: 4000 });
     }
-  }, [refreshDashboard, addNotification, t]);
+  }, [refreshDashboard, refreshCalendarMonth, addNotification, t]);
 
   const { pull, refreshing } = usePullToRefresh(handleRefresh, isMobile);
 
@@ -111,8 +118,10 @@ export default function ModernDashboard() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)] lg:gap-6">
             <CalendarActivityCard
-              activity={dashboardData.calendarActivity}
+              summary={calendarMonth}
               formatCurrency={formatCurrency}
+              isFetching={isCalendarFetching}
+              isError={isCalendarError}
               canPrevious={dashboardData.period?.availableOffsets?.includes(periodOffset - 1)}
               canNext={periodOffset < 0 && dashboardData.period?.availableOffsets?.includes(periodOffset + 1)}
               onPrevious={() => setPeriodOffset((value) => value - 1)}

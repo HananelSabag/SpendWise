@@ -3,6 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export const FINANCIAL_QUERY_ROOTS = [
   'dashboard',
+  'calendar-month-summary',
+  'financial-cycle',
   'bankSyncStats',
   'bankBalances',
   'transactions',

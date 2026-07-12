@@ -11,6 +11,7 @@ const logger = require('../utils/logger');
 const db = require('../config/db');
 const { INSTITUTIONS } = require('../config/institutions');
 const { buildDashboardData } = require('../services/dashboardService');
+const { getCalendarMonthSummary } = require('../services/calendarMonthSummaryService');
 const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAccountingService');
 const { buildRunwayOverview } = require('../services/cycleRunwayService');
 const { buildSalaryReview, saveSalaryReview } = require('../services/salaryReviewService');
@@ -201,6 +202,12 @@ const transactionController = {
       logger.error('Dashboard data fetch failed', { userId, error: error.message });
       throw error;
     }
+  }),
+
+  /** Exact posted transaction totals for one selected calendar month. */
+  getCalendarMonthSummary: asyncHandler(async (req, res) => {
+    const data = await getCalendarMonthSummary(req.user.id, req.query.periodOffset);
+    res.json({ success: true, data });
   }),
 
   /**

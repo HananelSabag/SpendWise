@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import transactionAPI from '../api/transactions';
 import { getAccessToken } from '../auth/tokenStorage';
@@ -18,12 +18,13 @@ export function useFinancialCycle() {
       if (!result.success) throw new Error(result.error?.message || 'Failed to load financial cycle');
       return result.data;
     },
+    placeholderData: keepPreviousData,
     ...queryConfigs.dashboard,
   });
   const { refetch } = query;
   const refresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey });
-    return refetch();
+    await queryClient.invalidateQueries({ queryKey, refetchType: 'none' });
+    return refetch({ cancelRefetch: false });
   }, [queryClient, queryKey, refetch]);
   return { ...query, refresh };
 }

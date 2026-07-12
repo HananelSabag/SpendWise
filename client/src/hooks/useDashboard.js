@@ -38,20 +38,17 @@ const EMPTY_DASHBOARD = {
   isEmpty: true,
 };
 
-export const useDashboard = ({ periodOffset = 0 } = {}) => {
+export const useDashboard = () => {
   const { isAuthenticated, user } = useAuthStore();
   const queryClient = useQueryClient();
-  const queryKey = useMemo(
-    () => ['dashboard', user?.id, periodOffset],
-    [user?.id, periodOffset]
-  );
+  const queryKey = useMemo(() => ['dashboard', user?.id], [user?.id]);
 
   const dashboardQuery = useQuery({
     queryKey,
     enabled: isAuthenticated && !!getAccessToken(),
     queryFn: async () => {
       if (!getAccessToken()) return null;
-      const result = await api.transactions.getDashboardData({ periodOffset });
+      const result = await api.transactions.getDashboardData();
       if (!result.success) throw new Error(result.error?.message || 'Failed to fetch dashboard data');
       return result.data?.data ?? result.data;
     },

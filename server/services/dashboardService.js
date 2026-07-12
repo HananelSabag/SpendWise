@@ -8,20 +8,17 @@ const { Transaction } = require('../models/Transaction');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 const { computeAvailablePeriodOffsets } = require('../utils/calendarPeriodAvailability');
-const { buildCalendarActivity } = require('./calendarActivityService');
 
 async function buildDashboardData(userId, requestedOffset = 0) {
   const period = getCalendarPeriod(requestedOffset);
   const { start, end } = period;
 
   const [
-    calendarActivity,
     recentTransactions,
     balancesResult,
     perAccountResult,
     availableMonths,
   ] = await Promise.all([
-    buildCalendarActivity(userId, period.offset),
     Transaction.getRecentForPeriod(userId, start, end, 10),
     db.query(`
       SELECT bank_source,
@@ -105,27 +102,29 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   }).sort((a, b) => b.expenses - a.expenses);
 
   const availableOffsets = computeAvailablePeriodOffsets(availableMonths);
+  const totalIncome = roundAccounts(sources, 'income');
+  const totalExpenses = roundAccounts(sources, 'expenses');
   const summary = {
-    total_transactions: calendarActivity.transactionCount,
-    total_income: calendarActivity.bankCashFlow.income,
-    total_expenses: calendarActivity.bankCashFlow.expenses,
-    net_balance: calendarActivity.bankCashFlow.net,
+    total_transactions: sources.reduce((sum, source) => sum + source.count, 0),
+    total_income: totalIncome,
+    total_expenses: totalExpenses,
+    net_balance: Math.round(((totalIncome - totalExpenses) + Number.EPSILON) * 100) / 100,
   };
 
   return {
     period: {
-      ...calendarActivity.period,
+      ...period,
       minOffset: Math.min(...availableOffsets),
       availableOffsets,
     },
     summary,
-    calendarActivity,
+    calendarActivity: null,
     categoryBreakdown: [],
     bankCosts: { feesInterest: 0, loanPayments: 0, cashWithdrawn: 0, cashWithdrawalCount: 0 },
     recurringPatterns: [],
     sources,
     recent_transactions: recentTransactions,
-    metadata: { generated_at: new Date().toISOString(), model: 'raw_bank_cash_flow_v1' },
+    metadata: { generated_at: new Date().toISOString(), model: 'dashboard_shell_v1' },
   };
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useDeferredValue, useState, useTransition } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,7 +16,9 @@ export default function InsightsPage() {
   const { formatCurrency } = useCurrency();
   const { data: runway, isLoading, isFetching, refresh } = useFinancialCycle();
   const [selected, setSelected] = useState('current');
-  const cycle = runway?.[selected];
+  const [isSwitching, startTransition] = useTransition();
+  const deferredSelected = useDeferredValue(selected);
+  const cycle = runway?.[deferredSelected];
 
   if (isLoading && !runway) return <div className="min-h-screen animate-pulse bg-gray-50 dark:bg-gray-950" />;
 
@@ -34,18 +36,20 @@ export default function InsightsPage() {
       <main className="mx-auto max-w-6xl space-y-4 px-4 py-5 lg:px-8">
         <div className="inline-flex rounded-2xl bg-gray-200/70 p-1 dark:bg-gray-800">
           {['current', 'previous'].map((key) => (
-            <button key={key} type="button" onClick={() => setSelected(key)} aria-pressed={selected === key} className={`rounded-xl px-4 py-2 text-xs font-bold transition ${selected === key ? 'bg-white text-indigo-600 shadow-sm dark:bg-gray-700 dark:text-indigo-300' : 'text-gray-500'}`}>{t(key === 'current' ? 'cycleDashboard.current' : 'cycleDashboard.previous')}</button>
+            <button key={key} type="button" onClick={() => startTransition(() => setSelected(key))} aria-pressed={selected === key} className={`rounded-xl px-4 py-2 text-xs font-bold transition ${selected === key ? 'bg-white text-indigo-600 shadow-sm dark:bg-gray-700 dark:text-indigo-300' : 'text-gray-500'}`}>{t(key === 'current' ? 'cycleDashboard.current' : 'cycleDashboard.previous')}</button>
           ))}
         </div>
 
+        <div className="contents" aria-busy={isSwitching}>
         <FinancialCycleSummary cycle={cycle} formatCurrency={formatCurrency} />
         <div className="grid gap-4 lg:grid-cols-2">
           <CardBillingCycles cycles={cycle?.cardBillingCycles || []} formatCurrency={formatCurrency} />
-          {selected === 'current' ? <RunwayProjectionPlanner runway={runway} formatCurrency={formatCurrency} onSaved={refresh} /> : (
+          {deferredSelected === 'current' ? <RunwayProjectionPlanner runway={runway} formatCurrency={formatCurrency} onSaved={refresh} /> : (
             <section className="rounded-3xl border border-gray-200 bg-white p-5 text-sm text-gray-500 shadow-sm dark:border-gray-800 dark:bg-gray-900">{t('cycleDashboard.closedCycle')}</section>
           )}
         </div>
-        <DailyFlowHistory runway={runway} selectedCycle={selected} formatCurrency={formatCurrency} language={currentLanguage} />
+        <DailyFlowHistory runway={runway} selectedCycle={deferredSelected} formatCurrency={formatCurrency} language={currentLanguage} />
+        </div>
       </main>
     </div>
   );
