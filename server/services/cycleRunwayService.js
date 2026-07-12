@@ -23,7 +23,11 @@
 const db = require('../config/db');
 const { INSTITUTIONS, institutionKind } = require('../config/institutions');
 const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
-const { classifyTransaction, summarizeCalendar } = require('./financialClassificationService');
+const {
+  classifyTransaction,
+  summarizeCalendar,
+  withoutSupersededPendingBankRows,
+} = require('./financialClassificationService');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
 
 const CARD_SOURCES = Object.entries(INSTITUTIONS).filter(([, x]) => x.kind === 'credit_card').map(([x]) => x);
@@ -71,7 +75,7 @@ function buildDailyHistory(rows, context, cycleStart, cycleEndExclusive) {
     guard += 1;
   }
 
-  for (const row of rows) {
+  for (const row of withoutSupersededPendingBankRows(rows)) {
     const key = dateKey(row.date);
     const day = key ? byDate.get(key) : null;
     if (!day) continue;

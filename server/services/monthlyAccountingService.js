@@ -161,6 +161,7 @@ async function buildMonth(userId, offset = 0) {
     income: { actual: actualIncome, salaryActual: totals.salaryIncome, other: totals.otherIncome },
     spending: {
       bankDirect,
+      bankDirectPending: totals.bankDirectPending,
       cardPosted,
       cardPending,
       manual,

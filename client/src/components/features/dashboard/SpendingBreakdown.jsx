@@ -17,7 +17,7 @@ const COLORS = [
   "#64748b",
 ];
 
-const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t }) => {
+const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t, periodLabel }) => {
   const data = useMemo(() => {
     const all = categoryBreakdown || [];
     const total = all.reduce((s, c) => s + Math.abs(Number(c.amount) || 0), 0);
@@ -52,11 +52,14 @@ const SpendingBreakdown = ({ categoryBreakdown, formatCurrency, t }) => {
 
   return (
     <div className="glass-card rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="mb-3 flex items-start gap-2">
         <PieIcon className="w-4 h-4 text-violet-500 dark:text-violet-400" />
-        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-          {t("breakdown.title", { fallback: "Spending by type" })}
-        </h3>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+            {t("breakdown.title", { fallback: "Spending by category" })}
+          </h3>
+          {periodLabel && <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">{periodLabel}</p>}
+        </div>
       </div>
       <div className="space-y-2.5">
         {data.map(({ name, source, amount, pct, color }) => (

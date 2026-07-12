@@ -169,7 +169,7 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       CARD_SETTLEMENT_SOURCE_PATTERNS.visa_cal,
       CARD_SETTLEMENT_SOURCE_PATTERNS.max,
     ]),
-    Transaction.getRecentForPeriod(userId, periodStart, periodEnd, CREDIT_CARD_SOURCES, 10),
+    Transaction.getRecentForPeriod(userId, periodStart, periodEnd, 10),
     db.query(`
       WITH scoped AS (
         SELECT
@@ -442,6 +442,9 @@ async function buildDashboardData(userId, requestedOffset = 0) {
       minOffset,
     },
     summary,
+    // Exact classifier-backed composition for the selected calendar month.
+    // This prevents historical explanations from accidentally using today.
+    selectedAccounting: monthly,
     categoryBreakdown,
     bankCosts,
     recurringPatterns,

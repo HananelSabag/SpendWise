@@ -243,4 +243,29 @@ ZIP bundles.
 - When you stop or hit usage limits, update `ROADMAP.md` and this file with exact
   commits, production state, database actions and the next unchecked item.
 
+## 2026-07-12 stabilization handoff update
+
+Fresh provider and production-DB evidence was captured without rewriting or
+deleting any financial row. Leumi job 167, Max job 168 and Visa Cal job 163 form
+the consistent snapshot at `2026-07-12T13:43:15.817Z`.
+
+The newly observed Leumi `פריסה לתשלומים` +₪12,805.22 movement is classified as
+financing proceeds and excluded from earned income. Its exact settlement offset
+is reconciliation-only. The separate pending `פרעון הלוואה` −₪1,046.45 remains
+committed bank-direct spending. The dedicated Loans section is deliberately still
+deferred because the RAW data does not expose principal, term, remaining balance,
+or payment position.
+
+July 1–12 production truth after the code changes is: bank completed ₪2,258.13 +
+bank pending ₪1,500.45 + card posted ₪4,714.51 + card pending ₪700.00 = committed
+₪9,173.09; earned income ₪0; net −₪9,173.09. Salary runway July 9–12 is committed
+₪3,346.79, actual ₪1,146.34, pending subset ₪2,200.45, and non-salary income ₪0.
+The separate current checking balance is ₪7,241.08.
+
+Local verification before push: server 21 suites / 180 tests; client 8 files / 77
+tests; client production build; ESLint 0 errors (276 pre-existing warnings); agent
+19 tests; Windows Release worker build 0 warnings / 0 errors. No RAW scrape file,
+credential, generated bundle, ZIP, or hard-coded user audit script is included in
+the intended commits.
+
 ---

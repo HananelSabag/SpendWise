@@ -434,6 +434,27 @@ monthly expense.
 - Deleted/disabled account remains excluded.
 - Late correction reopens/recalculates a closed month.
 
+### 15.1 Stabilization edge cases verified on 2026-07-12
+
+- `פריסה לתשלומים` is financing proceeds. Exclude it from earned income and from
+  spending even when the bank exposes it as a positive transaction paired with a
+  card settlement. Do not invent principal, term, or an installment schedule.
+- A loan repayment (`פרעון הלוואה`) is bank-direct spending on its factual date;
+  pending means committed but not actual.
+- Preserve pending and completed bank rows in the immutable ledger. For derived
+  totals only, suppress a pending copy when a completed bank row matches the same
+  source, account, direction, cent amount, normalized description, and local date.
+  Do not apply this rule to credit-company itemization.
+- A final bank settlement cannot be declared mismatched while provider purchases
+  for the same statement date are pending. Report reconciliation as `partial` and
+  leave calendar spending sourced from the itemized purchase facts.
+- The committed-spending equality is exact to cents:
+  `bank completed + bank pending + card posted + card pending + manual = committed`.
+  Pending is a subset/explanation, never an additional amount on top of committed.
+- Transaction detail must retain the factual purchase date while separately
+  showing provider processed date, pending/completed state, original currency,
+  transaction kind and installment position when captured.
+
 ## 16. Definition of done
 
 - June and July can be explained transaction by transaction.

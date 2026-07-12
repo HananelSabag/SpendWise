@@ -1,31 +1,16 @@
-/** Income, expenses, and net for the selected billing-cycle window. */
+/** Income, expenses, and net for the selected calendar month. */
 
 import React from 'react';
 import { CalendarRange } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
+import { formatFinancialPeriod } from '../../../utils/financialPeriod';
 import PeriodCountingPopover from './PeriodCountingPopover';
 
-// The cycle window is a half-open range [start, end); the last day the user
-// actually sees is end − 1 (e.g. cycle day 26 → "26 Jun – 25 Jul").
-function formatCycleRange(period) {
-  if (!period?.start || !period?.end) return '';
-  const start = new Date(`${period.start}T12:00:00`);
-  const end = new Date(`${period.end}T12:00:00`);
-  end.setDate(end.getDate() - 1);
-  if (isNaN(start) || isNaN(end)) return '';
-  const fmt = new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: start.getFullYear() === end.getFullYear() ? undefined : 'numeric',
-  });
-  return `${fmt.format(start)} – ${fmt.format(end)}`;
-}
-
-export default function PeriodSummary({ dashboardData, formatCurrency, t }) {
-  const { summary, period } = dashboardData;
+export default function PeriodSummary({ dashboardData, formatCurrency, t, language = 'en' }) {
+  const { summary, period, selectedAccounting } = dashboardData;
   const net = summary.net_balance;
-  const range = formatCycleRange(period);
+  const range = formatFinancialPeriod(period, language);
 
   return (
     <section className="glass-card rounded-2xl p-4">
@@ -33,13 +18,10 @@ export default function PeriodSummary({ dashboardData, formatCurrency, t }) {
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">
             {period?.isCurrent
-              ? t('period.title', { fallback: 'This financial period' })
-              : t('period.selectedTitle', { fallback: 'Selected financial period' })}
+              ? t('period.title', { fallback: 'This calendar month' })
+              : t('period.selectedTitle', { fallback: 'Selected calendar month' })}
           </h3>
-          {/* The active cycle window is always spelled out, plus a "so far"
-              badge on the current cycle: the totals are running, not the
-              final month — a big early expense here is often last month's card
-              bill settling, so we must not let it read as "done". */}
+          {/* The selected calendar-month window is always spelled out. */}
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
             {range && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
@@ -55,11 +37,11 @@ export default function PeriodSummary({ dashboardData, formatCurrency, t }) {
           </span>
           <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
             {period?.isCurrent
-              ? t('period.runningHint', { fallback: 'Running total for this cycle — still in progress' })
-              : t('period.cashFlowHint', { fallback: 'What came in and went out inside this cycle window' })}
+              ? t('period.runningHint', { fallback: 'Calendar-month activity through today' })
+              : t('period.cashFlowHint', { fallback: 'Income and committed spending for this calendar month' })}
           </p>
         </div>
-        <PeriodCountingPopover summary={summary} formatCurrency={formatCurrency} t={t} />
+        <PeriodCountingPopover accounting={selectedAccounting} formatCurrency={formatCurrency} t={t} />
       </div>
 
       <div className="grid grid-cols-3 gap-3">

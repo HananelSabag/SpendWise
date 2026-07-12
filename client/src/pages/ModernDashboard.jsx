@@ -1,6 +1,6 @@
 /**
  * ModernDashboard — one responsive financial home. Every card consumes the
- * same dashboard payload and selected billing-cycle window.
+ * same dashboard payload and selected calendar-month window.
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -11,6 +11,7 @@ import { useTranslation, useAuth, useCurrency, useNotifications } from '../store
 import { useDashboard } from '../hooks/useDashboard';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
+import { formatFinancialPeriod } from '../utils/financialPeriod';
 import { PageSkeleton } from '../components/ui';
 
 import BrandMark from '../components/common/BrandMark';
@@ -45,7 +46,7 @@ const useGreeting = (user, t) =>
   }, [user, t]);
 
 export default function ModernDashboard() {
-  const { t } = useTranslation('dashboard');
+  const { t, currentLanguage } = useTranslation('dashboard');
   const { user } = useAuth();
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
@@ -61,6 +62,10 @@ export default function ModernDashboard() {
   } = useDashboard({ periodOffset: 0 });
 
   const greeting = useGreeting(user, t);
+  const calendarPeriodLabel = useMemo(
+    () => formatFinancialPeriod(dashboardData?.period, currentLanguage),
+    [dashboardData?.period, currentLanguage],
+  );
 
   const handleRefresh = useCallback(async () => {
     const result = await refreshDashboard();
@@ -126,8 +131,9 @@ export default function ModernDashboard() {
                 categoryBreakdown={dashboardData.categoryBreakdown}
                 formatCurrency={formatCurrency}
                 t={t}
+                periodLabel={calendarPeriodLabel}
               />
-              <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} />
+              <BankCosts bankCosts={dashboardData.bankCosts} formatCurrency={formatCurrency} t={t} periodLabel={calendarPeriodLabel} />
             </aside>
           </div>
         </main>

@@ -33,18 +33,18 @@ const HelpCenter = ({ isOpen, onClose }) => {
   ];
 
   const pages = [
-    { icon: LayoutDashboard, title: he ? 'דשבורד' : 'Dashboard',        desc: he ? 'יתרת כל חשבון + סיכום המחזור הנוכחי' : "Each account balance + this cycle's summary", where: he ? 'טאב הבית' : 'Home tab' },
+    { icon: LayoutDashboard, title: he ? 'דשבורד' : 'Dashboard',        desc: he ? 'יתרת עו״ש + סיכום החודש הקלנדרי' : "Checking balance + this calendar month's summary", where: he ? 'טאב הבית' : 'Home tab' },
     { icon: Receipt,         title: he ? 'עסקאות' : 'Transactions',      desc: he ? 'כל העסקאות — הקש על עסקה לפרטים מלאים' : 'All transactions — tap one for full details', where: he ? 'טאב העסקאות' : 'Transactions tab' },
     { icon: Building2,       title: he ? 'סנכרון בנקים' : 'Bank Sync',   desc: he ? 'חיבור וניהול חשבונות בנק וכרטיסי אשראי' : 'Connect & manage bank + card accounts',    where: he ? 'טאב הבנק' : 'Bank tab' },
-    { icon: BarChart3,       title: he ? 'תובנות' : 'Insights',          desc: he ? 'מחזורים קודמים, דפוסים חוזרים ופילוח' : 'Past cycles, recurring patterns & breakdown', where: he ? 'תפריט ה־+' : 'The + (FAB) menu' },
+    { icon: BarChart3,       title: he ? 'תובנות' : 'Insights',          desc: he ? 'חודשים קודמים, דפוסים חוזרים ופילוח' : 'Past months, recurring patterns & breakdown', where: he ? 'תפריט ה־+' : 'The + (FAB) menu' },
     { icon: PlusCircle,      title: he ? 'הוספה מהירה' : 'Quick add',    desc: he ? 'הכנסה או הוצאה חד־פעמית' : 'A one-time income or expense',                          where: he ? 'תפריט ה־+' : 'The + (FAB)' },
     { icon: User,            title: he ? 'פרופיל' : 'Profile',           desc: he ? 'פרטים, העדפות, אבטחה וייצוא' : 'Details, preferences, security & export',            where: he ? 'טאב הפרופיל' : 'Profile tab' },
   ];
 
   const steps = [
     { icon: Building2,     title: he ? 'חברו חשבון' : 'Connect an account',   desc: he ? 'בטאב הבנק — חשבון בנק לתזרים ויתרה, חברת אשראי לפירוט קניות. או פשוט הוסיפו עסקאות ידנית.' : 'On the Bank tab — a bank account for cash flow & balance, a credit company for itemized purchases. Or just add transactions manually.' },
-    { icon: CalendarClock, title: he ? 'קבעו את יום המחזור' : 'Set your cycle day', desc: he ? 'היום בחודש שבו מתחיל המחזור הכספי שלכם (למשל יום המשכורת), כדי שהסכומים יתאימו לחודש האמיתי שלכם.' : 'The day of the month your financial cycle starts (e.g. payday), so totals match your real month.' },
-    { icon: LayoutDashboard, title: he ? 'עקבו בדשבורד' : 'Track on the dashboard', desc: he ? 'היתרות והמחזור הנוכחי תמיד מולכם. לתובנות עמוקות יותר — תפריט ה־+.' : 'Balances and the current cycle are always front and centre. For deeper insight, open the + menu.' },
+    { icon: CalendarClock, title: he ? 'בדקו את חלון המשכורת' : 'Review the salary window', desc: he ? 'החודש הקלנדרי מסכם את החשבונות; חלון משכורת־למשכורת מופיע בנפרד כדי להסביר את קצב התזרים.' : 'Calendar months summarize your accounts; the separate salary-to-salary window explains cash-flow pace.' },
+    { icon: LayoutDashboard, title: he ? 'עקבו בדשבורד' : 'Track on the dashboard', desc: he ? 'יתרת העו״ש וסיכום החודש תמיד מולכם. לתובנות עמוקות יותר — תפריט ה־+.' : 'Checking balance and the current calendar month stay front and centre. For deeper insight, open the + menu.' },
   ];
 
   const models = [

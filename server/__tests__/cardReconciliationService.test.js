@@ -64,15 +64,22 @@ describe('card reconciliation', () => {
       txn({ id: 100, bank_source: 'leumi', bank_account_number: 'bank', amount: 4734.66,
         description: 'כרטיסי אשראי-י', date: '2026-06-10', bank_processed_date: '2026-06-10',
         bank_sync_id: 'leumi:bank:987654' }),
+      txn({ id: 101, bank_source: 'leumi', bank_account_number: 'bank', amount: 2665.2,
+        description: 'כרטיסי אשראי-י', date: '2026-07-10', bank_processed_date: '2026-07-10',
+        bank_sync_id: 'leumi:bank:8547' }),
     ];
     const cal = reconcile(rows).cards[0];
     expect(cal.pending).toMatchObject({ itemizedPending: 700, count: 1 });
+    expect(cal.statements).toEqual([
+      expect.objectContaining({
+        statementDate: '2026-07-10', status: 'partial',
+        pendingCandidateTotal: 700, pendingCandidateCount: 1,
+      }),
+    ]);
     expect(cal.unmatchedBankSettlements).toEqual([
       expect.objectContaining({ amount: 4734.66, status: 'unavailable' }),
     ]);
-    expect(cal.unmatchedItemizedGroups).toEqual([
-      expect.objectContaining({ processedDate: '2026-07-10', total: 2375.7, statementLike: true }),
-    ]);
+    expect(cal.unmatchedItemizedGroups).toEqual([]);
   });
 
   test('does not mislabel a multi-row immediate batch as the monthly statement', () => {

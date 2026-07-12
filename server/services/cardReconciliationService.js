@@ -87,7 +87,7 @@ function groupItemized(items) {
   });
 }
 
-function buildStatement(pair, unknownGroup) {
+function buildStatement(pair, unknownGroup, pendingItems = []) {
   const { settlement, group } = pair;
   const unknownCandidates = unknownGroup && group
     ? unknownGroup.rows.filter(({ r }) => {
@@ -98,6 +98,12 @@ function buildStatement(pair, unknownGroup) {
     unknownCandidates.reduce((sum, { r }) => sum + economicAmount(r), 0),
   );
   const itemizedTotal = group?.total || 0;
+  const pendingCandidates = group
+    ? pendingItems.filter(({ r }) => dayDistance(r.bank_processed_date, group.processedDate) <= 3)
+    : [];
+  const pendingCandidateTotal = round2(
+    pendingCandidates.reduce((sum, { r }) => sum + economicAmount(r), 0),
+  );
   const observedTotal = round2(itemizedTotal + unprocessedCandidateTotal);
   const delta = round2(settlement.amount - observedTotal);
   let status = 'unavailable';
@@ -105,6 +111,9 @@ function buildStatement(pair, unknownGroup) {
   if (group && settlement.pending) {
     status = 'partial';
     note = 'bank settlement is pending; compare again only after the final bank amount arrives';
+  } else if (group && pendingCandidates.length) {
+    status = 'partial';
+    note = 'provider items for this statement date are still pending; both sides are not final';
   } else if (group && unknownCandidates.length) {
     status = 'partial';
     note = 'some captured purchases have no provider processed date; statement grouping is incomplete';
@@ -120,6 +129,8 @@ function buildStatement(pair, unknownGroup) {
     bankSettlement: { id: settlement.id, amount: settlement.amount, pending: settlement.pending },
     itemizedTotal,
     itemizedCount: group?.count || 0,
+    pendingCandidateTotal,
+    pendingCandidateCount: pendingCandidates.length,
     unprocessedCandidateTotal,
     unprocessedCandidateCount: unknownCandidates.length,
     observedTotal,
@@ -258,7 +269,7 @@ function reconcile(rows, context = {}) {
       status: settlement.pending ? 'partial' : 'unavailable',
       note: 'bank settlement has no captured provider group; it is not treated as a mismatch',
     }));
-    const statements = statementPairs.map((pair) => buildStatement(pair, unknownGroup));
+    const statements = statementPairs.map((pair) => buildStatement(pair, unknownGroup, pending));
     const immediate = immediatePairs.map(buildImmediate);
     const unmatchedItemizedGroups = matchableGroups.filter((g) => !usedGroups.has(g.processedDate)).map((g) => ({
       processedDate: g.processedDate, total: g.total, count: g.count,

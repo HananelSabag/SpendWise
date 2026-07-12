@@ -17,7 +17,7 @@ function fmtDate(key, language) {
     .format(new Date(`${key}T12:00:00`));
 }
 
-function Stat({ label, value, tone, Icon, formatCurrency }) {
+function Stat({ label, value, tone, Icon, formatCurrency, detail }) {
   const toneClass = tone === 'out' ? 'text-red-500' : tone === 'in' ? 'text-emerald-600' : 'text-amber-600';
   return (
     <div>
@@ -25,6 +25,7 @@ function Stat({ label, value, tone, Icon, formatCurrency }) {
         {Icon && <Icon className="h-3 w-3" />}{label}
       </p>
       <p className={`font-bold ${toneClass}`}>{formatCurrency(value)}</p>
+      {detail && <p className="mt-0.5 text-[10px] leading-snug text-amber-600 dark:text-amber-400">{detail}</p>}
     </div>
   );
 }
@@ -56,10 +57,18 @@ export default function RunwayCard({ data, formatCurrency }) {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label={t('runway.spentSince')} value={money.spentCommitted} tone="out" Icon={TrendingDown} formatCurrency={formatCurrency} />
+      <div className="grid grid-cols-2 gap-4 rounded-xl bg-gray-50/80 p-3 dark:bg-gray-800/50">
+        <Stat
+          label={t('runway.spentSince')}
+          value={money.spentCommitted}
+          tone="out"
+          Icon={TrendingDown}
+          formatCurrency={formatCurrency}
+          detail={money.spentPending > 0
+            ? t('runway.pendingIncluded', { amount: formatCurrency(money.spentPending) })
+            : null}
+        />
         <Stat label={t('runway.incomeExSalary')} value={money.incomeExSalary} tone="in" Icon={TrendingUp} formatCurrency={formatCurrency} />
-        <Stat label={t('runway.pending')} value={money.spentPending} tone="pending" formatCurrency={formatCurrency} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-gray-100 pt-3 text-[11px] text-gray-500 dark:border-gray-800">

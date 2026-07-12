@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrency, useTranslation } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useFinancialPeriodSelection } from '../hooks/useFinancialPeriodSelection';
+import { formatFinancialPeriod } from '../utils/financialPeriod';
 import transactionAPI from '../api/transactions';
 import FinancialPeriodNavigator from '../components/features/dashboard/FinancialPeriodNavigator';
 import PeriodSummary from '../components/features/dashboard/PeriodSummary';
@@ -39,6 +40,7 @@ export default function InsightsPage() {
 
   const transactions = periodTransactions.data?.transactions || [];
   const patterns = data?.recurringPatterns || [];
+  const calendarPeriodLabel = formatFinancialPeriod(data?.period, currentLanguage);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
@@ -57,17 +59,17 @@ export default function InsightsPage() {
 
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-5 lg:px-8">
         <FinancialPeriodNavigator period={data?.period} periodOffset={periodOffset} onPeriodOffsetChange={setPeriodOffset} />
-        <PeriodSummary dashboardData={data} formatCurrency={formatCurrency} t={t} />
+        <PeriodSummary dashboardData={data} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
         <DailyFlowHistory runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} />
         <RunwayProjectionPlanner runway={data?.runway} formatCurrency={formatCurrency} onSaved={refresh} />
         <WatchedMerchants formatCurrency={formatCurrency} />
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <SpendingBreakdown categoryBreakdown={data?.categoryBreakdown || []} formatCurrency={formatCurrency} t={t} />
+          <SpendingBreakdown categoryBreakdown={data?.categoryBreakdown || []} formatCurrency={formatCurrency} t={t} periodLabel={calendarPeriodLabel} />
           <SourcesOverview sources={data?.sources || []} formatCurrency={formatCurrency} t={t} lang={currentLanguage} navigate={navigate} />
         </div>
 
-        <BankCosts bankCosts={data?.bankCosts} formatCurrency={formatCurrency} t={t} />
+        <BankCosts bankCosts={data?.bankCosts} formatCurrency={formatCurrency} t={t} periodLabel={calendarPeriodLabel} />
 
         <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
           <div className="mb-3 flex items-center gap-2">

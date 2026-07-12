@@ -66,6 +66,31 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         year: 'numeric', month: 'short', day: 'numeric',
       })
     : null;
+  const processedLabel = transaction.bank_processed_date
+    ? new Date(`${String(transaction.bank_processed_date).slice(0, 10)}T12:00:00`).toLocaleDateString(
+        currentLanguage === 'he' ? 'he-IL' : 'en-US',
+        { year: 'numeric', month: 'long', day: 'numeric' },
+      )
+    : null;
+  const statusLabel = transaction.bank_status === 'pending'
+    ? t('detail.statusPending', { fallback: 'Pending' })
+    : transaction.bank_status === 'completed'
+      ? t('detail.statusCompleted', { fallback: 'Completed' })
+      : null;
+  const installmentLabel = transaction.installment_number && transaction.installment_total
+    ? t('detail.installmentValue', {
+        current: transaction.installment_number,
+        total: transaction.installment_total,
+        fallback: `${transaction.installment_number} of ${transaction.installment_total}`,
+      })
+    : null;
+  const originalAmount = Number(transaction.original_amount);
+  const originalAmountLabel = Number.isFinite(originalAmount) && transaction.original_currency
+    ? `${Math.abs(originalAmount).toLocaleString(currentLanguage === 'he' ? 'he-IL' : 'en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })} ${transaction.original_currency}`
+    : null;
 
   const sourceLabel = isBankSynced
     ? institutionLabel(transaction.bank_source, currentLanguage)
@@ -112,7 +137,13 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
               ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
               : 'bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-300',
           )}>
-            {isIncome ? t('types.income', { fallback: 'Income' }) : t('types.expense', { fallback: 'Expense' })}
+            {isBankSynced
+              ? (isIncome
+                  ? t('detail.incoming', { fallback: 'Incoming movement' })
+                  : t('detail.outgoing', { fallback: 'Outgoing movement' }))
+              : (isIncome
+                  ? t('types.income', { fallback: 'Income' })
+                  : t('types.expense', { fallback: 'Expense' }))}
           </span>
         </div>
       </div>
@@ -130,10 +161,15 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
       {/* Fields */}
       <div className="mt-2 divide-y divide-gray-100 dark:divide-gray-800">
         <Field label={t('detail.date', { fallback: 'Date' })} value={dateLabel} />
+        <Field label={t('detail.processedDate', { fallback: 'Processed date' })} value={processedLabel} />
+        <Field label={t('detail.status', { fallback: 'Status' })} value={statusLabel} />
         <Field label={t('detail.source', { fallback: 'Source' })} value={sourceLabel} />
         <Field label={t('detail.movement', { fallback: 'Movement' })} value={movementLabel} />
         <Field label={t('detail.account', { fallback: 'Account / card' })} value={transaction.bank_account_number} />
         <Field label={t('detail.category', { fallback: 'Category' })} value={(transaction.raw_category || '').trim()} />
+        <Field label={t('detail.installment', { fallback: 'Installment' })} value={installmentLabel} />
+        <Field label={t('detail.originalAmount', { fallback: 'Original amount' })} value={originalAmountLabel} />
+        <Field label={t('detail.transactionKind', { fallback: 'Provider type' })} value={transaction.txn_kind} />
         <Field label={t('detail.notes', { fallback: 'Notes' })} value={(transaction.notes || '').trim()} />
         <Field label={t('detail.origin', { fallback: 'Origin' })} value={originLabel} />
         <Field label={t('detail.addedOn', { fallback: 'Added on' })} value={createdLabel} />

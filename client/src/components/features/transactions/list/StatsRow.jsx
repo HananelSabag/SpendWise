@@ -12,8 +12,8 @@ const StatsRow = ({ summary, formatCurrency }) => {
   const net = summary.net;
   const items = [
     { label: t('title') || 'Transactions', value: summary.count },
-    { label: t('types.income') || 'Income', value: formatCurrency(summary.totalIncome), color: 'green' },
-    { label: t('types.expense') || 'Expenses', value: formatCurrency(summary.totalExpenses), color: 'red' },
+    { label: t('stats.inflows', { fallback: 'Inflows' }), value: formatCurrency(summary.totalIncome), color: 'green' },
+    { label: t('stats.outflows', { fallback: 'Outflows' }), value: formatCurrency(summary.totalExpenses), color: 'red' },
     // Signed net of the filtered set — clearer than the old "bank-synced %"
     // (whose numbers only covered the loaded pages anyway).
     { label: t('stats.net', 'Net'), value: `${net >= 0 ? '+' : '−'}${formatCurrency(Math.abs(net))}`, color: net >= 0 ? 'green' : 'red' },

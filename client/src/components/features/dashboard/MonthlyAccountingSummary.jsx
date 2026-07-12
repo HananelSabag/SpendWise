@@ -70,6 +70,7 @@ function MonthCard({ data, formatCurrency, t, language }) {
     .format(new Date(`${data.month}-15T12:00:00`));
   const income = data.income.actual;
   const net = data.net.actual;
+  const pendingTotal = Number(data.spending.cardPending || 0) + Number(data.spending.bankDirectPending || 0);
 
   return (
     <article className="rounded-2xl border border-gray-200/80 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-gray-700 dark:bg-gray-900/70">
@@ -96,7 +97,7 @@ function MonthCard({ data, formatCurrency, t, language }) {
           {t(data.spending.cardDataMode === 'settlement_fallback' ? 'monthlyAccounting.bankCardCharge' : 'monthlyAccounting.itemizedCard')}: {formatCurrency(data.spending.cardPosted)}
         </span>
         <span>{t('monthlyAccounting.bankDirect')}: {formatCurrency(data.spending.bankDirect)}</span>
-        {data.spending.cardPending > 0 && <span>{t('monthlyAccounting.pending')}: {formatCurrency(data.spending.cardPending)}</span>}
+        {pendingTotal > 0 && <span>{t('monthlyAccounting.pending')}: {formatCurrency(pendingTotal)}</span>}
         <span>{t('monthlyAccounting.avgDailySpend')}: {formatCurrency(data.dailyAverage.spending)}</span>
         <span>{t('monthlyAccounting.avgDailyIncome')}: {formatCurrency(data.dailyAverage.income)}</span>
       </div>

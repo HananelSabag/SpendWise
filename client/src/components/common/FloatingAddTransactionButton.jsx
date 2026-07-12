@@ -60,7 +60,7 @@ const FloatingAddTransactionButton = ({ title }) => {
     },
     {
       key: 'insights',
-      label: he ? 'מחזורים ותובנות' : 'Cycles & insights',
+      label: he ? 'חודשים ותובנות' : 'Months & insights',
       icon: BarChart3,
       ring: 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/30',
       onClick: () => go('/insights'),

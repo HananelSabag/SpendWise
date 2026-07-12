@@ -33,7 +33,15 @@ const SELECT_COLUMNS = `
   t.updated_at,
   t.bank_source,
   t.bank_account_number,
-  t.bank_sync_id
+  t.bank_sync_id,
+  t.bank_processed_date,
+  t.bank_status,
+  t.original_amount,
+  t.original_currency,
+  t.charged_currency,
+  t.txn_kind,
+  t.installment_number,
+  t.installment_total
 `;
 
 // Resolve the timezone-aware datetime for a manual entry.
@@ -100,7 +108,6 @@ class Transaction {
       bankSource = null, bankAccountNumber = null,
       amountMin = null, amountMax = null,
       financialPeriodStart = null, financialPeriodEnd = null,
-      creditCardSources = [],
     } = options;
 
     const conditions = ['t.user_id = $1', 't.deleted_at IS NULL'];
@@ -115,13 +122,13 @@ class Transaction {
     if (financialPeriodStart && financialPeriodEnd) {
       const startParam = paramCount;
       const endParam = paramCount + 1;
-      const sourcesParam = paramCount + 2;
-      conditions.push(`(CASE WHEN t.bank_source = ANY($${sourcesParam}::text[])
-        THEN COALESCE(t.bank_processed_date, t.date) ELSE t.date END) >= $${startParam}`);
-      conditions.push(`(CASE WHEN t.bank_source = ANY($${sourcesParam}::text[])
-        THEN COALESCE(t.bank_processed_date, t.date) ELSE t.date END) < $${endParam}`);
-      values.push(financialPeriodStart, financialPeriodEnd, creditCardSources);
-      paramCount += 3;
+      // Calendar performance follows the factual transaction/purchase date for
+      // every source. Provider processed dates belong to card reconciliation;
+      // using them here made the list disagree with the dashboard totals.
+      conditions.push(`t.date >= $${startParam}`);
+      conditions.push(`t.date < $${endParam}`);
+      values.push(financialPeriodStart, financialPeriodEnd);
+      paramCount += 2;
     } else if (dateFrom) {
       conditions.push(`t.date >= $${paramCount}`);
       values.push(dateFrom);
@@ -283,19 +290,15 @@ class Transaction {
   }
 
   /**
-   * Recent rows inside one financial period. Credit-card rows are scoped and
-   * ordered by their statement/payment date; every other source uses its
-   * transaction date. The original purchase date remains in the payload.
+   * Recent rows inside one calendar period. Every source is scoped and ordered
+   * by its factual transaction date; provider processing dates are reserved for
+   * independent card-statement reconciliation.
    */
-  static async getRecentForPeriod(userId, periodStart, periodEnd, creditCardSources, limit = 10) {
+  static async getRecentForPeriod(userId, periodStart, periodEnd, limit = 10) {
     try {
       const query = `
         SELECT ${SELECT_COLUMNS},
-          CASE
-            WHEN t.bank_source = ANY($4::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END AS financial_period_date
+          t.date AS financial_period_date
         FROM transactions t
         LEFT JOIN bank_accounts ba_filter
           ON ba_filter.user_id = t.user_id
@@ -303,20 +306,12 @@ class Transaction {
          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
           AND (t.bank_source IS NULL OR COALESCE(ba_filter.enabled, true) = true)
-          AND (CASE
-            WHEN t.bank_source = ANY($4::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) >= $2
-          AND (CASE
-            WHEN t.bank_source = ANY($4::text[])
-              THEN COALESCE(t.bank_processed_date, t.date)
-            ELSE t.date
-          END) < $3
+          AND t.date >= $2
+          AND t.date < $3
         ORDER BY financial_period_date DESC, t.transaction_datetime DESC NULLS LAST, t.created_at DESC
-        LIMIT $5
+        LIMIT $4
       `;
-      const result = await db.query(query, [userId, periodStart, periodEnd, creditCardSources, limit]);
+      const result = await db.query(query, [userId, periodStart, periodEnd, limit]);
       return result.rows;
     } catch (error) {
       logger.error('Period transaction retrieval failed', { userId, error: error.message });

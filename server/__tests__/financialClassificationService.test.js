@@ -1,6 +1,8 @@
 const {
   classifyTransaction,
   summarizeCalendar,
+  spendingBreakdown,
+  withoutSupersededPendingBankRows,
 } = require('../services/financialClassificationService');
 
 const row = (overrides = {}) => ({
@@ -56,6 +58,8 @@ describe('financial classification', () => {
       .toMatchObject({ economicRole: 'income', salary: true, monthOffset: -1, calendarInclusion: 'include' });
     expect(classifyTransaction(row({ type: 'income', description: 'העמדת הלואה' })))
       .toMatchObject({ economicRole: 'loan', calendarInclusion: 'exclude' });
+    expect(classifyTransaction(row({ type: 'income', description: 'פריסה לתשלומים' })))
+      .toMatchObject({ economicRole: 'loan', calendarInclusion: 'exclude', direction: 'neutral' });
     expect(classifyTransaction(row({ type: 'income', description: 'העברת ניירות ערך' })))
       .toMatchObject({ economicRole: 'security', calendarInclusion: 'exclude' });
     // A former employer's salary must NOT be hardcoded as "securities": unmarked it
@@ -111,5 +115,32 @@ describe('financial classification', () => {
     expect(summary.spendCommitted).toBe(110);
     expect(summary.netActual).toBe(-30);
     expect(summary.netCommitted).toBe(-60);
+  });
+
+  test('derived totals supersede an exact pending bank copy with its completed fact', () => {
+    const rows = [
+      row({ id: 1, amount: 1086.44, description: 'פרעון הלוואה', bank_status: 'pending' }),
+      row({ id: 2, amount: 1086.44, description: 'פרעון הלוואה', bank_status: 'completed' }),
+      row({ id: 3, amount: 1046.45, description: 'פרעון הלוואה', bank_status: 'pending', date: '2026-07-12' }),
+    ];
+    expect(withoutSupersededPendingBankRows(rows).map((item) => item.id)).toEqual([2, 3]);
+    expect(summarizeCalendar(rows).totals).toMatchObject({
+      bankDirectSpend: 1086.44,
+      bankDirectPending: 1046.45,
+      spendCommitted: 2132.89,
+    });
+  });
+
+  test('dashboard breakdown preserves every expense bucket for an honest Other total', () => {
+    const rows = Array.from({ length: 14 }, (_, index) => row({
+      id: index + 1,
+      bank_source: 'max',
+      amount: index + 1,
+      raw_category: `category-${index + 1}`,
+    }));
+    const breakdown = spendingBreakdown(rows);
+    expect(breakdown).toHaveLength(14);
+    expect(breakdown.reduce((sum, item) => sum + item.amount, 0)).toBe(105);
+    expect(spendingBreakdown(rows, {}, 12)).toHaveLength(12);
   });
 });

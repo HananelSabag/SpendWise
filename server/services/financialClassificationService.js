@@ -41,7 +41,7 @@ const CASH_DESC = /(משיכת\s*מזומן|משיכה\s*עם\s*קוד)/;   // A
 const LOAN_REPAY_DESC = /(פרעון\s*הלוואה|החזר\s*הלוואה)/; // loan repayment (expense)
 const FEE_INTEREST_DESC = /(ריבית|עמלה|עמל\.)/;          // bank fee / interest
 const TAX_DESC = /מס\s*הכנסה/;                            // tax
-const LOAN_DISBURSE_DESC = /(העמדת\s*הלוא|קבלת\s*הלוא)/;  // loan disbursement (income side)
+const LOAN_DISBURSE_DESC = /(העמדת\s*הלוא|קבלת\s*הלוא|פריסה\s*לתשלומים)/;  // financing proceeds (income side)
 // Generic securities/investment terms ONLY. Never hardcode an employer/business
 // name here — a former employer's salary (job change) must be recognised as income
 // via a user-confirmed salary signature, not silently excluded as "securities".
@@ -82,6 +82,36 @@ function regexTest(pattern, value) {
   if (!(pattern instanceof RegExp)) return false;
   pattern.lastIndex = 0;
   return pattern.test(String(value || ''));
+}
+
+/**
+ * Ignore a stale pending bank copy when the ledger also contains an exact
+ * completed fact for the same movement. Both rows remain immutable and visible
+ * in transaction history; derived financial totals count the economic fact once.
+ */
+function withoutSupersededPendingBankRows(rows) {
+  const completedKeys = new Set();
+  const keyFor = (row) => {
+    if (!row?.bank_source || institutionKind(row.bank_source) === 'credit_card') return null;
+    const date = row.date instanceof Date
+      ? row.date.toISOString().slice(0, 10)
+      : String(row.date || '').slice(0, 10);
+    const amount = Math.round((Math.abs(Number(row.amount) || 0) + Number.EPSILON) * 100);
+    return [row.bank_source, row.bank_account_number || '', row.type || '', amount,
+      normalizeDescription(row.description), date].join('|');
+  };
+
+  for (const row of rows) {
+    if (row.bank_status !== 'completed') continue;
+    const key = keyFor(row);
+    if (key) completedKeys.add(key);
+  }
+
+  return rows.filter((row) => {
+    if (row.bank_status !== 'pending') return true;
+    const key = keyFor(row);
+    return !key || !completedKeys.has(key);
+  });
 }
 
 /** Last 4 digits encoded in a Leumi settlement identifier, e.g. 582254 → 2254. */
@@ -402,7 +432,8 @@ function classifyTransaction(txn, context = {}) {
  * @returns {object} totals + the classified rows + any needs_review items
  */
 function summarizeCalendar(rows, context = {}) {
-  const classified = rows.map((r) => ({ row: r, c: classifyTransaction(r, context) }));
+  const classified = withoutSupersededPendingBankRows(rows)
+    .map((r) => ({ row: r, c: classifyTransaction(r, context) }));
   const acc = {
     earnedIncome: 0, salaryIncome: 0, otherIncome: 0, otherIncomeExcluded: 0,
     cardSpendPosted: 0, cardSpendPending: 0, cardRefunds: 0,
@@ -469,12 +500,14 @@ function autoBucket(classification) {
  *
  * @param {Array<object>} rows
  * @param {object} [context]
- * @param {number} [limit=12]
+ * @param {number} [limit=Infinity] Optional caller-side cap. Dashboard callers
+ *   must receive the complete distribution so the UI can roll the tail into
+ *   an honest "Other" bucket without losing money.
  * @returns {Array<{name:string, source:'source'|'auto', amount:number, count:number}>}
  */
-function spendingBreakdown(rows, context = {}, limit = 12) {
+function spendingBreakdown(rows, context = {}, limit = Infinity) {
   const buckets = new Map();
-  for (const row of rows) {
+  for (const row of withoutSupersededPendingBankRows(rows)) {
     const c = classifyTransaction(row, context);
     if (c.calendarInclusion !== 'include' || c.direction !== 'spend') continue;
     const rawCategory = String(row.raw_category || '').trim();
@@ -486,10 +519,10 @@ function spendingBreakdown(rows, context = {}, limit = 12) {
     bucket.count += 1;
     buckets.set(key, bucket);
   }
-  return [...buckets.values()]
+  const sorted = [...buckets.values()]
     .map((b) => ({ ...b, amount: Math.round((b.amount + Number.EPSILON) * 100) / 100 }))
-    .sort((a, b) => b.amount - a.amount)
-    .slice(0, limit);
+    .sort((a, b) => b.amount - a.amount);
+  return Number.isFinite(limit) ? sorted.slice(0, Math.max(0, limit)) : sorted;
 }
 
 module.exports = {
@@ -503,6 +536,7 @@ module.exports = {
   isDebitCardRow,
   matchesSalarySignature,
   matchesTransactionSignature,
+  withoutSupersededPendingBankRows,
   transactionOverride,
   regexTest,
   BANK_SETTLEMENT_DESCRIPTORS,

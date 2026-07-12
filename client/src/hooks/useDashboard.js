@@ -35,6 +35,7 @@ const EMPTY_DASHBOARD = {
   recentTransactions: [],
   recurringPatterns: [],
   monthlyAccounting: null,
+  selectedAccounting: null,
   runway: null,
   isEmpty: true,
 };
@@ -99,6 +100,7 @@ export const useDashboard = ({ periodOffset = 0 } = {}) => {
         recentTransactions,
         recurringPatterns: raw.recurringPatterns || [],
         monthlyAccounting: raw.monthlyAccounting || null,
+        selectedAccounting: raw.selectedAccounting || null,
         runway: raw.runway || null,
         isEmpty: recentTransactions.length === 0 && (parseInt(summary.total_transactions) || 0) === 0,
       };

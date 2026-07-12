@@ -229,3 +229,37 @@ month; anchored on the SALARY date (the refill), not the 1st.
   detect charge day = mode of processed_date, editable.
 - Accounts: Leumi (bank, balance −1,715), Max ×2 + Visa Cal (cards). 3 loans (~11th ×2,
   ~26th ×1, ~1,048–1,107).
+
+### 2026-07-12 16:43 Asia/Jerusalem — fresh production stabilization snapshot
+
+- Completed user-scoped syncs: Leumi job 167 (25 scraped, 3 new), Max job 168
+  (105 scraped, 0 new), Visa Cal job 163 (9 scraped, 0 new). The consistent
+  read-only Supabase snapshot was captured at `2026-07-12T13:43:15.817Z`.
+- Current Leumi checking balance is **₪7,241.08**. This is a live balance fact and
+  is never added to or subtracted from calendar-month performance.
+- New financing evidence: Leumi row 5902 is a pending **+₪12,805.22**
+  `פריסה לתשלומים`, exactly offsetting the completed **−₪12,805.22** `לאומי ויזה`
+  settlement in row 5906. It is financing proceeds, not earned income and not
+  spending. The later installment purchases will count on their factual dates.
+- New row 5903 is a separate pending **−₪1,046.45** `פרעון הלוואה`. It remains
+  ordinary bank-direct committed spending. Building the full Loans product from
+  recurring repayments is still deferred.
+- Derived July 1–12 totals after classification: earned income **₪0**; completed
+  bank-direct **₪2,258.13**; pending bank-direct **₪1,500.45**; posted card
+  purchases **₪4,714.51**; pending card purchases **₪700.00**; committed spending
+  **₪9,173.09**; net **−₪9,173.09**. The full category distribution equals the
+  headline exactly.
+- Current salary runway (July 9–12): committed out **₪3,346.79**, actual out
+  **₪1,146.34**, pending subset **₪2,200.45**, non-salary income **₪0**, while the
+  checking balance stays the separate **₪7,241.08** fact.
+- Derived totals now ignore a stale pending bank row only when an exact completed
+  same-source/account/type/amount/description/date fact exists. Both immutable
+  ledger rows remain visible. This removes the stale duplicate ₪1,086.44 loan
+  repayment from calculations without deleting history.
+- Card reconciliation remains separate from spending. A completed settlement is
+  `partial`, not a mismatch, while provider rows near its statement date remain
+  pending. The former Visa Cal ₪289.50 false mismatch is gone.
+- UX now spells out every additive committed-spending component, reconciles the
+  popover to cents, uses factual calendar dates, exposes bank status/processed/
+  installment/FX metadata in transaction details, and labels raw ledger statistics
+  as inflows/outflows. Bank Sync has Overview / Accounts / Private agent / Help.

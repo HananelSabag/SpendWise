@@ -7,7 +7,7 @@ import React from "react";
 import { Percent, Landmark, Banknote } from "lucide-react";
 import { cn } from "../../../utils/helpers";
 
-const BankCosts = ({ bankCosts, formatCurrency, t }) => {
+const BankCosts = ({ bankCosts, formatCurrency, t, periodLabel }) => {
   const hasAny =
     bankCosts &&
     (bankCosts.feesInterest > 0 ||
@@ -48,9 +48,10 @@ const BankCosts = ({ bankCosts, formatCurrency, t }) => {
         <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500 leading-snug">
           {t("bankCosts.subtitle", {
             fallback:
-              "Fees & interest, loan repayments and cash withdrawals from your bank account this cycle",
+              "Fees, repayments and cash withdrawals counted in the selected calendar month",
           })}
         </p>
+        {periodLabel && <p className="mt-1 text-[10px] font-semibold text-indigo-500 dark:text-indigo-300">{periodLabel}</p>}
       </div>
       <div className="space-y-2.5">
         {items.map(({ label, value, icon: Icon, tint, sub }) => (

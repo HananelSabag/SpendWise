@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, AlertCircle, Bot, CreditCard, Landmark, Plus, RefreshCw } from 'lucide-react';
+import { Activity, AlertCircle, Bot, CreditCard, HelpCircle, Landmark, Plus, RefreshCw } from 'lucide-react';
 
 import { useAuth, useTranslation } from '../stores';
 import apiClient from '../api/client';
@@ -11,6 +11,7 @@ import { LiquidTabs } from '../components/ui';
 import BankConnectionCard from '../components/features/bankSync/BankConnectionCard';
 import ConnectBankModal from '../components/features/bankSync/ConnectBankModal';
 import SyncMethodPanel from '../components/features/bankSync/SyncMethodPanel';
+import HowItWorksPanel from '../components/features/bankSync/HowItWorksPanel';
 import { institutionKind, nextAutoSync, formatDateTime } from '../components/features/bankSync/bankSyncMeta';
 import { BankIcon, StatusBadge } from '../components/features/bankSync/BankBits';
 
@@ -18,6 +19,7 @@ const TABS = [
   ['overview', Activity],
   ['accounts', Landmark],
   ['agent', Bot],
+  ['help', HelpCircle],
 ];
 const EMPTY_LIST = [];
 
@@ -73,7 +75,8 @@ export default function BankSyncPageV2() {
   const tabLabel = (key) => ({
     overview: he ? 'סקירה' : 'Overview',
     accounts: he ? 'חשבונות' : 'Accounts',
-    agent: he ? 'Agent' : 'Agent',
+    agent: he ? 'סוכן פרטי' : 'Private agent',
+    help: he ? 'עזרה' : 'Help',
   }[key]);
 
   const ConnectionGroup = ({ kind, items }) => {
@@ -203,6 +206,7 @@ export default function BankSyncPageV2() {
 
         {tab === 'accounts' && <div className="grid gap-7 lg:grid-cols-2"><ConnectionGroup kind="bank" items={groupedConnections.banks} /><ConnectionGroup kind="credit_card" items={groupedConnections.cards} /></div>}
         {tab === 'agent' && <div className="mx-auto max-w-3xl"><SyncMethodPanel t={t} hasConnections={connections.length > 0} /></div>}
+        {tab === 'help' && <div className="mx-auto max-w-3xl"><HowItWorksPanel t={t} defaultOpen /></div>}
       </main>
 
       <ConnectBankModal isOpen={showConnect} onClose={() => { setShowConnect(false); setInitialBank(null); setConnectKind(null); }} initialBank={initialBank} kindFilter={connectKind} existingSources={connections.map((c) => c.bank_source)} />

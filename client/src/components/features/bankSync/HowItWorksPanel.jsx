@@ -8,8 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Info, ChevronDown, ShieldCheck } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
 
-export default function HowItWorksPanel({ t }) {
-  const [open, setOpen] = useState(false);
+export default function HowItWorksPanel({ t, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
   const steps = [t('howItWorksStep1'), t('howItWorksStep2'), t('howItWorksStep3'), t('howItWorksStep4')];
 
   return (

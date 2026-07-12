@@ -43,14 +43,14 @@ export default function FinancialPeriodNavigator({
   const NextIcon = isRTL ? ChevronLeft : ChevronRight;
 
   return (
-    <section className={cn('glass-card rounded-2xl p-3 sm:p-4', className)} aria-label={t('period.navigator', { fallback: 'Financial period navigator' })}>
+    <section className={cn('glass-card rounded-2xl p-3 sm:p-4', className)} aria-label={t('period.navigator', { fallback: 'Calendar month navigator' })}>
       <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => onPeriodOffsetChange(offset - 1)}
           disabled={offset <= minOffset}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-          aria-label={t('period.older', { fallback: 'Older period' })}
+          aria-label={t('period.older', { fallback: 'Older month' })}
         >
           <PreviousIcon className="h-4 w-4" />
         </button>
@@ -65,7 +65,7 @@ export default function FinancialPeriodNavigator({
           onClick={() => onPeriodOffsetChange(offset + 1)}
           disabled={offset >= 0}
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 disabled:opacity-30 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-          aria-label={t('period.newer', { fallback: 'Newer period' })}
+          aria-label={t('period.newer', { fallback: 'Newer month' })}
         >
           <NextIcon className="h-4 w-4" />
         </button>
@@ -102,7 +102,7 @@ export default function FinancialPeriodNavigator({
           className="mx-auto mt-2 flex items-center gap-1 text-[11px] font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-300"
         >
           <RotateCcw className="h-3 w-3" />
-          {t('period.backToCurrent', { fallback: 'Back to current period' })}
+          {t('period.backToCurrent', { fallback: 'Back to current month' })}
         </button>
       )}
     </section>

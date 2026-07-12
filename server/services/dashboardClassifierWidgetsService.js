@@ -3,6 +3,7 @@ const { institutionKind } = require('../config/institutions');
 const {
   classifyTransaction,
   normalizeDescription,
+  withoutSupersededPendingBankRows,
 } = require('./financialClassificationService');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
 
@@ -25,7 +26,7 @@ function buildWidgets(periodRows, historyRows, context) {
   const bankCosts = { feesInterest: 0, loanPayments: 0, cashWithdrawn: 0, cashWithdrawalCount: 0 };
   const sourceMap = new Map();
 
-  for (const row of periodRows) {
+  for (const row of withoutSupersededPendingBankRows(periodRows)) {
     const classification = classifyTransaction(row, context);
     const amount = Math.abs(Number(row.amount) || 0);
 
@@ -55,7 +56,7 @@ function buildWidgets(periodRows, historyRows, context) {
   }
 
   const recurring = new Map();
-  for (const row of historyRows) {
+  for (const row of withoutSupersededPendingBankRows(historyRows)) {
     if (row.type !== 'expense') continue;
     const classification = classifyTransaction(row, context);
     if (classification.calendarInclusion !== 'include' || classification.direction !== 'spend') continue;
