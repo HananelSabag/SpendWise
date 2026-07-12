@@ -23,6 +23,48 @@ export default {
     needsSalary: "No salary detected yet — mark it to anchor the cycle to your payday.",
     fallbackNote: "Showing by calendar month until there's a prior salary to anchor on.",
   },
+  monthlyAccounting: {
+    previousMonth: "Previous month summary",
+    status: { open: "Open month", closed: "Closed month", awaitingSalary: "Waiting for salary", awaitingSettlement: "Waiting for card verification", needsReview: "Needs review" },
+    actualIncome: "Actual income", spending: "Spending", actualNet: "Actual net",
+    itemizedCard: "Itemized card spending", bankCardCharge: "Card spending from bank charge", bankDirect: "Direct bank spending", pending: "Pending",
+    avgDailySpend: "Average spend/day", avgDailyIncome: "Average income/day", cardVerification: "Card verification", matched: "Matched", difference: "Difference {{amount}}",
+    salarySearch: "Looking for salary deposits…", noSalaryCandidate: "No matching income found yet. This month will close after salary arrives and syncs.",
+    chooseSalary: "Which deposit is your salary?", chooseSalaryHint: "Choose once so future salaries can be assigned to the previous work month.", salarySaveFailed: "Could not save. Please try again."
+  },
+  salaryReview: {
+    title: "Two deposits look like salary", description: "Both map to {{month}} from the same employer. Classify each so a bonus does not create a false salary cycle.",
+    salary: "Salary", bonus: "Bonus / extra", other: "Other income", moreReviews: "{{count}} more reviews after this",
+    storedHint: "The choice is stored with the transaction and can be changed later.", save: "Save classification", saveFailed: "Save failed."
+  },
+  dailyFlow: {
+    eyebrow: "Salary to salary", title: "What happened each day", subtitle: "Facts only — no forecast and no double-counted card settlement.",
+    current: "Current", previous: "Previous", days: "{{count}} days", out: "Out", incomeExSalary: "In, ex salary", cycleNet: "Cycle net",
+    outToday: "Out today", inToday: "In today", cumulativeNet: "Cumulative net", dailyOut: "Daily out", dailyIncomeExSalary: "Income excluding salary",
+    ledger: "Daily ledger", items: "{{count}} items", salaryReceived: "Salary received", stillPending: "{{amount}} still pending",
+    needsReview: "{{count}} needs review", refund: "refund", noActivity: "No activity in this cycle."
+  },
+  projection: {
+    eyebrow: "Optional planning", title: "What remains after expected events", subtitle: "This layer never changes transactions or factual totals. It only lets you test a scenario.",
+    enable: "Enable planning", factualHint: "The current balance remains a bank fact; the planned number is always labelled separately.",
+    expectedSalary: "Expected salary", manualCharge: "Manual expected charge", amount: "Amount", date: "Date", chargeLabel: "Charge label", chargePlaceholder: "e.g. unconnected card",
+    salarySuggestion: "Leave blank to use the last salary for planning: {{amount}}", realBalance: "Real balance now", expectedNet: "Expected in minus out", plannedBalance: "Planned balance",
+    saved: "Plan saved.", saveFailed: "Could not save.", saving: "Saving…", save: "Save plan"
+  },
+  insightsPage: {
+    back: "Back", title: "Months & insights", subtitle: "Your full financial story, away from the home dashboard",
+    recurringTitle: "Recurring patterns", recurringSubtitle: "Merchants seen in at least two months — a useful signal, not a guaranteed bill.",
+    months: "{{count}} months", noPatterns: "Not enough history to detect patterns yet.", transactionsTitle: "All cycle transactions",
+    transactionCount: "{{count}} transactions using the correct financial date", noTransactions: "No transactions in this cycle."
+  },
+  merchantWatch: {
+    title: "Watched merchants", subtitle: "Rules you created from real transactions. They flag matches without changing your totals.",
+    watch: "Watch this merchant", close: "Close", chooseRule: "Choose rule", exactDescriptionHint: "Only the same transaction description will match. This never changes categories or totals.",
+    all: "Every transaction", above: "Above amount", exact: "Exact amount", amountIls: "Amount (ILS)", save: "Save watch",
+    created: "Watch added to Insights", createFailed: "Could not add watch", removeFailed: "Could not remove watch", loadFailed: "Could not load watches.",
+    ruleAbove: "Above {{amount}}", ruleExact: "Exactly {{amount}}", matches: "{{count}} matches", remove: "Remove watch",
+    recentMatches: "Recent matches", noMatches: "No transactions match these rules yet."
+  },
   welcome: {
     goodMorning: "Good morning, {{name}}! 🌅",
     goodAfternoon: "Good afternoon, {{name}}! ☀️",

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Calculator, CalendarClock, Save, ShieldCheck, TrendingDown, TrendingUp } from 'lucide-react';
 
 import transactionAPI from '../../../api/transactions';
+import { useTranslation } from '../../../stores';
 
 const emptySettings = {
   enabled: false,
@@ -40,8 +41,8 @@ function Field({ label, type = 'text', value, onChange, placeholder, min, step }
   );
 }
 
-export default function RunwayProjectionPlanner({ runway, formatCurrency, language = 'he', onSaved }) {
-  const he = language === 'he';
+export default function RunwayProjectionPlanner({ runway, formatCurrency, onSaved }) {
+  const { t } = useTranslation('dashboard');
   const projection = runway?.projection;
   const current = runway?.current;
   const [draft, setDraft] = useState(emptySettings);
@@ -71,10 +72,10 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, langua
       expectedCharge: draft.expectedCharge === '' ? null : Number(draft.expectedCharge),
     });
     if (result.success) {
-      setMessage(he ? 'התכנון נשמר.' : 'Plan saved.');
+      setMessage(t('projection.saved'));
       await onSaved?.();
     } else {
-      setMessage(result.error?.message || (he ? 'לא הצלחנו לשמור.' : 'Could not save.'));
+      setMessage(result.error?.message || t('projection.saveFailed'));
     }
     setSaving(false);
   };
@@ -84,50 +85,50 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, langua
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-violet-500">
-            <Calculator className="h-4 w-4" />{he ? 'תכנון אופציונלי' : 'Optional planning'}
+            <Calculator className="h-4 w-4" />{t('projection.eyebrow')}
           </p>
-          <h2 className="mt-1 text-lg font-black text-gray-950 dark:text-white">{he ? 'מה יישאר אחרי מה שצפוי' : 'What remains after expected events'}</h2>
-          <p className="mt-1 max-w-2xl text-xs text-gray-500">{he ? 'השכבה הזאת לא משנה עסקאות ולא נכנסת לחישובים האמיתיים. היא רק מאפשרת לך לבדוק תרחיש.' : 'This layer never changes transactions or factual totals. It only lets you test a scenario.'}</p>
+          <h2 className="mt-1 text-lg font-black text-gray-950 dark:text-white">{t('projection.title')}</h2>
+          <p className="mt-1 max-w-2xl text-xs text-gray-500">{t('projection.subtitle')}</p>
         </div>
         <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-gray-100 px-3 py-2 dark:bg-gray-800">
           <input type="checkbox" checked={draft.enabled} onChange={(event) => update('enabled', event.target.checked)} className="h-4 w-4 accent-indigo-600" />
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{he ? 'הפעל תכנון' : 'Enable planning'}</span>
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{t('projection.enable')}</span>
         </label>
       </div>
 
       <div className="mt-4 flex items-center gap-2 rounded-2xl bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300">
         <ShieldCheck className="h-4 w-4 shrink-0" />
-        {he ? 'המאזן הנוכחי נשאר עובדה מהבנק; המספר המתוכנן מסומן תמיד בנפרד.' : 'The current balance remains a bank fact; the planned number is always labelled separately.'}
+        {t('projection.factualHint')}
       </div>
 
       {draft.enabled && (
         <>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl bg-emerald-50/60 p-4 dark:bg-emerald-950/20">
-              <p className="mb-3 flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300"><TrendingUp className="h-4 w-4" />{he ? 'משכורת צפויה' : 'Expected salary'}</p>
+              <p className="mb-3 flex items-center gap-1.5 text-sm font-bold text-emerald-700 dark:text-emerald-300"><TrendingUp className="h-4 w-4" />{t('projection.expectedSalary')}</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label={he ? 'סכום' : 'Amount'} type="number" min="0" step="0.01" value={draft.expectedSalary} onChange={(value) => update('expectedSalary', value)} placeholder={projection.suggestedSalary?.amount ? String(projection.suggestedSalary.amount) : '0'} />
-                <Field label={he ? 'תאריך' : 'Date'} type="date" value={draft.expectedSalaryDate} onChange={(value) => update('expectedSalaryDate', value)} />
+                <Field label={t('projection.amount')} type="number" min="0" step="0.01" value={draft.expectedSalary} onChange={(value) => update('expectedSalary', value)} placeholder={projection.suggestedSalary?.amount ? String(projection.suggestedSalary.amount) : '0'} />
+                <Field label={t('projection.date')} type="date" value={draft.expectedSalaryDate} onChange={(value) => update('expectedSalaryDate', value)} />
               </div>
-              {projection.suggestedSalary && !draft.expectedSalary && <p className="mt-2 text-[11px] text-emerald-700/75">{he ? 'אם תשאיר ריק, נשתמש רק לתכנון במשכורת האחרונה' : 'Leave blank to use the last salary for planning'}: {formatCurrency(projection.suggestedSalary.amount)}</p>}
+              {projection.suggestedSalary && !draft.expectedSalary && <p className="mt-2 text-[11px] text-emerald-700/75">{t('projection.salarySuggestion', { amount: formatCurrency(projection.suggestedSalary.amount) })}</p>}
             </div>
 
             <div className="rounded-2xl bg-rose-50/60 p-4 dark:bg-rose-950/20">
-              <p className="mb-3 flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300"><TrendingDown className="h-4 w-4" />{he ? 'חיוב צפוי ידני' : 'Manual expected charge'}</p>
+              <p className="mb-3 flex items-center gap-1.5 text-sm font-bold text-rose-700 dark:text-rose-300"><TrendingDown className="h-4 w-4" />{t('projection.manualCharge')}</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label={he ? 'סכום' : 'Amount'} type="number" min="0" step="0.01" value={draft.expectedCharge} onChange={(value) => update('expectedCharge', value)} placeholder="0" />
-                <Field label={he ? 'תאריך' : 'Date'} type="date" value={draft.expectedChargeDate} onChange={(value) => update('expectedChargeDate', value)} />
+                <Field label={t('projection.amount')} type="number" min="0" step="0.01" value={draft.expectedCharge} onChange={(value) => update('expectedCharge', value)} placeholder="0" />
+                <Field label={t('projection.date')} type="date" value={draft.expectedChargeDate} onChange={(value) => update('expectedChargeDate', value)} />
               </div>
-              <div className="mt-3"><Field label={he ? 'שם החיוב' : 'Charge label'} value={draft.expectedChargeLabel} onChange={(value) => update('expectedChargeLabel', value)} placeholder={he ? 'למשל: כרטיס לא מחובר' : 'e.g. unconnected card'} /></div>
+              <div className="mt-3"><Field label={t('projection.chargeLabel')} value={draft.expectedChargeLabel} onChange={(value) => update('expectedChargeLabel', value)} placeholder={t('projection.chargePlaceholder')} /></div>
             </div>
           </div>
 
           <div className="mt-5 grid items-stretch gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
-            <div className="rounded-2xl bg-gray-50 p-3 text-center dark:bg-gray-800"><p className="text-[11px] text-gray-500">{he ? 'מאזן אמיתי עכשיו' : 'Real balance now'}</p><p className="mt-1 font-black text-gray-900 dark:text-white">{current.checkingBalance == null ? '—' : formatCurrency(current.checkingBalance)}</p></div>
+            <div className="rounded-2xl bg-gray-50 p-3 text-center dark:bg-gray-800"><p className="text-[11px] text-gray-500">{t('projection.realBalance')}</p><p className="mt-1 font-black text-gray-900 dark:text-white">{current.checkingBalance == null ? '—' : formatCurrency(current.checkingBalance)}</p></div>
             <TrendingUp className="m-auto h-5 w-5 text-emerald-500" />
-            <div className="rounded-2xl bg-gray-50 p-3 text-center dark:bg-gray-800"><p className="text-[11px] text-gray-500">{he ? 'צפוי להיכנס פחות לצאת' : 'Expected in minus out'}</p><p className="mt-1 font-black text-gray-900 dark:text-white">{formatCurrency((Number(draft.expectedSalary) || projection.suggestedSalary?.amount || 0) - (Number(draft.expectedCharge) || 0))}</p></div>
+            <div className="rounded-2xl bg-gray-50 p-3 text-center dark:bg-gray-800"><p className="text-[11px] text-gray-500">{t('projection.expectedNet')}</p><p className="mt-1 font-black text-gray-900 dark:text-white">{formatCurrency((Number(draft.expectedSalary) || projection.suggestedSalary?.amount || 0) - (Number(draft.expectedCharge) || 0))}</p></div>
             <CalendarClock className="m-auto h-5 w-5 text-violet-500" />
-            <div className="rounded-2xl bg-violet-50 p-3 text-center dark:bg-violet-950/25"><p className="text-[11px] text-violet-600">{he ? 'מאזן מתוכנן' : 'Planned balance'}</p><p className="mt-1 text-lg font-black text-violet-700 dark:text-violet-300">{preview == null ? '—' : formatCurrency(preview)}</p></div>
+            <div className="rounded-2xl bg-violet-50 p-3 text-center dark:bg-violet-950/25"><p className="text-[11px] text-violet-600">{t('projection.plannedBalance')}</p><p className="mt-1 text-lg font-black text-violet-700 dark:text-violet-300">{preview == null ? '—' : formatCurrency(preview)}</p></div>
           </div>
         </>
       )}
@@ -135,7 +136,7 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, langua
       <div className="mt-5 flex items-center justify-end gap-3">
         {message && <p className="text-xs text-gray-500">{message}</p>}
         <button type="button" onClick={save} disabled={saving} className="inline-flex h-11 items-center gap-2 rounded-xl bg-indigo-600 px-4 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:opacity-50">
-          <Save className="h-4 w-4" />{saving ? (he ? 'שומר…' : 'Saving…') : (he ? 'שמור תכנון' : 'Save plan')}
+          <Save className="h-4 w-4" />{saving ? t('projection.saving') : t('projection.save')}
         </button>
       </div>
     </section>

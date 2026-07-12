@@ -24,7 +24,6 @@ export default function InsightsPage() {
   const { formatCurrency } = useCurrency();
   const { periodOffset, setPeriodOffset } = useFinancialPeriodSelection();
   const { data, isLoading, refresh } = useDashboard({ periodOffset });
-  const he = currentLanguage === 'he';
 
   const periodTransactions = useQuery({
     queryKey: ['transactions', 'financial-period', periodOffset],
@@ -45,13 +44,13 @@ export default function InsightsPage() {
     <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
       <header className="sticky top-0 z-20 border-b border-gray-200/70 bg-white/85 backdrop-blur dark:border-gray-800 dark:bg-gray-900/85">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:px-8">
-          <button onClick={() => navigate('/')} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={he ? 'חזרה' : 'Back'}>
+          <button onClick={() => navigate('/')} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('insightsPage.back')}>
             <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
           </button>
           <BrandMark size="sm" />
           <div>
-            <h1 className="text-lg font-bold text-gray-950 dark:text-white">{he ? 'חודשים ותובנות' : 'Months & insights'}</h1>
-            <p className="text-xs text-gray-500">{he ? 'כל הסיפור הפיננסי, בלי להעמיס על הדשבורד' : 'Your full financial story, away from the home dashboard'}</p>
+            <h1 className="text-lg font-bold text-gray-950 dark:text-white">{t('insightsPage.title')}</h1>
+            <p className="text-xs text-gray-500">{t('insightsPage.subtitle')}</p>
           </div>
         </div>
       </header>
@@ -60,8 +59,8 @@ export default function InsightsPage() {
         <FinancialPeriodNavigator period={data?.period} periodOffset={periodOffset} onPeriodOffsetChange={setPeriodOffset} />
         <PeriodSummary dashboardData={data} formatCurrency={formatCurrency} t={t} />
         <DailyFlowHistory runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} />
-        <RunwayProjectionPlanner runway={data?.runway} formatCurrency={formatCurrency} language={currentLanguage} onSaved={refresh} />
-        <WatchedMerchants language={currentLanguage} formatCurrency={formatCurrency} />
+        <RunwayProjectionPlanner runway={data?.runway} formatCurrency={formatCurrency} onSaved={refresh} />
+        <WatchedMerchants formatCurrency={formatCurrency} />
 
         <div className="grid gap-5 lg:grid-cols-2">
           <SpendingBreakdown categoryBreakdown={data?.categoryBreakdown || []} formatCurrency={formatCurrency} t={t} />
@@ -74,8 +73,8 @@ export default function InsightsPage() {
           <div className="mb-3 flex items-center gap-2">
             <Repeat2 className="h-5 w-5 text-violet-500" />
             <div>
-              <h2 className="font-bold text-gray-950 dark:text-white">{he ? 'דפוסים שחוזרים' : 'Recurring patterns'}</h2>
-              <p className="text-xs text-gray-500">{he ? 'זיהוי חכם של בתי עסק שהופיעו לפחות בשני חודשים — כהמלצה לבדיקה, לא כחיוב ודאי.' : 'Merchants seen in at least two months — a useful signal, not a guaranteed bill.'}</p>
+              <h2 className="font-bold text-gray-950 dark:text-white">{t('insightsPage.recurringTitle')}</h2>
+              <p className="text-xs text-gray-500">{t('insightsPage.recurringSubtitle')}</p>
             </div>
           </div>
           {patterns.length ? (
@@ -86,26 +85,26 @@ export default function InsightsPage() {
                     <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{pattern.description}</p>
-                      <p className="text-xs text-gray-500">{pattern.category || pattern.bank_source} · {pattern.active_months} {he ? 'חודשים' : 'months'}</p>
+                      <p className="text-xs text-gray-500">{pattern.category || pattern.bank_source} · {t('insightsPage.months', { count: pattern.active_months })}</p>
                       <p className="mt-1 text-sm font-bold text-violet-700 dark:text-violet-300">~{formatCurrency(pattern.average_amount)}</p>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <p className="py-4 text-center text-sm text-gray-500">{he ? 'עדיין אין מספיק היסטוריה לזיהוי דפוסים.' : 'Not enough history to detect patterns yet.'}</p>}
+          ) : <p className="py-4 text-center text-sm text-gray-500">{t('insightsPage.noPatterns')}</p>}
         </section>
 
         <section>
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <h2 className="font-bold text-gray-950 dark:text-white">{he ? 'כל עסקאות המחזור' : 'All cycle transactions'}</h2>
-              <p className="text-xs text-gray-500">{periodTransactions.data?.pagination?.total || transactions.length} {he ? 'עסקאות לפי תאריך החיוב הנכון' : 'transactions using the correct financial date'}</p>
+              <h2 className="font-bold text-gray-950 dark:text-white">{t('insightsPage.transactionsTitle')}</h2>
+              <p className="text-xs text-gray-500">{t('insightsPage.transactionCount', { count: periodTransactions.data?.pagination?.total || transactions.length })}</p>
             </div>
           </div>
           <div className="space-y-2">
             {transactions.map((transaction) => <ModernTransactionCard key={transaction.id} transaction={transaction} />)}
-            {!periodTransactions.isLoading && !transactions.length && <p className="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 dark:bg-gray-900">{he ? 'אין עסקאות במחזור הזה.' : 'No transactions in this cycle.'}</p>}
+            {!periodTransactions.isLoading && !transactions.length && <p className="rounded-2xl bg-white p-8 text-center text-sm text-gray-500 dark:bg-gray-900">{t('insightsPage.noTransactions')}</p>}
           </div>
         </section>
       </main>

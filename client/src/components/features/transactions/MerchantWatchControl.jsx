@@ -5,15 +5,16 @@ import { Eye, Loader2 } from 'lucide-react';
 import transactionAPI from '../../../api/transactions';
 import { useToast } from '../../../hooks/useToast';
 import { cn } from '../../../utils/helpers';
+import { useTranslation } from '../../../stores';
 
 const CONDITIONS = [
-  ['all', 'כל עסקה', 'Every transaction'],
-  ['above', 'מעל סכום', 'Above amount'],
-  ['exact', 'סכום מדויק', 'Exact amount'],
+  ['all', 'all'],
+  ['above', 'above'],
+  ['exact', 'exact'],
 ];
 
-export default function MerchantWatchControl({ transaction, language }) {
-  const he = language === 'he';
+export default function MerchantWatchControl({ transaction }) {
+  const { t } = useTranslation('dashboard');
   const queryClient = useQueryClient();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -32,10 +33,10 @@ export default function MerchantWatchControl({ transaction, language }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['merchantWatches'] });
-      toast.success(he ? 'המעקב נוסף לתובנות' : 'Watch added to Insights');
+      toast.success(t('merchantWatch.created'));
       setOpen(false);
     },
-    onError: (error) => toast.error(error?.message || (he ? 'לא הצלחנו להוסיף מעקב' : 'Could not add watch')),
+    onError: (error) => toast.error(error?.message || t('merchantWatch.createFailed')),
   });
 
   if (!String(transaction?.description || '').trim()) return null;
@@ -49,18 +50,18 @@ export default function MerchantWatchControl({ transaction, language }) {
         aria-expanded={open}
       >
         <span className="flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">
-          <Eye className="h-4 w-4" />{he ? 'עקוב אחרי בית העסק' : 'Watch this merchant'}
+          <Eye className="h-4 w-4" />{t('merchantWatch.watch')}
         </span>
-        <span className="text-[10px] text-indigo-500">{open ? (he ? 'סגור' : 'Close') : (he ? 'בחר חוק' : 'Choose rule')}</span>
+        <span className="text-[10px] text-indigo-500">{t(open ? 'merchantWatch.close' : 'merchantWatch.chooseRule')}</span>
       </button>
 
       {open && (
         <div className="mt-3 space-y-3 border-t border-indigo-100 pt-3 dark:border-indigo-900/50">
           <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300">
-            {he ? 'נזהה רק את אותו תיאור עסקה. המעקב לא משנה קטגוריות או סכומים.' : 'Only the same transaction description will match. This never changes categories or totals.'}
+            {t('merchantWatch.exactDescriptionHint')}
           </p>
           <div className="grid grid-cols-3 gap-1.5">
-            {CONDITIONS.map(([value, heLabel, enLabel]) => (
+            {CONDITIONS.map(([value, labelKey]) => (
               <button
                 key={value}
                 type="button"
@@ -72,13 +73,13 @@ export default function MerchantWatchControl({ transaction, language }) {
                     : 'border-indigo-100 bg-white text-gray-600 dark:border-indigo-900 dark:bg-gray-900 dark:text-gray-300',
                 )}
               >
-                {he ? heLabel : enLabel}
+                {t(`merchantWatch.${labelKey}`)}
               </button>
             ))}
           </div>
           {condition !== 'all' && (
             <label className="block">
-              <span className="mb-1 block text-[11px] font-medium text-gray-500">{he ? 'סכום בש״ח' : 'Amount (ILS)'}</span>
+              <span className="mb-1 block text-[11px] font-medium text-gray-500">{t('merchantWatch.amountIls')}</span>
               <input
                 type="number"
                 min="0.01"
@@ -96,7 +97,7 @@ export default function MerchantWatchControl({ transaction, language }) {
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-700 disabled:opacity-40"
           >
             {create.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {he ? 'שמור מעקב' : 'Save watch'}
+            {t('merchantWatch.save')}
           </button>
         </div>
       )}

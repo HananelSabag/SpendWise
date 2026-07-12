@@ -6,9 +6,9 @@ import { api } from '../../../api';
 import { useTranslation } from '../../../stores';
 
 const choices = [
-  { id: 'salary', he: 'משכורת', en: 'Salary', Icon: Briefcase },
-  { id: 'bonus', he: 'בונוס / תוספת', en: 'Bonus / extra', Icon: CircleDollarSign },
-  { id: 'other', he: 'הכנסה אחרת', en: 'Other income', Icon: HelpCircle },
+  { id: 'salary', labelKey: 'salary', Icon: Briefcase },
+  { id: 'bonus', labelKey: 'bonus', Icon: CircleDollarSign },
+  { id: 'other', labelKey: 'other', Icon: HelpCircle },
 ];
 
 function monthLabel(month, language) {
@@ -17,7 +17,7 @@ function monthLabel(month, language) {
 }
 
 export default function SalaryReviewPrompt({ formatCurrency }) {
-  const { currentLanguage } = useTranslation();
+  const { t, currentLanguage } = useTranslation('dashboard');
   const he = currentLanguage === 'he';
   const queryClient = useQueryClient();
   const [decisions, setDecisions] = useState({});
@@ -61,11 +61,9 @@ export default function SalaryReviewPrompt({ formatCurrency }) {
       <div className="flex items-start gap-3">
         <div className="rounded-xl bg-violet-100 p-2 text-violet-600 dark:bg-violet-900/40 dark:text-violet-300"><BadgeCheck className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-black text-gray-950 dark:text-white">{he ? 'קיבלנו שתי הכנסות שנראות כמו משכורת' : 'Two deposits look like salary'}</h3>
+          <h3 className="font-black text-gray-950 dark:text-white">{t('salaryReview.title')}</h3>
           <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-            {he
-              ? `שתיהן משויכות ל${monthLabel(conflict.economicMonth, currentLanguage)} מאותו מעסיק. סמן מה כל אחת כדי שבונוס לא יפתח בטעות מחזור משכורת חדש.`
-              : `Both map to ${monthLabel(conflict.economicMonth, currentLanguage)} from the same employer. Classify each so a bonus does not create a false salary cycle.`}
+            {t('salaryReview.description', { month: monthLabel(conflict.economicMonth, currentLanguage) })}
           </p>
         </div>
       </div>
@@ -81,7 +79,7 @@ export default function SalaryReviewPrompt({ formatCurrency }) {
               <p className="text-base font-black text-emerald-600">+{formatCurrency(transaction.amount)}</p>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-1.5">
-              {choices.map(({ id, he: heLabel, en, Icon }) => {
+              {choices.map(({ id, labelKey, Icon }) => {
                 const selected = decisions[transaction.id] === id;
                 return (
                   <button
@@ -91,7 +89,7 @@ export default function SalaryReviewPrompt({ formatCurrency }) {
                     onClick={() => setDecisions((previous) => ({ ...previous, [transaction.id]: id }))}
                     className={`flex min-h-10 items-center justify-center gap-1 rounded-lg px-2 text-[11px] font-bold transition ${selected ? 'bg-violet-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300'}`}
                   >
-                    <Icon className="h-3.5 w-3.5" />{he ? heLabel : en}
+                    <Icon className="h-3.5 w-3.5" />{t(`salaryReview.${labelKey}`)}
                   </button>
                 );
               })}
@@ -101,12 +99,12 @@ export default function SalaryReviewPrompt({ formatCurrency }) {
       </div>
 
       <div className="mt-4 flex items-center justify-between gap-3">
-        <p className="text-[11px] text-gray-500">{review.data.conflicts.length > 1 ? `${review.data.conflicts.length - 1} ${he ? 'בדיקות נוספות אחר כך' : 'more reviews after this'}` : (he ? 'הבחירה נשמרת עם העסקה וניתנת לשינוי בעתיד.' : 'The choice is stored with the transaction and can be changed later.')}</p>
+        <p className="text-[11px] text-gray-500">{review.data.conflicts.length > 1 ? t('salaryReview.moreReviews', { count: review.data.conflicts.length - 1 }) : t('salaryReview.storedHint')}</p>
         <button type="button" disabled={save.isPending} onClick={() => save.mutate()} className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white hover:bg-violet-700 disabled:opacity-50">
-          {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />}{he ? 'שמור סיווג' : 'Save classification'}
+          {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />}{t('salaryReview.save')}
         </button>
       </div>
-      {save.isError && <p className="mt-2 text-xs text-red-600">{save.error?.message || (he ? 'השמירה נכשלה.' : 'Save failed.')}</p>}
+      {save.isError && <p className="mt-2 text-xs text-red-600">{save.error?.message || t('salaryReview.saveFailed')}</p>}
     </section>
   );
 }

@@ -140,7 +140,7 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         <Field label={t('detail.id', { fallback: 'Reference' })} value={transaction.id} mono />
       </div>
 
-      <MerchantWatchControl key={transaction.id} transaction={transaction} language={currentLanguage} />
+      <MerchantWatchControl key={transaction.id} transaction={transaction} />
 
       {/* Actions */}
       {(canEdit || canDuplicate || canDelete) && (

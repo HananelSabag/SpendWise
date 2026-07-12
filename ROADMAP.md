@@ -183,6 +183,12 @@ month; anchored on the SALARY date (the refill), not the 1st.
 ---
 
 ## 3. Deferred UI polish (from live review) 🧊
+- **✅ Financial UI i18n completed (2026-07-12):** Runway, previous-month
+  accounting, salary selection/review, daily-flow history, optional projection,
+  the Insights page and merchant watches now read all user-facing copy from the
+  shared Hebrew/English dashboard dictionary. Language switches no longer leave
+  newly added cards stuck in Hebrew; locale-only date formatting and RTL arrows
+  remain intentionally language-aware in component code.
 - **✅ BankSync overview compacted (2026-07-12):** the oversized repeated cards
   are now one compact operational summary plus one row per connection, with last
   sync/new/processed/status information and a direct path to management.

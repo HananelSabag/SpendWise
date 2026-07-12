@@ -25,6 +25,48 @@ export default {
     needsSalary: "עדיין לא זוהתה משכורת — סמן אותה כדי לעגן את המחזור על יום התשלום.",
     fallbackNote: "מוצג לפי חודש קלנדרי עד שתהיה משכורת קודמת לעגן עליה.",
   },
+  monthlyAccounting: {
+    previousMonth: "סיכום החודש הקודם",
+    status: { open: "חודש פתוח", closed: "חודש סגור", awaitingSalary: "ממתין למשכורת", awaitingSettlement: "ממתין לאימות אשראי", needsReview: "דורש בדיקה" },
+    actualIncome: "הכנסה בפועל", spending: "הוצאות", actualNet: "נטו בפועל",
+    itemizedCard: "אשראי מפורט", bankCardCharge: "אשראי לפי חיוב בנקאי", bankDirect: "בנק ישיר", pending: "ממתין",
+    avgDailySpend: "ממוצע הוצאה ליום", avgDailyIncome: "ממוצע הכנסה ליום", cardVerification: "אימות חיוב אשראי", matched: "תואם", difference: "פער {{amount}}",
+    salarySearch: "מחפש משכורת בחשבון…", noSalaryCandidate: "עדיין לא נמצאה הכנסה מתאימה. החודש יושלם אחרי שהמשכורת תיכנס ותסונכרן.",
+    chooseSalary: "איזו הכנסה היא המשכורת שלך?", chooseSalaryHint: "בחירה אחת תאפשר לשייך משכורות עתידיות לחודש העבודה הקודם.", salarySaveFailed: "השמירה נכשלה. אפשר לנסות שוב."
+  },
+  salaryReview: {
+    title: "קיבלנו שתי הכנסות שנראות כמו משכורת", description: "שתיהן משויכות ל{{month}} מאותו מעסיק. סמן מה כל אחת כדי שבונוס לא יפתח בטעות מחזור משכורת חדש.",
+    salary: "משכורת", bonus: "בונוס / תוספת", other: "הכנסה אחרת", moreReviews: "עוד {{count}} בדיקות אחר כך",
+    storedHint: "הבחירה נשמרת עם העסקה וניתנת לשינוי בעתיד.", save: "שמור סיווג", saveFailed: "השמירה נכשלה."
+  },
+  dailyFlow: {
+    eyebrow: "משכורת למשכורת", title: "מה קרה בכל יום במחזור", subtitle: "עובדות בלבד — בלי תחזית ובלי לספור חיוב אשראי פעמיים.",
+    current: "נוכחי", previous: "קודם", days: "{{count}} ימים", out: "יצא", incomeExSalary: "נכנס בלי שכר", cycleNet: "נטו במחזור",
+    outToday: "יצא היום", inToday: "נכנס היום", cumulativeNet: "נטו מצטבר", dailyOut: "יצא ביום", dailyIncomeExSalary: "נכנס בלי משכורת",
+    ledger: "יומן יומי", items: "{{count}} תנועות", salaryReceived: "נכנסה משכורת", stillPending: "{{amount}} עדיין ממתין",
+    needsReview: "{{count}} דורש בדיקה", refund: "החזר", noActivity: "אין פעילות במחזור הזה."
+  },
+  projection: {
+    eyebrow: "תכנון אופציונלי", title: "מה יישאר אחרי מה שצפוי", subtitle: "השכבה הזאת לא משנה עסקאות ולא נכנסת לחישובים האמיתיים. היא רק מאפשרת לך לבדוק תרחיש.",
+    enable: "הפעל תכנון", factualHint: "המאזן הנוכחי נשאר עובדה מהבנק; המספר המתוכנן מסומן תמיד בנפרד.",
+    expectedSalary: "משכורת צפויה", manualCharge: "חיוב צפוי ידני", amount: "סכום", date: "תאריך", chargeLabel: "שם החיוב", chargePlaceholder: "למשל: כרטיס לא מחובר",
+    salarySuggestion: "אם תשאיר ריק, נשתמש רק לתכנון במשכורת האחרונה: {{amount}}", realBalance: "מאזן אמיתי עכשיו", expectedNet: "צפוי להיכנס פחות לצאת", plannedBalance: "מאזן מתוכנן",
+    saved: "התכנון נשמר.", saveFailed: "לא הצלחנו לשמור.", saving: "שומר…", save: "שמור תכנון"
+  },
+  insightsPage: {
+    back: "חזרה", title: "חודשים ותובנות", subtitle: "כל הסיפור הפיננסי, בלי להעמיס על הדשבורד",
+    recurringTitle: "דפוסים שחוזרים", recurringSubtitle: "זיהוי חכם של בתי עסק שהופיעו לפחות בשני חודשים — כהמלצה לבדיקה, לא כחיוב ודאי.",
+    months: "{{count}} חודשים", noPatterns: "עדיין אין מספיק היסטוריה לזיהוי דפוסים.", transactionsTitle: "כל עסקאות המחזור",
+    transactionCount: "{{count}} עסקאות לפי התאריך הפיננסי הנכון", noTransactions: "אין עסקאות במחזור הזה."
+  },
+  merchantWatch: {
+    title: "בתי עסק במעקב", subtitle: "חוקים שבחרת מתוך עסקאות אמיתיות. הם מסמנים התאמות בלבד ולא משנים את החישובים.",
+    watch: "עקוב אחרי בית העסק", close: "סגור", chooseRule: "בחר חוק", exactDescriptionHint: "נזהה רק את אותו תיאור עסקה. המעקב לא משנה קטגוריות או סכומים.",
+    all: "כל עסקה", above: "מעל סכום", exact: "סכום מדויק", amountIls: "סכום בש״ח", save: "שמור מעקב",
+    created: "המעקב נוסף לתובנות", createFailed: "לא הצלחנו להוסיף מעקב", removeFailed: "לא הצלחנו להסיר את המעקב", loadFailed: "לא הצלחנו לטעון את המעקב.",
+    ruleAbove: "מעל {{amount}}", ruleExact: "בדיוק {{amount}}", matches: "{{count}} התאמות", remove: "הסר מעקב",
+    recentMatches: "התאמות אחרונות", noMatches: "אין עדיין עסקאות שמתאימות לחוקים האלה."
+  },
   insights: {
     largeTransaction: "עסקה גדולה",
     recurringPattern: "דפוס חוזר",
