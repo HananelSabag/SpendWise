@@ -10,6 +10,7 @@
 
 const logger = require('../utils/logger');
 const { institutionKind } = require('../config/institutions');
+const { getRepresentativeRates } = require('./exchangeRateService');
 
 const MAX_TXNS = 2000;
 const MAX_AMOUNT = 10_000_000;
@@ -44,10 +45,19 @@ const CARD_PENDING_REKEY_CANDIDATE_SQL = `/* card pending-to-settled rekey candi
   WHERE stale.user_id = $1
     AND stale.bank_source = $2
     AND stale.bank_account_number IS NOT DISTINCT FROM $3
-    AND stale.amount = $4
     AND stale.type = $5
-    AND LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g'))
-        = LOWER(REGEXP_REPLACE(TRIM($6), '\\s+', ' ', 'g'))
+    AND (
+      (
+        stale.amount = $4
+        AND LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g'))
+            = LOWER(REGEXP_REPLACE(TRIM($6), '\\s+', ' ', 'g'))
+      )
+      OR (
+        stale.amount_is_estimated = TRUE
+        AND stale.original_amount = $9
+        AND stale.original_currency = $10
+      )
+    )
     AND ABS(stale.date - $7::date) <= 3
     AND stale.deleted_at IS NULL
     AND stale.bank_status = 'pending'
@@ -99,6 +109,58 @@ function normalizePositiveInteger(value) {
   return Number.isInteger(number) && number > 0 && number <= 32767 ? number : null;
 }
 
+function median(values) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function buildPayloadFxRates(accounts) {
+  const samples = new Map();
+  for (const account of accounts || []) {
+    const accountNumber = String(account.account_number || 'default').trim();
+    for (const txn of account.txns || []) {
+      const charged = Math.abs(Number(txn.charged_amount));
+      const original = Math.abs(Number(txn.original_amount));
+      const currency = normalizeCurrency(txn.original_currency);
+      const chargedCurrency = normalizeCurrency(txn.charged_currency);
+      if (!currency || currency === 'ILS' || chargedCurrency !== 'ILS'
+        || !Number.isFinite(charged) || charged <= 0
+        || !Number.isFinite(original) || original <= 0) continue;
+      const rate = charged / original;
+      if (!Number.isFinite(rate) || rate <= 0 || rate > 1000) continue;
+      const key = `${accountNumber}:${currency}`;
+      const list = samples.get(key) || [];
+      list.push(rate);
+      samples.set(key, list);
+    }
+  }
+  return new Map([...samples].map(([key, values]) => [key, {
+    rate: median(values), source: 'provider_history_median', asOf: null,
+  }]));
+}
+
+function estimatePendingFx(txn, accountNumber, representativeRates, payloadRates) {
+  const status = normalizeBankStatus(txn.status);
+  const charged = Number(txn.charged_amount);
+  const originalSigned = Number(txn.original_amount);
+  const currency = normalizeCurrency(txn.original_currency);
+  if (charged !== 0 || status !== 'pending' || !Number.isFinite(originalSigned)
+    || originalSigned === 0 || !currency || currency === 'ILS') return null;
+  const rateInfo = representativeRates.get(currency)
+    || payloadRates.get(`${accountNumber}:${currency}`);
+  if (!rateInfo || !Number.isFinite(rateInfo.rate) || rateInfo.rate <= 0) return null;
+  const signedAmount = Math.sign(originalSigned)
+    * Math.round((Math.abs(originalSigned) * rateInfo.rate + Number.EPSILON) * 100) / 100;
+  return {
+    chargedAmount: signedAmount,
+    rate: rateInfo.rate,
+    source: rateInfo.source,
+    asOf: rateInfo.asOf,
+  };
+}
+
 /**
  * Ingest scraped accounts for a user inside an existing DB transaction.
  *
@@ -112,6 +174,15 @@ async function ingestAccounts(client, userId, source, accounts) {
   let inserted = 0;
   let skipped = 0;
   const isCreditCompany = institutionKind(source) === 'credit_card';
+  const payloadFxRates = buildPayloadFxRates(accounts);
+  const hasPendingForeignZero = accounts.some((account) => (account.txns || []).some((txn) => {
+    const currency = normalizeCurrency(txn.original_currency);
+    return Number(txn.charged_amount) === 0
+      && normalizeBankStatus(txn.status) === 'pending'
+      && currency && currency !== 'ILS'
+      && Number(txn.original_amount) !== 0;
+  }));
+  const representativeRates = hasPendingForeignZero ? await getRepresentativeRates() : new Map();
 
   const totalTxns = accounts.reduce(
     (sum, a) => sum + (Array.isArray(a.txns) ? a.txns.length : 0), 0
@@ -145,7 +216,15 @@ async function ingestAccounts(client, userId, source, accounts) {
     if (disabled.has(acctKey)) continue;
 
     for (const txn of (account.txns || [])) {
-      const chargedAmount = parseFloat(txn.charged_amount);
+      const bankStatus = normalizeBankStatus(txn.status);
+      const originalAmount = normalizeOptionalAmount(txn.original_amount);
+      const originalCurrency = normalizeCurrency(txn.original_currency);
+      const fxEstimate = estimatePendingFx(txn, acctKey, representativeRates, payloadFxRates);
+      const chargedAmount = fxEstimate?.chargedAmount ?? parseFloat(txn.charged_amount);
+      const amountIsEstimated = Boolean(fxEstimate);
+      const fxRateUsed = fxEstimate?.rate || null;
+      const fxRateSource = fxEstimate?.source || null;
+      const fxRateAsOf = fxEstimate?.asOf || null;
 
       // Skip zero, NaN, or unrealistically large amounts.
       if (!Number.isFinite(chargedAmount) || chargedAmount === 0) { skipped++; continue; }
@@ -162,10 +241,7 @@ async function ingestAccounts(client, userId, source, accounts) {
       // null when absent — we never guess a category at ingest time.
       const rawCategory = (txn.raw_category || '').toString().trim().slice(0, 200) || null;
       const bankProcessedDate = normalizeProcessedDate(txn.processed_date);
-      const bankStatus = normalizeBankStatus(txn.status);
-      const originalAmount = normalizeOptionalAmount(txn.original_amount);
-      const originalCurrency = normalizeCurrency(txn.original_currency);
-      const chargedCurrency = normalizeCurrency(txn.charged_currency);
+      const chargedCurrency = amountIsEstimated ? 'ILS' : normalizeCurrency(txn.charged_currency);
       const txnKind = String(txn.txn_kind ?? '').trim().slice(0, 50) || null;
       const installmentNumber = normalizePositiveInteger(txn.installment_number);
       const installmentTotal = normalizePositiveInteger(txn.installment_total);
@@ -221,7 +297,10 @@ async function ingestAccounts(client, userId, source, accounts) {
           const rekeyCandidates = isCreditCompany
             ? await client.query(
               CARD_PENDING_REKEY_CANDIDATE_SQL,
-              [userId, source, acctNum, amount, type, description, date, bankSyncId],
+              [
+                userId, source, acctNum, amount, type, description, date, bankSyncId,
+                originalAmount, originalCurrency,
+              ],
             )
             : await client.query(
               PENDING_REKEY_CANDIDATE_SQL,
@@ -249,6 +328,10 @@ async function ingestAccounts(client, userId, source, accounts) {
                  txn_kind             = COALESCE($15, txn_kind),
                  installment_number   = COALESCE($16, installment_number),
                  installment_total    = COALESCE($17, installment_total),
+                 amount_is_estimated  = $18,
+                 fx_rate_used         = $19,
+                 fx_rate_source       = $20,
+                 fx_rate_as_of        = $21,
                  updated_at           = NOW()
                WHERE id = $1`,
               [
@@ -257,6 +340,7 @@ async function ingestAccounts(client, userId, source, accounts) {
                 bankStatus, originalAmount, originalCurrency, chargedCurrency, txnKind,
                 validInstallments ? installmentNumber : null,
                 validInstallments ? installmentTotal : null,
+                amountIsEstimated, fxRateUsed, fxRateSource, fxRateAsOf,
               ],
             );
             skipped++;
@@ -271,8 +355,9 @@ async function ingestAccounts(client, userId, source, accounts) {
               raw_category, bank_sync_id, bank_source, bank_account_number,
               bank_processed_date, bank_status, original_amount, original_currency,
               charged_currency, txn_kind, installment_number, installment_total,
+              amount_is_estimated, fx_rate_used, fx_rate_source, fx_rate_as_of,
               created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$13,$5,$6,$7,$8,$9,$10,$11,$12,$14,$15,$16,$17,$18,$19,NOW(),NOW())
+           VALUES ($1,$2,$3,$4,$13,$5,$6,$7,$8,$9,$10,$11,$12,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW(),NOW())
            ON CONFLICT (user_id, bank_sync_id)
              WHERE bank_sync_id IS NOT NULL
            DO UPDATE SET
@@ -289,6 +374,10 @@ async function ingestAccounts(client, userId, source, accounts) {
              txn_kind            = COALESCE(EXCLUDED.txn_kind, transactions.txn_kind),
              installment_number  = COALESCE(EXCLUDED.installment_number, transactions.installment_number),
              installment_total   = COALESCE(EXCLUDED.installment_total, transactions.installment_total),
+             amount_is_estimated = EXCLUDED.amount_is_estimated,
+             fx_rate_used        = EXCLUDED.fx_rate_used,
+             fx_rate_source      = EXCLUDED.fx_rate_source,
+             fx_rate_as_of       = EXCLUDED.fx_rate_as_of,
              raw_category        = COALESCE(transactions.raw_category, EXCLUDED.raw_category),
              notes               = CASE
                                      WHEN COALESCE(transactions.notes, '') = '' THEN EXCLUDED.notes
@@ -308,6 +397,10 @@ async function ingestAccounts(client, userId, source, accounts) {
               OR transactions.txn_kind IS DISTINCT FROM COALESCE(EXCLUDED.txn_kind, transactions.txn_kind)
               OR transactions.installment_number IS DISTINCT FROM COALESCE(EXCLUDED.installment_number, transactions.installment_number)
               OR transactions.installment_total IS DISTINCT FROM COALESCE(EXCLUDED.installment_total, transactions.installment_total)
+              OR transactions.amount_is_estimated IS DISTINCT FROM EXCLUDED.amount_is_estimated
+              OR transactions.fx_rate_used IS DISTINCT FROM EXCLUDED.fx_rate_used
+              OR transactions.fx_rate_source IS DISTINCT FROM EXCLUDED.fx_rate_source
+              OR transactions.fx_rate_as_of IS DISTINCT FROM EXCLUDED.fx_rate_as_of
               OR transactions.raw_category IS DISTINCT FROM COALESCE(transactions.raw_category, EXCLUDED.raw_category)
               OR (COALESCE(transactions.notes, '') = '' AND COALESCE(EXCLUDED.notes, '') <> '')
            RETURNING id, (xmax = 0) AS was_inserted`,
@@ -317,6 +410,7 @@ async function ingestAccounts(client, userId, source, accounts) {
             originalAmount, originalCurrency, chargedCurrency, txnKind,
             validInstallments ? installmentNumber : null,
             validInstallments ? installmentTotal : null,
+            amountIsEstimated, fxRateUsed, fxRateSource, fxRateAsOf,
           ],
         );
         result.rows[0]?.was_inserted ? inserted++ : skipped++;
@@ -355,6 +449,10 @@ async function ingestAccounts(client, userId, source, accounts) {
                txn_kind            = COALESCE($14, txn_kind),
                installment_number  = COALESCE($15, installment_number),
                installment_total   = COALESCE($16, installment_total),
+               amount_is_estimated = $17,
+               fx_rate_used        = $18,
+               fx_rate_source      = $19,
+               fx_rate_as_of       = $20,
                updated_at          = NOW()
              WHERE id = $1
                AND (
@@ -373,6 +471,10 @@ async function ingestAccounts(client, userId, source, accounts) {
                  OR txn_kind IS DISTINCT FROM COALESCE($14, txn_kind)
                  OR installment_number IS DISTINCT FROM COALESCE($15, installment_number)
                  OR installment_total IS DISTINCT FROM COALESCE($16, installment_total)
+                 OR amount_is_estimated IS DISTINCT FROM $17
+                 OR fx_rate_used IS DISTINCT FROM $18
+                 OR fx_rate_source IS DISTINCT FROM $19
+                 OR fx_rate_as_of IS DISTINCT FROM $20
                )`,
             [
               existing.rows[0].id, amount, type, description, date,
@@ -380,6 +482,7 @@ async function ingestAccounts(client, userId, source, accounts) {
               originalAmount, originalCurrency, chargedCurrency, txnKind,
               validInstallments ? installmentNumber : null,
               validInstallments ? installmentTotal : null,
+              amountIsEstimated, fxRateUsed, fxRateSource, fxRateAsOf,
             ],
           );
           skipped++;
@@ -390,14 +493,16 @@ async function ingestAccounts(client, userId, source, accounts) {
                 raw_category, bank_source, bank_account_number,
                 bank_processed_date, bank_status, original_amount, original_currency,
                 charged_currency, txn_kind, installment_number, installment_total,
+                amount_is_estimated, fx_rate_used, fx_rate_source, fx_rate_as_of,
                 created_at, updated_at)
-             VALUES ($1,$2,$3,$4,$12,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16,$17,$18,NOW(),NOW())`,
+             VALUES ($1,$2,$3,$4,$12,$5,$6,$7,$8,$9,$10,$11,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,NOW(),NOW())`,
             [
               userId, amount, type, description, date, transactionDatetime,
               rawCategory, source, acctNum, bankProcessedDate, bankStatus, bankNotes,
               originalAmount, originalCurrency, chargedCurrency, txnKind,
               validInstallments ? installmentNumber : null,
               validInstallments ? installmentTotal : null,
+              amountIsEstimated, fxRateUsed, fxRateSource, fxRateAsOf,
             ],
           );
           inserted++;
@@ -444,5 +549,7 @@ module.exports = {
   normalizeOptionalAmount,
   normalizeCurrency,
   normalizePositiveInteger,
+  buildPayloadFxRates,
+  estimatePendingFx,
   PENDING_REKEY_CANDIDATE_SQL,
 };

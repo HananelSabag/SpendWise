@@ -71,11 +71,10 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
   layer. The user/auth record, three encrypted Yahav/Max/Isracard connections and
   all nine account enable choices were preserved; disabled Yahav account
   `120-511509` remained disabled.
-- Clean worker jobs completed for Yahav, Max and Isracard. The resulting ledger has
-  **306** rows: Yahav **68**, Max **45**, Isracard **193**. Max's two non-inserted
-  RAW rows are factual zero-charge rows: one completed cancellation and one USD
-  pending authorization without a provider-supplied ILS charge. No exchange rate
-  or amount is inferred.
+- Clean worker jobs completed for Yahav, Max and Isracard. The initial ledger had
+  **306** rows: Yahav **68**, Max **45**, Isracard **193**. Max's two initially
+  non-inserted RAW rows were a factual completed zero-charge cancellation and a USD
+  pending authorization without a provider-supplied ILS charge.
 - Yahav describes settlements by provider (`מקס איט פיננסים`, `ישראכרט בע"מ`,
   `כרטיסי אשראי לי`, `פרימיום אקספרס`) and does not expose card last-four in the
   bank row. Reconciliation now supports account scope when identity is explicit,
@@ -88,6 +87,27 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
   income **₪0**, expenses **₪499.69**, and known upcoming card charges **₪1,624.70**.
 - Provider-level reconciliation is scoped to the selected Financial Cycle and
   preserves distinct pending settlement rows. Loans remain deferred.
+
+### 2026-07-13 21:50 Asia/Jerusalem — pending FX and automatic salary forecast
+
+- A pending foreign-card authorization whose provider amount is still zero is no
+  longer dropped. It receives a clearly marked temporary ILS estimate from the
+  Bank of Israel representative rate (with a recent provider-history median as an
+  offline fallback). The estimate, source and timestamp are stored explicitly.
+- When the issuer later posts the completed transaction, pending-to-completed rekey
+  matching also uses original amount/currency, replaces the estimate with the final
+  provider ILS amount and clears all estimate metadata. A completed zero-charge
+  cancellation remains excluded.
+- Yahav's explicit `משכורת` label is now a high-confidence salary fact even before
+  the user creates a salary signature. Overrides remain authoritative. This fixed
+  the clean-onboarding gap where all six real salary deposits were ordinary income.
+- Yehuda's previous cycle (June 11–July 10) contains salary **₪33,075.01**, other
+  income **₪2,254.00**, total income **₪35,329.01**, expenses **₪35,759.58** and net
+  **−₪430.57**.
+- The current-cycle forecast detects the two salary streams independently from
+  three months of history: **₪14,263.04** expected August 1 and **₪15,333.21**
+  expected August 5. Total automatic expected income is **₪29,596.25**; a manual
+  planning value, when provided, still overrides it.
 
 ---
 

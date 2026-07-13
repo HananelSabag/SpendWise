@@ -50,7 +50,7 @@ export default {
   projection: {
     eyebrow: "תכנון אופציונלי", title: "מה יישאר אחרי מה שצפוי", subtitle: "השכבה הזאת לא משנה עסקאות ולא נכנסת לחישובים האמיתיים. היא רק מאפשרת לך לבדוק תרחיש.",
     enable: "הפעל תכנון", factualHint: "המאזן הנוכחי נשאר עובדה מהבנק; המספר המתוכנן מסומן תמיד בנפרד.",
-    expectedIncome: "הכנסה צפויה", expectedSalary: "הכנסה צפויה", manualCharge: "חיוב צפוי ידני", amount: "סכום", date: "תאריך", chargeLabel: "שם החיוב", chargePlaceholder: "למשל: כרטיס לא מחובר",
+    expectedIncome: "הכנסה צפויה", expectedSalary: "הכנסה צפויה", manualCharge: "חיוב צפוי ידני", amount: "סכום", date: "תאריך", chargeLabel: "שם החיוב", chargePlaceholder: "למשל: כרטיס לא מחובר", automaticSalary: "{{amount}} צפויים אוטומטית לפי היסטוריית המשכורות",
     salarySuggestion: "אם תשאיר ריק, נשתמש רק לתכנון במשכורת האחרונה: {{amount}}", realBalance: "מאזן אמיתי עכשיו", expectedNet: "צפוי להיכנס פחות לצאת", plannedBalance: "מאזן מתוכנן",
     saved: "התכנון נשמר.", saveFailed: "לא הצלחנו לשמור.", saving: "שומר…", save: "שמור תכנון"
   },

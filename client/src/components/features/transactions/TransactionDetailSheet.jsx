@@ -110,6 +110,9 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         fallback: `1 ${fx.originalCurrency} ≈ ${fx.effectiveRate.toFixed(4)} ${fx.chargedCurrency}`,
       })
     : null;
+  const fxEstimateLabel = fx?.estimated
+    ? t('detail.fxEstimate', { fallback: 'Temporary estimate · replaced when the issuer posts the final ILS amount' })
+    : null;
 
   const sourceLabel = isBankSynced
     ? institutionLabel(transaction.bank_source, currentLanguage)
@@ -190,6 +193,7 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         <Field label={t('detail.originalAmount', { fallback: 'Original amount' })} value={originalAmountLabel} />
         <Field label={t('detail.chargedAmount', { fallback: 'Charged amount' })} value={chargedAmountLabel} />
         <Field label={t('detail.effectiveRate', { fallback: 'Effective conversion' })} value={effectiveRateLabel} />
+        <Field label={t('detail.fxEstimateLabel', { fallback: 'FX status' })} value={fxEstimateLabel} />
         <Field label={t('detail.transactionKind', { fallback: 'Provider type' })} value={transaction.txn_kind} />
         <Field label={t('detail.notes', { fallback: 'Notes' })} value={(transaction.notes || '').trim()} />
         <Field label={t('detail.origin', { fallback: 'Origin' })} value={originLabel} />

@@ -44,7 +44,11 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, onSave
   useEffect(() => setDraft(toDraft(projection?.settings)), [projection?.settings]);
   const planned = draft.enabled ? Number(draft.expectedCharge) || 0 : 0;
   const expectedRemaining = (current?.expected?.remainingKnown ?? current?.money?.spentPending ?? 0) + planned;
-  const expectedIncome = draft.enabled ? Number(draft.expectedIncome) || 0 : 0;
+  const manualExpectedIncome = draft.enabled && draft.expectedIncome !== ''
+    ? Number(draft.expectedIncome) || 0 : null;
+  const expectedIncome = manualExpectedIncome ?? (Number(projection?.expectedIncome?.amount) || 0);
+  const automaticSalaries = projection?.expectedIncome?.source === 'automatic_salary_history'
+    ? projection.expectedIncome.entries || [] : [];
   const preview = useMemo(() => current?.checkingBalance == null ? null : current.checkingBalance + expectedIncome - expectedRemaining, [current?.checkingBalance, expectedIncome, expectedRemaining]);
   if (!current || !projection) return null;
 
@@ -73,6 +77,14 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, onSave
         <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/20"><p className="text-[10px] text-amber-700">{t('cycleDashboard.remaining')}</p><p className="mt-1 font-black text-amber-700">{formatCurrency(expectedRemaining)}</p></div>
         <div className="rounded-2xl bg-indigo-50 p-3 dark:bg-indigo-950/25"><p className="text-[10px] text-indigo-600">{t('cycleDashboard.expectedEnd')}</p><p className="mt-1 font-black text-indigo-700 dark:text-indigo-300">{preview == null ? '—' : formatCurrency(preview)}</p></div>
       </div>
+      {automaticSalaries.length > 0 && (
+        <div className="mt-3 rounded-2xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300">
+          <p className="font-bold">{t('projection.automaticSalary', { amount: formatCurrency(expectedIncome) })}</p>
+          <p className="mt-1 text-[11px] opacity-80">
+            {automaticSalaries.map((entry) => `${entry.description} · ${entry.expectedDate}`).join(' · ')}
+          </p>
+        </div>
+      )}
       <details className="group mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
         <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-gray-500">{t('cycleDashboard.adjustForecast')}<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">

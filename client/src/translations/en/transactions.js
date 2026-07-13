@@ -532,6 +532,8 @@ export default {
     chargedAmount: "Charged amount",
     effectiveRate: "Effective conversion",
     effectiveRateValue: "1 {{originalCurrency}} ≈ {{rate}} {{chargedCurrency}}",
+    fxEstimateLabel: "FX status",
+    fxEstimate: "Temporary estimate · replaced when the issuer posts the final ILS amount",
     transactionKind: "Provider type",
     notes: "Notes",
     incoming: "Incoming movement",

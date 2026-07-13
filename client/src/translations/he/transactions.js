@@ -532,6 +532,8 @@ export default {
     chargedAmount: "סכום שחויב",
     effectiveRate: "המרה בפועל",
     effectiveRateValue: "1 {{originalCurrency}} ≈ {{rate}} {{chargedCurrency}}",
+    fxEstimateLabel: "מצב המרה",
+    fxEstimate: "אומדן זמני · יוחלף כשהמנפיק יפרסם את החיוב הסופי בשקלים",
     transactionKind: "סוג אצל הספק",
     notes: "הערות",
     incoming: "תנועה נכנסת",

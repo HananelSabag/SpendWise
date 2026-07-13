@@ -1,5 +1,6 @@
 const {
   buildCycleFromData,
+  buildExpectedSalaryForecast,
   buildProjection,
   deriveBillingBoundaries,
   reduceCycleRows,
@@ -277,6 +278,43 @@ describe('card-billing financial cycle', () => {
       incomeExSalary: 250,
       transferInflows: 4200,
       netIncludingSalaryCommitted: 8250,
+    });
+  });
+
+  test('automatically recognizes explicit bank salary labels and forecasts recurring salary dates', () => {
+    const salaryRows = [
+      row({ id: 1, type: 'income', amount: 10000, description: 'משכורת/עובדי מדינה', date: '2026-05-01' }),
+      row({ id: 2, type: 'income', amount: 14000, description: 'משכורת/עובדי מדינה', date: '2026-06-01' }),
+      row({ id: 3, type: 'income', amount: 17000, description: 'משכורת/עובדי מדינה', date: '2026-07-01' }),
+      row({ id: 4, type: 'income', amount: 15000, description: 'משכורת/מובילאיי', date: '2026-05-05' }),
+      row({ id: 5, type: 'income', amount: 15300, description: 'משכורת/מובילאיי', date: '2026-06-05' }),
+      row({ id: 6, type: 'income', amount: 15400, description: 'משכורת/מובילאיי', date: '2026-07-05' }),
+    ];
+    const forecast = buildExpectedSalaryForecast(salaryRows, {
+      cycleStart: '2026-07-11', nextBillingDate: '2026-08-10',
+    }, { debitCardAccounts: [], connectedCardSources: [] }, '2026-07-13');
+
+    expect(forecast).toMatchObject({ total: 29300, method: 'recurring_explicit_salary_labels' });
+    expect(forecast.entries.map((entry) => [entry.expectedDate, entry.amount])).toEqual([
+      ['2026-08-01', 14000],
+      ['2026-08-05', 15300],
+    ]);
+
+    const projection = buildProjection({
+      checkingBalance: -1800,
+      lastDay: '2026-07-13',
+      expected: {
+        remainingKnown: 1600,
+        cardChargesNotYetSettled: 1600,
+        bankPending: 0,
+        salaryIncomeExpected: forecast.total,
+        salaryForecast: forecast,
+      },
+    });
+    expect(projection).toMatchObject({
+      projectedCheckingBalance: 25900,
+      hasAutomaticSalaryForecast: true,
+      expectedIncome: { amount: 29300, source: 'automatic_salary_history' },
     });
   });
 

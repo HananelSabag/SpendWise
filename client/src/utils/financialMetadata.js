@@ -17,5 +17,8 @@ export function getForeignExchangeMetadata(transaction) {
     chargedAmount,
     chargedCurrency,
     effectiveRate: chargedAmount / originalAmount,
+    estimated: transaction?.amount_is_estimated === true || transaction?.amountIsEstimated === true,
+    rateSource: transaction?.fx_rate_source || transaction?.fxRateSource || null,
+    rateAsOf: transaction?.fx_rate_as_of || transaction?.fxRateAsOf || null,
   };
 }

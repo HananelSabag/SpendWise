@@ -39,6 +39,10 @@ const SELECT_COLUMNS = `
   t.original_amount,
   t.original_currency,
   t.charged_currency,
+  t.amount_is_estimated,
+  t.fx_rate_used,
+  t.fx_rate_source,
+  t.fx_rate_as_of,
   t.txn_kind,
   t.installment_number,
   t.installment_total

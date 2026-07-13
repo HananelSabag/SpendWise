@@ -11,10 +11,15 @@
   after the last observed dominant provider billing date, not on salary day.
 - Count every raw income and expense in the window. Exclude only a summarized bank
   card settlement when connected itemized purchases would duplicate it.
-- End-cycle forecast is checking balance + explicit expected income − upcoming
-  cards − bank pending − optional planned expense.
-- Do not restore salary attribution, `month_offset`, or classification patches to
-  these two user-facing calculations. Loans are explicitly deferred.
+- End-cycle forecast is checking balance + either a manual expected-income override
+  or automatic recurring salary history − upcoming cards − bank pending − optional
+  planned expense. Explicit provider salary labels and user signatures are the only
+  automatic salary identities; Calendar Month still remains raw and un-attributed.
+- Pending foreign-card rows with no provider ILS amount use a stored, visibly marked
+  temporary Bank of Israel estimate. The completed provider row replaces it using
+  original amount/currency lifecycle matching. Never present the estimate as final.
+- Do not restore `month_offset` attribution or salary ownership patches to Calendar
+  Month. Loans are explicitly deferred.
 - Long explanations belong in collapsed `<details>` panels, closed by default.
 
 Copy the prompt below into a new Claude session. Do not restart the project or

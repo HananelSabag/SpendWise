@@ -75,6 +75,8 @@ describe('financial classification', () => {
     }] };
     expect(classifyTransaction(row({ type: 'income', description: 'הורייזן טכנו-י' }), salaryContext))
       .toMatchObject({ economicRole: 'income', salary: true, monthOffset: -1, calendarInclusion: 'include' });
+    expect(classifyTransaction(row({ type: 'income', bank_source: 'yahav', description: '‫משכורת/‫מובילאיי טכנולו' })))
+      .toMatchObject({ economicRole: 'income', salary: true, confidence: 'high', calendarInclusion: 'include' });
     expect(classifyTransaction(row({ type: 'income', description: 'העמדת הלואה' })))
       .toMatchObject({ economicRole: 'loan', calendarInclusion: 'exclude' });
     expect(classifyTransaction(row({ type: 'income', description: 'פריסה לתשלומים' })))

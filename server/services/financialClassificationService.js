@@ -41,6 +41,7 @@ const CASH_DESC = /(משיכת\s*מזומן|משיכה\s*עם\s*קוד)/;   // A
 const LOAN_REPAY_DESC = /(פרעון\s*הלוואה|החזר\s*הלוואה)/; // loan repayment (expense)
 const FEE_INTEREST_DESC = /(ריבית|עמלה|עמל\.)/;          // bank fee / interest
 const TAX_DESC = /מס\s*הכנסה/;                            // tax
+const SALARY_DESC = /(משכורת|salary)/i;
 const LOAN_DISBURSE_DESC = /(העמדת\s*הלוא|קבלת\s*הלוא|פריסה\s*לתשלומים)/;  // financing proceeds (income side)
 // Generic securities/investment terms ONLY. Never hardcode an employer/business
 // name here — a former employer's salary (job change) must be recognised as income
@@ -312,11 +313,14 @@ function classifyTransaction(txn, context = {}) {
       // employer's salary (job change) be recognised as real income once marked —
       // instead of a hardcoded name silently excluding it as "securities".
       const salary = matchesSalarySignature(txn, context.salarySignatures);
-      if (salary || txn.ledger_class === 'salary') {
+      const providerSalaryLabel = regexTest(SALARY_DESC, description);
+      if (salary || txn.ledger_class === 'salary' || providerSalaryLabel) {
         return { ...base, economicRole: 'income', sourceRole: 'bank_primary', settlementRole: 'none',
           calendarInclusion: 'include', direction: 'income', salary: true,
           monthOffset: Number.isInteger(salary?.month_offset) ? salary.month_offset : -1,
-          confidence: 'high', reason: `salary (${salary ? `signature ${salary.id ?? 'match'}` : 'stored ledger class'})` };
+          confidence: 'high', reason: `salary (${salary
+            ? `signature ${salary.id ?? 'match'}`
+            : providerSalaryLabel ? 'explicit provider label' : 'stored ledger class'})` };
       }
       if (regexTest(financingPattern, description) || txn.ledger_class === 'loan_disbursement') {
         return { ...base, economicRole: 'loan', sourceRole: 'bank_primary', settlementRole: 'none',
@@ -548,4 +552,5 @@ module.exports = {
   BANK_SETTLEMENT_DESCRIPTORS,
   DEBIT_CARD_DESC,
   CARD_LAST4_IN_MEMO,
+  SALARY_DESC,
 };

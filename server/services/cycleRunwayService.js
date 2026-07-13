@@ -13,6 +13,7 @@ const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
 const {
   classifyTransaction,
+  normalizeDescription,
   withoutSupersededPendingBankRows,
 } = require('./financialClassificationService');
 
@@ -322,10 +323,10 @@ function reduceCycleRows(rows, accounts, window, rawContext = {}) {
   const dailyEntries = [];
   const needsReview = [];
 
-  const addEntry = (row, key, amount, role, pending) => {
+  const addEntry = (row, key, amount, role, pending, salary = false) => {
     totals.transactionCount += 1;
     includedRows.push(row);
-    dailyEntries.push({ date: key, amount, role, pending });
+    dailyEntries.push({ date: key, amount, role, pending, salary });
   };
 
   for (const row of withoutSupersededPendingBankRows(rows)) {
@@ -359,7 +360,7 @@ function reduceCycleRows(rows, accounts, window, rawContext = {}) {
 
     if (classification.direction === 'refund') {
       totals[pending ? 'cardRefundsPending' : 'cardRefundsPosted'] += rawAmount;
-      addEntry(row, key, rawAmount, 'income', pending);
+      addEntry(row, key, rawAmount, 'income', pending, classification.salary === true);
     } else if (classification.direction === 'income' || row.type === 'income') {
       totals[pending ? 'incomePending' : 'incomePosted'] += rawAmount;
       if (classification.salary) totals.salaryIncome += rawAmount;
@@ -510,7 +511,10 @@ function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive, rawCon
     const day = days.get(entry.date);
     if (!day) continue;
     day.transactionCount += 1;
-    if (entry.role === 'income') day.totalIncome += entry.amount;
+    if (entry.role === 'income') {
+      day.totalIncome += entry.amount;
+      if (entry.salary) day.salaryIncome += entry.amount;
+    }
     else {
       day.spentCommitted += entry.amount;
       if (!entry.pending) day.spentActual += entry.amount;
@@ -518,23 +522,100 @@ function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive, rawCon
   }
   let cumulativeSpent = 0;
   let cumulativeIncome = 0;
+  let cumulativeSalary = 0;
   return [...days.values()].map((day) => {
     day.spentActual = round2(day.spentActual);
     day.spentCommitted = round2(day.spentCommitted);
     day.spentPending = round2(day.spentCommitted - day.spentActual);
     day.totalIncome = round2(day.totalIncome);
-    day.incomeExSalary = day.totalIncome;
+    day.salaryIncome = round2(day.salaryIncome);
+    day.incomeExSalary = round2(day.totalIncome - day.salaryIncome);
     cumulativeSpent = round2(cumulativeSpent + day.spentCommitted);
     cumulativeIncome = round2(cumulativeIncome + day.totalIncome);
+    cumulativeSalary = round2(cumulativeSalary + day.salaryIncome);
     return {
       ...day,
       cumulativeSpent,
       cumulativeIncome,
       cumulativeTotalIncome: cumulativeIncome,
       cumulativeNetIncludingSalary: round2(cumulativeIncome - cumulativeSpent),
-      cumulativeNetExSalary: round2(cumulativeIncome - cumulativeSpent),
+      cumulativeNetExSalary: round2(cumulativeIncome - cumulativeSalary - cumulativeSpent),
     };
   });
+}
+
+function medianNumber(values) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function monthAfter(month, offset) {
+  const date = new Date(`${month}-01T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + offset);
+  return date.toISOString().slice(0, 7);
+}
+
+function dateInMonth(month, day) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  return `${month}-${String(Math.min(lastDay, Math.max(1, day))).padStart(2, '0')}`;
+}
+
+function buildExpectedSalaryForecast(rows, window, context, today) {
+  if (!window?.nextBillingDate) return { total: 0, entries: [], method: 'none' };
+  const groups = new Map();
+  for (const row of rows || []) {
+    if (institutionKind(row.bank_source) !== 'bank' || row.type !== 'income'
+      || row.bank_status === 'pending') continue;
+    const date = dateKey(row.date);
+    if (!date || date > today) continue;
+    const classification = classifyTransaction(row, context);
+    if (!classification.salary) continue;
+    const key = [row.bank_source, row.bank_account_number || '', normalizeDescription(row.description)].join('|');
+    const group = groups.get(key) || {
+      bankSource: row.bank_source,
+      accountNumber: String(row.bank_account_number || ''),
+      description: row.description || '',
+      rows: [],
+    };
+    group.rows.push({ date, amount: Math.abs(Number(row.amount) || 0) });
+    groups.set(key, group);
+  }
+
+  const horizonExclusive = nextDay(window.nextBillingDate);
+  const entries = [];
+  for (const group of groups.values()) {
+    group.rows.sort((a, b) => a.date.localeCompare(b.date));
+    const distinctMonths = new Set(group.rows.map((item) => item.date.slice(0, 7)));
+    if (distinctMonths.size < 2) continue;
+    const samples = group.rows.slice(-3);
+    const typicalDay = Math.round(medianNumber(samples.map((item) => Number(item.date.slice(8, 10)))));
+    const estimatedAmount = round2(medianNumber(samples.map((item) => item.amount)));
+    let expectedDate = null;
+    for (let offset = 0; offset < 3 && !expectedDate; offset += 1) {
+      const candidate = dateInMonth(monthAfter(today.slice(0, 7), offset), typicalDay);
+      if (candidate > today && candidate >= window.cycleStart && candidate < horizonExclusive) {
+        expectedDate = candidate;
+      }
+    }
+    if (!expectedDate || !estimatedAmount) continue;
+    entries.push({
+      ...group,
+      rows: undefined,
+      expectedDate,
+      amount: estimatedAmount,
+      sampleCount: samples.length,
+      method: 'median_of_recent_salary_history',
+    });
+  }
+  entries.sort((a, b) => a.expectedDate.localeCompare(b.expectedDate) || a.description.localeCompare(b.description));
+  return {
+    total: round2(entries.reduce((sum, entry) => sum + entry.amount, 0)),
+    entries,
+    method: entries.length ? 'recurring_explicit_salary_labels' : 'none',
+  };
 }
 
 function buildCycleFromData(data, offset = 0, now = todayKey()) {
@@ -559,6 +640,9 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
   const daysElapsed = daysBetween(window.cycleStart, window.cycleEndExclusive);
   const pendingBank = reduced.totals.bankExpensesPending;
   const salaryInWindow = reduced.totals.salaryIncome;
+  const salaryForecast = offset === 0
+    ? buildExpectedSalaryForecast(rows, window, context, now)
+    : { total: 0, entries: [], method: 'none' };
 
   return {
     offset,
@@ -608,6 +692,8 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
       cardChargesPosted: upcoming.posted,
       cardChargesPending: upcoming.pending,
       cardRefundsExpected: upcoming.refunds,
+      salaryIncomeExpected: salaryForecast.total,
+      salaryForecast,
       remainingKnown: offset === 0 ? round2(pendingBank + upcoming.total) : 0,
     },
     dailyHistory: buildDailyHistory(rows, accounts, window.cycleStart, window.cycleEndExclusive, context),
@@ -628,7 +714,9 @@ function buildProjection(current, rawSettings = {}) {
     expectedChargeDate: dateKey(rawSettings?.expectedChargeDate),
     expectedChargeLabel: String(rawSettings?.expectedChargeLabel || '').trim().slice(0, 80),
   };
-  const expectedIncome = settings.enabled ? settings.expectedIncome || 0 : 0;
+  const automaticIncome = Number(current.expected?.salaryIncomeExpected) || 0;
+  const hasManualIncome = settings.enabled && settings.expectedIncome != null;
+  const expectedIncome = hasManualIncome ? settings.expectedIncome : automaticIncome;
   const plannedExpenses = settings.enabled ? settings.expectedCharge || 0 : 0;
   const knownPending = current.expected?.remainingKnown || 0;
   const expectedRemainingExpenses = round2(knownPending + plannedExpenses);
@@ -639,7 +727,12 @@ function buildProjection(current, rawSettings = {}) {
       : projectedCheckingBalance < 1000 ? 'low' : 'ok';
   return {
     settings,
-    expectedIncome: settings.enabled ? { amount: expectedIncome, date: settings.expectedIncomeDate } : null,
+    expectedIncome: expectedIncome > 0 ? {
+      amount: expectedIncome,
+      date: hasManualIncome ? settings.expectedIncomeDate : null,
+      source: hasManualIncome ? 'manual' : 'automatic_salary_history',
+      entries: hasManualIncome ? [] : current.expected?.salaryForecast?.entries || [],
+    } : null,
     expectedCharge: settings.enabled && settings.expectedCharge ? {
       amount: settings.expectedCharge,
       date: settings.expectedChargeDate,
@@ -654,6 +747,7 @@ function buildProjection(current, rawSettings = {}) {
     warning,
     factsAsOf: current.lastDay,
     isPlanningOnly: true,
+    hasAutomaticSalaryForecast: !hasManualIncome && automaticIncome > 0,
   };
 }
 
@@ -711,6 +805,7 @@ module.exports = {
   buildDailyHistory,
   buildCardBillingCycles,
   buildProjection,
+  buildExpectedSalaryForecast,
   deriveBillingBoundaries,
   resolveCycleWindow,
   reduceCycleRows,

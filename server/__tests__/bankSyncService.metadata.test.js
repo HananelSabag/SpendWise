@@ -6,6 +6,8 @@ const {
   normalizeOptionalAmount,
   normalizeCurrency,
   normalizePositiveInteger,
+  buildPayloadFxRates,
+  estimatePendingFx,
 } = require('../services/bankSyncService');
 
 describe('bank sync statement metadata', () => {
@@ -32,6 +34,30 @@ describe('bank sync statement metadata', () => {
     expect(normalizeCurrency(' usd ')).toBe('USD');
     expect(normalizePositiveInteger(5)).toBe(5);
     expect(normalizePositiveInteger(0)).toBeNull();
+  });
+
+  test('estimates a zero-valued foreign pending authorization in ILS', () => {
+    const payloadRates = buildPayloadFxRates([{
+      account_number: '4297',
+      txns: [
+        { charged_amount: -78.04, charged_currency: 'ILS', original_amount: -25.9, original_currency: 'USD' },
+        { charged_amount: -212.63, charged_currency: 'ILS', original_amount: -69.68, original_currency: 'USD' },
+      ],
+    }]);
+    const representativeRates = new Map([['USD', {
+      rate: 3.025, source: 'boi_representative', asOf: '2026-07-13T12:22:03Z',
+    }]]);
+    expect(estimatePendingFx({
+      charged_amount: 0,
+      original_amount: -12.91,
+      original_currency: 'USD',
+      status: 'pending',
+    }, '4297', representativeRates, payloadRates)).toEqual({
+      chargedAmount: -39.05,
+      rate: 3.025,
+      source: 'boi_representative',
+      asOf: '2026-07-13T12:22:03Z',
+    });
   });
 
   test('a deduped Israeli-midnight row repairs its old UTC date and enriches notes', async () => {
@@ -70,7 +96,9 @@ describe('bank sync statement metadata', () => {
     expect(upsert.params[4]).toBe('2026-07-09');
     expect(upsert.params[5]).toBe('2026-07-08T21:00:00.000Z');
     expect(upsert.params[12]).toBe('Monthly salary');
-    expect(upsert.params.slice(13)).toEqual([120, 'USD', 'ILS', 'installments', 5, 10]);
+    expect(upsert.params.slice(13)).toEqual([
+      120, 'USD', 'ILS', 'installments', 5, 10, false, null, null, null,
+    ]);
     expect(upsert.sql).toContain('amount              = EXCLUDED.amount');
     expect(upsert.sql).toContain('date                = EXCLUDED.date');
     expect(upsert.sql).toContain('transaction_datetime = EXCLUDED.transaction_datetime');
@@ -228,7 +256,10 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const candidate = calls.find(({ sql }) => sql.includes('card pending-to-settled rekey candidate'));
-    expect(candidate.params).toEqual([1, 'max', '2254', 384.95, 'expense', 'Pending purchase', '2026-07-12', 'max:2254:final-123']);
+    expect(candidate.params).toEqual([
+      1, 'max', '2254', 384.95, 'expense', 'Pending purchase', '2026-07-12',
+      'max:2254:final-123', null, null,
+    ]);
     const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
     expect(repair.params[0]).toBe(900);
     expect(repair.params[1]).toBe('max:2254:final-123');

@@ -24,7 +24,8 @@ const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type,
   description, notes, date, transaction_datetime, bank_processed_date,
   bank_status, bank_sync_id, raw_category, ledger_class,
   settlement_card_source, settlement_card_account,
-  txn_kind, installment_number, installment_total`;
+  txn_kind, installment_number, installment_total,
+  amount_is_estimated, fx_rate_used, fx_rate_source, fx_rate_as_of`;
 
 const round2 = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100) / 100;
 const amount = (row) => Math.abs(Number(row.amount) || 0);
@@ -87,6 +88,10 @@ function detailRow(row, countedAmount = amount(row)) {
     adjustment: round2(Math.max(0, rawAmount - counted)),
     installmentNumber: row.installment_number || null,
     installmentTotal: row.installment_total || null,
+    amountIsEstimated: row.amount_is_estimated === true,
+    fxRateUsed: row.fx_rate_used == null ? null : Number(row.fx_rate_used),
+    fxRateSource: row.fx_rate_source || null,
+    fxRateAsOf: row.fx_rate_as_of || null,
   };
 }
 

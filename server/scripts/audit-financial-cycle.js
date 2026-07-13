@@ -229,6 +229,8 @@ async function main() {
       window: `${cycle.cycleStart}..${cycle.lastDay}`,
       anchor: cycle.anchor,
       income: cycle.money.totalIncome,
+      salaryIncome: cycle.money.salaryInWindow,
+      otherIncome: cycle.money.incomeExSalary,
       expenses: cycle.money.spentCommitted,
       net: cycle.money.netIncludingSalaryCommitted,
       financingInflows: cycle.money.financingInflows,
@@ -238,6 +240,7 @@ async function main() {
       cardCommitmentsPending: cycle.expected.cardChargesPending,
       checkingBalance: cycle.checkingBalance,
       expectedEndBalance: cycle.isCurrent ? projection.projectedCheckingBalance : null,
+      expectedIncome: cycle.isCurrent ? projection.expectedIncome : null,
       cardBillingCycles: cycle.cardBillingCycles.map((item) => ({
         source: item.bankSource,
         account: item.accountNumber,
