@@ -80,7 +80,9 @@ function DetailBody({ details, isLoading, isError, onRetry, formatCurrency }) {
           {(details.transactions || []).map((transaction) => {
             const income = transaction.type === 'income';
             const adjusted = transaction.adjustment > 0;
-            const Icon = transaction.bankSource === 'max' || transaction.bankSource === 'visa_cal' ? CreditCard : Landmark;
+            const cardSource = transaction.bankSource === 'max' || transaction.bankSource === 'visa_cal';
+            const Icon = cardSource ? CreditCard : Landmark;
+            const countedAmount = Number(transaction.countedAmount) || 0;
             return (
               <div key={transaction.id} className="flex items-center gap-3 bg-white px-3 py-3 dark:bg-gray-900">
                 <span className="rounded-xl bg-gray-100 p-2 text-gray-500 dark:bg-gray-800"><Icon className="h-4 w-4" /></span>
@@ -89,15 +91,19 @@ function DetailBody({ details, isLoading, isError, onRetry, formatCurrency }) {
                   <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-gray-500">
                     <span>{localDate(transaction.date, currentLanguage)}</span>
                     <span>·</span>
-                    <span>{sourceName(transaction.bankSource)}{transaction.accountNumber ? ` ••••${String(transaction.accountNumber).slice(-4)}` : ''}</span>
+                    <span>{sourceName(transaction.bankSource)}{cardSource && transaction.accountNumber ? ` ••••${String(transaction.accountNumber).slice(-4)}` : ''}</span>
                     {transaction.status === 'pending' && <span className="inline-flex items-center gap-1 text-amber-600"><Clock3 className="h-3 w-3" />{t('calendarActivity.pending')}</span>}
                   </p>
                   {adjusted && <p className="mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">{t('calendarActivity.rowAdjusted', { raw: formatCurrency(transaction.amount), adjustment: formatCurrency(transaction.adjustment) })}</p>}
                 </div>
                 <div className="shrink-0 text-end">
-                  <p className={cn('whitespace-nowrap text-sm font-black tabular-nums', income ? 'text-emerald-600' : 'text-gray-950 dark:text-white')}>
-                    {income ? '+' : '−'}{formatCurrency(transaction.countedAmount)}
-                  </p>
+                  {adjusted && countedAmount === 0 ? (
+                    <p className="whitespace-nowrap text-[11px] font-bold text-indigo-600 dark:text-indigo-300">{t('calendarActivity.notCounted')}</p>
+                  ) : (
+                    <p className={cn('whitespace-nowrap text-sm font-black tabular-nums', income ? 'text-emerald-600' : 'text-gray-950 dark:text-white')}>
+                      {income ? '+' : '−'}{formatCurrency(countedAmount)}
+                    </p>
+                  )}
                   {adjusted && <p className="text-[10px] tabular-nums text-gray-400 line-through">{formatCurrency(transaction.amount)}</p>}
                 </div>
               </div>

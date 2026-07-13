@@ -398,6 +398,7 @@ export default {
     rawLessOverlap: "מתוך {{raw}} הופחתו {{adjustment}} שכבר מיוצגים בכרטיס",
     rowAdjusted: "חיוב מקורי {{raw}} · הופחתו {{adjustment}} שכבר נספרו",
     unknownTransaction: "תנועה",
+    notCounted: "לא נספר",
     cardDebitAdjustments: "התאמות חיובי אשראי בבנק",
     refundsReversals: "זיכויים והחזרי פריסה (כלולים בהכנסות)",
     howCardDebitsAdjusted: "איך הותאמו חיובי האשראי",

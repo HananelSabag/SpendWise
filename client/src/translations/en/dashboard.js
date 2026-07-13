@@ -409,6 +409,7 @@ export default {
     rawLessOverlap: "Raw {{raw}} less {{adjustment}} already represented by card activity",
     rowAdjusted: "Raw {{raw}} · {{adjustment}} already represented",
     unknownTransaction: "Transaction",
+    notCounted: "Not counted",
     cardDebitAdjustments: "Credit card debit adjustments",
     refundsReversals: "Refunds and installment proceeds (included in income)",
     howCardDebitsAdjusted: "How card debits were adjusted",
