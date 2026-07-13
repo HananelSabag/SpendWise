@@ -207,6 +207,13 @@ async function main() {
       cardCommitmentsPending: cycle.expected.cardChargesPending,
       checkingBalance: cycle.checkingBalance,
       expectedEndBalance: cycle.isCurrent ? projection.projectedCheckingBalance : null,
+      cardBillingCycles: cycle.cardBillingCycles.map((item) => ({
+        source: item.bankSource,
+        account: item.accountNumber,
+        billingDate: item.billingDate,
+        total: item.total,
+        count: item.count,
+      })),
       needsReview: cycle.needsReview,
       model: cycle.model,
     });

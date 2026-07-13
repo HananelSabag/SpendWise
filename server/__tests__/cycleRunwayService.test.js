@@ -170,6 +170,30 @@ describe('card-billing financial cycle', () => {
     expect(reduced.totals.cardExpensesPosted).toBe(400);
   });
 
+  test('groups closed-cycle card activity only by observed statement dates', () => {
+    const data = {
+      accounts,
+      rows: [
+        card(1, '2026-04-20', '2026-05-10'),
+        card(2, '2026-05-20', '2026-06-10'),
+        card(3, '2026-05-21', '2026-06-10'),
+        card(4, '2026-06-16', '2026-06-16', { amount: 100 }),
+        card(5, '2026-06-20', '2026-07-10', { amount: 200 }),
+        card(6, '2026-06-21', '2026-07-10', { amount: 50 }),
+        card(7, '2026-06-22', '2026-08-10', { amount: 300 }),
+        card(8, '2026-06-23', '2026-08-10', { amount: 25 }),
+      ],
+    };
+    const previous = buildCycleFromData(data, -1, '2026-07-13');
+    expect(previous.cardBillingCycles.map((cycle) => ({
+      billingDate: cycle.billingDate,
+      total: cycle.total,
+    }))).toEqual([
+      { billingDate: '2026-07-10', total: 350 },
+      { billingDate: '2026-08-10', total: 325 },
+    ]);
+  });
+
   test('refunds improve net without being silently clamped away', () => {
     const rows = [
       card(1, '2026-07-12', '2026-08-10', { amount: 100 }),

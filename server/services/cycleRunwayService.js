@@ -397,9 +397,11 @@ function buildCardBillingCycles(rows, debitAccounts = debitAccountSet(rows), opt
       const key = activityDate(row);
       if (!key || key < options.window.cycleStart || key >= options.window.cycleEndExclusive) continue;
     }
-    const billingDate = row.bank_status === 'pending'
-      ? options.pendingBillingDate?.(row) || null
-      : dateKey(row.bank_processed_date);
+    const billingDate = options.billingDateForRow
+      ? options.billingDateForRow(row)
+      : row.bank_status === 'pending'
+        ? options.pendingBillingDate?.(row) || null
+        : dateKey(row.bank_processed_date);
     const key = `${row.bank_source}|${row.bank_account_number || ''}|${billingDate || 'unassigned'}`;
     const group = groups.get(key) || {
       bankSource: row.bank_source,
@@ -423,6 +425,31 @@ function buildCardBillingCycles(rows, debitAccounts = debitAccountSet(rows), opt
     refunds: round2(group.refunds),
     total: round2(Math.max(0, group.posted + group.pending - group.refunds)),
   })).sort((a, b) => String(a.billingDate || '9999').localeCompare(String(b.billingDate || '9999')));
+}
+
+function observedStatementDateResolver(boundaries, fallbackDate) {
+  const datesByCard = new Map();
+  for (const boundary of boundaries) {
+    for (const source of boundary.sources || []) {
+      const key = debitKey(source.bankSource, source.accountNumber);
+      const dates = datesByCard.get(key) || [];
+      dates.push(source.billingDate);
+      datesByCard.set(key, dates);
+    }
+  }
+  for (const dates of datesByCard.values()) dates.sort();
+
+  return (row) => {
+    if (row.bank_status === 'pending') return fallbackDate || null;
+    const processedDate = dateKey(row.bank_processed_date);
+    const observedDates = datesByCard.get(debitKey(row.bank_source, row.bank_account_number)) || [];
+    if (processedDate && observedDates.includes(processedDate)) return processedDate;
+    const economicDate = activityDate(row);
+    return observedDates.find((date) => economicDate && date >= economicDate)
+      || processedDate
+      || fallbackDate
+      || null;
+  };
 }
 
 function buildUpcomingCardCommitments(rows, window, context, today) {
@@ -511,7 +538,7 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
     ? upcoming.cycles
     : buildCardBillingCycles(rows, debitAccounts, {
       window,
-      pendingBillingDate: () => window.nextBillingDate,
+      billingDateForRow: observedStatementDateResolver(boundaries, window.nextBillingDate),
     });
   const bankAccounts = accounts.filter((account) => account.enabled && institutionKind(account.bank_source) === 'bank' && account.balance != null);
   const checkingBalance = bankAccounts.length ? round2(bankAccounts.reduce((sum, account) => sum + Number(account.balance), 0)) : null;
