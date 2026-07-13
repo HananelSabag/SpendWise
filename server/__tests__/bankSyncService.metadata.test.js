@@ -103,11 +103,11 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const candidate = calls.find(({ sql }) => sql.includes('pending-to-settled rekey candidate'));
-    expect(candidate.params.slice(-2)).toEqual(['leumi:1234:2026-07-02:61616', '61616']);
+    expect(candidate.params.slice(-2)).toEqual(['leumi:1234:2026-07-02:e387.29:61616', '61616']);
 
     const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
     expect(repair.params[0]).toBe(2470);
-    expect(repair.params[1]).toBe('leumi:1234:2026-07-02:61616');
+    expect(repair.params[1]).toBe('leumi:1234:2026-07-02:e387.29:61616');
     expect(repair.params[10]).toBe('completed');
     expect(calls.some(({ sql }) => sql.includes('INSERT INTO transactions\n'))).toBe(false);
     expect(result).toEqual({ inserted: 0, skipped: 1 });
@@ -167,8 +167,8 @@ describe('bank sync statement metadata', () => {
     const ids = calls.filter(({ sql }) => sql.includes('INSERT INTO transactions'))
       .map(({ params }) => params[7]);
     expect(ids).toEqual([
-      'leumi:797-43483_78:2026-07-10:43483',
-      'leumi:797-43483_78:2026-07-12:43483',
+      'leumi:797-43483_78:2026-07-10:e1086.44:43483',
+      'leumi:797-43483_78:2026-07-12:e1046.45:43483',
     ]);
     expect(new Set(ids).size).toBe(2);
     expect(calls.filter(({ sql }) => sql.includes('promote legacy pending bank id'))).toHaveLength(2);
@@ -199,8 +199,8 @@ describe('bank sync statement metadata', () => {
     const ids = calls.filter(({ sql }) => sql.includes('INSERT INTO transactions'))
       .map(({ params }) => params[7]);
     expect(ids).toEqual([
-      'leumi:797-43483_78:2026-07-10:42209',
-      'leumi:797-43483_78:2026-07-01:42209',
+      'leumi:797-43483_78:2026-07-10:e76.49:42209',
+      'leumi:797-43483_78:2026-07-01:e70.00:42209',
     ]);
     expect(new Set(ids).size).toBe(2);
   });

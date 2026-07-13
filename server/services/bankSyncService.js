@@ -173,13 +173,13 @@ async function ingestAccounts(client, userId, source, accounts) {
         && installmentNumber <= installmentTotal;
       const rawIdentifier = txn.identifier == null ? null : String(txn.identifier);
       const legacyBankSyncId = rawIdentifier ? `${source}:${acctKey}:${rawIdentifier}` : null;
-      // Banks can reuse one identifier for different factual movements,
-      // including completed rows on different dates. Qualify every bank id by
-      // local date while keeping the raw id as the suffix for lifecycle repair.
+      // Banks can reuse one identifier for different factual movements, even
+      // on the same day. Qualify by local date, direction, and amount while
+      // keeping the raw id as the suffix for lifecycle repair.
       const bankSyncId = rawIdentifier
         ? (isCreditCompany
           ? legacyBankSyncId
-          : `${source}:${acctKey}:${date}:${rawIdentifier}`)
+          : `${source}:${acctKey}:${date}:${type === 'expense' ? 'e' : 'i'}${amount.toFixed(2)}:${rawIdentifier}`)
         : null;
 
       const acctNum = acctKey === 'default' ? null : acctKey;
