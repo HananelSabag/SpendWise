@@ -2,9 +2,9 @@
  * Calendar-month aggregation for the Dashboard.
  *
  * Raw rows remain immutable. For connected credit cards, itemized activity is
- * counted on its factual purchase date and the summarized bank settlement is
- * excluded. For unconnected cards, the bank settlement remains the fallback
- * expense because no itemized provider activity is available.
+ * counted on its factual purchase date. A summarized bank settlement is reduced
+ * only by the same-month itemized activity already represented in that debit;
+ * the unmatched remainder stays visible as real calendar-month cash activity.
  */
 
 const db = require('../config/db');
@@ -160,14 +160,7 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
     }
   }
 
-  const connectedSettlementIds = new Set(
-    [...settlementGroups.values()]
-      .filter((group) => group.connected)
-      .flatMap((group) => group.activeRows || [])
-      .map((row) => row.id),
-  );
   const matchedReversals = matchConnectedSettlementReversals(scopedRows, settlementGroups, supersededSettlementIds);
-  const matchedReversalIds = new Set(matchedReversals.map((match) => match.incomeTransactionId));
 
   const bank = emptyActivity();
   const cards = emptyActivity();
@@ -179,9 +172,6 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
 
   for (const row of scopedRows) {
     if (supersededSettlementIds.has(row.id)) continue;
-    // Connected-card settlements and their exact bank reversals are statement
-    // evidence, not new calendar activity. The itemized card rows are the facts.
-    if (connectedSettlementIds.has(row.id) || matchedReversalIds.has(row.id)) continue;
     const kind = institutionKind(row.bank_source);
     if (kind === 'credit_card' && debitKeys.has(cardKey(row.bank_source, row.bank_account_number))) {
       debitEnrichmentExcluded += amount(row);
@@ -205,6 +195,7 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
 
   const adjustments = [];
   let totalAdjustment = 0;
+  let pendingExpenseAdjustment = 0;
   for (const group of settlementGroups.values()) {
     const bankDebit = round2(group.activeRows.reduce((sum, row) => sum + amount(row), 0));
     const connected = group.connected;
@@ -218,10 +209,11 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
     const itemizedExpenses = round2(itemized.filter((row) => row.type === 'expense').reduce((sum, row) => sum + amount(row), 0));
     const itemizedRefunds = round2(itemized.filter((row) => row.type === 'income').reduce((sum, row) => sum + amount(row), 0));
     const representedNet = round2(Math.max(0, itemizedExpenses - itemizedRefunds));
-    const adjustment = connected ? bankDebit : 0;
+    const adjustment = connected ? round2(Math.min(bankDebit, representedNet)) : 0;
     const remainingBankDebit = round2(Math.max(0, bankDebit - adjustment));
     const isPendingDebit = group.activeRows.length > 0 && group.activeRows.every((row) => row.bank_status === 'pending');
     totalAdjustment += adjustment;
+    if (isPendingDebit) pendingExpenseAdjustment += adjustment;
     adjustments.push({
       cardSource: group.source,
       accountNumber: group.account,
@@ -235,12 +227,15 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       alreadyRepresented: representedNet,
       adjustment,
       remainingBankDebit,
-      matchingBasis: connected ? 'connected_card_settlement_excluded' : 'unconnected_or_unresolved_card',
+      matchingBasis: connected
+        ? 'same_month_connected_card_overlap_subtracted'
+        : 'unconnected_or_unresolved_card',
     });
   }
   totalAdjustment = round2(totalAdjustment);
+  pendingExpenseAdjustment = round2(pendingExpenseAdjustment);
 
-  const bankFinished = finishActivity(bank);
+  const bankFinished = finishActivity(bank, totalAdjustment, pendingExpenseAdjustment);
   const cardsFinished = finishActivity(cards);
   const otherFinished = finishActivity(other);
   const income = round2(bankFinished.income + cardsFinished.income + otherFinished.income);
@@ -263,9 +258,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       net: round2(income - expenses),
       transactionCount: countedRows.length,
       rawExpensesBeforeAdjustments: round2(expenses + totalAdjustment),
-      rawIncomeBeforeAdjustments: round2(income + matchedBankReversalAmount),
+      rawIncomeBeforeAdjustments: income,
       creditCardDebitAdjustments: totalAdjustment,
-      bankReversalAdjustments: matchedBankReversalAmount,
+      bankReversalAdjustments: 0,
     },
     breakdown: {
       bankTransactions: bankFinished,
@@ -287,7 +282,8 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       refundsAndReversals: {
         cardRefunds: cardsFinished.income,
         matchedBankReversals: matchedBankReversalAmount,
-        matchedBankReversalsExcludedFromIncome: matchedBankReversalAmount,
+        matchedBankReversalsIncludedInIncome: matchedBankReversalAmount,
+        matchedBankReversalsExcludedFromIncome: 0,
         matches: matchedReversals,
       },
       debitCardEnrichmentExcluded: {
@@ -305,9 +301,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       totalAdjustment,
       adjustments,
       supersededPendingSettlementCount: supersededSettlementIds.size,
-      rule: 'connected_card_settlements_excluded_unconnected_settlements_counted',
+      rule: 'subtract_only_same_month_itemized_overlap_from_connected_card_debits',
     },
-    model: 'purchase_date_calendar_with_connected_settlements_excluded_v3',
+    model: 'raw_calendar_activity_with_partial_card_debit_reconciliation_v4',
   };
 }
 

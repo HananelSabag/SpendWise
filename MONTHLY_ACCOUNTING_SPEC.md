@@ -452,9 +452,12 @@ monthly expense.
 
 ### 15.1 Stabilization edge cases verified on 2026-07-12
 
-- `פריסה לתשלומים` is financing proceeds. Exclude it from earned income and from
-  spending even when the bank exposes it as a positive transaction paired with a
-  card settlement. Do not invent principal, term, or an installment schedule.
+- `פריסה לתשלומים` is financing proceeds, not earned income. Financial Cycle and
+  earned-income analysis must exclude it. The raw Calendar Month view must still
+  show the factual bank inflow and its paired card-settlement outflow so they offset
+  naturally. For connected cards, reduce the settlement only by same-month itemized
+  activity already represented in it; do not remove the full settlement. Do not
+  invent principal, term, or an installment schedule.
 - A loan repayment (`פרעון הלוואה`) is bank-direct spending on its factual date;
   pending means committed but not actual.
 - Preserve pending and completed bank rows in the immutable ledger. For derived

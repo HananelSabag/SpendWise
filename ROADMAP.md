@@ -1,19 +1,22 @@
 # SpendWise — Roadmap & Decisions
 
 > **2026-07-13 final simplification decision (supersedes the older models below):**
-> Dashboard shows raw calendar-month bank cash flow on each movement's real local
-> date. Itemized credit-card activity is shown separately and never merged into the
-> bank headline. The former Insights page is now Financial Cycle, anchored one day
+> Dashboard shows calendar-month activity on each movement's real local date.
+> Connected-card itemization is included, and a bank card debit is reduced only by
+> the same-month itemized amount already represented inside that debit. Unmatched
+> bank debit remains visible. The former Insights page is now Financial Cycle, anchored one day
 > after the latest observed card billing date. Loans remain deferred for a separate
 > product and data-model study.
 
 ## 2026-07-13 Dashboard / Financial Cycle simplification
 
-- Dashboard answers “what happened in this calendar month?” with every raw bank
-  income and expense from the 1st through month end. Previous/next arrows navigate
-  calendar months, and next stops at the current month.
-- Itemized card charges/refunds are a separate fact block. They are not added to
-  raw bank cash flow.
+- Dashboard answers “what happened in this calendar month?” with every real bank
+  inflow/outflow and itemized card fact from the 1st through month end. Previous/next
+  arrows navigate calendar months, and next stops at the current month.
+- For a connected-card bank debit, subtract only the same-month provider activity
+  already represented in that debit. Keep the unmatched debit. A matching refund
+  or installment-financing inflow remains visible, so the raw debit and credit
+  offset naturally instead of both disappearing from the headline.
 - Dashboard Runway remains a compact snapshot. Full analysis lives only in
   Financial Cycle (`/financial-cycle`; `/insights` redirects for compatibility).
 - Financial Cycle answers “how am I doing since the last card bill?” The boundary
@@ -37,6 +40,25 @@ Living plan for the financial-model rebuild. The **heart** is one honest answer:
 layered over real balances and ledger facts, with no salary forecast.
 
 Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
+
+### 2026-07-13 16:05 Asia/Jerusalem — clean import and calendar v4
+
+- User 1 financial rows were reset without touching the user, password hash or the
+  three encrypted bank connections. Fresh jobs imported Leumi **113/113**, Max
+  **374/374** and Visa Cal **53/53**, with zero skipped rows and zero zero-amount rows.
+- The clean ledger contains **540** transactions. Nine Max pending purchases total
+  **₪1,857.76** and are included in the current-month totals.
+- Leumi contains a completed **−₪12,805.22** `לאומי ויזה` movement on July 10 and
+  a completed **+₪12,805.22** `פריסה לתשלומים` movement on July 12. Calendar v3
+  incorrectly hid both and fully removed the connected settlement even though only
+  **₪2,558.61** was represented by same-month Max itemization.
+- Calendar v4 keeps both real bank movements, subtracts only the **₪2,558.61**
+  overlap, and counts the remaining **₪10,246.61** bank debit. July then reports
+  inflows **₪26,150.97**, expenses **₪22,807.34**, net **+₪3,343.63**, with total
+  card-debit overlap adjustments of **₪4,666.51**.
+- `פריסה לתשלומים` remains classified as financing rather than earned income for
+  Financial Cycle analysis. Its appearance in Calendar Month is raw cash activity,
+  not a claim that it is salary or profit. The full Loans product remains deferred.
 
 ---
 

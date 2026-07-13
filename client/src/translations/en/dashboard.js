@@ -394,7 +394,7 @@ export default {
     otherTransactions: "Other transactions — {{count}}",
     pendingIncluded: "{{count}} pending transactions are included ({{amount}} pending expenses).",
     cardDebitAdjustments: "Credit card debit adjustments",
-    refundsReversals: "Refunds and matched reversals",
+    refundsReversals: "Refunds and installment proceeds (included in income)",
     howCardDebitsAdjusted: "How card debits were adjusted",
     fullBankDebit: "Full bank debit",
     alreadyRepresented: "Already represented by card transactions",
@@ -408,7 +408,7 @@ export default {
     cardCharges: "Card charges",
     cardRefunds: "Card refunds",
     rawRows: "Raw rows",
-    rawExplanation: "Bank totals include every bank deposit and withdrawal on its actual date. Itemized card activity is displayed separately and is not added to bank cash flow.",
+    rawExplanation: "Totals include every real deposit and withdrawal on its actual date. For a connected card debit, only the same-month card activity already represented in that debit is subtracted; the unmatched bank debit remains counted.",
     events: "events",
     income: "Income",
     spending: "Committed",
@@ -422,7 +422,7 @@ export default {
     loans: "Loan repayments",
     cash: "Cash withdrawals",
     fees: "Fees and tax",
-    explanation: "This view uses the transaction's actual date. Salary is shown in the month it reached the account; card settlements and debit-card copies are not counted twice."
+    explanation: "This view uses each transaction's actual date. Salary, refunds and installment proceeds appear in the month they reached the account. Connected card debits are reduced only by itemized activity already counted in the same month."
   },
   runwaySnapshot: {
     title: "Financial cycle",

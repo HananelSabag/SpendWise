@@ -286,4 +286,20 @@ tests; client production build; ESLint 0 errors (276 pre-existing warnings); age
 credential, generated bundle, ZIP, or hard-coded user audit script is included in
 the intended commits.
 
+## 2026-07-13 clean-sync / Calendar v4 update
+
+The production account was reset at the imported-financial-data layer only; the
+user, password hash and encrypted connections were preserved. A clean three-month
+sync imported Leumi 113, Max 374 and Visa Cal 53 rows with no skips. The resulting
+ledger has 540 rows, no zero-amount row and nine pending Max rows totaling ₪1,857.76.
+
+Raw and DB evidence confirms a July 10 `לאומי ויזה` expense of ₪12,805.22 followed
+by a July 12 `פריסה לתשלומים` income of ₪12,805.22. Calendar v3 hid both movements
+and incorrectly adjusted the full settlement despite only ₪2,558.61 of same-month
+Max detail being represented. Calendar v4 keeps real inflows/outflows, subtracts
+only itemized overlap, and exposes every adjustment in the collapsible explanation.
+The verified July result is income ₪26,150.97, expenses ₪22,807.34 and net
++₪3,343.63. Financing remains excluded from *earned-income* analysis; no Loans UI
+or inferred loan schedule was added.
+
 ---
