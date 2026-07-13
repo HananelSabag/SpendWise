@@ -19,6 +19,7 @@ const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAcco
 const { buildRunwayOverview } = require('../services/cycleRunwayService');
 const { buildSalaryReview, saveSalaryReview } = require('../services/salaryReviewService');
 const { createWatch, removeWatch, getWatched } = require('../services/merchantWatchService');
+const { classifyTransaction } = require('../services/financialClassificationService');
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
@@ -42,42 +43,60 @@ const transactionController = {
   }),
 
   getSalaryCandidates: asyncHandler(async (req, res) => {
-    const result = await db.query(`
-      SELECT DISTINCT ON (
-        t.bank_source,
-        COALESCE(t.bank_account_number, ''),
-        LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
-      )
-        t.id,
-        t.amount,
-        t.description,
-        t.date,
-        t.bank_source,
-        t.bank_account_number
-      FROM transactions t
-      WHERE t.user_id=$1
-        AND t.deleted_at IS NULL
-        AND t.type='income'
-        AND t.bank_source IS NOT NULL
-        AND NOT (t.bank_source = ANY($2::text[]))
-        AND NOT (t.description ~* $3)
-        AND NOT EXISTS (
-          SELECT 1
-            FROM bank_accounts ba_filter
-           WHERE ba_filter.user_id = t.user_id
-             AND ba_filter.bank_source = t.bank_source
-             AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
-             AND ba_filter.enabled = false
-        )
-        AND t.date >= CURRENT_DATE - INTERVAL '90 days'
-      ORDER BY
-        t.bank_source,
-        COALESCE(t.bank_account_number, ''),
-        LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g')),
-        t.date DESC
-      LIMIT 12
-    `, [req.user.id, CREDIT_CARD_SOURCES, '(העמדת הלוא|קבלת הלוא|ניירות ערך|תיק השקעות)']);
-    res.json({ success: true, data: result.rows });
+    const [result, signatures] = await Promise.all([
+      db.query(`
+        SELECT * FROM (
+          SELECT DISTINCT ON (
+            t.bank_source,
+            COALESCE(t.bank_account_number, ''),
+            LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
+          )
+            t.id, t.amount, t.type, t.description, t.notes, t.date,
+            t.bank_source, t.bank_account_number, t.bank_status, t.ledger_class,
+            t.settlement_card_source, t.settlement_card_account
+          FROM transactions t
+          WHERE t.user_id=$1
+            AND t.deleted_at IS NULL
+            AND t.type='income'
+            AND t.bank_source IS NOT NULL
+            AND NOT (t.bank_source = ANY($2::text[]))
+            AND NOT EXISTS (
+              SELECT 1
+                FROM salary_signatures ss
+               WHERE ss.user_id = t.user_id
+                 AND ss.active = true
+                 AND ss.bank_source = t.bank_source
+                 AND COALESCE(ss.bank_account_number, '') = COALESCE(t.bank_account_number, '')
+                 AND ss.normalized_description = LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g'))
+            )
+            AND NOT EXISTS (
+              SELECT 1
+                FROM bank_accounts ba_filter
+               WHERE ba_filter.user_id = t.user_id
+                 AND ba_filter.bank_source = t.bank_source
+                 AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+                 AND ba_filter.enabled = false
+            )
+            AND t.date >= CURRENT_DATE - INTERVAL '90 days'
+          ORDER BY
+            t.bank_source,
+            COALESCE(t.bank_account_number, ''),
+            LOWER(REGEXP_REPLACE(TRIM(t.description), '\\s+', ' ', 'g')),
+            t.date DESC
+        ) candidates
+        ORDER BY amount DESC, date DESC
+        LIMIT 50
+      `, [req.user.id, CREDIT_CARD_SOURCES]),
+      db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true', [req.user.id]),
+    ]);
+    const context = { salarySignatures: signatures.rows };
+    const candidates = result.rows.filter((row) => {
+      const classification = classifyTransaction(row, context);
+      return classification.economicRole === 'income'
+        && classification.calendarInclusion === 'include'
+        && classification.salary !== true;
+    }).slice(0, 12);
+    res.json({ success: true, data: candidates });
   }),
 
   createSalarySignature: asyncHandler(async (req, res) => {
@@ -85,8 +104,9 @@ const transactionController = {
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
       return res.status(400).json({ success: false, error: { message: 'Valid transactionId is required' } });
     }
-    const candidate = await db.query(`
-      SELECT id, bank_source, bank_account_number, description,
+    const [candidate, signatures] = await Promise.all([db.query(`
+      SELECT id, amount, type, bank_source, bank_account_number, description, notes,
+        bank_status, ledger_class, settlement_card_source, settlement_card_account,
         LOWER(REGEXP_REPLACE(TRIM(description), '\\s+', ' ', 'g')) AS normalized_description
       FROM transactions t
       WHERE t.id=$1 AND t.user_id=$2 AND t.deleted_at IS NULL AND t.type='income'
@@ -100,11 +120,16 @@ const transactionController = {
              AND ba_filter.enabled = false
         )
       LIMIT 1
-    `, [transactionId, req.user.id, CREDIT_CARD_SOURCES]);
+    `, [transactionId, req.user.id, CREDIT_CARD_SOURCES]),
+    db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true', [req.user.id])]);
     if (!candidate.rows[0]) {
       return res.status(404).json({ success: false, error: { message: 'Salary candidate not found' } });
     }
     const row = candidate.rows[0];
+    const classification = classifyTransaction(row, { salarySignatures: signatures.rows });
+    if (classification.economicRole !== 'income' || classification.calendarInclusion !== 'include') {
+      return res.status(400).json({ success: false, error: { message: 'Transaction is not eligible as salary' } });
+    }
     const saved = await db.query(`
       INSERT INTO salary_signatures (
         user_id, bank_source, bank_account_number, normalized_description,

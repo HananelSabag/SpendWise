@@ -279,6 +279,7 @@ describe('card-billing financial cycle', () => {
       transferInflows: 4200,
       netIncludingSalaryCommitted: 8250,
     });
+    expect(cycle.expected).toMatchObject({ hasSalaryIdentity: true, salaryIdentityCount: 1 });
   });
 
   test('automatically recognizes explicit bank salary labels and forecasts recurring salary dates', () => {

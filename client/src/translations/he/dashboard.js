@@ -33,7 +33,7 @@ export default {
     itemizedCard: "אשראי מפורט", bankCardCharge: "אשראי לפי חיוב בנקאי", bankDirect: "בנק ישיר", pending: "ממתין",
     avgDailySpend: "ממוצע הוצאה ליום", avgDailyIncome: "ממוצע הכנסה ליום", cardVerification: "אימות חיוב אשראי", matched: "תואם", difference: "פער {{amount}}",
     salarySearch: "מחפש משכורת בחשבון…", noSalaryCandidate: "עדיין לא נמצאה הכנסה מתאימה. החודש יושלם אחרי שהמשכורת תיכנס ותסונכרן.",
-    chooseSalary: "איזו הכנסה היא המשכורת שלך?", chooseSalaryHint: "בחירה אחת תאפשר לשייך משכורות עתידיות לחודש העבודה הקודם.", salarySaveFailed: "השמירה נכשלה. אפשר לנסות שוב."
+    chooseSalary: "אילו הפקדות הן משכורות קבועות?", addSalary: "הוספת משכורת קבועה נוספת", chooseSalaryHint: "אפשר לבחור יותר מאחת בחשבון משותף. הבחירה משמשת לזיהוי ולתחזית בלבד.", salarySaveFailed: "השמירה נכשלה. אפשר לנסות שוב."
   },
   salaryReview: {
     title: "קיבלנו שתי הכנסות שנראות כמו משכורת", description: "שתיהן משויכות ל{{month}} מאותו מעסיק. סמן מה כל אחת כדי שבונוס לא יפתח בטעות מחזור משכורת חדש.",

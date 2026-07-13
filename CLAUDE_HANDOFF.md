@@ -21,6 +21,10 @@
 - Multiple recurring salary descriptions in one enabled bank account are separate
   household income streams. Forecast each independently; suppress a stream when its
   normal payday has passed this month without a new deposit, to handle job changes.
+- Financial Cycle Remaining Outlook owns the compact salary-candidate selector.
+  Provider-labeled salaries need no action; employer-only bank descriptions require
+  one user confirmation, and a joint account may select multiple streams in the
+  same session. Candidate eligibility must always use `classifyTransaction`.
 - Do not restore `month_offset` attribution or salary ownership patches to Calendar
   Month. Loans are explicitly deferred.
 - Long explanations belong in collapsed `<details>` panels, closed by default.

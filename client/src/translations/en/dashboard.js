@@ -31,7 +31,7 @@ export default {
     itemizedCard: "Itemized card spending", bankCardCharge: "Card spending from bank charge", bankDirect: "Direct bank spending", pending: "Pending",
     avgDailySpend: "Average spend/day", avgDailyIncome: "Average income/day", cardVerification: "Card verification", matched: "Matched", difference: "Difference {{amount}}",
     salarySearch: "Looking for salary deposits…", noSalaryCandidate: "No matching income found yet. This month will close after salary arrives and syncs.",
-    chooseSalary: "Which deposit is your salary?", chooseSalaryHint: "Choose once so future salaries can be assigned to the previous work month.", salarySaveFailed: "Could not save. Please try again."
+    chooseSalary: "Which deposits are recurring salaries?", addSalary: "Add another recurring salary", chooseSalaryHint: "You can select more than one for a joint account. This is used only for recognition and forecasting.", salarySaveFailed: "Could not save. Please try again."
   },
   salaryReview: {
     title: "Two deposits look like salary", description: "Both map to {{month}} from the same employer. Classify each so a bonus does not create a false salary cycle.",

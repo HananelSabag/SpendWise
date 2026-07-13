@@ -626,6 +626,24 @@ function buildExpectedSalaryForecast(rows, window, context, today) {
   };
 }
 
+function countSalaryIdentities(rows, context, salarySignatures = []) {
+  const identities = new Set((salarySignatures || []).map((signature) => [
+    signature.bank_source || '',
+    signature.bank_account_number || '',
+    signature.normalized_description || '',
+  ].join('|')));
+  for (const row of rows || []) {
+    if (institutionKind(row.bank_source) !== 'bank' || row.type !== 'income') continue;
+    if (!classifyTransaction(row, context).salary) continue;
+    identities.add([
+      row.bank_source || '',
+      row.bank_account_number || '',
+      normalizeDescription(row.description),
+    ].join('|'));
+  }
+  return identities.size;
+}
+
 function buildCycleFromData(data, offset = 0, now = todayKey()) {
   const rows = data.rows || [];
   const accounts = data.accounts || [];
@@ -648,6 +666,7 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
   const daysElapsed = daysBetween(window.cycleStart, window.cycleEndExclusive);
   const pendingBank = reduced.totals.bankExpensesPending;
   const salaryInWindow = reduced.totals.salaryIncome;
+  const salaryIdentityCount = countSalaryIdentities(rows, context, data.salarySignatures);
   const salaryForecast = offset === 0
     ? buildExpectedSalaryForecast(rows, window, context, now)
     : { total: 0, entries: [], method: 'none' };
@@ -702,6 +721,8 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
       cardRefundsExpected: upcoming.refunds,
       salaryIncomeExpected: salaryForecast.total,
       salaryForecast,
+      hasSalaryIdentity: salaryIdentityCount > 0,
+      salaryIdentityCount,
       remainingKnown: offset === 0 ? round2(pendingBank + upcoming.total) : 0,
     },
     dailyHistory: buildDailyHistory(rows, accounts, window.cycleStart, window.cycleEndExclusive, context),
@@ -814,6 +835,7 @@ module.exports = {
   buildCardBillingCycles,
   buildProjection,
   buildExpectedSalaryForecast,
+  countSalaryIdentities,
   deriveBillingBoundaries,
   resolveCycleWindow,
   reduceCycleRows,

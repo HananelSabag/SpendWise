@@ -119,6 +119,13 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
   did not recur are suppressed from the next forecast. This prevents a former
   employer from being projected after a job change while preserving multiple
   current-month salaries in a joint account.
+- The old salary-candidate control was found orphaned after the Financial Cycle
+  redesign. It is now a compact expandable control inside Remaining Outlook. A
+  user whose bank does not label salary (for example Leumi employer-only text) can
+  select one or several household salary deposits; identified provider salaries
+  remain automatic. Candidates are ranked by amount and filtered through the same
+  central classifier, so loans, installment proceeds, investments, internal cash
+  transfers and already identified salaries cannot be offered as salary.
 
 ---
 

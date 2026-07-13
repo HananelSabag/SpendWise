@@ -1,8 +1,7 @@
 import React from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, CheckCircle2, Clock3, Loader2 } from 'lucide-react';
-import { api } from '../../../api';
+import { AlertTriangle, CheckCircle2, Clock3 } from 'lucide-react';
 import { useTranslation } from '../../../stores';
+import SalaryCandidatePrompt from './SalaryCandidatePrompt';
 import SalaryReviewPrompt from './SalaryReviewPrompt';
 
 const STATUS = {
@@ -12,56 +11,6 @@ const STATUS = {
   awaiting_settlement: ['awaitingSettlement', Clock3, 'text-amber-600 bg-amber-50 dark:bg-amber-950/30'],
   needs_review: ['needsReview', AlertTriangle, 'text-red-600 bg-red-50 dark:bg-red-950/30'],
 };
-
-function SalaryCandidatePrompt({ formatCurrency, t }) {
-  const queryClient = useQueryClient();
-  const candidates = useQuery({
-    queryKey: ['salaryCandidates'],
-    queryFn: async () => {
-      const result = await api.transactions.getSalaryCandidates();
-      if (!result.success) throw new Error(result.error?.message || 'Failed to load salary candidates');
-      return result.data;
-    },
-    staleTime: 5 * 60_000,
-  });
-  const selectSalary = useMutation({
-    mutationFn: async (transactionId) => {
-      const result = await api.transactions.createSalarySignature(transactionId);
-      if (!result.success) throw new Error(result.error?.message || 'Failed to save salary');
-      return result.data;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
-  });
-
-  if (candidates.isLoading) {
-    return <div className="mt-3 flex items-center gap-2 text-xs text-gray-500"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t('monthlyAccounting.salarySearch')}</div>;
-  }
-  if (!candidates.data?.length) {
-    return <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-950/25 dark:text-amber-300">{t('monthlyAccounting.noSalaryCandidate')}</p>;
-  }
-
-  return (
-    <div className="mt-3 rounded-xl border border-amber-200/70 bg-amber-50/70 p-3 dark:border-amber-900 dark:bg-amber-950/20">
-      <p className="text-xs font-bold text-amber-900 dark:text-amber-200">{t('monthlyAccounting.chooseSalary')}</p>
-      <p className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-300">{t('monthlyAccounting.chooseSalaryHint')}</p>
-      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-        {candidates.data.slice(0, 4).map((candidate) => (
-          <button
-            key={candidate.id}
-            type="button"
-            disabled={selectSalary.isPending}
-            onClick={() => selectSalary.mutate(candidate.id)}
-            className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-start text-xs transition hover:border-amber-400 disabled:opacity-50 dark:border-amber-900 dark:bg-gray-900"
-          >
-            <span className="min-w-0 truncate font-medium text-gray-800 dark:text-gray-100">{candidate.description}</span>
-            <span className="shrink-0 font-bold text-emerald-600">{formatCurrency(Number(candidate.amount))}</span>
-          </button>
-        ))}
-      </div>
-      {selectSalary.isError && <p className="mt-2 text-[11px] text-red-600">{t('monthlyAccounting.salarySaveFailed')}</p>}
-    </div>
-  );
-}
 
 function MonthCard({ data, formatCurrency, t, language }) {
   if (!data) return null;
@@ -106,7 +55,7 @@ function MonthCard({ data, formatCurrency, t, language }) {
           {t('monthlyAccounting.cardVerification')}: {data.reconciliation.status === 'matched' ? t('monthlyAccounting.matched') : t('monthlyAccounting.difference', { amount: formatCurrency(Math.abs(data.reconciliation.difference)) })}
         </p>
       )}
-      {data.status === 'awaiting_salary' && <SalaryCandidatePrompt formatCurrency={formatCurrency} t={t} />}
+      {data.status === 'awaiting_salary' && <SalaryCandidatePrompt formatCurrency={formatCurrency} />}
     </article>
   );
 }

@@ -3,6 +3,7 @@ import { ChevronDown, Save, Target } from 'lucide-react';
 
 import transactionAPI from '../../../api/transactions';
 import { useTranslation } from '../../../stores';
+import SalaryCandidatePrompt from '../dashboard/SalaryCandidatePrompt';
 
 const emptySettings = {
   enabled: false,
@@ -85,6 +86,12 @@ export default function RunwayProjectionPlanner({ runway, formatCurrency, onSave
           </p>
         </div>
       )}
+      <SalaryCandidatePrompt
+        formatCurrency={formatCurrency}
+        hasSalaryIdentity={current.expected?.hasSalaryIdentity === true}
+        salaryIdentityCount={Number(current.expected?.salaryIdentityCount) || 0}
+        onSelected={onSaved}
+      />
       <details className="group mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
         <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-bold text-gray-500">{t('cycleDashboard.adjustForecast')}<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
