@@ -14,6 +14,10 @@ const {
 
 const DEFAULT_TOLERANCE_ABS = 5;
 const DEFAULT_TOLERANCE_RATE = 0.005;
+const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: process.env.PERIOD_TIMEZONE || 'Asia/Jerusalem',
+  year: 'numeric', month: '2-digit', day: '2-digit',
+});
 
 const num = (value) => Number(value) || 0;
 const round2 = (value) => Math.round((num(value) + Number.EPSILON) * 100) / 100;
@@ -26,10 +30,7 @@ function dateKey(value) {
   if (!(value instanceof Date) && /^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
   const date = value instanceof Date ? value : new Date(text);
   if (Number.isNaN(date.getTime())) return null;
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: process.env.PERIOD_TIMEZONE || 'Asia/Jerusalem',
-    year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(date);
+  const parts = DATE_FORMATTER.formatToParts(date);
   const get = (type) => parts.find((part) => part.type === type)?.value;
   return `${get('year')}-${get('month')}-${get('day')}`;
 }

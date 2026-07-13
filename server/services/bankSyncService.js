@@ -14,6 +14,7 @@ const { getRepresentativeRates } = require('./exchangeRateService');
 
 const MAX_TXNS = 2000;
 const MAX_AMOUNT = 10_000_000;
+const IDENTIFIED_BATCH_SIZE = 250;
 
 const PENDING_REKEY_CANDIDATE_SQL = `/* pending-to-settled rekey candidate */
   SELECT id
@@ -70,15 +71,97 @@ const CARD_PENDING_REKEY_CANDIDATE_SQL = `/* card pending-to-settled rekey candi
   LIMIT 2
   FOR UPDATE OF stale`;
 
+const BATCH_IDENTIFIED_UPSERT_SQL = `/* batch identified transaction upsert */
+  INSERT INTO transactions
+    (user_id, amount, type, description, notes, date, transaction_datetime,
+     raw_category, bank_sync_id, bank_source, bank_account_number,
+     bank_processed_date, bank_status, original_amount, original_currency,
+     charged_currency, txn_kind, installment_number, installment_total,
+     amount_is_estimated, fx_rate_used, fx_rate_source, fx_rate_as_of,
+     created_at, updated_at)
+  SELECT $1, payload.amount, payload.type, payload.description, payload.notes,
+         payload.date, payload.transaction_datetime, payload.raw_category,
+         payload.bank_sync_id, payload.bank_source, payload.bank_account_number,
+         payload.bank_processed_date, payload.bank_status, payload.original_amount,
+         payload.original_currency, payload.charged_currency, payload.txn_kind,
+         payload.installment_number, payload.installment_total,
+         payload.amount_is_estimated, payload.fx_rate_used, payload.fx_rate_source,
+         payload.fx_rate_as_of, NOW(), NOW()
+    FROM jsonb_to_recordset($2::jsonb) AS payload(
+      amount numeric, type text, description text, notes text, date date,
+      transaction_datetime timestamptz, raw_category text, bank_sync_id text,
+      bank_source text, bank_account_number text, bank_processed_date date,
+      bank_status text, original_amount numeric, original_currency text,
+      charged_currency text, txn_kind text, installment_number integer,
+      installment_total integer, amount_is_estimated boolean,
+      fx_rate_used numeric, fx_rate_source text, fx_rate_as_of timestamptz
+    )
+  ON CONFLICT (user_id, bank_sync_id) WHERE bank_sync_id IS NOT NULL
+  DO UPDATE SET
+    amount               = EXCLUDED.amount,
+    type                 = EXCLUDED.type,
+    description          = EXCLUDED.description,
+    date                 = EXCLUDED.date,
+    transaction_datetime = EXCLUDED.transaction_datetime,
+    bank_processed_date  = COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date),
+    bank_status          = COALESCE(EXCLUDED.bank_status, transactions.bank_status),
+    original_amount      = COALESCE(EXCLUDED.original_amount, transactions.original_amount),
+    original_currency    = COALESCE(EXCLUDED.original_currency, transactions.original_currency),
+    charged_currency     = COALESCE(EXCLUDED.charged_currency, transactions.charged_currency),
+    txn_kind             = COALESCE(EXCLUDED.txn_kind, transactions.txn_kind),
+    installment_number   = COALESCE(EXCLUDED.installment_number, transactions.installment_number),
+    installment_total    = COALESCE(EXCLUDED.installment_total, transactions.installment_total),
+    amount_is_estimated  = EXCLUDED.amount_is_estimated,
+    fx_rate_used         = EXCLUDED.fx_rate_used,
+    fx_rate_source       = EXCLUDED.fx_rate_source,
+    fx_rate_as_of        = EXCLUDED.fx_rate_as_of,
+    raw_category         = COALESCE(transactions.raw_category, EXCLUDED.raw_category),
+    notes                = CASE WHEN COALESCE(transactions.notes, '') = ''
+                                THEN EXCLUDED.notes ELSE transactions.notes END,
+    updated_at           = NOW()
+  WHERE transactions.amount IS DISTINCT FROM EXCLUDED.amount
+     OR transactions.type IS DISTINCT FROM EXCLUDED.type
+     OR transactions.description IS DISTINCT FROM EXCLUDED.description
+     OR transactions.date IS DISTINCT FROM EXCLUDED.date
+     OR transactions.transaction_datetime IS DISTINCT FROM EXCLUDED.transaction_datetime
+     OR transactions.bank_processed_date IS DISTINCT FROM COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date)
+     OR transactions.bank_status IS DISTINCT FROM COALESCE(EXCLUDED.bank_status, transactions.bank_status)
+     OR transactions.original_amount IS DISTINCT FROM COALESCE(EXCLUDED.original_amount, transactions.original_amount)
+     OR transactions.original_currency IS DISTINCT FROM COALESCE(EXCLUDED.original_currency, transactions.original_currency)
+     OR transactions.charged_currency IS DISTINCT FROM COALESCE(EXCLUDED.charged_currency, transactions.charged_currency)
+     OR transactions.txn_kind IS DISTINCT FROM COALESCE(EXCLUDED.txn_kind, transactions.txn_kind)
+     OR transactions.installment_number IS DISTINCT FROM COALESCE(EXCLUDED.installment_number, transactions.installment_number)
+     OR transactions.installment_total IS DISTINCT FROM COALESCE(EXCLUDED.installment_total, transactions.installment_total)
+     OR transactions.amount_is_estimated IS DISTINCT FROM EXCLUDED.amount_is_estimated
+     OR transactions.fx_rate_used IS DISTINCT FROM EXCLUDED.fx_rate_used
+     OR transactions.fx_rate_source IS DISTINCT FROM EXCLUDED.fx_rate_source
+     OR transactions.fx_rate_as_of IS DISTINCT FROM EXCLUDED.fx_rate_as_of
+     OR transactions.raw_category IS DISTINCT FROM COALESCE(transactions.raw_category, EXCLUDED.raw_category)
+     OR (COALESCE(transactions.notes, '') = '' AND COALESCE(EXCLUDED.notes, '') <> '')
+  RETURNING id, (xmax = 0) AS was_inserted`;
+
 // The calendar date a transaction belongs to, in the app's timezone.
 // toISOString() would use UTC — an Israeli 00:30 purchase would land on the
 // previous day, shifting day grouping and financial-period boundaries.
 const INGEST_TZ = process.env.PERIOD_TIMEZONE || process.env.SYNC_TIMEZONE || 'Asia/Jerusalem';
+const INGEST_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: INGEST_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+});
 function calendarDateInTz(d) {
-  // en-CA formats as YYYY-MM-DD.
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: INGEST_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(d);
+  return INGEST_DATE_FORMATTER.format(d);
+}
+
+async function upsertIdentifiedBatches(client, userId, payloads) {
+  let inserted = 0;
+  for (let start = 0; start < payloads.length; start += IDENTIFIED_BATCH_SIZE) {
+    const chunk = payloads.slice(start, start + IDENTIFIED_BATCH_SIZE);
+    const result = await client.query(
+      BATCH_IDENTIFIED_UPSERT_SQL,
+      [userId, JSON.stringify(chunk)],
+    );
+    inserted += result.rows.filter((row) => row.was_inserted === true).length;
+  }
+  return inserted;
 }
 
 function normalizeProcessedDate(value) {
@@ -114,6 +197,37 @@ function median(values) {
   if (!sorted.length) return null;
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function normalizedText(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function dateDistance(left, right) {
+  const a = Date.parse(`${String(left).slice(0, 10)}T00:00:00Z`);
+  const b = Date.parse(`${String(right).slice(0, 10)}T00:00:00Z`);
+  return Number.isFinite(a) && Number.isFinite(b) ? Math.abs(a - b) / 86400000 : Infinity;
+}
+
+function couldMatchPendingRekey(candidate, incoming, isCreditCompany) {
+  if (String(candidate.bank_account_number || '') !== String(incoming.accountNumber || '')
+    || candidate.type !== incoming.type
+    || dateDistance(candidate.date, incoming.date) > 3) return false;
+  if (isCreditCompany) {
+    if (candidate.bank_sync_id != null || candidate.bank_status !== 'pending') return false;
+    const exact = Number(candidate.amount) === incoming.amount
+      && normalizedText(candidate.description) === normalizedText(incoming.description);
+    const estimatedFx = candidate.amount_is_estimated === true
+      && Number(candidate.original_amount) === incoming.originalAmount
+      && candidate.original_currency === incoming.originalCurrency;
+    return exact || estimatedFx;
+  }
+  return candidate.bank_sync_id != null
+    && candidate.bank_sync_id !== incoming.bankSyncId
+    && (candidate.bank_status == null || candidate.bank_status === 'pending')
+    && Number(candidate.amount) === incoming.amount
+    && normalizedText(candidate.description) === normalizedText(incoming.description)
+    && String(candidate.bank_sync_id).endsWith(incoming.rawIdentifier);
 }
 
 function buildPayloadFxRates(accounts) {
@@ -173,6 +287,8 @@ function estimatePendingFx(txn, accountNumber, representativeRates, payloadRates
 async function ingestAccounts(client, userId, source, accounts) {
   let inserted = 0;
   let skipped = 0;
+  let identifiedAttempts = 0;
+  const identifiedBySyncId = new Map();
   const isCreditCompany = institutionKind(source) === 'credit_card';
   const payloadFxRates = buildPayloadFxRates(accounts);
   const hasPendingForeignZero = accounts.some((account) => (account.txns || []).some((txn) => {
@@ -204,6 +320,17 @@ async function ingestAccounts(client, userId, source, accounts) {
     );
     for (const r of existing.rows) disabled.add((r.account_number || '').trim());
   }
+  const pendingInventory = (await client.query(
+    `/* pending lifecycle inventory */
+     SELECT id, bank_account_number, amount, type, description, date,
+            bank_sync_id, bank_status, amount_is_estimated,
+            original_amount, original_currency
+       FROM transactions
+      WHERE user_id = $1 AND bank_source = $2 AND deleted_at IS NULL
+        AND ((bank_sync_id IS NULL AND bank_status = 'pending')
+          OR (bank_sync_id IS NOT NULL AND (bank_status IS NULL OR bank_status = 'pending')))`,
+    [userId, source],
+  )).rows;
 
   for (const account of accounts) {
     // Scope the dedup id to the account too — a bank with multiple accounts
@@ -264,7 +391,15 @@ async function ingestAccounts(client, userId, source, accounts) {
         // One-time compatibility for pending rows stored before date-qualified
         // ids existed. Promote only an exact legacy fact; when two provider rows
         // share the legacy id, the non-matching one inserts independently.
-        if (legacyBankSyncId !== bankSyncId) {
+        const legacyCandidateExists = pendingInventory.some((candidate) => (
+          candidate.bank_sync_id === legacyBankSyncId
+          && String(candidate.bank_account_number || '') === String(acctNum || '')
+          && Number(candidate.amount) === amount
+          && candidate.type === type
+          && normalizedText(candidate.description) === normalizedText(description)
+          && String(candidate.date).slice(0, 10) === date
+        ));
+        if (legacyBankSyncId !== bankSyncId && legacyCandidateExists) {
           await client.query(
             `/* promote legacy pending bank id */
              UPDATE transactions legacy
@@ -293,7 +428,21 @@ async function ingestAccounts(client, userId, source, accounts) {
         // Before inserting a completed fact, repair exactly one stale pending
         // predecessor. Banks may re-key their identifier; card providers often
         // omit the identifier entirely until an authorization is finalized.
-        if (bankStatus === 'completed') {
+        const rekeyInput = {
+          accountNumber: acctNum,
+          amount,
+          type,
+          description,
+          date,
+          bankSyncId,
+          rawIdentifier: String(txn.identifier),
+          originalAmount,
+          originalCurrency,
+        };
+        if (bankStatus === 'completed'
+          && pendingInventory.some((candidate) => couldMatchPendingRekey(
+            candidate, rekeyInput, isCreditCompany,
+          ))) {
           const rekeyCandidates = isCreditCompany
             ? await client.query(
               CARD_PENDING_REKEY_CANDIDATE_SQL,
@@ -310,6 +459,7 @@ async function ingestAccounts(client, userId, source, accounts) {
               ],
             );
           if (rekeyCandidates.rows.length === 1) {
+            const repairedId = Number(rekeyCandidates.rows[0].id);
             await client.query(
               `UPDATE transactions SET
                  bank_sync_id         = $2,
@@ -344,76 +494,40 @@ async function ingestAccounts(client, userId, source, accounts) {
               ],
             );
             skipped++;
+            const inventoryIndex = pendingInventory.findIndex((row) => Number(row.id) === repairedId);
+            if (inventoryIndex >= 0) pendingInventory.splice(inventoryIndex, 1);
             continue;
           }
         }
 
-        // Hard dedup via partial unique index on (user_id, bank_sync_id).
-        const result = await client.query(
-           `INSERT INTO transactions
-             (user_id, amount, type, description, notes, date, transaction_datetime,
-              raw_category, bank_sync_id, bank_source, bank_account_number,
-              bank_processed_date, bank_status, original_amount, original_currency,
-              charged_currency, txn_kind, installment_number, installment_total,
-              amount_is_estimated, fx_rate_used, fx_rate_source, fx_rate_as_of,
-              created_at, updated_at)
-           VALUES ($1,$2,$3,$4,$13,$5,$6,$7,$8,$9,$10,$11,$12,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW(),NOW())
-           ON CONFLICT (user_id, bank_sync_id)
-             WHERE bank_sync_id IS NOT NULL
-           DO UPDATE SET
-             amount              = EXCLUDED.amount,
-             type                = EXCLUDED.type,
-             description         = EXCLUDED.description,
-             date                = EXCLUDED.date,
-             transaction_datetime = EXCLUDED.transaction_datetime,
-             bank_processed_date = COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date),
-             bank_status         = COALESCE(EXCLUDED.bank_status, transactions.bank_status),
-             original_amount     = COALESCE(EXCLUDED.original_amount, transactions.original_amount),
-             original_currency   = COALESCE(EXCLUDED.original_currency, transactions.original_currency),
-             charged_currency    = COALESCE(EXCLUDED.charged_currency, transactions.charged_currency),
-             txn_kind            = COALESCE(EXCLUDED.txn_kind, transactions.txn_kind),
-             installment_number  = COALESCE(EXCLUDED.installment_number, transactions.installment_number),
-             installment_total   = COALESCE(EXCLUDED.installment_total, transactions.installment_total),
-             amount_is_estimated = EXCLUDED.amount_is_estimated,
-             fx_rate_used        = EXCLUDED.fx_rate_used,
-             fx_rate_source      = EXCLUDED.fx_rate_source,
-             fx_rate_as_of       = EXCLUDED.fx_rate_as_of,
-             raw_category        = COALESCE(transactions.raw_category, EXCLUDED.raw_category),
-             notes               = CASE
-                                     WHEN COALESCE(transactions.notes, '') = '' THEN EXCLUDED.notes
-                                     ELSE transactions.notes
-                                   END,
-             updated_at          = NOW()
-           WHERE transactions.amount IS DISTINCT FROM EXCLUDED.amount
-              OR transactions.type IS DISTINCT FROM EXCLUDED.type
-              OR transactions.description IS DISTINCT FROM EXCLUDED.description
-              OR transactions.date IS DISTINCT FROM EXCLUDED.date
-              OR transactions.transaction_datetime IS DISTINCT FROM EXCLUDED.transaction_datetime
-              OR transactions.bank_processed_date IS DISTINCT FROM COALESCE(EXCLUDED.bank_processed_date, transactions.bank_processed_date)
-              OR transactions.bank_status IS DISTINCT FROM COALESCE(EXCLUDED.bank_status, transactions.bank_status)
-              OR transactions.original_amount IS DISTINCT FROM COALESCE(EXCLUDED.original_amount, transactions.original_amount)
-              OR transactions.original_currency IS DISTINCT FROM COALESCE(EXCLUDED.original_currency, transactions.original_currency)
-              OR transactions.charged_currency IS DISTINCT FROM COALESCE(EXCLUDED.charged_currency, transactions.charged_currency)
-              OR transactions.txn_kind IS DISTINCT FROM COALESCE(EXCLUDED.txn_kind, transactions.txn_kind)
-              OR transactions.installment_number IS DISTINCT FROM COALESCE(EXCLUDED.installment_number, transactions.installment_number)
-              OR transactions.installment_total IS DISTINCT FROM COALESCE(EXCLUDED.installment_total, transactions.installment_total)
-              OR transactions.amount_is_estimated IS DISTINCT FROM EXCLUDED.amount_is_estimated
-              OR transactions.fx_rate_used IS DISTINCT FROM EXCLUDED.fx_rate_used
-              OR transactions.fx_rate_source IS DISTINCT FROM EXCLUDED.fx_rate_source
-              OR transactions.fx_rate_as_of IS DISTINCT FROM EXCLUDED.fx_rate_as_of
-              OR transactions.raw_category IS DISTINCT FROM COALESCE(transactions.raw_category, EXCLUDED.raw_category)
-              OR (COALESCE(transactions.notes, '') = '' AND COALESCE(EXCLUDED.notes, '') <> '')
-           RETURNING id, (xmax = 0) AS was_inserted`,
-          [
-            userId, amount, type, description, date, transactionDatetime,
-            rawCategory, bankSyncId, source, acctNum, bankProcessedDate, bankStatus, bankNotes,
-            originalAmount, originalCurrency, chargedCurrency, txnKind,
-            validInstallments ? installmentNumber : null,
-            validInstallments ? installmentTotal : null,
-            amountIsEstimated, fxRateUsed, fxRateSource, fxRateAsOf,
-          ],
-        );
-        result.rows[0]?.was_inserted ? inserted++ : skipped++;
+        // Hard-deduped rows are sent in bounded batches. This preserves the
+        // exact ON CONFLICT lifecycle semantics while avoiding one network
+        // round trip per provider transaction.
+        identifiedAttempts += 1;
+        identifiedBySyncId.set(bankSyncId, {
+          amount,
+          type,
+          description,
+          notes: bankNotes,
+          date,
+          transaction_datetime: transactionDatetime,
+          raw_category: rawCategory,
+          bank_sync_id: bankSyncId,
+          bank_source: source,
+          bank_account_number: acctNum,
+          bank_processed_date: bankProcessedDate,
+          bank_status: bankStatus,
+          original_amount: originalAmount,
+          original_currency: originalCurrency,
+          charged_currency: chargedCurrency,
+          txn_kind: txnKind,
+          installment_number: validInstallments ? installmentNumber : null,
+          installment_total: validInstallments ? installmentTotal : null,
+          amount_is_estimated: amountIsEstimated,
+          fx_rate_used: fxRateUsed,
+          fx_rate_source: fxRateSource,
+          fx_rate_as_of: fxRateAsOf,
+        });
       } else {
         // Soft dedup: match on (user_id, source, account, date, amount, description).
         // Deliberately INCLUDES tombstoned rows (deleted_at set): a user-deleted
@@ -509,6 +623,13 @@ async function ingestAccounts(client, userId, source, accounts) {
         }
       }
     }
+  }
+
+  const identifiedPayloads = [...identifiedBySyncId.values()];
+  if (identifiedPayloads.length) {
+    const batchInserted = await upsertIdentifiedBatches(client, userId, identifiedPayloads);
+    inserted += batchInserted;
+    skipped += identifiedAttempts - batchInserted;
   }
 
   // Upsert every discovered account (even with a null balance) so it stays

@@ -430,3 +430,34 @@ assets, and a publicly trusted Windows code-signing identity for release ZIPs.
   popover to cents, uses factual calendar dates, exposes bank status/processed/
   installment/FX metadata in transaction details, and labels raw ledger statistics
   as inflows/outflows. Bank Sync has Overview / Accounts / Private agent / Help.
+
+### 2026-07-13 final pre-Loans engine and performance audit
+
+- Re-ran Calendar Month for May, June and July and both current/previous Financial
+  Cycles against production users 1 and 34. Every additive invariant reconciled to
+  cents: raw expense minus card-debit overlap, source subtotals, pending subsets,
+  daily cumulative history, remaining commitments and projected checking balance.
+- Account inclusion is now one explicit shared rule. An exact synchronized
+  source/account marked `enabled=false` is excluded defensively inside both pure
+  engines as well as their SQL loaders; missing legacy account metadata remains
+  visible. Dashboard source totals also use enabled accounts only.
+- Financial Cycle now reuses its already-computed reduction for daily history
+  instead of repeating classification and settlement reconciliation. Date
+  formatting uses cached `Intl.DateTimeFormat` instances instead of constructing
+  one for every transaction.
+- Automatic salary forecasts retain independent household streams, suppress stale
+  employers, and now apply an Israel-specific Friday/Saturday banking-day shift
+  plus a short delay grace window. Calendar Month remains raw and never forecasts.
+- The sync ingestion hot path was the cause of the observed 502: each identified
+  provider transaction performed multiple sequential Supabase round trips. Hard-
+  identified rows now use bounded 250-row JSONB upserts, while pending lifecycle
+  repair first loads a small candidate inventory and keeps its exact row lock.
+- Production-data rollback benchmark (no persisted mutation): user-1 Max, 374
+  rows, fell from roughly 120 seconds to 2.24 seconds and 24 queries; user-34
+  Isracard, 193 rows, completed in 0.43 seconds and 5 queries.
+- Snapshot at 2026-07-13 23:23 Asia/Jerusalem remained unchanged by the audit:
+  user 1 July `income 26150.97 / expenses 22807.34 / net 3343.63`; user 34 July
+  `income 33524.01 / expenses 37076.52 / net -3552.51`.
+- Verification: server 28 suites / 219 tests; client 11 files / 86 tests; client
+  production build; ESLint 0 errors (276 pre-existing warnings); `git diff --check`.
+- Full Loans research/product work remains deferred exactly as requested.

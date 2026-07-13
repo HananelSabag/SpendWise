@@ -11,6 +11,7 @@ const db = require('../config/db');
 const { institutionKind } = require('../config/institutions');
 const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
+const { filterDisabledAccountRows } = require('./accountScopeService');
 const {
   classifyTransaction,
   normalizeDescription,
@@ -501,8 +502,9 @@ function buildUpcomingCardCommitments(rows, window, context, today) {
   };
 }
 
-function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive, rawContext = {}) {
-  const reduced = reduceCycleRows(rows, accounts, { cycleStart, cycleEndExclusive }, rawContext);
+function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive, rawContext = {}, precomputed = null) {
+  const reduced = precomputed
+    || reduceCycleRows(rows, accounts, { cycleStart, cycleEndExclusive }, rawContext);
   const days = new Map();
   for (let cursor = cycleStart; cursor < cycleEndExclusive; cursor = nextDay(cursor)) {
     days.set(cursor, { date: cursor, spentActual: 0, spentCommitted: 0, spentPending: 0, totalIncome: 0, incomeExSalary: 0, salaryIncome: 0, transactionCount: 0, needsReviewCount: 0 });
@@ -563,6 +565,19 @@ function dateInMonth(month, day) {
   return `${month}-${String(Math.min(lastDay, Math.max(1, day))).padStart(2, '0')}`;
 }
 
+function addDays(key, days) {
+  const date = new Date(`${key}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function israelBankingDay(key) {
+  const day = new Date(`${key}T00:00:00Z`).getUTCDay();
+  if (day === 5) return addDays(key, 2);
+  if (day === 6) return addDays(key, 1);
+  return key;
+}
+
 function buildExpectedSalaryForecast(rows, window, context, today) {
   if (!window?.nextBillingDate) return { total: 0, entries: [], method: 'none' };
   const groups = new Map();
@@ -600,10 +615,18 @@ function buildExpectedSalaryForecast(rows, window, context, today) {
     // (job change / stopped household income). Do not keep forecasting an old
     // employer merely because it appeared in two historical months. Streams
     // whose payday is still ahead this month remain eligible.
-    if (typicalDay <= todayDay && latestMonth < currentMonth) continue;
+    const typicalCurrentDate = dateInMonth(currentMonth, typicalDay);
+    const delayedCurrentDate = israelBankingDay(typicalCurrentDate);
+    const graceEnd = addDays(delayedCurrentDate, 2);
+    if (typicalDay <= todayDay && latestMonth < currentMonth && today > graceEnd) continue;
     let expectedDate = null;
     for (let offset = 0; offset < 3 && !expectedDate; offset += 1) {
-      const candidate = dateInMonth(monthAfter(today.slice(0, 7), offset), typicalDay);
+      let candidate = israelBankingDay(
+        dateInMonth(monthAfter(today.slice(0, 7), offset), typicalDay),
+      );
+      if (offset === 0 && latestMonth < currentMonth && candidate <= today && today <= graceEnd) {
+        candidate = nextDay(today);
+      }
       if (candidate > today && candidate >= window.cycleStart && candidate < horizonExclusive) {
         expectedDate = candidate;
       }
@@ -645,8 +668,8 @@ function countSalaryIdentities(rows, context, salarySignatures = []) {
 }
 
 function buildCycleFromData(data, offset = 0, now = todayKey()) {
-  const rows = data.rows || [];
   const accounts = data.accounts || [];
+  const rows = filterDisabledAccountRows(data.rows || [], accounts);
   const debitAccounts = debitAccountSet(rows);
   const boundaries = deriveBillingBoundaries(rows, debitAccounts);
   const window = resolveCycleWindow(boundaries, offset, now);
@@ -725,7 +748,9 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
       salaryIdentityCount,
       remainingKnown: offset === 0 ? round2(pendingBank + upcoming.total) : 0,
     },
-    dailyHistory: buildDailyHistory(rows, accounts, window.cycleStart, window.cycleEndExclusive, context),
+    dailyHistory: buildDailyHistory(
+      rows, accounts, window.cycleStart, window.cycleEndExclusive, context, reduced,
+    ),
     cardBillingCycles,
     reconciliation: reduced.reconciliation,
     needsReview: reduced.needsReview,

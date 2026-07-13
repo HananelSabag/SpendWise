@@ -8,17 +8,14 @@
  */
 
 const db = require('../config/db');
-const { INSTITUTIONS, institutionKind } = require('../config/institutions');
+const { institutionKind } = require('../config/institutions');
 const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
 const { deriveDebitCardAccounts, dateKey, dayDistance } = require('./cardReconciliationService');
+const { filterDisabledAccountRows } = require('./accountScopeService');
 const {
   classifyTransaction,
   withoutSupersededPendingBankRows,
 } = require('./financialClassificationService');
-
-const CARD_SOURCES = Object.entries(INSTITUTIONS)
-  .filter(([, institution]) => institution.kind === 'credit_card')
-  .map(([source]) => source);
 
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type,
   description, notes, date, transaction_datetime, bank_processed_date,
@@ -163,6 +160,8 @@ function matchConnectedSettlementReversals(rows, settlementGroups, supersededSet
 }
 
 function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, period, options = {}) {
+  const enabledRows = filterDisabledAccountRows(rows || [], accounts || []);
+  const enabledDebitScopeRows = filterDisabledAccountRows(debitScopeRows || [], accounts || []);
   const connectedBySource = new Map();
   for (const account of accounts || []) {
     if (!account.enabled || institutionKind(account.bank_source) !== 'credit_card') continue;
@@ -173,13 +172,15 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
   const connectedCardKeys = new Set(
     [...connectedBySource].flatMap(([source, accountNumbers]) => accountNumbers.map((account) => cardKey(source, account))),
   );
-  const debitAccounts = deriveDebitCardAccounts((debitScopeRows?.length ? debitScopeRows : rows) || []);
+  const debitAccounts = deriveDebitCardAccounts(
+    enabledDebitScopeRows.length ? enabledDebitScopeRows : enabledRows,
+  );
   const debitKeys = new Set(debitAccounts.map((item) => cardKey(item.source, item.account)));
   const context = {
     debitCardAccounts: debitAccounts,
     connectedCardSources: [...connectedBySource.keys()],
   };
-  const scopedRows = withoutSupersededPendingBankRows(rows || []).filter((row) => {
+  const scopedRows = withoutSupersededPendingBankRows(enabledRows).filter((row) => {
     const key = dateKey(row.date);
     return key && key >= period.start && key < period.end;
   });
@@ -439,6 +440,13 @@ async function loadCalendarMonthRows(userId, offset = 0) {
       `SELECT ${SELECT_COLUMNS}
          FROM transactions t
         WHERE t.user_id = $1 AND t.deleted_at IS NULL
+          AND (t.bank_source IS NULL OR NOT EXISTS (
+            SELECT 1 FROM bank_accounts ba_filter
+             WHERE ba_filter.user_id = t.user_id
+               AND ba_filter.bank_source = t.bank_source
+               AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
+               AND ba_filter.enabled = false
+          ))
           AND t.date >= $2 AND t.date < $3
         ORDER BY t.date, t.id`,
       [userId, period.start, period.end],
@@ -447,8 +455,8 @@ async function loadCalendarMonthRows(userId, offset = 0) {
     db.query(
       `SELECT bank_source, account_number, enabled
          FROM bank_accounts
-        WHERE user_id = $1 AND bank_source = ANY($2::text[])`,
-      [userId, CARD_SOURCES],
+        WHERE user_id = $1`,
+      [userId],
       'calendar_month_connected_cards',
     ),
     db.query(

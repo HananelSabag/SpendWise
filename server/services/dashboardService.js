@@ -85,15 +85,16 @@ async function buildDashboardData(userId, requestedOffset = 0) {
   const sources = [...sourceKeys].map((key) => {
     const kind = institutionKind(key);
     const accountRows = accountsBySource[key] || [];
+    const activeAccountRows = accountRows.filter((row) => row.enabled !== false);
     const account = accountFacts[key] || {};
     const isBank = kind === 'bank';
     return {
       bankSource: key,
       kind,
       label: INSTITUTIONS[key]?.label || key,
-      income: roundAccounts(accountRows, 'income'),
-      expenses: roundAccounts(accountRows, 'expenses'),
-      count: accountRows.reduce((sum, row) => sum + row.count, 0),
+      income: roundAccounts(activeAccountRows, 'income'),
+      expenses: roundAccounts(activeAccountRows, 'expenses'),
+      count: activeAccountRows.reduce((sum, row) => sum + row.count, 0),
       balance: isBank && account.hasBalance ? account.balance : null,
       hasBalance: isBank ? account.hasBalance === true : false,
       lastSyncedAt: account.lastSyncedAt || null,

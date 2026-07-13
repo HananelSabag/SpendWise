@@ -93,16 +93,26 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const upsert = calls.find(({ sql }) => sql.includes('INSERT INTO transactions'));
-    expect(upsert.params[4]).toBe('2026-07-09');
-    expect(upsert.params[5]).toBe('2026-07-08T21:00:00.000Z');
-    expect(upsert.params[12]).toBe('Monthly salary');
-    expect(upsert.params.slice(13)).toEqual([
-      120, 'USD', 'ILS', 'installments', 5, 10, false, null, null, null,
-    ]);
-    expect(upsert.sql).toContain('amount              = EXCLUDED.amount');
-    expect(upsert.sql).toContain('date                = EXCLUDED.date');
+    const [payload] = JSON.parse(upsert.params[1]);
+    expect(payload.date).toBe('2026-07-09');
+    expect(payload.transaction_datetime).toBe('2026-07-08T21:00:00.000Z');
+    expect(payload.notes).toBe('Monthly salary');
+    expect(payload).toMatchObject({
+      original_amount: 120,
+      original_currency: 'USD',
+      charged_currency: 'ILS',
+      txn_kind: 'installments',
+      installment_number: 5,
+      installment_total: 10,
+      amount_is_estimated: false,
+      fx_rate_used: null,
+      fx_rate_source: null,
+      fx_rate_as_of: null,
+    });
+    expect(upsert.sql).toContain('amount               = EXCLUDED.amount');
+    expect(upsert.sql).toContain('date                 = EXCLUDED.date');
     expect(upsert.sql).toContain('transaction_datetime = EXCLUDED.transaction_datetime');
-    expect(upsert.sql).toContain('installment_number  = COALESCE');
+    expect(upsert.sql).toContain('installment_number   = COALESCE');
   });
 
   test('a uniquely matched settled bank re-key updates the pending row instead of inserting', async () => {
@@ -111,6 +121,11 @@ describe('bank sync statement metadata', () => {
       query: jest.fn(async (sql, params) => {
         calls.push({ sql, params });
         if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending lifecycle inventory')) return { rows: [{
+          id: 2470, bank_account_number: '1234', amount: 387.29, type: 'expense',
+          description: 'Debit purchase', date: '2026-07-02',
+          bank_sync_id: 'leumi:1234:old:61616', bank_status: 'pending',
+        }] };
         if (sql.includes('pending-to-settled rekey candidate')) return { rows: [{ id: 2470 }] };
         return { rows: [] };
       }),
@@ -147,6 +162,11 @@ describe('bank sync statement metadata', () => {
       query: jest.fn(async (sql, params) => {
         calls.push({ sql, params });
         if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending lifecycle inventory')) return { rows: [{
+          id: 10, bank_account_number: '1234', amount: 25, type: 'expense',
+          description: 'Ambiguous movement', date: '2026-07-02',
+          bank_sync_id: 'leumi:1234:old:123', bank_status: 'pending',
+        }] };
         if (sql.includes('pending-to-settled rekey candidate')) {
           return { rows: [{ id: 10 }, { id: 11 }] };
         }
@@ -193,13 +213,13 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const ids = calls.filter(({ sql }) => sql.includes('INSERT INTO transactions'))
-      .map(({ params }) => params[7]);
+      .flatMap(({ params }) => JSON.parse(params[1]).map((payload) => payload.bank_sync_id));
     expect(ids).toEqual([
       'leumi:797-43483_78:2026-07-10:e1086.44:43483',
       'leumi:797-43483_78:2026-07-12:e1046.45:43483',
     ]);
     expect(new Set(ids).size).toBe(2);
-    expect(calls.filter(({ sql }) => sql.includes('promote legacy pending bank id'))).toHaveLength(2);
+    expect(calls.filter(({ sql }) => sql.includes('promote legacy pending bank id'))).toHaveLength(0);
   });
 
   test('keeps completed bank rows with a reused provider identifier distinct by date', async () => {
@@ -225,7 +245,7 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const ids = calls.filter(({ sql }) => sql.includes('INSERT INTO transactions'))
-      .map(({ params }) => params[7]);
+      .flatMap(({ params }) => JSON.parse(params[1]).map((payload) => payload.bank_sync_id));
     expect(ids).toEqual([
       'leumi:797-43483_78:2026-07-10:e76.49:42209',
       'leumi:797-43483_78:2026-07-01:e70.00:42209',
@@ -239,6 +259,12 @@ describe('bank sync statement metadata', () => {
       query: jest.fn(async (sql, params) => {
         calls.push({ sql, params });
         if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending lifecycle inventory')) return { rows: [{
+          id: 900, bank_account_number: '2254', amount: 384.95, type: 'expense',
+          description: 'Pending purchase', date: '2026-07-12',
+          bank_sync_id: null, bank_status: 'pending', amount_is_estimated: false,
+          original_amount: null, original_currency: null,
+        }] };
         if (sql.includes('card pending-to-settled rekey candidate')) return { rows: [{ id: 900 }] };
         return { rows: [] };
       }),
@@ -265,5 +291,31 @@ describe('bank sync statement metadata', () => {
     expect(repair.params[1]).toBe('max:2254:final-123');
     expect(repair.params[10]).toBe('completed');
     expect(result).toEqual({ inserted: 0, skipped: 1 });
+  });
+
+  test('batches hundreds of identified provider rows into bounded database calls', async () => {
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending lifecycle inventory')) return { rows: [] };
+        if (sql.includes('batch identified transaction upsert')) {
+          return { rows: JSON.parse(params[1]).map(() => ({ was_inserted: true })) };
+        }
+        return { rows: [] };
+      }),
+    };
+    const txns = Array.from({ length: 300 }, (_, index) => ({
+      charged_amount: -(index + 1),
+      date: '2026-07-12T09:00:00.000Z',
+      description: `Purchase ${index + 1}`,
+      status: 'completed',
+      identifier: `provider-${index + 1}`,
+    }));
+
+    await expect(ingestAccounts(client, 1, 'max', [{ account_number: '2254', txns }]))
+      .resolves.toEqual({ inserted: 300, skipped: 0 });
+    expect(client.query.mock.calls.filter(([sql]) => sql.includes('batch identified transaction upsert')))
+      .toHaveLength(2);
+    expect(client.query).toHaveBeenCalledTimes(5);
   });
 });

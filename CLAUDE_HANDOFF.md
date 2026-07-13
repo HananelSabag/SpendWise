@@ -344,4 +344,35 @@ historical settlement. The guarded `reset-synced-user-data.js` utility is dry-ru
 default and requires both `--execute` and an exact `--confirm=<email>` before any
 destructive operation.
 
+## 2026-07-13 final engine/performance audit
+
+The entire pre-Loans calculation layer was re-audited with production users 1 and
+34 over May-July and current/previous financial cycles. All source totals, card
+overlap adjustments, pending subsets, daily histories and projection formulas
+reconciled to cents. The current production-data snapshot remained:
+
+- user 1 July: income 26150.97, expenses 22807.34, net 3343.63;
+- user 34 July: income 33524.01, expenses 37076.52, net -3552.51;
+- user 1 current cycle (Jul 11-13): income 18, committed spend 3396.31,
+  upcoming cards 3335.64, checking 7259.08, projected 3923.44;
+- user 34 current cycle (Jul 11-13): spend 538.74, upcoming cards 1663.75,
+  expected household salaries 29596.25, projected 26115.45.
+
+Implementation changes:
+
+- `accountScopeService` is the defensive source of truth for disabled accounts;
+  Calendar Month, Financial Cycle and Dashboard active totals now agree.
+- Financial Cycle no longer runs its full reduction twice for daily history.
+- Israel Friday/Saturday handling and a short bank-delay grace protect salary
+  forecasts without introducing any forecast into Calendar Month.
+- Provider ingestion uses bounded batch upserts and a preloaded pending candidate
+  inventory. A transaction-wrapped production-data benchmark (always rolled back)
+  reduced user-1 Max 374 rows from about 120s to 2.24s / 24 queries, and user-34
+  Isracard 193 rows to 0.43s / 5 queries.
+
+Verification before deployment: 28 server suites / 219 tests, 11 client files /
+86 tests, production client build, ESLint 0 errors with 276 existing warnings, and
+clean `git diff --check`. Loans remain the next separate research phase, not part
+of this batch.
+
 ---

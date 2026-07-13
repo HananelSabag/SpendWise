@@ -126,4 +126,25 @@ describe('calendar month card reconciliation', () => {
     expect(result.totals).toMatchObject({ income: 12000, expenses: 12000, net: 0 });
     expect(result.breakdown.refundsAndReversals.matchedBankReversals).toBe(0);
   });
+
+  test('excludes only rows from an explicitly disabled source/account', () => {
+    const scopedAccounts = [
+      { bank_source: 'leumi', account_number: 'main', enabled: true },
+      { bank_source: 'leumi', account_number: 'side', enabled: false },
+      { bank_source: 'max', account_number: '2254', enabled: true },
+      { bank_source: 'max', account_number: '9999', enabled: false },
+    ];
+    const rows = [
+      row({ id: 1, bank_account_number: 'main', amount: 100 }),
+      row({ id: 2, bank_account_number: 'side', amount: 900 }),
+      row({ id: 3, bank_source: 'max', bank_account_number: '2254', amount: 200 }),
+      row({ id: 4, bank_source: 'max', bank_account_number: '9999', amount: 800 }),
+    ];
+    const result = buildCalendarMonthSummaryFromRows(rows, scopedAccounts, rows, period);
+
+    expect(result.totals).toMatchObject({ expenses: 300, transactionCount: 2 });
+    expect(result.breakdown.creditCards).toEqual([
+      expect.objectContaining({ accountNumber: '2254', charges: 200 }),
+    ]);
+  });
 });

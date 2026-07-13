@@ -297,7 +297,7 @@ describe('card-billing financial cycle', () => {
 
     expect(forecast).toMatchObject({ total: 29300, method: 'recurring_explicit_salary_labels' });
     expect(forecast.entries.map((entry) => [entry.expectedDate, entry.amount])).toEqual([
-      ['2026-08-01', 14000],
+      ['2026-08-02', 14000],
       ['2026-08-05', 15300],
     ]);
 
@@ -329,6 +329,37 @@ describe('card-billing financial cycle', () => {
     }, { debitCardAccounts: [], connectedCardSources: [] }, '2026-07-13');
 
     expect(forecast).toEqual({ total: 0, entries: [], method: 'none' });
+  });
+
+  test('keeps a weekend-delayed salary inside a short grace window', () => {
+    const salaryRows = [
+      row({ id: 1, type: 'income', amount: 10000, description: 'Salary employer', date: '2026-06-01' }),
+      row({ id: 2, type: 'income', amount: 10200, description: 'Salary employer', date: '2026-07-01' }),
+    ];
+    const window = { cycleStart: '2026-08-01', nextBillingDate: '2026-09-10' };
+    const context = { debitCardAccounts: [], connectedCardSources: [] };
+
+    expect(buildExpectedSalaryForecast(salaryRows, window, context, '2026-08-01'))
+      .toMatchObject({ total: 10100, entries: [{ expectedDate: '2026-08-02', amount: 10100 }] });
+    expect(buildExpectedSalaryForecast(salaryRows, window, context, '2026-08-06'))
+      .toEqual({ total: 0, entries: [], method: 'none' });
+  });
+
+  test('excludes explicitly disabled accounts even when a caller passes raw rows directly', () => {
+    const cycle = buildCycleFromData({
+      accounts: [
+        ...accounts,
+        { bank_source: 'leumi', account_number: 'side', balance: 9000, enabled: false },
+      ],
+      rows: [
+        card(10, '2026-06-20', '2026-07-10'),
+        card(11, '2026-07-12', '2026-08-10', { amount: 100 }),
+        row({ id: 12, bank_account_number: 'side', amount: 5000, date: '2026-07-12' }),
+      ],
+    }, 0, '2026-07-13');
+
+    expect(cycle.money.spentCommitted).toBe(100);
+    expect(cycle.checkingBalance).toBe(5000);
   });
 
   test('does not count an identical pending bank copy when its completed fact exists', () => {

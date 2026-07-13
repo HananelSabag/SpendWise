@@ -484,6 +484,12 @@ monthly expense.
 - Current and previous Runway/month summaries must be derived from one immutable
   query snapshot per engine; duplicate client requests may not recompute the same
   monthly overview or multiply database connection groups.
+- Account scope is enforced twice: SQL avoids loading an explicitly disabled exact
+  source/account, and the pure aggregation layer filters it defensively for tests,
+  scripts and future callers. Unknown legacy account metadata is not silently lost.
+- Financial Cycle salary dates use the Israeli banking week (Friday/Saturday shift
+  forward) with a short grace window for delayed posting. This changes forecast
+  timing only; it never changes raw Calendar Month income.
 
 ## 16. Definition of done
 
