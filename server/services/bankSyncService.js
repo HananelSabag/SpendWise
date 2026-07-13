@@ -38,6 +38,28 @@ const PENDING_REKEY_CANDIDATE_SQL = `/* pending-to-settled rekey candidate */
   LIMIT 2
   FOR UPDATE OF stale`;
 
+const CARD_PENDING_REKEY_CANDIDATE_SQL = `/* card pending-to-settled rekey candidate */
+  SELECT id
+  FROM transactions stale
+  WHERE stale.user_id = $1
+    AND stale.bank_source = $2
+    AND stale.bank_account_number IS NOT DISTINCT FROM $3
+    AND stale.amount = $4
+    AND stale.type = $5
+    AND LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g'))
+        = LOWER(REGEXP_REPLACE(TRIM($6), '\\s+', ' ', 'g'))
+    AND ABS(stale.date - $7::date) <= 3
+    AND stale.deleted_at IS NULL
+    AND stale.bank_status = 'pending'
+    AND stale.bank_sync_id IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM transactions current
+      WHERE current.user_id = $1 AND current.bank_sync_id = $8
+    )
+  ORDER BY ABS(stale.date - $7::date), stale.id
+  LIMIT 2
+  FOR UPDATE OF stale`;
+
 // The calendar date a transaction belongs to, in the app's timezone.
 // toISOString() would use UTC — an Israeli 00:30 purchase would land on the
 // previous day, shifting day grouping and financial-period boundaries.
@@ -151,15 +173,13 @@ async function ingestAccounts(client, userId, source, accounts) {
         && installmentNumber <= installmentTotal;
       const rawIdentifier = txn.identifier == null ? null : String(txn.identifier);
       const legacyBankSyncId = rawIdentifier ? `${source}:${acctKey}:${rawIdentifier}` : null;
-      // Leumi can reuse one generic identifier for multiple simultaneous pending
-      // movements (proven with two distinct loan repayments both reported as
-      // identifier 43483). Qualifying bank-pending ids by their local due date
-      // keeps both facts while retaining the raw identifier as the final suffix,
-      // so pending→settled suffix reconciliation continues to work.
+      // Banks can reuse one identifier for different factual movements,
+      // including completed rows on different dates. Qualify every bank id by
+      // local date while keeping the raw id as the suffix for lifecycle repair.
       const bankSyncId = rawIdentifier
-        ? (!isCreditCompany && bankStatus === 'pending'
-          ? `${source}:${acctKey}:${date}:${rawIdentifier}`
-          : legacyBankSyncId)
+        ? (isCreditCompany
+          ? legacyBankSyncId
+          : `${source}:${acctKey}:${date}:${rawIdentifier}`)
         : null;
 
       const acctNum = acctKey === 'default' ? null : acctKey;
@@ -194,17 +214,22 @@ async function ingestAccounts(client, userId, source, accounts) {
 
         // Some banks re-key the same movement when it settles (Leumi has been
         // observed changing 45061616 → 61616 and shifting the date by 2 days).
-        // Before inserting a completed bank row, look for exactly one stale
-        // pending/unknown predecessor whose old identifier ends with the new
-        // identifier. This intentionally does not run for card-company rows.
-        if (!isCreditCompany && bankStatus === 'completed') {
-          const rekeyCandidates = await client.query(
-            PENDING_REKEY_CANDIDATE_SQL,
-            [
-              userId, source, acctNum, amount, type, description, date,
-              bankSyncId, String(txn.identifier),
-            ],
-          );
+        // Before inserting a completed fact, repair exactly one stale pending
+        // predecessor. Banks may re-key their identifier; card providers often
+        // omit the identifier entirely until an authorization is finalized.
+        if (bankStatus === 'completed') {
+          const rekeyCandidates = isCreditCompany
+            ? await client.query(
+              CARD_PENDING_REKEY_CANDIDATE_SQL,
+              [userId, source, acctNum, amount, type, description, date, bankSyncId],
+            )
+            : await client.query(
+              PENDING_REKEY_CANDIDATE_SQL,
+              [
+                userId, source, acctNum, amount, type, description, date,
+                bankSyncId, String(txn.identifier),
+              ],
+            );
           if (rekeyCandidates.rows.length === 1) {
             await client.query(
               `UPDATE transactions SET

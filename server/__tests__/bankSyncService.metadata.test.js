@@ -103,11 +103,11 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const candidate = calls.find(({ sql }) => sql.includes('pending-to-settled rekey candidate'));
-    expect(candidate.params.slice(-2)).toEqual(['leumi:1234:61616', '61616']);
+    expect(candidate.params.slice(-2)).toEqual(['leumi:1234:2026-07-02:61616', '61616']);
 
     const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
     expect(repair.params[0]).toBe(2470);
-    expect(repair.params[1]).toBe('leumi:1234:61616');
+    expect(repair.params[1]).toBe('leumi:1234:2026-07-02:61616');
     expect(repair.params[10]).toBe('completed');
     expect(calls.some(({ sql }) => sql.includes('INSERT INTO transactions\n'))).toBe(false);
     expect(result).toEqual({ inserted: 0, skipped: 1 });
@@ -172,5 +172,67 @@ describe('bank sync statement metadata', () => {
     ]);
     expect(new Set(ids).size).toBe(2);
     expect(calls.filter(({ sql }) => sql.includes('promote legacy pending bank id'))).toHaveLength(2);
+  });
+
+  test('keeps completed bank rows with a reused provider identifier distinct by date', async () => {
+    const calls = [];
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending-to-settled rekey candidate')) return { rows: [] };
+        if (sql.includes('INSERT INTO transactions')) return { rows: [{ was_inserted: true }] };
+        return { rows: [] };
+      }),
+    };
+
+    await ingestAccounts(client, 1, 'leumi', [{
+      account_number: '797-43483_78',
+      txns: [
+        { charged_amount: -76.49, date: '2026-07-09T21:00:00.000Z',
+          description: 'First movement', status: 'completed', identifier: 42209 },
+        { charged_amount: -70, date: '2026-06-30T21:00:00.000Z',
+          description: 'Second movement', status: 'completed', identifier: 42209 },
+      ],
+    }]);
+
+    const ids = calls.filter(({ sql }) => sql.includes('INSERT INTO transactions'))
+      .map(({ params }) => params[7]);
+    expect(ids).toEqual([
+      'leumi:797-43483_78:2026-07-10:42209',
+      'leumi:797-43483_78:2026-07-01:42209',
+    ]);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  test('promotes one exact identifier-less card pending row when the completed fact arrives', async () => {
+    const calls = [];
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('card pending-to-settled rekey candidate')) return { rows: [{ id: 900 }] };
+        return { rows: [] };
+      }),
+    };
+
+    const result = await ingestAccounts(client, 1, 'max', [{
+      account_number: '2254',
+      txns: [{
+        charged_amount: -384.95,
+        date: '2026-07-12T09:00:00.000Z',
+        description: 'Pending purchase',
+        status: 'completed',
+        identifier: 'final-123',
+      }],
+    }]);
+
+    const candidate = calls.find(({ sql }) => sql.includes('card pending-to-settled rekey candidate'));
+    expect(candidate.params).toEqual([1, 'max', '2254', 384.95, 'expense', 'Pending purchase', '2026-07-12', 'max:2254:final-123']);
+    const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
+    expect(repair.params[0]).toBe(900);
+    expect(repair.params[1]).toBe('max:2254:final-123');
+    expect(repair.params[10]).toBe('completed');
+    expect(result).toEqual({ inserted: 0, skipped: 1 });
   });
 });
