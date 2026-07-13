@@ -65,6 +65,30 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
   Each row exposes the exact transactions, factual dates, pending state, raw amount,
   counted amount and any duplicate-card adjustment without downloading the full ledger.
 
+### 2026-07-13 21:08 Asia/Jerusalem — second-user Yahav fixture
+
+- With Yehuda Sabag's consent, user 34 was reset only at the synchronized-data
+  layer. The user/auth record, three encrypted Yahav/Max/Isracard connections and
+  all nine account enable choices were preserved; disabled Yahav account
+  `120-511509` remained disabled.
+- Clean worker jobs completed for Yahav, Max and Isracard. The resulting ledger has
+  **306** rows: Yahav **68**, Max **45**, Isracard **193**. Max's two non-inserted
+  RAW rows are factual zero-charge rows: one completed cancellation and one USD
+  pending authorization without a provider-supplied ILS charge. No exchange rate
+  or amount is inferred.
+- Yahav describes settlements by provider (`מקס איט פיננסים`, `ישראכרט בע"מ`,
+  `כרטיסי אשראי לי`, `פרימיום אקספרס`) and does not expose card last-four in the
+  bank row. Reconciliation now supports account scope when identity is explicit,
+  provider scope across all enabled connected cards when it is not, and full bank
+  expense when that provider is unconnected.
+- July provider-level overlap is **₪3,741.59**; raw expenses **₪40,779.06** become
+  **₪37,037.47**, with income **₪33,524.01** and net **−₪3,513.46**. The previous
+  Financial Cycle is now income **₪35,329.01**, expenses **₪35,759.58**, net
+  **−₪430.57**, with no unresolved settlement rows. The current cycle remains
+  income **₪0**, expenses **₪499.69**, and known upcoming card charges **₪1,624.70**.
+- Provider-level reconciliation is scoped to the selected Financial Cycle and
+  preserves distinct pending settlement rows. Loans remain deferred.
+
 ---
 
 ## 0. The model (agreed)

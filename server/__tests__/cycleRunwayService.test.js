@@ -130,6 +130,52 @@ describe('card-billing financial cycle', () => {
       unmatchedCardSettlements: 700,
     });
     expect(reduced.spentCommitted).toBe(1300);
+    expect(reduced.reconciliation).toHaveLength(2);
+  });
+
+  test('returns reconciliation only for settlements inside the selected cycle', () => {
+    const rows = [
+      card(1, '2026-06-12', '2026-06-12', { amount: 400 }),
+      settlement(2, 500, '2026-06-12', 'max', '2254'),
+      card(3, '2026-07-12', '2026-07-12', { amount: 600 }),
+      settlement(4, 700, '2026-07-12', 'max', '2254'),
+    ];
+    const reduced = reduceCycleRows(rows, accounts, {
+      cycleStart: '2026-07-11', cycleEndExclusive: '2026-07-14',
+    });
+
+    expect(reduced.reconciliation).toEqual([
+      expect.objectContaining({ billingDate: '2026-07-12', bankDebit: 700, adjustment: 600 }),
+    ]);
+  });
+
+  test('reconciles a provider-level settlement across multiple connected cards', () => {
+    const multiMaxAccounts = [
+      accounts[0],
+      { bank_source: 'max', account_number: '1111', balance: null, enabled: true },
+      { bank_source: 'max', account_number: '2222', balance: null, enabled: true },
+    ];
+    const rows = [
+      card(1, '2026-07-12', '2026-07-12', { bank_account_number: '1111', amount: 300 }),
+      card(2, '2026-07-12', '2026-07-12', { bank_account_number: '2222', amount: 200 }),
+      settlement(3, 1000, '2026-07-12', 'max', null),
+      settlement(4, 100, '2026-07-12', 'max', null, { bank_status: 'pending' }),
+    ];
+    const reduced = reduceCycleRows(rows, multiMaxAccounts, {
+      cycleStart: '2026-07-11', cycleEndExclusive: '2026-07-14',
+    });
+
+    expect(reduced.totals).toMatchObject({
+      cardExpensesPosted: 500,
+      bankExpensesPosted: 500,
+      bankExpensesPending: 100,
+      excludedCardSettlements: 500,
+      unmatchedCardSettlements: 600,
+    });
+    expect(reduced.reconciliation[0]).toMatchObject({
+      matchingScope: 'provider', connected: true, bankDebit: 1100,
+      adjustment: 500, remainingBankDebit: 600,
+    });
   });
 
   test('counts debit-card bank activity once and excludes the card enrichment copy', () => {

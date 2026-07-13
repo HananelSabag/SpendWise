@@ -208,7 +208,7 @@ function activityDate(row) {
   return dateKey(row.date);
 }
 
-function buildSettlementReconciliation(rows, accounts, context) {
+function buildSettlementReconciliation(rows, accounts, context, window = null) {
   const activeRows = withoutSupersededPendingBankRows(rows);
   const debitKeys = new Set(context.debitCardAccounts.map((item) => debitKey(item.source, item.account)));
   const connectedBySource = new Map();
@@ -223,16 +223,22 @@ function buildSettlementReconciliation(rows, accounts, context) {
   const groups = new Map();
   for (const row of activeRows) {
     if (institutionKind(row.bank_source) !== 'bank' || row.type !== 'expense') continue;
+    const rowDate = dateKey(row.date);
+    if (window && (!rowDate || rowDate < window.cycleStart || rowDate >= window.cycleEndExclusive)) continue;
     const classification = classifyTransaction(row, context);
     if (classification.settlementRole !== 'card_settlement') continue;
     const source = classification.reconciliation?.cardSource || null;
     const connectedAccounts = connectedBySource.get(source) || [];
     const explicit = String(classification.reconciliation?.cardAccount || '');
-    const account = explicit && connectedAccounts.includes(explicit)
-      ? explicit : connectedAccounts.length === 1 ? connectedAccounts[0] : explicit || null;
+    const account = explicit
+      ? explicit : connectedAccounts.length === 1 ? connectedAccounts[0] : null;
+    const matchingScope = explicit
+      ? (connectedAccounts.includes(explicit) ? 'account' : 'unconnected')
+      : connectedAccounts.length === 1 ? 'account'
+        : connectedAccounts.length > 1 ? 'provider' : 'unconnected';
     const billingDate = dateKey(row.date);
     const key = `${source || 'unresolved'}:${account || 'unresolved'}:${billingDate}`;
-    const group = groups.get(key) || { source, account, billingDate, rows: [] };
+    const group = groups.get(key) || { source, account, matchingScope, billingDate, rows: [] };
     group.rows.push(row);
     groups.set(key, group);
   }
@@ -242,14 +248,21 @@ function buildSettlementReconciliation(rows, accounts, context) {
   const adjustments = [];
   for (const group of groups.values()) {
     const hasCompleted = group.rows.some((row) => row.bank_status !== 'pending');
-    const settlementRows = hasCompleted ? group.rows.filter((row) => row.bank_status !== 'pending') : group.rows;
+    // A provider-level group may aggregate distinct debits for several cards.
+    // Preserve a pending sibling unless an exact completed duplicate already
+    // removed it in withoutSupersededPendingBankRows().
+    const settlementRows = hasCompleted && group.matchingScope !== 'provider'
+      ? group.rows.filter((row) => row.bank_status !== 'pending') : group.rows;
     group.rows.filter((row) => !settlementRows.includes(row)).forEach((row) => inactiveIds.add(row.id));
-    const connected = Boolean(group.source && group.account
-      && (connectedBySource.get(group.source) || []).includes(group.account));
+    const connected = group.matchingScope === 'provider'
+      || Boolean(group.source && group.account
+        && (connectedBySource.get(group.source) || []).includes(group.account));
     const bankDebit = round2(settlementRows.reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
     const itemized = connected ? activeRows.filter((row) => (
       row.bank_source === group.source
-      && String(row.bank_account_number || '') === group.account
+      && (group.matchingScope === 'provider'
+        ? (connectedBySource.get(group.source) || []).includes(String(row.bank_account_number || ''))
+        : String(row.bank_account_number || '') === group.account)
       && !debitKeys.has(debitKey(row.bank_source, row.bank_account_number))
       && dateKey(row.bank_processed_date) === group.billingDate
       && (row.type === 'income' || row.type === 'expense')
@@ -272,6 +285,7 @@ function buildSettlementReconciliation(rows, accounts, context) {
       accountNumber: group.account,
       billingDate: group.billingDate,
       connected,
+      matchingScope: group.matchingScope,
       bankDebit,
       itemizedExpenses,
       itemizedRefunds,
@@ -285,7 +299,7 @@ function buildSettlementReconciliation(rows, accounts, context) {
 function reduceCycleRows(rows, accounts, window, rawContext = {}) {
   const context = rawContext.debitCardAccounts ? rawContext : buildClassificationContext({ accounts }, rows);
   const debitAccounts = new Set(context.debitCardAccounts.map((item) => debitKey(item.source, item.account)));
-  const reconciliation = buildSettlementReconciliation(rows, accounts, context);
+  const reconciliation = buildSettlementReconciliation(rows, accounts, context, window);
   const totals = {
     incomePosted: 0,
     incomePending: 0,

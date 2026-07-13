@@ -65,6 +65,12 @@ const BANK_SETTLEMENT_DESCRIPTORS = {
     { cardSource: 'max', test: /לאומי\s*ויזה/ },
     { cardSource: 'visa_cal', test: /כרטיסי\s*אשראי/ },
   ],
+  yahav: [
+    { cardSource: 'isracard', test: /ישראכרט/ },
+    { cardSource: 'isracard', test: /כרטיסי\s*אשראי\s*ל(?:ישראל|י)?/ },
+    { cardSource: 'max', test: /מקס\s*איט\s*פיננסים/ },
+    { cardSource: 'amex', test: /פרימיום\s*אקספרס/ },
+  ],
 };
 
 // A last-resort signal that a bank expense *might* be an unmapped card

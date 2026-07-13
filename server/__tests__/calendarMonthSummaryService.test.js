@@ -86,6 +86,37 @@ describe('calendar month card reconciliation', () => {
     expect(result.reconciliation.adjustments[0]).toMatchObject({ connected: false, adjustment: 0, remainingBankDebit: 2665.2 });
   });
 
+  test('reconciles a Yahav provider debit across multiple connected cards', () => {
+    const yahavAccounts = [
+      { bank_source: 'max', account_number: '1111', enabled: true },
+      { bank_source: 'max', account_number: '2222', enabled: true },
+    ];
+    const rows = [
+      row({ id: 1, bank_source: 'yahav', amount: 1000, description: 'מקס איט פיננסים', date: '2026-07-10' }),
+      row({ id: 2, bank_source: 'max', bank_account_number: '1111', amount: 300, bank_processed_date: '2026-07-10' }),
+      row({ id: 3, bank_source: 'max', bank_account_number: '2222', amount: 200, bank_processed_date: '2026-07-10' }),
+      row({ id: 4, bank_source: 'yahav', amount: 300, description: 'פרימיום אקספרס', date: '2026-07-10' }),
+      row({ id: 5, bank_source: 'yahav', amount: 100, description: 'מקס איט פיננסים', date: '2026-07-10', bank_status: 'pending' }),
+    ];
+    const result = buildCalendarMonthSummaryFromRows(rows, yahavAccounts, rows, period);
+
+    expect(result.totals).toMatchObject({
+      expenses: 1400,
+      rawExpensesBeforeAdjustments: 1900,
+      creditCardDebitAdjustments: 500,
+    });
+    expect(result.reconciliation.adjustments).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        cardSource: 'max', accountNumber: null, connected: true,
+        matchingScope: 'provider', bankDebit: 1100, adjustment: 500, remainingBankDebit: 600,
+      }),
+      expect.objectContaining({
+        cardSource: 'amex', connected: false, matchingScope: 'unconnected',
+        adjustment: 0, remainingBankDebit: 300,
+      }),
+    ]));
+  });
+
   test('does not exclude an unrelated same-amount bank income from another account', () => {
     const rows = [
       row({ id: 1, amount: 12000, description: 'לאומי ויזה', date: '2026-07-10', bank_account_number: 'checking-a', bank_sync_id: 'leumi:a:122254' }),

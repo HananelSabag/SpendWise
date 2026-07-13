@@ -103,12 +103,21 @@ function detailGroup(key, kind, rows, total, extra = {}) {
 
 function resolveSettlementAccount(classification, connectedBySource) {
   const source = classification.reconciliation?.cardSource;
-  if (!source) return { source: null, account: null };
+  if (!source) return { source: null, account: null, matchingScope: 'unresolved' };
   const connected = connectedBySource.get(source) || [];
   const explicit = String(classification.reconciliation?.cardAccount || '');
-  if (explicit && connected.includes(explicit)) return { source, account: explicit };
-  if (connected.length === 1) return { source, account: connected[0] };
-  return { source, account: explicit || null };
+  if (explicit) {
+    return connected.includes(explicit)
+      ? { source, account: explicit, matchingScope: 'account' }
+      : { source, account: explicit, matchingScope: 'unconnected' };
+  }
+  if (connected.length === 1) {
+    return { source, account: connected[0], matchingScope: 'account' };
+  }
+  if (connected.length > 1) {
+    return { source, account: null, matchingScope: 'provider' };
+  }
+  return { source, account: null, matchingScope: 'unconnected' };
 }
 
 function matchConnectedSettlementReversals(rows, settlementGroups, supersededSettlementIds) {
@@ -161,7 +170,10 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
   );
   const debitAccounts = deriveDebitCardAccounts((debitScopeRows?.length ? debitScopeRows : rows) || []);
   const debitKeys = new Set(debitAccounts.map((item) => cardKey(item.source, item.account)));
-  const context = { debitCardAccounts: debitAccounts };
+  const context = {
+    debitCardAccounts: debitAccounts,
+    connectedCardSources: [...connectedBySource.keys()],
+  };
   const scopedRows = withoutSupersededPendingBankRows(rows || []).filter((row) => {
     const key = dateKey(row.date);
     return key && key >= period.start && key < period.end;
@@ -185,9 +197,14 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
   const supersededSettlementIds = new Set();
   for (const group of settlementGroups.values()) {
     const hasCompleted = group.rows.some((row) => row.bank_status !== 'pending');
-    group.activeRows = hasCompleted ? group.rows.filter((row) => row.bank_status !== 'pending') : group.rows;
-    group.connected = Boolean(group.source && group.account && connectedCardKeys.has(cardKey(group.source, group.account)));
-    if (hasCompleted) {
+    // Provider-level groups can contain several real card debits on the same
+    // day. Do not drop one merely because a sibling row is still pending; the
+    // exact pending/completed duplicate filter already ran above.
+    group.activeRows = hasCompleted && group.matchingScope !== 'provider'
+      ? group.rows.filter((row) => row.bank_status !== 'pending') : group.rows;
+    group.connected = group.matchingScope === 'provider'
+      || Boolean(group.source && group.account && connectedCardKeys.has(cardKey(group.source, group.account)));
+    if (hasCompleted && group.matchingScope !== 'provider') {
       group.rows.filter((row) => row.bank_status === 'pending').forEach((row) => supersededSettlementIds.add(row.id));
     }
   }
@@ -233,7 +250,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
     const connected = group.connected;
     const itemized = connected ? scopedRows.filter((row) => (
       row.bank_source === group.source
-      && String(row.bank_account_number || '') === String(group.account)
+      && (group.matchingScope === 'provider'
+        ? (connectedBySource.get(group.source) || []).includes(String(row.bank_account_number || ''))
+        : String(row.bank_account_number || '') === String(group.account))
       && !debitKeys.has(cardKey(row.bank_source, row.bank_account_number))
       && dateKey(row.bank_processed_date) === group.billingDate
       && (row.type === 'income' || row.type === 'expense')
@@ -260,8 +279,11 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       adjustment,
       remainingBankDebit,
       matchingBasis: connected
-        ? 'same_month_connected_card_overlap_subtracted'
+        ? (group.matchingScope === 'provider'
+          ? 'same_month_connected_provider_overlap_subtracted'
+          : 'same_month_connected_card_overlap_subtracted')
         : 'unconnected_or_unresolved_card',
+      matchingScope: group.matchingScope,
     };
     group.adjustmentDetail = adjustmentDetail;
     adjustments.push(adjustmentDetail);

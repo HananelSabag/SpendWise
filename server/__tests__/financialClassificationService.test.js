@@ -40,6 +40,25 @@ describe('financial classification', () => {
     });
   });
 
+  test('maps Yahav provider-level card settlement labels', () => {
+    const context = { connectedCardSources: ['max', 'isracard'] };
+    expect(classifyTransaction(row({ bank_source: 'yahav', description: 'מקס איט פיננסים' }), context))
+      .toMatchObject({
+        settlementRole: 'card_settlement', calendarInclusion: 'exclude',
+        reconciliation: { cardSource: 'max', cardAccount: null },
+      });
+    expect(classifyTransaction(row({ bank_source: 'yahav', description: 'ישראכרט בע"מ' }), context))
+      .toMatchObject({ reconciliation: { cardSource: 'isracard', cardAccount: null } });
+    expect(classifyTransaction(row({ bank_source: 'yahav', description: 'כרטיסי אשראי לי' }), context))
+      .toMatchObject({ reconciliation: { cardSource: 'isracard', cardAccount: null } });
+
+    expect(classifyTransaction(row({ bank_source: 'yahav', description: 'פרימיום אקספרס' }), context))
+      .toMatchObject({
+        settlementRole: 'card_settlement', calendarInclusion: 'include', direction: 'spend',
+        reconciliation: { cardSource: 'amex' },
+      });
+  });
+
   test('uses bank debit as primary and the connected Max copy as enrichment only', () => {
     const card = classifyTransaction(row({
       bank_source: 'max', bank_account_number: '8345', description: 'ALIEXPRESS', amount: 240.98,

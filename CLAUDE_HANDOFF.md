@@ -308,4 +308,28 @@ adjustment. The headline endpoint remains aggregate-only; transaction rows are
 requested from `/transactions/calendar-month-details` only after the user opens a
 row. The same component renders as a desktop modal and mobile bottom sheet.
 
+## 2026-07-13 second-user Yahav reconciliation audit
+
+User 34 (`yudasabag@gmail.com`) was used as an authorized second production
+fixture. Only synchronized transactions/job history/account facts were reset; the
+user, auth data, encrypted connections and enabled/disabled account selections were
+preserved. Fresh jobs produced 68 Yahav, 45 Max and 193 Isracard rows. RAW debug was
+disabled after capture, and no RAW/credential artifact is tracked by Git.
+
+The clean fixture exposed a real generalization gap: Yahav bank settlement rows
+name only the provider, while the user has multiple cards for that provider. The
+classifier now maps Yahav's observed Max, Isracard and Amex labels. Calendar Month
+and Financial Cycle reconciliation use one of three explicit scopes:
+
+- `account`: an exact/single connected card;
+- `provider`: all enabled connected accounts for an identified provider;
+- `unconnected`: no itemized source exists, so the bank debit remains full spend.
+
+Provider/date rows are aggregated before applying the overlap cap, refunds reduce
+the represented amount, and distinct pending sibling debits remain included. Cycle
+reconciliation output is limited to the selected cycle instead of returning every
+historical settlement. The guarded `reset-synced-user-data.js` utility is dry-run by
+default and requires both `--execute` and an exact `--confirm=<email>` before any
+destructive operation.
+
 ---

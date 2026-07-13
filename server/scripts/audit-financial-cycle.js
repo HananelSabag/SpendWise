@@ -193,6 +193,37 @@ async function main() {
   const previousAudit = auditWindow(data.rows, data.accounts, previousWindow);
   const projection = buildProjection(current, user.preferences?.runway_projection || {});
 
+  if (process.argv.includes('--review-only')) {
+    const reviewIds = new Set([
+      ...current.needsReview,
+      ...previous.needsReview,
+    ].map((item) => Number(item.id)));
+    const reviewRows = data.rows.filter((row) => reviewIds.has(Number(row.id))).map((row) => ({
+      id: row.id,
+      source: row.bank_source,
+      account: row.bank_account_number,
+      date: dateKey(row.date),
+      processedDate: dateKey(row.bank_processed_date),
+      status: row.bank_status,
+      type: row.type,
+      amount: round2(row.amount),
+      description: row.description,
+      notes: row.notes,
+      syncId: row.bank_sync_id,
+      ledgerClass: row.ledger_class,
+      settlementSource: row.settlement_card_source,
+      settlementAccount: row.settlement_card_account,
+    }));
+    process.stdout.write(`${JSON.stringify({
+      mode: 'read-only-review',
+      user: { id: user.id, username: user.username, email: user.email },
+      current: { needsReview: current.needsReview, reconciliation: current.reconciliation },
+      previous: { needsReview: previous.needsReview, reconciliation: previous.reconciliation },
+      rows: reviewRows,
+    }, null, 2)}\n`);
+    return;
+  }
+
   if (process.argv.includes('--summary-only')) {
     const summarize = (cycle) => ({
       window: `${cycle.cycleStart}..${cycle.lastDay}`,
