@@ -108,6 +108,17 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
   three months of history: **₪14,263.04** expected August 1 and **₪15,333.21**
   expected August 5. Total automatic expected income is **₪29,596.25**; a manual
   planning value, when provided, still overrides it.
+- These are two legitimate household salary streams in one joint bank account,
+  not a duplicate. Forecast identity is account + normalized provider description,
+  so two employers stay separate and are summed only at the household projection.
+- A targeted production Max resync returned 47 provider rows and produced exactly
+  one insert plus 46 deduplicated rows. The new row is AliExpress USD **$12.91**,
+  pending on card 4297, temporarily estimated at **₪39.05** using the official
+  **3.025** representative rate. The clean fixture now contains **307** rows.
+- Salary streams whose normal payday has already passed in the current month but
+  did not recur are suppressed from the next forecast. This prevents a former
+  employer from being projected after a job change while preserving multiple
+  current-month salaries in a joint account.
 
 ---
 

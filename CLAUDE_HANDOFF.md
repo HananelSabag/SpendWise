@@ -18,6 +18,9 @@
 - Pending foreign-card rows with no provider ILS amount use a stored, visibly marked
   temporary Bank of Israel estimate. The completed provider row replaces it using
   original amount/currency lifecycle matching. Never present the estimate as final.
+- Multiple recurring salary descriptions in one enabled bank account are separate
+  household income streams. Forecast each independently; suppress a stream when its
+  normal payday has passed this month without a new deposit, to handle job changes.
 - Do not restore `month_offset` attribution or salary ownership patches to Calendar
   Month. Loans are explicitly deferred.
 - Long explanations belong in collapsed `<details>` panels, closed by default.

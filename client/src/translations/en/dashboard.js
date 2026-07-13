@@ -48,7 +48,7 @@ export default {
   projection: {
     eyebrow: "Optional planning", title: "What remains after expected events", subtitle: "This layer never changes transactions or factual totals. It only lets you test a scenario.",
     enable: "Enable planning", factualHint: "The current balance remains a bank fact; the planned number is always labelled separately.",
-    expectedIncome: "Expected income", expectedSalary: "Expected income", manualCharge: "Manual expected charge", amount: "Amount", date: "Date", chargeLabel: "Charge label", chargePlaceholder: "e.g. unconnected card", automaticSalary: "{{amount}} expected automatically from recurring salary history",
+    expectedIncome: "Expected income", expectedSalary: "Expected income", manualCharge: "Manual expected charge", amount: "Amount", date: "Date", chargeLabel: "Charge label", chargePlaceholder: "e.g. unconnected card", automaticSalary: "Recurring salary deposits of {{amount}} are expected from history",
     salarySuggestion: "Leave blank to use the last salary for planning: {{amount}}", realBalance: "Real balance now", expectedNet: "Expected in minus out", plannedBalance: "Planned balance",
     saved: "Plan saved.", saveFailed: "Could not save.", saving: "Saving…", save: "Save plan"
   },

@@ -593,6 +593,14 @@ function buildExpectedSalaryForecast(rows, window, context, today) {
     const samples = group.rows.slice(-3);
     const typicalDay = Math.round(medianNumber(samples.map((item) => Number(item.date.slice(8, 10)))));
     const estimatedAmount = round2(medianNumber(samples.map((item) => item.amount)));
+    const latestMonth = group.rows[group.rows.length - 1].date.slice(0, 7);
+    const currentMonth = today.slice(0, 7);
+    const todayDay = Number(today.slice(8, 10));
+    // A stream that missed its normal payday this month is probably stale
+    // (job change / stopped household income). Do not keep forecasting an old
+    // employer merely because it appeared in two historical months. Streams
+    // whose payday is still ahead this month remain eligible.
+    if (typicalDay <= todayDay && latestMonth < currentMonth) continue;
     let expectedDate = null;
     for (let offset = 0; offset < 3 && !expectedDate; offset += 1) {
       const candidate = dateInMonth(monthAfter(today.slice(0, 7), offset), typicalDay);

@@ -138,7 +138,11 @@ async function main() {
     ),
     db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true ORDER BY id', [user.id]),
   ]);
-  const data = { rows: transactions.rows, accounts: accountResult.rows };
+  const data = {
+    rows: transactions.rows,
+    accounts: accountResult.rows,
+    salarySignatures: signatureResult.rows,
+  };
   const today = dateKey(new Date());
   const classificationContext = {
     salarySignatures: signatureResult.rows,

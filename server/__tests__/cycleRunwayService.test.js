@@ -318,6 +318,18 @@ describe('card-billing financial cycle', () => {
     });
   });
 
+  test('does not forecast a stale salary stream after its normal payday was missed', () => {
+    const oldEmployer = [
+      row({ id: 1, type: 'income', amount: 10000, description: 'משכורת/מעסיק קודם', date: '2026-05-09' }),
+      row({ id: 2, type: 'income', amount: 10200, description: 'משכורת/מעסיק קודם', date: '2026-06-09' }),
+    ];
+    const forecast = buildExpectedSalaryForecast(oldEmployer, {
+      cycleStart: '2026-07-11', nextBillingDate: '2026-08-10',
+    }, { debitCardAccounts: [], connectedCardSources: [] }, '2026-07-13');
+
+    expect(forecast).toEqual({ total: 0, entries: [], method: 'none' });
+  });
+
   test('does not count an identical pending bank copy when its completed fact exists', () => {
     const duplicate = {
       amount: 90,
