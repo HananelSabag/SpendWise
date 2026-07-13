@@ -5,6 +5,8 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   CreditCard,
   Loader2,
@@ -84,10 +86,12 @@ export default function CalendarActivityCard({
 }) {
   const { t, currentLanguage } = useTranslation('dashboard');
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const detailQuery = useCalendarMonthDetails(summary?.period?.offset || 0, selectedGroup?.key || null);
 
   useEffect(() => {
     setSelectedGroup(null);
+    setIsExpanded(false);
   }, [summary?.period?.month]);
 
   if (!summary) return null;
@@ -99,6 +103,66 @@ export default function CalendarActivityCard({
   const reversals = breakdown.refundsAndReversals || {};
   const reversalTotal = (reversals.cardRefunds || 0) + (reversals.matchedBankReversals || 0);
   const openGroup = (key, title) => setSelectedGroup({ key, title });
+  const activityRows = [
+    ...cards.map((card) => {
+      const title = `${sourceName(card.bankSource)} ••••${String(card.accountNumber).slice(-4)}`;
+      return {
+        key: `card:${card.bankSource}:${card.accountNumber}`,
+        icon: CreditCard,
+        label: title,
+        meta: t('calendarActivity.transactionCount', { count: card.chargeCount || 0 }),
+        amount: card.charges || 0,
+        tone: 'card',
+        onClick: () => openGroup(`card:${card.bankSource}:${card.accountNumber}`, title),
+      };
+    }),
+    {
+      key: 'bank:expense',
+      icon: ArrowDownToLine,
+      label: t('calendarActivity.bankOut'),
+      meta: t('calendarActivity.transactionCount', { count: bank.expenseCount || 0 }),
+      amount: bank.expenses || 0,
+      onClick: () => openGroup('bank:expense', t('calendarActivity.bankOut')),
+    },
+    {
+      key: 'bank:income',
+      icon: ArrowUpFromLine,
+      label: t('calendarActivity.bankIn'),
+      meta: t('calendarActivity.transactionCount', { count: bank.incomeCount || 0 }),
+      amount: bank.income || 0,
+      tone: 'income',
+      onClick: () => openGroup('bank:income', t('calendarActivity.bankIn')),
+    },
+    reconciliation.totalAdjustment > 0 && {
+      key: 'adjustments',
+      icon: RefreshCcw,
+      label: t('calendarActivity.duplicateAdjustments'),
+      meta: t('calendarActivity.adjustmentsHint'),
+      amount: -reconciliation.totalAdjustment,
+      tone: 'adjustment',
+      onClick: () => openGroup('adjustments', t('calendarActivity.duplicateAdjustments')),
+    },
+    reversalTotal > 0 && {
+      key: 'refunds',
+      icon: Undo2,
+      label: t('calendarActivity.refundInstallment'),
+      meta: t('calendarActivity.includedInBankIncome'),
+      amount: reversalTotal,
+      tone: 'income',
+      onClick: () => openGroup('refunds', t('calendarActivity.refundInstallment')),
+    },
+    summary.pending?.count > 0 && {
+      key: 'pending',
+      icon: Clock3,
+      label: t('calendarActivity.pendingTitle'),
+      meta: t('calendarActivity.pendingSubset'),
+      amount: summary.pending.expenses || 0,
+      tone: 'pending',
+      onClick: () => openGroup('pending', t('calendarActivity.pendingTitle')),
+    },
+  ].filter(Boolean);
+  const hiddenRowCount = Math.max(activityRows.length - 3, 0);
+  const visibleRows = isExpanded ? activityRows : activityRows.slice(0, 3);
 
   return (
     <>
@@ -125,78 +189,26 @@ export default function CalendarActivityCard({
         </div>
 
         <div className={cn('mt-3 space-y-2 transition-opacity', isFetching && 'opacity-65')}>
-          {cards.map((card) => {
-            const title = `${sourceName(card.bankSource)} ••••${String(card.accountNumber).slice(-4)}`;
-            return (
-              <ActivityRow
-                key={`${card.bankSource}:${card.accountNumber}`}
-                icon={CreditCard}
-                label={title}
-                meta={t('calendarActivity.transactionCount', { count: card.chargeCount || 0 })}
-                amount={card.charges || 0}
-                tone="card"
-                formatCurrency={formatCurrency}
-                disabled={isFetching}
-                onClick={() => openGroup(`card:${card.bankSource}:${card.accountNumber}`, title)}
-              />
-            );
-          })}
-
-          <ActivityRow
-            icon={ArrowDownToLine}
-            label={t('calendarActivity.bankOut')}
-            meta={t('calendarActivity.transactionCount', { count: bank.expenseCount || 0 })}
-            amount={bank.expenses || 0}
-            formatCurrency={formatCurrency}
-            disabled={isFetching}
-            onClick={() => openGroup('bank:expense', t('calendarActivity.bankOut'))}
-          />
-          <ActivityRow
-            icon={ArrowUpFromLine}
-            label={t('calendarActivity.bankIn')}
-            meta={t('calendarActivity.transactionCount', { count: bank.incomeCount || 0 })}
-            amount={bank.income || 0}
-            tone="income"
-            formatCurrency={formatCurrency}
-            disabled={isFetching}
-            onClick={() => openGroup('bank:income', t('calendarActivity.bankIn'))}
-          />
-
-          {reconciliation.totalAdjustment > 0 && (
+          {visibleRows.map(({ key, ...row }) => (
             <ActivityRow
-              icon={RefreshCcw}
-              label={t('calendarActivity.duplicateAdjustments')}
-              meta={t('calendarActivity.adjustmentsHint')}
-              amount={-reconciliation.totalAdjustment}
-              tone="adjustment"
+              key={key}
+              {...row}
               formatCurrency={formatCurrency}
               disabled={isFetching}
-              onClick={() => openGroup('adjustments', t('calendarActivity.duplicateAdjustments'))}
             />
-          )}
-          {reversalTotal > 0 && (
-            <ActivityRow
-              icon={Undo2}
-              label={t('calendarActivity.refundInstallment')}
-              meta={t('calendarActivity.includedInBankIncome')}
-              amount={reversalTotal}
-              tone="income"
-              formatCurrency={formatCurrency}
-              disabled={isFetching}
-              onClick={() => openGroup('refunds', t('calendarActivity.refundInstallment'))}
-            />
-          )}
-          {summary.pending?.count > 0 && (
-            <ActivityRow
-              icon={Clock3}
-              label={t('calendarActivity.pendingTitle')}
-              meta={t('calendarActivity.pendingSubset')}
-              amount={summary.pending.expenses || 0}
-              tone="pending"
-              formatCurrency={formatCurrency}
-              disabled={isFetching}
-              onClick={() => openGroup('pending', t('calendarActivity.pendingTitle'))}
-            />
+          ))}
+          {hiddenRowCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded((value) => !value)}
+              aria-expanded={isExpanded}
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-bold text-indigo-600 transition hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/25"
+            >
+              {isExpanded
+                ? t('calendarActivity.showLess')
+                : t('calendarActivity.showMore', { count: hiddenRowCount })}
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
           )}
           {isError && <p className="px-1 text-[11px] text-rose-600">{t('calendarActivity.loadError')}</p>}
         </div>

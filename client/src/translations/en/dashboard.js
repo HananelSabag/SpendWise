@@ -410,6 +410,8 @@ export default {
     rowAdjusted: "Raw {{raw}} · {{adjustment}} already represented",
     unknownTransaction: "Transaction",
     notCounted: "Not counted",
+    showMore: "Show {{count}} more",
+    showLess: "Show less",
     cardDebitAdjustments: "Credit card debit adjustments",
     refundsReversals: "Refunds and installment proceeds (included in income)",
     howCardDebitsAdjusted: "How card debits were adjusted",

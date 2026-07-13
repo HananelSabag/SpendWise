@@ -399,6 +399,8 @@ export default {
     rowAdjusted: "חיוב מקורי {{raw}} · הופחתו {{adjustment}} שכבר נספרו",
     unknownTransaction: "תנועה",
     notCounted: "לא נספר",
+    showMore: "הצג עוד {{count}}",
+    showLess: "הצג פחות",
     cardDebitAdjustments: "התאמות חיובי אשראי בבנק",
     refundsReversals: "זיכויים והחזרי פריסה (כלולים בהכנסות)",
     howCardDebitsAdjusted: "איך הותאמו חיובי האשראי",
