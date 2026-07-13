@@ -1,9 +1,10 @@
 /**
  * Calendar-month aggregation for the Dashboard.
  *
- * Raw rows remain immutable. The only economic adjustment is credit-card
- * reconciliation: an enabled card provider's itemized activity is counted,
- * while only the unmatched remainder of its bank debit is added.
+ * Raw rows remain immutable. For connected credit cards, itemized activity is
+ * counted on its factual purchase date and the summarized bank settlement is
+ * excluded. For unconnected cards, the bank settlement remains the fallback
+ * expense because no itemized provider activity is available.
  */
 
 const db = require('../config/db');
@@ -78,6 +79,43 @@ function resolveSettlementAccount(classification, connectedBySource) {
   return { source, account: explicit || null };
 }
 
+function matchConnectedSettlementReversals(rows, settlementGroups, supersededSettlementIds) {
+  const settlements = [...settlementGroups.values()]
+    .filter((group) => group.connected)
+    .flatMap((group) => group.activeRows || []);
+  const usedSettlementIds = new Set();
+  const matches = [];
+
+  const incomes = (rows || [])
+    .filter((row) => !supersededSettlementIds.has(row.id)
+      && institutionKind(row.bank_source) === 'bank'
+      && row.type === 'income')
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || Number(a.id) - Number(b.id));
+
+  for (const incomeRow of incomes) {
+    const match = settlements
+      .filter((settlement) => !usedSettlementIds.has(settlement.id)
+        && settlement.bank_source === incomeRow.bank_source
+        && String(settlement.bank_account_number || '') === String(incomeRow.bank_account_number || '')
+        && Math.abs(amount(settlement) - amount(incomeRow)) < 0.01
+        && dayDistance(settlement.date, incomeRow.date) <= 7)
+      .sort((a, b) => dayDistance(a.date, incomeRow.date) - dayDistance(b.date, incomeRow.date))[0];
+
+    if (!match) continue;
+    usedSettlementIds.add(match.id);
+    matches.push({
+      incomeTransactionId: incomeRow.id,
+      debitTransactionId: match.id,
+      amount: round2(amount(incomeRow)),
+      incomeDate: dateKey(incomeRow.date),
+      debitDate: dateKey(match.date),
+      matchingBasis: 'same_bank_account_exact_amount_within_7_days',
+    });
+  }
+
+  return matches;
+}
+
 function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, period) {
   const connectedBySource = new Map();
   for (const account of accounts || []) {
@@ -116,10 +154,20 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
   for (const group of settlementGroups.values()) {
     const hasCompleted = group.rows.some((row) => row.bank_status !== 'pending');
     group.activeRows = hasCompleted ? group.rows.filter((row) => row.bank_status !== 'pending') : group.rows;
+    group.connected = Boolean(group.source && group.account && connectedCardKeys.has(cardKey(group.source, group.account)));
     if (hasCompleted) {
       group.rows.filter((row) => row.bank_status === 'pending').forEach((row) => supersededSettlementIds.add(row.id));
     }
   }
+
+  const connectedSettlementIds = new Set(
+    [...settlementGroups.values()]
+      .filter((group) => group.connected)
+      .flatMap((group) => group.activeRows || [])
+      .map((row) => row.id),
+  );
+  const matchedReversals = matchConnectedSettlementReversals(scopedRows, settlementGroups, supersededSettlementIds);
+  const matchedReversalIds = new Set(matchedReversals.map((match) => match.incomeTransactionId));
 
   const bank = emptyActivity();
   const cards = emptyActivity();
@@ -131,6 +179,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
 
   for (const row of scopedRows) {
     if (supersededSettlementIds.has(row.id)) continue;
+    // Connected-card settlements and their exact bank reversals are statement
+    // evidence, not new calendar activity. The itemized card rows are the facts.
+    if (connectedSettlementIds.has(row.id) || matchedReversalIds.has(row.id)) continue;
     const kind = institutionKind(row.bank_source);
     if (kind === 'credit_card' && debitKeys.has(cardKey(row.bank_source, row.bank_account_number))) {
       debitEnrichmentExcluded += amount(row);
@@ -154,10 +205,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
 
   const adjustments = [];
   let totalAdjustment = 0;
-  let pendingAdjustment = 0;
   for (const group of settlementGroups.values()) {
     const bankDebit = round2(group.activeRows.reduce((sum, row) => sum + amount(row), 0));
-    const connected = group.source && group.account && connectedCardKeys.has(cardKey(group.source, group.account));
+    const connected = group.connected;
     const itemized = connected ? scopedRows.filter((row) => (
       row.bank_source === group.source
       && String(row.bank_account_number || '') === String(group.account)
@@ -168,11 +218,10 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
     const itemizedExpenses = round2(itemized.filter((row) => row.type === 'expense').reduce((sum, row) => sum + amount(row), 0));
     const itemizedRefunds = round2(itemized.filter((row) => row.type === 'income').reduce((sum, row) => sum + amount(row), 0));
     const representedNet = round2(Math.max(0, itemizedExpenses - itemizedRefunds));
-    const adjustment = connected ? round2(Math.min(bankDebit, representedNet)) : 0;
+    const adjustment = connected ? bankDebit : 0;
     const remainingBankDebit = round2(Math.max(0, bankDebit - adjustment));
     const isPendingDebit = group.activeRows.length > 0 && group.activeRows.every((row) => row.bank_status === 'pending');
     totalAdjustment += adjustment;
-    if (isPendingDebit) pendingAdjustment += adjustment;
     adjustments.push({
       cardSource: group.source,
       accountNumber: group.account,
@@ -186,33 +235,18 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       alreadyRepresented: representedNet,
       adjustment,
       remainingBankDebit,
-      matchingBasis: connected ? 'provider_account_and_processed_date' : 'unconnected_or_unresolved_card',
+      matchingBasis: connected ? 'connected_card_settlement_excluded' : 'unconnected_or_unresolved_card',
     });
   }
   totalAdjustment = round2(totalAdjustment);
-  pendingAdjustment = round2(pendingAdjustment);
 
-  const bankFinished = finishActivity(bank, totalAdjustment, pendingAdjustment);
+  const bankFinished = finishActivity(bank);
   const cardsFinished = finishActivity(cards);
   const otherFinished = finishActivity(other);
   const income = round2(bankFinished.income + cardsFinished.income + otherFinished.income);
   const expenses = round2(bankFinished.expenses + cardsFinished.expenses + otherFinished.expenses);
 
-  const settlementRows = [...settlementGroups.values()].flatMap((group) => group.activeRows || []);
-  const matchedReversals = countedRows.filter((row) => institutionKind(row.bank_source) === 'bank' && row.type === 'income')
-    .flatMap((incomeRow) => {
-      const match = settlementRows.find((settlement) => settlement.bank_source === incomeRow.bank_source
-        && Math.abs(amount(settlement) - amount(incomeRow)) < 0.01
-        && dayDistance(settlement.date, incomeRow.date) <= 7);
-      return match ? [{
-        incomeTransactionId: incomeRow.id,
-        debitTransactionId: match.id,
-        amount: round2(amount(incomeRow)),
-        incomeDate: dateKey(incomeRow.date),
-        debitDate: dateKey(match.date),
-        matchingBasis: 'exact_amount_within_7_days',
-      }] : [];
-    });
+  const matchedBankReversalAmount = round2(matchedReversals.reduce((sum, item) => sum + item.amount, 0));
 
   return {
     period: {
@@ -229,7 +263,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       net: round2(income - expenses),
       transactionCount: countedRows.length,
       rawExpensesBeforeAdjustments: round2(expenses + totalAdjustment),
+      rawIncomeBeforeAdjustments: round2(income + matchedBankReversalAmount),
       creditCardDebitAdjustments: totalAdjustment,
+      bankReversalAdjustments: matchedBankReversalAmount,
     },
     breakdown: {
       bankTransactions: bankFinished,
@@ -250,7 +286,8 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       otherTransactions: otherFinished,
       refundsAndReversals: {
         cardRefunds: cardsFinished.income,
-        matchedBankReversals: round2(matchedReversals.reduce((sum, item) => sum + item.amount, 0)),
+        matchedBankReversals: matchedBankReversalAmount,
+        matchedBankReversalsExcludedFromIncome: matchedBankReversalAmount,
         matches: matchedReversals,
       },
       debitCardEnrichmentExcluded: {
@@ -268,9 +305,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       totalAdjustment,
       adjustments,
       supersededPendingSettlementCount: supersededSettlementIds.size,
-      rule: 'remaining_bank_debit_equals_bank_debit_minus_itemized_card_net',
+      rule: 'connected_card_settlements_excluded_unconnected_settlements_counted',
     },
-    model: 'raw_calendar_with_card_reconciliation_v2',
+    model: 'purchase_date_calendar_with_connected_settlements_excluded_v3',
   };
 }
 
