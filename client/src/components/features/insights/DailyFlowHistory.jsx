@@ -22,10 +22,12 @@ function Metric({ icon: Icon, label, value, tone, formatCurrency }) {
     green: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/25 dark:text-emerald-300',
     indigo: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/25 dark:text-indigo-300',
   };
+  const numericValue = Number(value) || 0;
+  const displayValue = `${numericValue < 0 ? '−' : ''}${formatCurrency(Math.abs(numericValue))}`;
   return (
     <div className={`rounded-2xl p-3 ${tones[tone]}`}>
       <p className="flex items-center gap-1 text-[11px] font-medium opacity-75"><Icon className="h-3.5 w-3.5" />{label}</p>
-      <p className="mt-1 text-base font-black tabular-nums">{formatCurrency(value)}</p>
+      <p className="mt-1 text-base font-black tabular-nums">{displayValue}</p>
     </div>
   );
 }
