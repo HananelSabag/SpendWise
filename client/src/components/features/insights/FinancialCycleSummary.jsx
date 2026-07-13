@@ -18,6 +18,7 @@ export default function FinancialCycleSummary({ cycle, formatCurrency }) {
   const { t } = useTranslation('dashboard');
   if (!cycle) return null;
   const net = cycle.money?.netIncludingSalaryCommitted || 0;
+  const financingInflows = cycle.money?.financingInflows || 0;
   return (
     <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -34,6 +35,11 @@ export default function FinancialCycleSummary({ cycle, formatCurrency }) {
         <Metric icon={Wallet} label={t('cycleDashboard.cycleNet')} value={net} tone={net >= 0 ? 'text-emerald-600' : 'text-rose-600'} formatCurrency={formatCurrency} />
         <Metric icon={Wallet} label={t('cycleDashboard.currentBalance')} value={cycle.checkingBalance} tone="text-indigo-600" formatCurrency={formatCurrency} />
       </div>
+      {financingInflows > 0 && (
+        <p className="mt-3 rounded-xl bg-sky-50 px-3 py-2 text-[11px] font-semibold text-sky-700 dark:bg-sky-950/25 dark:text-sky-300">
+          {t('cycleDashboard.financingExcluded', { amount: formatCurrency(financingInflows) })}
+        </p>
+      )}
       <details className="group mt-3 border-t border-gray-100 pt-3 text-xs dark:border-gray-800">
         <summary className="flex cursor-pointer list-none items-center justify-between font-semibold text-gray-500">{t('cycleDashboard.howCalculated')}<ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
         <p className="mt-2 rounded-xl bg-gray-50 p-3 leading-5 text-gray-500 dark:bg-gray-800/60">{t('cycleDashboard.summaryExplanation')}</p>

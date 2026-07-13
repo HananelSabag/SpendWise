@@ -1,21 +1,26 @@
 /**
  * Financial cycle model anchored by observed credit-card billing dates.
  *
- * One intentional dedupe rule exists: when itemized credit-card data is
- * connected, the summarized bank settlement is excluded because the purchases
- * are already counted. Everything else follows the raw transaction type/date.
+ * Economic activity and future cash commitments are intentionally separate:
+ * purchases are attributed to the activity window, while known future-billed
+ * card rows inform the checking-balance outlook. Bank settlements are
+ * reconciled per connected provider/account so unmatched cash is never hidden.
  */
 
 const db = require('../config/db');
 const { institutionKind } = require('../config/institutions');
 const { getCalendarPeriod, TZ } = require('../utils/calendarPeriod');
 const { deriveDebitCardAccounts, dateKey } = require('./cardReconciliationService');
-const { withoutSupersededPendingBankRows } = require('./financialClassificationService');
+const {
+  classifyTransaction,
+  withoutSupersededPendingBankRows,
+} = require('./financialClassificationService');
 
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type,
   description, notes, date, transaction_datetime, bank_processed_date,
   bank_status, bank_sync_id, raw_category, ledger_class,
-  settlement_card_source, settlement_card_account`;
+  settlement_card_source, settlement_card_account,
+  txn_kind, installment_number, installment_total`;
 const CARD_SETTLEMENT_HINT = /(כרטיסי?\s*אשראי|לאומי\s*ויזה|ויזה|מקס|ישראכרט|כאל|אמריקן|credit\s*card|max|visa|isracard|amex|\bcal\b)/i;
 const round2 = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100) / 100;
 
@@ -76,7 +81,9 @@ function isBankCardSettlement(row, hasConnectedCardDetail) {
 function deriveBillingBoundaries(rows, debitAccounts = debitAccountSet(rows)) {
   const dateGroups = new Map();
   for (const row of rows) {
-    if (!isItemizedCreditCard(row, debitAccounts) || row.type !== 'expense') continue;
+    if (!isItemizedCreditCard(row, debitAccounts)
+      || row.type !== 'expense'
+      || row.bank_status === 'pending') continue;
     const billingDate = dateKey(row.bank_processed_date);
     if (!billingDate) continue;
     const account = String(row.bank_account_number || '');
@@ -144,6 +151,8 @@ function resolveCycleWindow(boundaries, offset = 0, today = todayKey()) {
         openedAfterBillingDate: closingBoundary.billingDate,
         nextBillingDate: nextObserved?.billingDate || addMonth(closingBoundary.billingDate),
         boundarySources: closingBoundary.sources,
+        nextBoundarySources: nextObserved?.sources
+          || closingBoundary.sources.map((source) => ({ ...source, billingDate: addMonth(source.billingDate) })),
       };
     }
   } else {
@@ -159,6 +168,7 @@ function resolveCycleWindow(boundaries, offset = 0, today = todayKey()) {
         openedAfterBillingDate: openingBoundary.billingDate,
         nextBillingDate: closingBoundary.billingDate,
         boundarySources: closingBoundary.sources,
+        nextBoundarySources: closingBoundary.sources,
       };
     }
   }
@@ -172,87 +182,224 @@ function resolveCycleWindow(boundaries, offset = 0, today = todayKey()) {
     openedAfterBillingDate: null,
     nextBillingDate: null,
     boundarySources: [],
+    nextBoundarySources: [],
   };
 }
 
-function reduceCycleRows(rows, accounts, window) {
-  const debitAccounts = debitAccountSet(rows);
-  const connectedCardSources = new Set(
-    accounts.filter((account) => account.enabled && institutionKind(account.bank_source) === 'credit_card')
-      .map((account) => account.bank_source),
-  );
-  const hasConnectedCardDetail = connectedCardSources.size > 0;
+function buildClassificationContext(data, rows = data.rows || []) {
+  const debitCardAccounts = deriveDebitCardAccounts(rows);
+  const connectedCardSources = [...new Set((data.accounts || [])
+    .filter((account) => account.enabled && institutionKind(account.bank_source) === 'credit_card')
+    .map((account) => account.bank_source))];
+  return {
+    debitCardAccounts,
+    connectedCardSources,
+    salarySignatures: data.salarySignatures || [],
+    transactionOverrides: data.transactionOverrides || [],
+  };
+}
+
+function activityDate(row) {
+  if (institutionKind(row.bank_source) === 'credit_card'
+    && row.bank_status !== 'pending'
+    && (row.txn_kind === 'installments' || Number(row.installment_total) > 1)) {
+    return dateKey(row.bank_processed_date) || dateKey(row.date);
+  }
+  return dateKey(row.date);
+}
+
+function buildSettlementReconciliation(rows, accounts, context) {
+  const activeRows = withoutSupersededPendingBankRows(rows);
+  const debitKeys = new Set(context.debitCardAccounts.map((item) => debitKey(item.source, item.account)));
+  const connectedBySource = new Map();
+  for (const account of accounts || []) {
+    if (!account.enabled || institutionKind(account.bank_source) !== 'credit_card') continue;
+    if (debitKeys.has(debitKey(account.bank_source, account.account_number))) continue;
+    const list = connectedBySource.get(account.bank_source) || [];
+    list.push(String(account.account_number || ''));
+    connectedBySource.set(account.bank_source, list);
+  }
+
+  const groups = new Map();
+  for (const row of activeRows) {
+    if (institutionKind(row.bank_source) !== 'bank' || row.type !== 'expense') continue;
+    const classification = classifyTransaction(row, context);
+    if (classification.settlementRole !== 'card_settlement') continue;
+    const source = classification.reconciliation?.cardSource || null;
+    const connectedAccounts = connectedBySource.get(source) || [];
+    const explicit = String(classification.reconciliation?.cardAccount || '');
+    const account = explicit && connectedAccounts.includes(explicit)
+      ? explicit : connectedAccounts.length === 1 ? connectedAccounts[0] : explicit || null;
+    const billingDate = dateKey(row.date);
+    const key = `${source || 'unresolved'}:${account || 'unresolved'}:${billingDate}`;
+    const group = groups.get(key) || { source, account, billingDate, rows: [] };
+    group.rows.push(row);
+    groups.set(key, group);
+  }
+
+  const countedById = new Map();
+  const inactiveIds = new Set();
+  const adjustments = [];
+  for (const group of groups.values()) {
+    const hasCompleted = group.rows.some((row) => row.bank_status !== 'pending');
+    const settlementRows = hasCompleted ? group.rows.filter((row) => row.bank_status !== 'pending') : group.rows;
+    group.rows.filter((row) => !settlementRows.includes(row)).forEach((row) => inactiveIds.add(row.id));
+    const connected = Boolean(group.source && group.account
+      && (connectedBySource.get(group.source) || []).includes(group.account));
+    const bankDebit = round2(settlementRows.reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
+    const itemized = connected ? activeRows.filter((row) => (
+      row.bank_source === group.source
+      && String(row.bank_account_number || '') === group.account
+      && !debitKeys.has(debitKey(row.bank_source, row.bank_account_number))
+      && dateKey(row.bank_processed_date) === group.billingDate
+      && (row.type === 'income' || row.type === 'expense')
+    )) : [];
+    const itemizedExpenses = round2(itemized.filter((row) => row.type === 'expense')
+      .reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
+    const itemizedRefunds = round2(itemized.filter((row) => row.type === 'income')
+      .reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
+    const represented = round2(Math.max(0, itemizedExpenses - itemizedRefunds));
+    const adjustment = connected ? round2(Math.min(bankDebit, represented)) : 0;
+    let adjustmentLeft = adjustment;
+    for (const row of settlementRows.sort((a, b) => Number(a.id) - Number(b.id))) {
+      const raw = Math.abs(Number(row.amount) || 0);
+      const deducted = Math.min(raw, adjustmentLeft);
+      countedById.set(row.id, round2(raw - deducted));
+      adjustmentLeft = round2(adjustmentLeft - deducted);
+    }
+    adjustments.push({
+      cardSource: group.source,
+      accountNumber: group.account,
+      billingDate: group.billingDate,
+      connected,
+      bankDebit,
+      itemizedExpenses,
+      itemizedRefunds,
+      adjustment,
+      remainingBankDebit: round2(bankDebit - adjustment),
+    });
+  }
+  return { countedById, inactiveIds, adjustments };
+}
+
+function reduceCycleRows(rows, accounts, window, rawContext = {}) {
+  const context = rawContext.debitCardAccounts ? rawContext : buildClassificationContext({ accounts }, rows);
+  const debitAccounts = new Set(context.debitCardAccounts.map((item) => debitKey(item.source, item.account)));
+  const reconciliation = buildSettlementReconciliation(rows, accounts, context);
   const totals = {
     incomePosted: 0,
     incomePending: 0,
+    salaryIncome: 0,
     bankExpensesPosted: 0,
     bankExpensesPending: 0,
     cardExpensesPosted: 0,
     cardExpensesPending: 0,
-    cardRefunds: 0,
+    cardRefundsPosted: 0,
+    cardRefundsPending: 0,
     manualExpenses: 0,
+    financingInflows: 0,
+    transferInflows: 0,
     excludedCardSettlements: 0,
+    unmatchedCardSettlements: 0,
+    debitEnrichmentExcluded: 0,
     transactionCount: 0,
   };
   const includedRows = [];
+  const dailyEntries = [];
+  const needsReview = [];
+
+  const addEntry = (row, key, amount, role, pending) => {
+    totals.transactionCount += 1;
+    includedRows.push(row);
+    dailyEntries.push({ date: key, amount, role, pending });
+  };
 
   for (const row of withoutSupersededPendingBankRows(rows)) {
-    const key = dateKey(row.date);
+    const key = activityDate(row);
     if (!key || key < window.cycleStart || key >= window.cycleEndExclusive) continue;
-    totals.transactionCount += 1;
-    const amount = Math.abs(Number(row.amount) || 0);
+    if (reconciliation.inactiveIds.has(row.id)) continue;
+    const rawAmount = Math.abs(Number(row.amount) || 0);
     const pending = row.bank_status === 'pending';
-    const kind = institutionKind(row.bank_source);
+    const classification = classifyTransaction(row, context);
 
-    if (kind === 'bank') {
-      if (row.type === 'income') totals[pending ? 'incomePending' : 'incomePosted'] += amount;
-      else if (row.type === 'expense') {
-        if (isBankCardSettlement(row, hasConnectedCardDetail)) totals.excludedCardSettlements += amount;
-        else totals[pending ? 'bankExpensesPending' : 'bankExpensesPosted'] += amount;
+    if (classification.settlementRole === 'card_settlement') {
+      const counted = reconciliation.countedById.get(row.id) ?? rawAmount;
+      totals.excludedCardSettlements += rawAmount - counted;
+      totals.unmatchedCardSettlements += counted;
+      if (counted > 0) {
+        totals[pending ? 'bankExpensesPending' : 'bankExpensesPosted'] += counted;
+        addEntry(row, key, counted, 'expense', pending);
       }
-      includedRows.push(row);
       continue;
     }
-    if (kind === 'credit_card') {
-      if (!isItemizedCreditCard(row, debitAccounts)) continue;
-      if (row.type === 'income') totals.cardRefunds += amount;
-      else if (row.type === 'expense') totals[pending ? 'cardExpensesPending' : 'cardExpensesPosted'] += amount;
-      includedRows.push(row);
+
+    if (classification.calendarInclusion === 'exclude') {
+      if (classification.sourceRole === 'card_enrichment') totals.debitEnrichmentExcluded += rawAmount;
+      else if (row.type === 'income' && classification.economicRole === 'loan') totals.financingInflows += rawAmount;
+      else if (row.type === 'income') totals.transferInflows += rawAmount;
       continue;
     }
-    if (row.bank_source == null || kind === 'unknown') {
-      if (row.type === 'income') totals[pending ? 'incomePending' : 'incomePosted'] += amount;
-      else if (row.type === 'expense') totals.manualExpenses += amount;
-      includedRows.push(row);
+    if (classification.calendarInclusion === 'needs_review') {
+      needsReview.push({ id: row.id, reason: classification.reason });
+    }
+
+    if (classification.direction === 'refund') {
+      totals[pending ? 'cardRefundsPending' : 'cardRefundsPosted'] += rawAmount;
+      addEntry(row, key, rawAmount, 'income', pending);
+    } else if (classification.direction === 'income' || row.type === 'income') {
+      totals[pending ? 'incomePending' : 'incomePosted'] += rawAmount;
+      if (classification.salary) totals.salaryIncome += rawAmount;
+      addEntry(row, key, rawAmount, 'income', pending);
+    } else if (row.type === 'expense') {
+      if (classification.sourceRole === 'card_itemized') {
+        if (debitAccounts.has(debitKey(row.bank_source, row.bank_account_number))) continue;
+        totals[pending ? 'cardExpensesPending' : 'cardExpensesPosted'] += rawAmount;
+      } else if (classification.sourceRole === 'manual') {
+        totals.manualExpenses += rawAmount;
+      } else {
+        totals[pending ? 'bankExpensesPending' : 'bankExpensesPosted'] += rawAmount;
+      }
+      addEntry(row, key, rawAmount, 'expense', pending);
     }
   }
 
   for (const [key, value] of Object.entries(totals)) {
     if (typeof value === 'number' && key !== 'transactionCount') totals[key] = round2(value);
   }
-  const cardCommitted = round2(Math.max(0, totals.cardExpensesPosted + totals.cardExpensesPending - totals.cardRefunds));
-  const spentActual = round2(totals.bankExpensesPosted + Math.max(0, totals.cardExpensesPosted - totals.cardRefunds) + totals.manualExpenses);
-  const spentCommitted = round2(totals.bankExpensesPosted + totals.bankExpensesPending + cardCommitted + totals.manualExpenses);
-  const totalIncome = round2(totals.incomePosted + totals.incomePending);
+  const refundsActual = totals.cardRefundsPosted;
+  const refundsCommitted = round2(refundsActual + totals.cardRefundsPending);
+  const spentActual = round2(totals.bankExpensesPosted + totals.cardExpensesPosted + totals.manualExpenses);
+  const spentCommitted = round2(spentActual + totals.bankExpensesPending + totals.cardExpensesPending);
+  const incomeActual = round2(totals.incomePosted + refundsActual);
+  const totalIncome = round2(totals.incomePosted + totals.incomePending + refundsCommitted);
   return {
     totals,
     includedRows,
-    cardCommitted,
+    dailyEntries,
+    cardCommitted: round2(totals.cardExpensesPosted + totals.cardExpensesPending),
     spentActual,
     spentCommitted,
     totalIncome,
-    netActual: round2(totals.incomePosted - spentActual),
+    netActual: round2(incomeActual - spentActual),
     netCommitted: round2(totalIncome - spentCommitted),
     debitAccounts,
+    reconciliation: reconciliation.adjustments,
+    needsReview,
   };
 }
 
-function buildCardBillingCycles(rows, debitAccounts = debitAccountSet(rows)) {
+function buildCardBillingCycles(rows, debitAccounts = debitAccountSet(rows), options = {}) {
   const groups = new Map();
   for (const row of rows) {
     if (!isItemizedCreditCard(row, debitAccounts)) continue;
     if (row.type !== 'expense' && row.type !== 'income') continue;
-    const billingDate = dateKey(row.bank_processed_date);
+    if (options.window) {
+      const key = activityDate(row);
+      if (!key || key < options.window.cycleStart || key >= options.window.cycleEndExclusive) continue;
+    }
+    const billingDate = row.bank_status === 'pending'
+      ? options.pendingBillingDate?.(row) || null
+      : dateKey(row.bank_processed_date);
     const key = `${row.bank_source}|${row.bank_account_number || ''}|${billingDate || 'unassigned'}`;
     const group = groups.get(key) || {
       bankSource: row.bank_source,
@@ -278,30 +425,54 @@ function buildCardBillingCycles(rows, debitAccounts = debitAccountSet(rows)) {
   })).sort((a, b) => String(a.billingDate || '9999').localeCompare(String(b.billingDate || '9999')));
 }
 
-function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive) {
-  const reduced = reduceCycleRows(rows, accounts, { cycleStart, cycleEndExclusive });
+function buildUpcomingCardCommitments(rows, window, context, today) {
+  if (!window.nextBillingDate) return { total: 0, posted: 0, pending: 0, refunds: 0, rows: [], cycles: [] };
+  const debitAccounts = new Set(context.debitCardAccounts.map((item) => debitKey(item.source, item.account)));
+  const nextDateByCard = new Map((window.nextBoundarySources || [])
+    .map((source) => [debitKey(source.bankSource, source.accountNumber), source.billingDate]));
+  const commitmentRows = withoutSupersededPendingBankRows(rows).filter((row) => {
+    if (institutionKind(row.bank_source) !== 'credit_card'
+      || debitAccounts.has(debitKey(row.bank_source, row.bank_account_number))
+      || (row.type !== 'expense' && row.type !== 'income')) return false;
+    const transactionDate = dateKey(row.date);
+    const processedDate = dateKey(row.bank_processed_date);
+    if (row.bank_status === 'pending') {
+      return transactionDate && transactionDate >= window.openedAfterBillingDate && transactionDate <= today;
+    }
+    return processedDate && processedDate > today && processedDate <= window.nextBillingDate;
+  });
+  const posted = round2(commitmentRows.filter((row) => row.type === 'expense' && row.bank_status !== 'pending')
+    .reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
+  const pending = round2(commitmentRows.filter((row) => row.type === 'expense' && row.bank_status === 'pending')
+    .reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
+  const refunds = round2(commitmentRows.filter((row) => row.type === 'income')
+    .reduce((sum, row) => sum + Math.abs(Number(row.amount) || 0), 0));
+  const pendingBillingDate = (row) => nextDateByCard.get(debitKey(row.bank_source, row.bank_account_number))
+    || window.nextBillingDate;
+  return {
+    total: round2(Math.max(0, posted + pending - refunds)),
+    posted,
+    pending,
+    refunds,
+    rows: commitmentRows,
+    cycles: buildCardBillingCycles(commitmentRows, debitAccounts, { pendingBillingDate }),
+  };
+}
+
+function buildDailyHistory(rows, accounts, cycleStart, cycleEndExclusive, rawContext = {}) {
+  const reduced = reduceCycleRows(rows, accounts, { cycleStart, cycleEndExclusive }, rawContext);
   const days = new Map();
   for (let cursor = cycleStart; cursor < cycleEndExclusive; cursor = nextDay(cursor)) {
     days.set(cursor, { date: cursor, spentActual: 0, spentCommitted: 0, spentPending: 0, totalIncome: 0, incomeExSalary: 0, salaryIncome: 0, transactionCount: 0, needsReviewCount: 0 });
   }
-  const debitAccounts = reduced.debitAccounts;
-  const hasCardDetail = accounts.some((account) => account.enabled && institutionKind(account.bank_source) === 'credit_card');
-  for (const row of withoutSupersededPendingBankRows(rows)) {
-    const key = dateKey(row.date);
-    const day = days.get(key);
+  for (const entry of reduced.dailyEntries) {
+    const day = days.get(entry.date);
     if (!day) continue;
-    const amount = Math.abs(Number(row.amount) || 0);
-    const kind = institutionKind(row.bank_source);
-    if (kind === 'bank' && row.type === 'expense' && isBankCardSettlement(row, hasCardDetail)) continue;
-    if (kind === 'credit_card' && !isItemizedCreditCard(row, debitAccounts)) continue;
     day.transactionCount += 1;
-    if (row.type === 'income' && kind !== 'credit_card') day.totalIncome += amount;
-    else if (row.type === 'income' && kind === 'credit_card') {
-      day.spentActual -= amount;
-      day.spentCommitted -= amount;
-    } else if (row.type === 'expense') {
-      day.spentCommitted += amount;
-      if (row.bank_status !== 'pending') day.spentActual += amount;
+    if (entry.role === 'income') day.totalIncome += entry.amount;
+    else {
+      day.spentCommitted += entry.amount;
+      if (!entry.pending) day.spentActual += entry.amount;
     }
   }
   let cumulativeSpent = 0;
@@ -331,13 +502,22 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
   const debitAccounts = debitAccountSet(rows);
   const boundaries = deriveBillingBoundaries(rows, debitAccounts);
   const window = resolveCycleWindow(boundaries, offset, now);
-  const reduced = reduceCycleRows(rows, accounts, window);
-  const cardBillingCycles = buildCardBillingCycles(reduced.includedRows, debitAccounts);
+  const context = buildClassificationContext(data, rows);
+  const reduced = reduceCycleRows(rows, accounts, window, context);
+  const upcoming = offset === 0
+    ? buildUpcomingCardCommitments(rows, window, context, now)
+    : { total: 0, posted: 0, pending: 0, refunds: 0, rows: [], cycles: [] };
+  const cardBillingCycles = offset === 0
+    ? upcoming.cycles
+    : buildCardBillingCycles(rows, debitAccounts, {
+      window,
+      pendingBillingDate: () => window.nextBillingDate,
+    });
   const bankAccounts = accounts.filter((account) => account.enabled && institutionKind(account.bank_source) === 'bank' && account.balance != null);
   const checkingBalance = bankAccounts.length ? round2(bankAccounts.reduce((sum, account) => sum + Number(account.balance), 0)) : null;
   const daysElapsed = daysBetween(window.cycleStart, window.cycleEndExclusive);
   const pendingBank = reduced.totals.bankExpensesPending;
-  const upcomingCards = offset === 0 ? reduced.cardCommitted : 0;
+  const salaryInWindow = reduced.totals.salaryIncome;
 
   return {
     offset,
@@ -354,6 +534,7 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
       openedAfterBillingDate: window.openedAfterBillingDate,
       nextBillingDate: window.nextBillingDate,
       boundarySources: window.boundarySources,
+      nextBoundarySources: window.nextBoundarySources,
       observedBoundaries: boundaries,
     },
     money: {
@@ -361,16 +542,20 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
       spentCommitted: reduced.spentCommitted,
       spentPending: round2(reduced.spentCommitted - reduced.spentActual),
       totalIncome: reduced.totalIncome,
-      incomeExSalary: reduced.totalIncome,
-      salaryInWindow: 0,
+      incomeExSalary: round2(reduced.totalIncome - salaryInWindow),
+      salaryInWindow,
       netIncludingSalaryActual: reduced.netActual,
       netIncludingSalaryCommitted: reduced.netCommitted,
-      netExSalaryActual: reduced.netActual,
-      netExSalaryCommitted: reduced.netCommitted,
+      netExSalaryActual: round2(reduced.netActual - salaryInWindow),
+      netExSalaryCommitted: round2(reduced.netCommitted - salaryInWindow),
       bankExpenses: round2(reduced.totals.bankExpensesPosted + reduced.totals.bankExpensesPending),
       cardActivity: reduced.cardCommitted,
+      cardRefunds: round2(reduced.totals.cardRefundsPosted + reduced.totals.cardRefundsPending),
       manualExpenses: reduced.totals.manualExpenses,
       excludedCardSettlements: reduced.totals.excludedCardSettlements,
+      unmatchedCardSettlements: reduced.totals.unmatchedCardSettlements,
+      financingInflows: reduced.totals.financingInflows,
+      transferInflows: reduced.totals.transferInflows,
     },
     dailyAverage: {
       spent: round2(reduced.spentCommitted / daysElapsed),
@@ -378,12 +563,17 @@ function buildCycleFromData(data, offset = 0, now = todayKey()) {
     },
     expected: {
       bankPending: offset === 0 ? pendingBank : 0,
-      cardChargesNotYetSettled: upcomingCards,
-      remainingKnown: offset === 0 ? round2(pendingBank + upcomingCards) : 0,
+      cardChargesNotYetSettled: upcoming.total,
+      cardChargesPosted: upcoming.posted,
+      cardChargesPending: upcoming.pending,
+      cardRefundsExpected: upcoming.refunds,
+      remainingKnown: offset === 0 ? round2(pendingBank + upcoming.total) : 0,
     },
-    dailyHistory: buildDailyHistory(rows, accounts, window.cycleStart, window.cycleEndExclusive),
+    dailyHistory: buildDailyHistory(rows, accounts, window.cycleStart, window.cycleEndExclusive, context),
     cardBillingCycles,
-    needsReview: [],
+    reconciliation: reduced.reconciliation,
+    needsReview: reduced.needsReview,
+    model: 'financial_cycle_activity_and_cash_commitments_v2',
   };
 }
 
@@ -427,7 +617,7 @@ function buildProjection(current, rawSettings = {}) {
 }
 
 async function loadCycleData(userId) {
-  const [transactions, accounts] = await Promise.all([
+  const [transactions, accounts, salarySignatures, transactionOverrides] = await Promise.all([
     db.query(
       `SELECT ${SELECT_COLUMNS} FROM transactions t
         WHERE t.user_id=$1 AND t.deleted_at IS NULL
@@ -441,8 +631,15 @@ async function loadCycleData(userId) {
       [userId],
     ),
     db.query('SELECT bank_source, account_number, balance, enabled FROM bank_accounts WHERE user_id=$1', [userId]),
+    db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true', [userId]),
+    db.query('SELECT * FROM transaction_month_overrides WHERE user_id=$1', [userId]),
   ]);
-  return { rows: transactions.rows, accounts: accounts.rows };
+  return {
+    rows: transactions.rows,
+    accounts: accounts.rows,
+    salarySignatures: salarySignatures.rows,
+    transactionOverrides: transactionOverrides.rows,
+  };
 }
 
 async function buildCycle(userId, offset = 0) {

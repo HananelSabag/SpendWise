@@ -54,7 +54,7 @@ router.get('/monthly-accounting',
   transactionController.getMonthlyAccounting
 );
 
-// Salary-anchored spending cycle + real checking balance (the "runway" view).
+// Card-billing financial cycle + transparent checking-balance outlook.
 router.get('/cycle',
   getSummaryLimiter,
   routeLogger('CYCLE_RUNWAY'),

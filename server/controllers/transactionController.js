@@ -135,8 +135,8 @@ const transactionController = {
   }),
 
   /**
-   * Salary-anchored cycle + runway: current cycle (since last salary) and the
-   * previous cycle, with the real checking balance. See cycleRunwayService.
+   * Card-billing financial cycle: current/previous economic activity plus
+   * explicit upcoming cash commitments and the real checking balance.
    * @route GET /api/v1/transactions/cycle
    */
   getCycleRunway: asyncHandler(async (req, res) => {
