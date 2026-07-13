@@ -42,6 +42,12 @@ router.get('/calendar-month-summary',
   transactionController.getCalendarMonthSummary
 );
 
+router.get('/calendar-month-details',
+  getSummaryLimiter,
+  routeLogger('CALENDAR_MONTH_DETAILS'),
+  transactionController.getCalendarMonthDetails
+);
+
 router.get('/monthly-accounting',
   getSummaryLimiter,
   routeLogger('MONTHLY_ACCOUNTING'),

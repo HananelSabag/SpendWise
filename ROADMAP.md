@@ -59,6 +59,11 @@ Status: ✅ done · 🔜 next · ⏳ planned · 🧊 deferred
 - `פריסה לתשלומים` remains classified as financing rather than earned income for
   Financial Cycle analysis. Its appearance in Calendar Month is raw cash activity,
   not a claim that it is salary or profit. The full Loans product remains deferred.
+- Calendar rows are now compact drill-down controls. A dedicated lazy
+  `/calendar-month-details` endpoint returns only the selected card/bank/adjustment
+  group; desktop opens a centered modal and mobile opens a full-height bottom sheet.
+  Each row exposes the exact transactions, factual dates, pending state, raw amount,
+  counted amount and any duplicate-card adjustment without downloading the full ledger.
 
 ---
 

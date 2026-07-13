@@ -4,7 +4,7 @@
  * Uses Framer Motion for animation. Dismisses on backdrop click or drag down.
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useId, useRef } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '../../utils/helpers';
@@ -21,6 +21,7 @@ const BottomSheet = ({
 }) => {
   const { t } = useTranslation('common');
   const dragControls = useDragControls();
+  const titleId = useId();
 
   // Keep a stable ref to onClose so the history effect doesn't re-run on every render
   const onCloseRef = useRef(onClose);
@@ -92,6 +93,10 @@ const BottomSheet = ({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-label={title ? undefined : t('dialog', { fallback: 'Dialog' })}
             className={cn(
               'fixed bottom-0 left-0 right-0 z-[201]',
               'bg-white dark:bg-gray-900',
@@ -114,7 +119,7 @@ const BottomSheet = ({
             {(title || true) && (
               <div className="flex-shrink-0 flex items-center justify-between px-4 pb-3 border-b border-gray-100 dark:border-gray-800">
                 {title ? (
-                  <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+                  <h2 id={titleId} className="text-base font-semibold text-gray-900 dark:text-white">
                     {title}
                   </h2>
                 ) : (

@@ -302,4 +302,10 @@ The verified July result is income ₪26,150.97, expenses ₪22,807.34 and net
 +₪3,343.63. Financing remains excluded from *earned-income* analysis; no Loans UI
 or inferred loan schedule was added.
 
+The Calendar Month card now exposes lazy, group-scoped evidence for every visible
+card, bank inflow/outflow, pending subset, refund/financing row and reconciliation
+adjustment. The headline endpoint remains aggregate-only; transaction rows are
+requested from `/transactions/calendar-month-details` only after the user opens a
+row. The same component renders as a desktop modal and mobile bottom sheet.
+
 ---

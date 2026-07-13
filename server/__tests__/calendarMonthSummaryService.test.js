@@ -20,7 +20,7 @@ describe('calendar month card reconciliation', () => {
       row({ id: 4, type: 'income', amount: 12000, description: 'installment reversal', date: '2026-07-12' }),
       row({ id: 5, amount: 2000, description: 'כרטיסי אשראי', date: '2026-07-11' }),
     ];
-    const result = buildCalendarMonthSummaryFromRows(rows, accounts, rows, period);
+    const result = buildCalendarMonthSummaryFromRows(rows, accounts, rows, period, { includeDetails: true });
 
     expect(result.totals).toMatchObject({
       income: 12000,
@@ -38,6 +38,31 @@ describe('calendar month card reconciliation', () => {
     ]));
     expect(result.breakdown.refundsAndReversals.matchedBankReversals).toBe(12000);
     expect(result.breakdown.refundsAndReversals.matchedBankReversalsIncludedInIncome).toBe(12000);
+    expect(result.drilldowns.find((group) => group.key === 'card:max:2254')).toMatchObject({
+      total: 3000,
+      count: 2,
+    });
+    expect(result.drilldowns.find((group) => group.key === 'bank:expense')).toMatchObject({
+      total: 11000,
+      rawTotal: 14000,
+      adjustment: 3000,
+    });
+    expect(result.drilldowns.find((group) => group.key === 'bank:income')).toMatchObject({
+      total: 12000,
+      count: 1,
+    });
+    expect(result.drilldowns.find((group) => group.key === 'refunds')).toMatchObject({
+      total: 12000,
+      count: 1,
+    });
+    expect(result.drilldowns.find((group) => group.key === 'adjustments')).toMatchObject({
+      total: 3000,
+      count: 1,
+    });
+    expect(result.drilldowns.find((group) => group.key === 'bank:expense').transactions)
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 1, amount: 12000, countedAmount: 9000, adjustment: 3000 }),
+      ]));
   });
 
   test('prefers a completed settlement over its stale pending lifecycle copy', () => {

@@ -69,6 +69,38 @@ function finishActivity(activity, expenseAdjustment = 0, pendingExpenseAdjustmen
   };
 }
 
+function detailRow(row, countedAmount = amount(row)) {
+  const rawAmount = round2(amount(row));
+  const counted = round2(countedAmount);
+  return {
+    id: row.id,
+    date: dateKey(row.date),
+    processedDate: dateKey(row.bank_processed_date),
+    description: row.description || '',
+    notes: row.notes || '',
+    bankSource: row.bank_source || null,
+    accountNumber: String(row.bank_account_number || ''),
+    type: row.type,
+    status: row.bank_status || 'completed',
+    amount: rawAmount,
+    countedAmount: counted,
+    adjustment: round2(Math.max(0, rawAmount - counted)),
+    installmentNumber: row.installment_number || null,
+    installmentTotal: row.installment_total || null,
+  };
+}
+
+function detailGroup(key, kind, rows, total, extra = {}) {
+  return {
+    key,
+    kind,
+    total: round2(total),
+    count: rows.length,
+    transactions: rows,
+    ...extra,
+  };
+}
+
 function resolveSettlementAccount(classification, connectedBySource) {
   const source = classification.reconciliation?.cardSource;
   if (!source) return { source: null, account: null };
@@ -116,7 +148,7 @@ function matchConnectedSettlementReversals(rows, settlementGroups, supersededSet
   return matches;
 }
 
-function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, period) {
+function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, period, options = {}) {
   const connectedBySource = new Map();
   for (const account of accounts || []) {
     if (!account.enabled || institutionKind(account.bank_source) !== 'credit_card') continue;
@@ -214,7 +246,7 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
     const isPendingDebit = group.activeRows.length > 0 && group.activeRows.every((row) => row.bank_status === 'pending');
     totalAdjustment += adjustment;
     if (isPendingDebit) pendingExpenseAdjustment += adjustment;
-    adjustments.push({
+    const adjustmentDetail = {
       cardSource: group.source,
       accountNumber: group.account,
       billingDate: group.billingDate,
@@ -230,7 +262,9 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
       matchingBasis: connected
         ? 'same_month_connected_card_overlap_subtracted'
         : 'unconnected_or_unresolved_card',
-    });
+    };
+    group.adjustmentDetail = adjustmentDetail;
+    adjustments.push(adjustmentDetail);
   }
   totalAdjustment = round2(totalAdjustment);
   pendingExpenseAdjustment = round2(pendingExpenseAdjustment);
@@ -243,7 +277,7 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
 
   const matchedBankReversalAmount = round2(matchedReversals.reduce((sum, item) => sum + item.amount, 0));
 
-  return {
+  const result = {
     period: {
       month: period.month,
       start: period.start,
@@ -305,9 +339,73 @@ function buildCalendarMonthSummaryFromRows(rows, accounts, debitScopeRows, perio
     },
     model: 'raw_calendar_activity_with_partial_card_debit_reconciliation_v4',
   };
+
+  if (options.includeDetails) {
+    const countedAmountById = new Map(countedRows.map((row) => [row.id, amount(row)]));
+    for (const group of settlementGroups.values()) {
+      let adjustmentLeft = Number(group.adjustmentDetail?.adjustment) || 0;
+      for (const row of [...(group.activeRows || [])].sort((a, b) => Number(a.id) - Number(b.id))) {
+        if (!countedAmountById.has(row.id) || adjustmentLeft <= 0) continue;
+        const deducted = Math.min(countedAmountById.get(row.id), adjustmentLeft);
+        countedAmountById.set(row.id, round2(countedAmountById.get(row.id) - deducted));
+        adjustmentLeft = round2(adjustmentLeft - deducted);
+      }
+    }
+
+    const serialize = (row) => detailRow(row, countedAmountById.get(row.id));
+    const bankExpenseRows = countedRows
+      .filter((row) => institutionKind(row.bank_source) === 'bank' && row.type === 'expense')
+      .map(serialize);
+    const bankIncomeRows = countedRows
+      .filter((row) => institutionKind(row.bank_source) === 'bank' && row.type === 'income')
+      .map(serialize);
+    const pendingRows = countedRows
+      .filter((row) => row.bank_status === 'pending' && row.type === 'expense')
+      .map(serialize);
+    const matchedReversalIds = new Set(matchedReversals.map((match) => match.incomeTransactionId));
+    const refundRows = countedRows
+      .filter((row) => (institutionKind(row.bank_source) === 'credit_card' && row.type === 'income')
+        || matchedReversalIds.has(row.id))
+      .map(serialize);
+
+    const drilldowns = [
+      detailGroup('bank:expense', 'bank_expenses', bankExpenseRows, bankFinished.expenses, {
+        rawTotal: bankFinished.rawExpenses,
+        adjustment: totalAdjustment,
+      }),
+      detailGroup('bank:income', 'bank_income', bankIncomeRows, bankFinished.income),
+      detailGroup('adjustments', 'card_debit_adjustments', [], totalAdjustment, {
+        adjustments,
+        count: adjustments.filter((item) => item.adjustment > 0).length,
+      }),
+      detailGroup('refunds', 'refunds_and_installment_proceeds', refundRows,
+        round2(cardsFinished.income + matchedBankReversalAmount)),
+      detailGroup('pending', 'pending_expenses', pendingRows, result.pending.expenses),
+    ];
+
+    for (const activity of cardActivities.values()) {
+      const cardRows = countedRows
+        .filter((row) => institutionKind(row.bank_source) === 'credit_card'
+          && row.type === 'expense'
+          && row.bank_source === activity.bankSource
+          && String(row.bank_account_number || '') === activity.accountNumber)
+        .map(serialize);
+      drilldowns.push(detailGroup(
+        `card:${activity.bankSource}:${activity.accountNumber}`,
+        'credit_card_expenses',
+        cardRows,
+        finishActivity(activity).expenses,
+        { bankSource: activity.bankSource, accountNumber: activity.accountNumber },
+      ));
+    }
+
+    result.drilldowns = drilldowns;
+  }
+
+  return result;
 }
 
-async function getCalendarMonthSummary(userId, offset = 0) {
+async function loadCalendarMonthRows(userId, offset = 0) {
   const period = getCalendarPeriod(offset);
   const [transactions, accounts, debitScope] = await Promise.all([
     db.query(
@@ -345,7 +443,28 @@ async function getCalendarMonthSummary(userId, offset = 0) {
       notes: '',
     })),
   ];
-  return buildCalendarMonthSummaryFromRows(transactions.rows, accounts.rows, debitIdentityRows, period);
+  return { rows: transactions.rows, accounts: accounts.rows, debitIdentityRows, period };
 }
 
-module.exports = { getCalendarMonthSummary, buildCalendarMonthSummaryFromRows };
+async function getCalendarMonthSummary(userId, offset = 0) {
+  const data = await loadCalendarMonthRows(userId, offset);
+  return buildCalendarMonthSummaryFromRows(
+    data.rows, data.accounts, data.debitIdentityRows, data.period,
+  );
+}
+
+async function getCalendarMonthDetails(userId, offset = 0, groupKey = '') {
+  const data = await loadCalendarMonthRows(userId, offset);
+  const summary = buildCalendarMonthSummaryFromRows(
+    data.rows, data.accounts, data.debitIdentityRows, data.period, { includeDetails: true },
+  );
+  const group = summary.drilldowns.find((item) => item.key === String(groupKey || ''));
+  if (!group) return null;
+  return { period: summary.period, model: summary.model, ...group };
+}
+
+module.exports = {
+  getCalendarMonthSummary,
+  getCalendarMonthDetails,
+  buildCalendarMonthSummaryFromRows,
+};

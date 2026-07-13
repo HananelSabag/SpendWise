@@ -152,6 +152,17 @@ const transactionAPI = {
     }
   },
 
+  /** Lazy transaction evidence for one calendar summary row. */
+  async getCalendarMonthDetails(params = {}) {
+    try {
+      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
+      const response = await apiClient.client.get('/transactions/calendar-month-details', { params });
+      return { success: true, data: response.data?.data || response.data };
+    } catch (error) {
+      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
+    }
+  },
+
   async getMonthlyAccounting() {
     try {
       if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
