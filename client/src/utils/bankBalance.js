@@ -62,12 +62,12 @@ export function computeBankBalance(sources) {
  * `upcomingTotal` contains only movements that have not happened yet, so a statement that already
  * left the account is deliberately not subtracted a second time.
  */
-export function projectBalanceAfterNextBills(currentBalance, cycle) {
+export function projectBalanceAfterNextBills(currentBalance, cycle, useHistoricalEstimate = true) {
   const forecast = cycle?.nextCardForecast;
   const current = Number(currentBalance);
   const untilSalary = Number(cycle?.projection?.upcomingTotal || 0);
   const salary = Number(forecast?.salaryAmount);
-  const cards = Number(forecast?.estimatedTotal);
+  const cards = Number(useHistoricalEstimate ? forecast?.estimatedTotal : forecast?.knownTotal);
 
   if (!cycle?.window?.running || !forecast?.bills?.length) return null;
   if (![current, untilSalary, salary, cards].every(Number.isFinite)) return null;

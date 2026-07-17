@@ -197,7 +197,10 @@ salary ⇒ estimated end-of-cycle (labelled שערוך, never mixed into settled
   final, estimate it as `max(known amount, average of up to 3 recent complete statements)`. Debit /
   passthrough cards have no monthly statement and are excluded. Formula: today's real checking
   balance + still-upcoming movements before salary + expected salary − estimated next card bills.
-  A statement that already left the bank is therefore never subtracted twice.
+  A statement that already left the bank is therefore never subtracted twice. The UI must keep
+  **known accumulated spend** visually separate from the historical estimate and let the user turn
+  the estimate off; in that mode the cash point subtracts `knownTotal` only. The preference is
+  remembered locally and never changes settled/accounting data.
 - **A series can hold more than one rhythm**: insurance `42209` bills on **both the 1st and the 10th**
   under one identifier. Project each recurring day-of-month separately — "last date + 1 month" jumps
   to 10/08 (outside the window) and silently loses the 01/08 hit.

@@ -64,7 +64,16 @@ describe('CycleCardsTab', () => {
     render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
 
     expect(screen.getByText('~₪1100.00')).toBeInTheDocument();
-    expect(screen.getByText(/Already accumulated ₪300.00/)).toBeInTheDocument();
+    expect(screen.getByText('Actually accumulated')).toBeInTheDocument();
+    expect(screen.getByText('₪300.00')).toBeInTheDocument();
     expect(screen.getByText(/10 Aug/)).toBeInTheDocument();
+  });
+
+  it('can hide the historical estimate without hiding the actual accumulated amount', () => {
+    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" useCardEstimate={false} />);
+
+    expect(screen.queryByText('~₪1100.00')).not.toBeInTheDocument();
+    expect(screen.getByText('₪300.00')).toBeInTheDocument();
+    expect(screen.getByText('Actually accumulated')).toBeInTheDocument();
   });
 });

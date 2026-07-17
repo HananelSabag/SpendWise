@@ -71,12 +71,14 @@ describe('projectBalanceAfterNextBills', () => {
       projection: { upcomingTotal: -1000 },
       nextCardForecast: {
         salaryAmount: 13000,
+        knownTotal: 300,
         estimatedTotal: 15000,
         bills: [{ chargeDate: '2026-08-10' }],
       },
     };
 
     expect(projectBalanceAfterNextBills(5000, cycle)).toBe(2000);
+    expect(projectBalanceAfterNextBills(5000, cycle, false)).toBe(16700);
   });
 
   it('does not show the forward forecast on a completed cycle', () => {

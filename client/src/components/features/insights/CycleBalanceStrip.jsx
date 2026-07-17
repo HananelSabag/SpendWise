@@ -22,7 +22,15 @@ import { projectBalanceAfterNextBills } from '../../../utils/bankBalance';
 
 const signed = (value, formatCurrency) => `${Number(value) < 0 ? '−' : '+'}${formatCurrency(Math.abs(Number(value) || 0))}`;
 
-export default function CycleBalanceStrip({ cycle, formatCurrency, t, language = 'en', className }) {
+export default function CycleBalanceStrip({
+  cycle,
+  formatCurrency,
+  t,
+  language = 'en',
+  useCardEstimate = true,
+  onCardEstimateChange,
+  className,
+}) {
   const {
     hasSynced, hasBankSource, hasRealBalance, totalRealBalance,
     bankAccounts, someBalancesUnavailable, isLoading,
@@ -34,7 +42,10 @@ export default function CycleBalanceStrip({ cycle, formatCurrency, t, language =
   const accountLabel = (a, i) =>
     `${institutionLabel(a.source, language)}${a.accountNumber ? ` · ${a.accountNumber}` : ''}` || `#${i}`;
   const forecast = cycle?.nextCardForecast;
-  const projectedBalance = hasRealBalance ? projectBalanceAfterNextBills(totalRealBalance, cycle) : null;
+  const projectedBalance = hasRealBalance
+    ? projectBalanceAfterNextBills(totalRealBalance, cycle, useCardEstimate)
+    : null;
+  const cardAmount = useCardEstimate ? forecast?.estimatedTotal : forecast?.knownTotal;
   const lastBillDate = forecast?.bills?.reduce(
     (latest, bill) => !latest || bill.chargeDate > latest ? bill.chargeDate : latest,
     null,
@@ -68,20 +79,43 @@ export default function CycleBalanceStrip({ cycle, formatCurrency, t, language =
 
         {projectedBalance !== null && (
           <div className="rounded-xl bg-indigo-50/70 px-3 py-2.5 dark:bg-indigo-950/25">
-            <p className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-              {t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}
-              {lastBillDate && <span className="font-medium opacity-65">· {formatCycleDay(lastBillDate, language)}</span>}
-              <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}>
-                {t('cycle.balanceForecastHint', { fallback: "Today's balance, plus what remains before salary, plus salary, minus the next card bills." })}
-              </InfoHint>
-            </p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                {t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}
+                {lastBillDate && <span className="font-medium opacity-65">· {formatCycleDay(lastBillDate, language)}</span>}
+                <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}>
+                  {useCardEstimate
+                    ? t('cycle.balanceForecastHint', { fallback: "This uses a historical card estimate. Turn it off to count only purchases already accumulated." })
+                    : t('cycle.balanceKnownHint', { fallback: 'This counts only card purchases already accumulated. The final bill can still grow.' })}
+                </InfoHint>
+              </p>
+              {onCardEstimateChange && (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={useCardEstimate}
+                  onClick={() => onCardEstimateChange(!useCardEstimate)}
+                  className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
+                >
+                  {t('cycle.useEstimate', { fallback: 'Use estimate' })}
+                  <span className={cn('relative h-4 w-7 rounded-full transition', useCardEstimate ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600')}>
+                    <span className={cn('absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all', useCardEstimate ? 'end-0.5' : 'start-0.5')} />
+                  </span>
+                </button>
+              )}
+            </div>
             <p className={cn('mt-0.5 text-2xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
               ~{formatCurrency(projectedBalance)}
+            </p>
+            <p className="text-[9px] font-bold text-indigo-500 dark:text-indigo-400">
+              {useCardEstimate
+                ? t('cycle.estimateOnly', { fallback: 'Estimate only — based on recent bills' })
+                : t('cycle.knownOnly', { fallback: 'Only what has actually accumulated' })}
             </p>
             <p className="mt-1 flex flex-wrap gap-x-2 text-[10px] font-medium tabular-nums text-gray-500 dark:text-gray-400">
               <span>{t('cycle.untilSalaryShort', { fallback: 'until salary' })} {signed(cycle?.projection?.upcomingTotal || 0, formatCurrency)}</span>
               <span>{t('cycle.salaryShort', { fallback: 'salary' })} {signed(forecast.salaryAmount, formatCurrency)}</span>
-              <span>{t('cycle.cardsShort', { fallback: 'cards' })} −{formatCurrency(forecast.estimatedTotal)}</span>
+              <span>{t('cycle.cardsShort', { fallback: 'cards' })} −{formatCurrency(cardAmount)}</span>
             </p>
           </div>
         )}

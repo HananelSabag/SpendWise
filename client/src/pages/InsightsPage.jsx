@@ -26,6 +26,15 @@ import CycleBalanceStrip from '../components/features/insights/CycleBalanceStrip
 import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandidatePrompt';
 
 const TABS = ['overview', 'cards', 'debts', 'tracking'];
+const CARD_ESTIMATE_KEY = 'spendwise-use-card-estimate';
+
+function savedCardEstimatePreference() {
+  try {
+    return localStorage.getItem(CARD_ESTIMATE_KEY) !== 'false';
+  } catch (_) {
+    return true;
+  }
+}
 
 /** Readable window: the end is exclusive, and a running cycle has not reached it yet. */
 function formatWindow(window, language) {
@@ -48,6 +57,7 @@ export default function InsightsPage() {
   const { formatCurrency } = useCurrency();
   const [tab, setTab] = useState('overview');
   const [cycleIndex, setCycleIndex] = useState(null);
+  const [useCardEstimate, setUseCardEstimate] = useState(savedCardEstimatePreference);
   const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,
     needsSalaryLink, hasNoBankData, isLoading, refetch, classifyCredit,
     isClassifying, classifyingTransactionId } = useCycles();
@@ -65,6 +75,11 @@ export default function InsightsPage() {
       reason: item.reason,
     });
   }, [classifyCredit]);
+
+  const changeCardEstimate = useCallback((enabled) => {
+    setUseCardEstimate(enabled);
+    try { localStorage.setItem(CARD_ESTIMATE_KEY, String(enabled)); } catch (_) { /* optional preference */ }
+  }, []);
 
   if (isLoading && !cycles?.length) {
     return <div className="min-h-screen animate-pulse bg-gray-50 dark:bg-gray-950" />;
@@ -125,7 +140,15 @@ export default function InsightsPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-4 lg:px-8">
         {/* The level the user navigates by — always in view, above the flow. */}
-        <CycleBalanceStrip cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} className="mb-4" />
+        <CycleBalanceStrip
+          cycle={cycle}
+          formatCurrency={formatCurrency}
+          t={t}
+          language={currentLanguage}
+          useCardEstimate={useCardEstimate}
+          onCardEstimateChange={changeCardEstimate}
+          className="mb-4"
+        />
 
         {empty ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-800 dark:bg-gray-900">
@@ -166,7 +189,15 @@ export default function InsightsPage() {
             {tab === 'overview' && (
               <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
             )}
-            {tab === 'cards' && <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} />}
+            {tab === 'cards' && (
+              <CycleCardsTab
+                cycle={cycle}
+                formatCurrency={formatCurrency}
+                t={t}
+                language={currentLanguage}
+                useCardEstimate={useCardEstimate}
+              />
+            )}
             {tab === 'debts' && (
               <CycleDebtsTab loans={loans} totalOutstanding={totalOutstanding} recurring={recurring} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
             )}

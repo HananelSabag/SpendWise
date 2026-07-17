@@ -15,6 +15,7 @@ import { AlertTriangle, ChevronRight, Clock3, CreditCard } from 'lucide-react';
 import { InfoHint } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { cn } from '../../../utils/helpers';
 import BottomSheet from '../../common/BottomSheet';
 import Modal from '../../ui/Modal';
 
@@ -84,7 +85,7 @@ function ChargeRow({ label, meta, amount, formatCurrency, onClick }) {
   );
 }
 
-export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en' }) {
+export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en', useCardEstimate = true }) {
   const isMobile = useIsMobile();
   const [group, setGroup] = useState(null);
   const cards = cycle?.cards || [];
@@ -194,20 +195,23 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
 
             {nextBill && (
               <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5 dark:border-indigo-900/50 dark:bg-indigo-950/20">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
-                      {t('cycle.nextBill', { fallback: 'Next bill' })} · {formatCycleDay(nextBill.chargeDate, language)}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
-                      {t('cycle.knownCardSpend', { fallback: 'Already accumulated' })} {formatCurrency(nextBill.knownAmount)}
-                      {nextBill.historyCount > 0 && <> · {t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `average of ${nextBill.historyCount} recent bills` })}</>}
-                    </p>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+                  {t('cycle.nextBill', { fallback: 'Next bill' })} · {formatCycleDay(nextBill.chargeDate, language)}
+                </p>
+                <div className={cn('mt-1.5 grid gap-2', useCardEstimate && 'grid-cols-2')}>
+                  <div className="rounded-lg bg-white/75 px-2.5 py-2 dark:bg-gray-900/60">
+                    <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{t('cycle.knownCardSpend', { fallback: 'Actually accumulated' })}</p>
+                    <p className="text-base font-black tabular-nums text-gray-950 dark:text-white">{formatCurrency(nextBill.knownAmount)}</p>
                   </div>
-                  <div className="shrink-0 text-end">
-                    <p className="text-[10px] font-semibold text-gray-400">{t('cycle.expectedCardBill', { fallback: 'Expected' })}</p>
-                    <p className="text-lg font-black tabular-nums text-indigo-950 dark:text-white">~{formatCurrency(nextBill.estimatedAmount)}</p>
-                  </div>
+                  {useCardEstimate && (
+                    <div className="rounded-lg bg-indigo-100/70 px-2.5 py-2 dark:bg-indigo-950/50">
+                      <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-300">{t('cycle.expectedCardBill', { fallback: 'Estimate only' })}</p>
+                      <p className="text-base font-black tabular-nums text-indigo-950 dark:text-white">~{formatCurrency(nextBill.estimatedAmount)}</p>
+                      {nextBill.historyCount > 0 && (
+                        <p className="text-[9px] text-gray-500 dark:text-gray-400">{t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `average of ${nextBill.historyCount} recent bills` })}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
