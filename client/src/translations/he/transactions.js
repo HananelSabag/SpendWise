@@ -5,6 +5,7 @@
  */
 
 export default {
+  watchBadge: "במעקב",
   title: "עסקאות",
   subtitle: "נהלו את העסקאות הפיננסיות שלכם",
   total: "סה״כ",

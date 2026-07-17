@@ -12,6 +12,7 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { Eye } from 'lucide-react';
 
 import { useTranslation, useCurrency } from '../../../stores';
 import { cn } from '../../../utils/helpers';
@@ -134,6 +135,12 @@ const ModernTransactionCard = ({
             )}>
               {sourceKindLabel}
             </span>
+            {transaction?.merchant_watch_matches?.length > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-indigo-50 px-1 py-px text-[10px] font-semibold text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-300">
+                <Eye className="h-2.5 w-2.5" />
+                {t('transactions.watchBadge', { fallback: 'Watched' })}
+              </span>
+            )}
             {rawCategory && (
               <>
                 <span>·</span>

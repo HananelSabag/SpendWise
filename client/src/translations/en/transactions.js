@@ -8,6 +8,7 @@ export default {
   title: "Transactions",
   subtitle: "Manage your financial transactions",
   total: "total",
+  watchBadge: "Watched",
   types: {
     income: "Income",
     expense: "Expense",

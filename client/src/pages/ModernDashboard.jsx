@@ -1,16 +1,16 @@
 /**
- * ModernDashboard — one responsive financial home. Every card consumes the
- * same dashboard payload and selected calendar-month window.
+ * ModernDashboard — one responsive financial home, stating one truth: the balance you have
+ * and the salary-to-salary cycle you are living in. Calendar-month retrospectives live on
+ * /insights, deliberately away from the headline.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCw } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
-import { useFinancialCycle } from '../hooks/useFinancialCycle';
-import { useCalendarMonthSummary } from '../hooks/useCalendarMonthSummary';
+import { useCurrentCycle } from '../hooks/useCycles';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
 import { PageSkeleton } from '../components/ui';
@@ -18,9 +18,8 @@ import { PageSkeleton } from '../components/ui';
 import BrandMark from '../components/common/BrandMark';
 import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
+import FinancialCycleCard from '../components/features/dashboard/FinancialCycleCard';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
-import CalendarActivityCard from '../components/features/dashboard/CalendarActivityCard';
-import RunwaySnapshot from '../components/features/dashboard/RunwaySnapshot';
 import GreetingHeader from '../components/features/dashboard/GreetingHeader';
 import DashboardError from '../components/features/dashboard/DashboardError';
 import { usePullToRefresh } from '../components/features/dashboard/usePullToRefresh';
@@ -45,13 +44,13 @@ const useGreeting = (user, t) =>
   }, [user, t]);
 
 export default function ModernDashboard() {
-  const { t } = useTranslation('dashboard');
+  const { t, currentLanguage } = useTranslation('dashboard');
   const { user } = useAuth();
   const { formatCurrency } = useCurrency();
   const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [periodOffset, setPeriodOffset] = useState(0);
+  const currentCycle = useCurrentCycle();
 
   const {
     data: dashboardData,
@@ -60,21 +59,14 @@ export default function ModernDashboard() {
     isRefetching,
     refresh: refreshDashboard,
   } = useDashboard();
-  const {
-    data: calendarMonth,
-    isFetching: isCalendarFetching,
-    isError: isCalendarError,
-    refetch: refreshCalendarMonth,
-  } = useCalendarMonthSummary(periodOffset);
-  const { data: financialCycle } = useFinancialCycle();
 
   const greeting = useGreeting(user, t);
   const handleRefresh = useCallback(async () => {
-    const [result] = await Promise.all([refreshDashboard(), refreshCalendarMonth()]);
+    const [result] = await Promise.all([refreshDashboard(), currentCycle.refetch()]);
     if (!result.success) {
       addNotification({ type: 'error', message: t('refreshError'), duration: 4000 });
     }
-  }, [refreshDashboard, refreshCalendarMonth, addNotification, t]);
+  }, [refreshDashboard, currentCycle, addNotification, t]);
 
   const { pull, refreshing } = usePullToRefresh(handleRefresh, isMobile);
 
@@ -116,29 +108,28 @@ export default function ModernDashboard() {
         <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:space-y-6 lg:px-8 lg:py-6">
           <ModernBalancePanel />
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)] lg:gap-6">
-            <CalendarActivityCard
-              summary={calendarMonth}
-              formatCurrency={formatCurrency}
-              isFetching={isCalendarFetching}
-              isError={isCalendarError}
-              canPrevious={dashboardData.period?.availableOffsets?.includes(periodOffset - 1)}
-              canNext={periodOffset < 0 && dashboardData.period?.availableOffsets?.includes(periodOffset + 1)}
-              onPrevious={() => setPeriodOffset((value) => value - 1)}
-              onNext={() => setPeriodOffset((value) => Math.min(0, value + 1))}
-            />
-            <aside>
-              <RunwaySnapshot runway={financialCycle} formatCurrency={formatCurrency} onOpen={() => navigate('/financial-cycle')} />
-            </aside>
-            <div className="lg:col-start-1">
-              <ModernRecentTransactionsWidget
-                onViewAll={() => navigate('/transactions')}
-                maxItems={isMobile ? 6 : 8}
-                preloadedTransactions={dashboardData.recentTransactions}
-                preloadedLoading={isRefetching}
-              />
-            </div>
-          </div>
+          {/* The salary-to-salary cycle is the only headline here. The calendar month used to
+              sit under the balance and contradicted it — it counted a loan as income (₪26,150.97
+              "earned" against a real ₪13,327.75), turning a ₪5,483 deficit into a comfortable
+              −₪350. Retro calendar analysis lives on /insights; one screen states one truth. */}
+          <FinancialCycleCard
+            cycle={currentCycle.cycle}
+            salaryTracking={currentCycle.salaryTracking}
+            totalOutstanding={currentCycle.totalOutstanding}
+            needsSalaryLink={currentCycle.needsSalaryLink}
+            formatCurrency={formatCurrency}
+            t={t}
+            language={currentLanguage}
+            onOpenCycle={() => navigate('/financial-cycle')}
+            onLinkSalary={() => navigate('/financial-cycle')}
+          />
+
+          <ModernRecentTransactionsWidget
+            onViewAll={() => navigate('/transactions')}
+            maxItems={isMobile ? 6 : 8}
+            preloadedTransactions={dashboardData.recentTransactions}
+            preloadedLoading={isRefetching}
+          />
         </main>
       </div>
 

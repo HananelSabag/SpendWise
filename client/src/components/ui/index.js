@@ -15,6 +15,7 @@ export { default as Dropdown } from './Dropdown';
 export { default as Tooltip } from './Tooltip';
 export { default as Checkbox } from './Checkbox'; // ✅ NEW: Checkbox component
 export { default as LiquidTabs } from './LiquidTabs'; // animated sliding-pill tab selector
+export { default as InfoHint } from './InfoHint'; // "?" that parks an explanation out of the way
 
 // Central page skeleton — one component for every page's loading state
 export { default as PageSkeleton } from './PageSkeleton';

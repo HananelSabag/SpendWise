@@ -82,7 +82,7 @@ async function removeWatch(userId, ruleId) {
 async function getWatched(userId) {
   const [rulesResult, matchesResult] = await Promise.all([
     db.query(
-      `SELECT r.id, r.display_merchant, r.condition, r.amount, r.created_at,
+      `SELECT r.id, r.display_merchant, r.normalized_merchant, r.condition, r.amount, r.created_at,
          COUNT(t.id)::int AS match_count,
          COALESCE(SUM(ABS(t.amount)), 0)::numeric AS matched_total,
          MAX(COALESCE(t.transaction_datetime, t.date::timestamp)) AS latest_match_at

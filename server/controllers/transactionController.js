@@ -90,17 +90,26 @@ const transactionController = {
       db.query('SELECT * FROM salary_signatures WHERE user_id=$1 AND active=true', [req.user.id]),
     ]);
     const context = { salarySignatures: signatures.rows };
-    const candidates = result.rows.filter((row) => {
+    const candidates = result.rows.map((row) => {
       const classification = classifyTransaction(row, context);
-      return classification.economicRole === 'income'
+      return {
+        ...row,
+        suggested_salary: classification.salary === true,
+        eligible: classification.economicRole === 'income'
         && classification.calendarInclusion === 'include'
-        && classification.salary !== true;
-    }).slice(0, 12);
+      };
+    })
+      .filter((row) => row.eligible)
+      .sort((a, b) => Number(b.suggested_salary) - Number(a.suggested_salary)
+        || Number(b.amount) - Number(a.amount))
+      .slice(0, 12)
+      .map(({ eligible, ...row }) => row);
     res.json({ success: true, data: candidates });
   }),
 
   createSalarySignature: asyncHandler(async (req, res) => {
     const transactionId = Number(req.body?.transactionId);
+    const cycleAnchor = req.body?.cycleAnchor !== false;
     if (!Number.isInteger(transactionId) || transactionId <= 0) {
       return res.status(400).json({ success: false, error: { message: 'Valid transactionId is required' } });
     }
@@ -133,14 +142,16 @@ const transactionController = {
     const saved = await db.query(`
       INSERT INTO salary_signatures (
         user_id, bank_source, bank_account_number, normalized_description,
-        display_description, month_offset, created_from_transaction_id
-      ) VALUES ($1,$2,$3,$4,$5,-1,$6)
+        display_description, month_offset, created_from_transaction_id, cycle_anchor
+      ) VALUES ($1,$2,$3,$4,$5,-1,$6,$7)
       ON CONFLICT (
         user_id, bank_source, COALESCE(bank_account_number, ''), normalized_description
       ) WHERE active=true
-      DO UPDATE SET display_description=EXCLUDED.display_description, updated_at=NOW()
-      RETURNING id, bank_source, bank_account_number, display_description, month_offset
-    `, [req.user.id, row.bank_source, row.bank_account_number, row.normalized_description, row.description, row.id]);
+      DO UPDATE SET display_description=EXCLUDED.display_description,
+                    cycle_anchor=EXCLUDED.cycle_anchor,
+                    updated_at=NOW()
+      RETURNING id, bank_source, bank_account_number, display_description, month_offset, cycle_anchor
+    `, [req.user.id, row.bank_source, row.bank_account_number, row.normalized_description, row.description, row.id, cycleAnchor]);
     res.status(201).json({ success: true, data: saved.rows[0] });
   }),
 

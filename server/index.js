@@ -289,6 +289,10 @@ try {
   app.use(`${API_VERSION}/transactions`, require('./routes/transactionRoutes'));
   logger.debug('✅ Transaction routes loaded');
 
+  logger.debug('Loading financial cycle routes...');
+  app.use(`${API_VERSION}/cycles`, require('./routes/cycleRoutes'));
+  logger.debug('✅ Financial cycle routes loaded');
+
   logger.debug('Loading export routes...');
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   logger.debug('✅ Export routes loaded');

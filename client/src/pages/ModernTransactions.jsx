@@ -38,6 +38,13 @@ import StatsRow from '../components/features/transactions/list/StatsRow';
 import BulkDeleteModal from '../components/features/transactions/list/BulkDeleteModal';
 import LoadMoreSection from '../components/features/transactions/list/LoadMoreSection';
 
+const normalizeMerchant = (value) => String(value || '')
+  .replace(/[‎‏]/g, '')
+  .replace(/["'`.,\-*]/g, '')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLowerCase();
+
 // ─── Mobile layout ────────────────────────────────────────────────────────────
 
 const MobileTransactions = ({
@@ -362,6 +369,15 @@ const ModernTransactions = () => {
     queryFn: () => apiClient.get('/bank-sync/stats').then((r) => r.data.sources || []),
     staleTime: 5 * 60_000,
   });
+  const { data: merchantWatchData } = useQuery({
+    queryKey: ['merchantWatches'],
+    queryFn: async () => {
+      const result = await api.transactions.getMerchantWatches();
+      if (!result.success) throw result.error;
+      return result.data;
+    },
+    staleTime: 30_000,
+  });
 
   // ── Derived data ──
   // Month options from the server (all months with data), not from whichever
@@ -402,6 +418,22 @@ const ModernTransactions = () => {
     const totalExpenses = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0);
     return { count: txs.length, totalIncome, totalExpenses, net: totalIncome - totalExpenses };
   }, [serverSummary, transactions]);
+
+  const transactionsWithWatchLabels = useMemo(() => {
+    const rules = merchantWatchData?.rules || [];
+    if (!rules.length) return transactions;
+    return (transactions || []).map((transaction) => {
+      const merchant = normalizeMerchant(transaction.description);
+      const amount = Math.abs(Number(transaction.amount) || 0);
+      const matches = rules.filter((rule) => {
+        if (merchant !== rule.normalized_merchant) return false;
+        if (rule.condition === 'above') return amount > Number(rule.amount);
+        if (rule.condition === 'exact') return Math.abs(amount - Number(rule.amount)) < 0.01;
+        return true;
+      });
+      return matches.length ? { ...transaction, merchant_watch_matches: matches } : transaction;
+    });
+  }, [transactions, merchantWatchData]);
 
   // ── Handlers ──
   // Create/update/delete mutations (useTransactions) show their own toasts,
@@ -485,7 +517,7 @@ const ModernTransactions = () => {
     filters, onFilterChange, clearFilters,
     showFilters, setShowFilters,
     availableMonths,
-    transactions, syncedSources, transactionsLoading,
+    transactions: transactionsWithWatchLabels, syncedSources, transactionsLoading,
     loadMoreRef, isFetchingNextPage, hasMore, loadMore,
     summary, formatCurrency,
     onEdit, onDelete, onDuplicate, onOpenDetail,

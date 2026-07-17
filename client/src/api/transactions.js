@@ -202,9 +202,9 @@ const transactionAPI = {
     }
   },
 
-  async createSalarySignature(transactionId) {
+  async createSalarySignature(transactionId, { cycleAnchor = true } = {}) {
     try {
-      const response = await apiClient.client.post('/transactions/salary-signatures', { transactionId });
+      const response = await apiClient.client.post('/transactions/salary-signatures', { transactionId, cycleAnchor });
       return { success: true, data: response.data?.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };

@@ -28,14 +28,21 @@ export default function SalaryCandidatePrompt({
   });
   const selectSalary = useMutation({
     mutationFn: async (transactionId) => {
-      const result = await api.transactions.createSalarySignature(transactionId);
+      const result = await api.transactions.createSalarySignature(transactionId, {
+        cycleAnchor: !hasSalaryIdentity,
+      });
       if (!result.success) throw new Error(result.error?.message || 'Failed to save salary');
       return result.data;
     },
     onSuccess: async () => {
+      // The dashboard's current-cycle query may be inactive while onboarding lives on the
+      // full cycle page. Drop that cached pre-link response so returning home cannot briefly
+      // repeat the "link your salary" prompt after the salary was already saved.
+      queryClient.removeQueries({ queryKey: ['cycles', 'current'] });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['salaryCandidates'] }),
         queryClient.invalidateQueries({ queryKey: ['financial-cycle'] }),
+        queryClient.invalidateQueries({ queryKey: ['cycles'] }),
         queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
       ]);
       await onSelected?.();
@@ -61,7 +68,12 @@ export default function SalaryCandidatePrompt({
             className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-white px-3 py-2 text-start text-xs transition hover:border-amber-400 disabled:opacity-50 dark:border-amber-900 dark:bg-gray-900"
           >
             <span className="min-w-0 truncate font-medium text-gray-800 dark:text-gray-100">{candidate.description}</span>
-            <span className="shrink-0 font-bold text-emerald-600">{formatCurrency(Number(candidate.amount))}</span>
+            <span className="shrink-0 text-end">
+              <span className="block font-bold text-emerald-600">{formatCurrency(Number(candidate.amount))}</span>
+              <span className="block text-[9px] font-semibold text-amber-700 dark:text-amber-300">
+                {t(hasSalaryIdentity ? 'monthlyAccounting.additionalSalary' : 'monthlyAccounting.mainSalary')}
+              </span>
+            </span>
           </button>
         ))}
       </div>

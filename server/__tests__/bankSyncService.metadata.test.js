@@ -146,7 +146,11 @@ describe('bank sync statement metadata', () => {
     }]);
 
     const candidate = calls.find(({ sql }) => sql.includes('pending-to-settled rekey candidate'));
-    expect(candidate.params.slice(-2)).toEqual(['leumi:1234:2026-07-02:e387.29:61616', '61616']);
+    // The last param is no longer the raw identifier: identifier evidence (a suffix re-key, or
+    // the bank no longer listing the old id) needs the live scrape, which SQL cannot see. JS
+    // decides and hands the accepted ids down, so the lock re-selects exactly that row.
+    expect(candidate.params[7]).toBe('leumi:1234:2026-07-02:e387.29:61616');
+    expect(candidate.params[8]).toEqual([2470]);
 
     const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
     expect(repair.params[0]).toBe(2470);
@@ -290,6 +294,42 @@ describe('bank sync statement metadata', () => {
     expect(repair.params[0]).toBe(900);
     expect(repair.params[1]).toBe('max:2254:final-123');
     expect(repair.params[10]).toBe('completed');
+    expect(result).toEqual({ inserted: 0, skipped: 1 });
+  });
+
+  test('promotes a same-day card authorization when settlement expands the merchant and shifts by agorot', async () => {
+    const calls = [];
+    const client = {
+      query: jest.fn(async (sql, params) => {
+        calls.push({ sql, params });
+        if (sql.includes('SELECT account_number FROM bank_accounts')) return { rows: [] };
+        if (sql.includes('pending lifecycle inventory')) return { rows: [{
+          id: 9083, bank_account_number: '4297', amount: 39.05, type: 'expense',
+          description: 'aliexpress', date: '2026-07-12',
+          bank_sync_id: null, bank_status: 'pending', amount_is_estimated: false,
+          original_amount: null, original_currency: null,
+        }] };
+        if (sql.includes('card pending-to-settled rekey candidate')) return { rows: [{ id: 9083 }] };
+        return { rows: [] };
+      }),
+    };
+
+    const result = await ingestAccounts(client, 34, 'max', [{
+      account_number: '4297',
+      txns: [{
+        charged_amount: -39.15,
+        date: '2026-07-12T09:00:00.000Z',
+        processed_date: '2026-10-11T09:00:00.000Z',
+        description: 'ALIEXPRESS LUXEMBOURG LUX',
+        status: 'completed',
+        identifier: 'final-aliexpress-123',
+      }],
+    }]);
+
+    const repair = calls.find(({ sql }) => sql.includes('UPDATE transactions SET'));
+    expect(repair.params[0]).toBe(9083);
+    expect(repair.params[1]).toBe('max:4297:final-aliexpress-123');
+    expect(repair.params[2]).toBe(39.15);
     expect(result).toEqual({ inserted: 0, skipped: 1 });
   });
 

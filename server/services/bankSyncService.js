@@ -16,6 +16,12 @@ const MAX_TXNS = 2000;
 const MAX_AMOUNT = 10_000_000;
 const IDENTIFIED_BATCH_SIZE = 250;
 
+/**
+ * Re-select, under a row lock, the pending predecessor that couldMatchPendingRekey() already
+ * accepted in JS. $9 carries those ids: the identifier evidence (suffix re-key, or the bank no
+ * longer listing the old id) needs the current scrape, which SQL cannot see. Every factual guard
+ * is still re-checked here so a concurrent write cannot slip a different row past the lock.
+ */
 const PENDING_REKEY_CANDIDATE_SQL = `/* pending-to-settled rekey candidate */
   SELECT id
   FROM transactions stale
@@ -31,7 +37,7 @@ const PENDING_REKEY_CANDIDATE_SQL = `/* pending-to-settled rekey candidate */
     AND stale.bank_sync_id IS NOT NULL
     AND stale.bank_sync_id <> $8
     AND (stale.bank_status IS NULL OR stale.bank_status = 'pending')
-    AND RIGHT(stale.bank_sync_id, LENGTH($9)) = $9
+    AND stale.id = ANY($9::int[])
     AND NOT EXISTS (
       SELECT 1 FROM transactions current
       WHERE current.user_id = $1 AND current.bank_sync_id = $8
@@ -57,6 +63,17 @@ const CARD_PENDING_REKEY_CANDIDATE_SQL = `/* card pending-to-settled rekey candi
         stale.amount_is_estimated = TRUE
         AND stale.original_amount = $9
         AND stale.original_currency = $10
+      )
+      OR (
+        stale.date = $7::date
+        AND ABS(stale.amount - $4) <= 1.00
+        AND LENGTH(LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g'))) >= 4
+        AND (
+          LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g'))
+            LIKE '%' || LOWER(REGEXP_REPLACE(TRIM($6), '\\s+', ' ', 'g')) || '%'
+          OR LOWER(REGEXP_REPLACE(TRIM($6), '\\s+', ' ', 'g'))
+            LIKE '%' || LOWER(REGEXP_REPLACE(TRIM(stale.description), '\\s+', ' ', 'g')) || '%'
+        )
       )
     )
     AND ABS(stale.date - $7::date) <= 3
@@ -203,13 +220,74 @@ function normalizedText(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+/**
+ * A calendar day as 'YYYY-MM-DD', from either a scraper string or a pg DATE.
+ *
+ * node-postgres hands DATE columns back as a JS Date at LOCAL midnight, and
+ * `String(thatDate).slice(0, 10)` yields "Sun Jul 12" — which Date.parse rejects. That silently
+ * made dateDistance() return Infinity for every row read from the database, so the guard below
+ * rejected every candidate and the whole pending-repair path never ran even once (it left real
+ * duplicate rows behind: a pending copy plus its settled twin).
+ * Read the parts locally, never via toISOString(), or a UTC+N local midnight rolls back a day.
+ */
+function calendarKey(value) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return null;
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${value.getFullYear()}-${month}-${day}`;
+  }
+  if (!value) return null;
+  const key = String(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
+}
+
 function dateDistance(left, right) {
-  const a = Date.parse(`${String(left).slice(0, 10)}T00:00:00Z`);
-  const b = Date.parse(`${String(right).slice(0, 10)}T00:00:00Z`);
+  const leftKey = calendarKey(left);
+  const rightKey = calendarKey(right);
+  if (!leftKey || !rightKey) return Infinity;
+  const a = Date.parse(`${leftKey}T00:00:00Z`);
+  const b = Date.parse(`${rightKey}T00:00:00Z`);
   return Number.isFinite(a) && Number.isFinite(b) ? Math.abs(a - b) / 86400000 : Infinity;
 }
 
-function couldMatchPendingRekey(candidate, incoming, isCreditCompany) {
+/** The provider's own id, which bank_sync_id carries as its last colon-separated segment. */
+function rawIdentifierOf(bankSyncId) {
+  if (!bankSyncId) return null;
+  const parts = String(bankSyncId).split(':');
+  return parts.length ? parts[parts.length - 1] : null;
+}
+
+/**
+ * Has the bank stopped listing this pending row's identifier?
+ *
+ * Only answerable inside the window the scrape actually covered: a row older than that is
+ * missing because nobody looked, not because it settled.
+ */
+function identifierVanished(candidate, scrape) {
+  if (!scrape || !scrape.identifiers) return false;
+  const raw = rawIdentifierOf(candidate.bank_sync_id);
+  if (!raw) return false;
+  const day = calendarKey(candidate.date);
+  if (!day || !scrape.earliest || day < scrape.earliest) return false;
+  return !scrape.identifiers.has(raw);
+}
+
+/**
+ * Is this stale pending row the same movement as the settled one arriving now?
+ *
+ * Every branch demands the same account, direction, amount, description and a date within
+ * three days — a bank may shift the day when a hold settles. What differs is the identifier
+ * evidence:
+ *   card providers  — publish no identifier at all until an authorization is final, so the
+ *                     stale row simply has none, and the factual match is all we get.
+ *   banks           — re-key on settlement. The old id may survive as a suffix of the new one
+ *                     (45061616 → 61616), or be replaced outright (416173003 → 160717); the
+ *                     latter is only catchable by noticing the bank no longer lists the old id.
+ * A same-day pair of identical genuine movements stays safe: the bank keeps listing both ids,
+ * so neither looks vanished, and the caller repairs only when exactly one candidate matches.
+ */
+function couldMatchPendingRekey(candidate, incoming, isCreditCompany, scrape = null) {
   if (String(candidate.bank_account_number || '') !== String(incoming.accountNumber || '')
     || candidate.type !== incoming.type
     || dateDistance(candidate.date, incoming.date) > 3) return false;
@@ -220,14 +298,26 @@ function couldMatchPendingRekey(candidate, incoming, isCreditCompany) {
     const estimatedFx = candidate.amount_is_estimated === true
       && Number(candidate.original_amount) === incoming.originalAmount
       && candidate.original_currency === incoming.originalCurrency;
-    return exact || estimatedFx;
+    // Card providers may publish a short merchant label and an estimated ILS amount while
+    // pending, then return a fuller label and a few agorot of FX drift when settled. On the
+    // same purchase day, a unique near-amount containment match is the same lifecycle row.
+    // The SQL re-check still requires exactly one candidate under a row lock.
+    const pendingMerchant = normalizedText(candidate.description);
+    const settledMerchant = normalizedText(incoming.description);
+    const sameMerchantFamily = Math.min(pendingMerchant.length, settledMerchant.length) >= 4
+      && (pendingMerchant.includes(settledMerchant) || settledMerchant.includes(pendingMerchant));
+    const nearSameDayAuthorization = dateDistance(candidate.date, incoming.date) === 0
+      && Math.abs(Number(candidate.amount) - incoming.amount) <= 1
+      && sameMerchantFamily;
+    return exact || estimatedFx || nearSameDayAuthorization;
   }
   return candidate.bank_sync_id != null
     && candidate.bank_sync_id !== incoming.bankSyncId
     && (candidate.bank_status == null || candidate.bank_status === 'pending')
     && Number(candidate.amount) === incoming.amount
     && normalizedText(candidate.description) === normalizedText(incoming.description)
-    && String(candidate.bank_sync_id).endsWith(incoming.rawIdentifier);
+    && (String(candidate.bank_sync_id).endsWith(incoming.rawIdentifier)
+      || identifierVanished(candidate, scrape));
 }
 
 function buildPayloadFxRates(accounts) {
@@ -320,9 +410,12 @@ async function ingestAccounts(client, userId, source, accounts) {
     );
     for (const r of existing.rows) disabled.add((r.account_number || '').trim());
   }
+  // `date::text` is deliberate: pg would otherwise return a Date at local midnight, and the
+  // comparison helpers work on 'YYYY-MM-DD' keys. Handing them a Date used to poison every
+  // pending-repair decision (see calendarKey).
   const pendingInventory = (await client.query(
     `/* pending lifecycle inventory */
-     SELECT id, bank_account_number, amount, type, description, date,
+     SELECT id, bank_account_number, amount, type, description, date::text AS date,
             bank_sync_id, bank_status, amount_is_estimated,
             original_amount, original_currency
        FROM transactions
@@ -331,6 +424,31 @@ async function ingestAccounts(client, userId, source, accounts) {
           OR (bank_sync_id IS NOT NULL AND (bank_status IS NULL OR bank_status = 'pending')))`,
     [userId, source],
   )).rows;
+
+  /**
+   * What this scrape actually reported, per account: every raw identifier, and the oldest day
+   * it covered.
+   *
+   * A bank that re-keys a movement on settlement simply stops reporting the old identifier —
+   * Leumi has been seen turning 416173003 into 160717, which shares no suffix with it, so
+   * suffix matching cannot catch that. "The bank no longer lists this id" is the real evidence,
+   * and it is safe in the one case that matters: two genuine same-day ₪500 withdrawals both stay
+   * listed under their own ids, so neither is ever mistaken for the other's re-key.
+   * The oldest covered day matters because a pending row from before the scrape window is absent
+   * for a boring reason — nobody looked — and must not be read as "vanished".
+   */
+  const scrapeReport = new Map();
+  for (const account of accounts) {
+    const key = (account.account_number || 'default').toString().trim();
+    const identifiers = new Set();
+    let earliest = null;
+    for (const txn of account.txns || []) {
+      if (txn.identifier != null && txn.identifier !== '') identifiers.add(String(txn.identifier));
+      const day = calendarKey(txn.date);
+      if (day && (!earliest || day < earliest)) earliest = day;
+    }
+    scrapeReport.set(key, { identifiers, earliest });
+  }
 
   for (const account of accounts) {
     // Scope the dedup id to the account too — a bank with multiple accounts
@@ -439,10 +557,18 @@ async function ingestAccounts(client, userId, source, accounts) {
           originalAmount,
           originalCurrency,
         };
+        const scrape = scrapeReport.get(acctKey) || null;
         if (bankStatus === 'completed'
           && pendingInventory.some((candidate) => couldMatchPendingRekey(
-            candidate, rekeyInput, isCreditCompany,
+            candidate, rekeyInput, isCreditCompany, scrape,
           ))) {
+          // The JS pass above already proved a match exists; re-select it under a row lock so
+          // the repair is atomic. Pass the ids the JS pass accepted so the SQL agrees with it —
+          // otherwise a bank that re-keyed outright is matched here and rejected there, and the
+          // duplicate is inserted anyway.
+          const rekeyableIds = pendingInventory
+            .filter((candidate) => couldMatchPendingRekey(candidate, rekeyInput, isCreditCompany, scrape))
+            .map((candidate) => Number(candidate.id));
           const rekeyCandidates = isCreditCompany
             ? await client.query(
               CARD_PENDING_REKEY_CANDIDATE_SQL,
@@ -455,7 +581,7 @@ async function ingestAccounts(client, userId, source, accounts) {
               PENDING_REKEY_CANDIDATE_SQL,
               [
                 userId, source, acctNum, amount, type, description, date,
-                bankSyncId, String(txn.identifier),
+                bankSyncId, rekeyableIds,
               ],
             );
           if (rekeyCandidates.rows.length === 1) {
@@ -672,5 +798,10 @@ module.exports = {
   normalizePositiveInteger,
   buildPayloadFxRates,
   estimatePendingFx,
+  calendarKey,
+  dateDistance,
+  rawIdentifierOf,
+  identifierVanished,
+  couldMatchPendingRekey,
   PENDING_REKEY_CANDIDATE_SQL,
 };

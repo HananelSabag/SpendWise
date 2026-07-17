@@ -216,7 +216,7 @@ router.get('/stats', auth, async (req, res) => {
        SELECT
          s.source                                                             AS source,
          COALESCE(ts.total, 0)::int                                           AS total,
-         COALESCE(ts.last_transaction_sync, ast.last_account_sync)            AS last_sync,
+         GREATEST(ts.last_transaction_sync, ast.last_account_sync)            AS last_sync,
          COALESCE(ts.income_count, 0)::int                                    AS income_count,
          COALESCE(ts.expense_count, 0)::int                                   AS expense_count,
          COALESCE(ts.total_income, 0)                                         AS total_income,
