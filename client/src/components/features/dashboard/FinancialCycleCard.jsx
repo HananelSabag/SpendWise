@@ -9,7 +9,6 @@
  */
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { AlertTriangle, ArrowRight, CalendarRange, Coins, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
@@ -65,8 +64,37 @@ function Line({ label, value, hint, formatCurrency, tone = 'neutral', bold = fal
   );
 }
 
+function CycleCardSkeleton({ label }) {
+  const pulse = 'animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700/60';
+  return (
+    <section
+      aria-busy="true"
+      aria-label={label}
+      className="glass-card min-h-[28rem] rounded-2xl p-4"
+    >
+      <div className={`${pulse} h-4 w-36`} />
+      <div className={`${pulse} mt-2 h-5 w-28 rounded-full`} />
+      <div className="mt-5 space-y-3">
+        {[72, 64, 84].map((width) => (
+          <div key={width} className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 dark:border-gray-800">
+            <div className={`${pulse} h-3`} style={{ width: `${width}px` }} />
+            <div className={`${pulse} h-4 w-24`} />
+          </div>
+        ))}
+      </div>
+      <div className={`${pulse} mt-4 h-16 w-full rounded-xl`} />
+      <div className="mt-4 space-y-2">
+        <div className={`${pulse} h-12 w-full rounded-xl`} />
+        <div className={`${pulse} h-12 w-full rounded-xl`} />
+      </div>
+      <div className={`${pulse} mt-4 h-24 w-full rounded-xl`} />
+    </section>
+  );
+}
+
 export default function FinancialCycleCard({
   cycle,
+  isLoading = false,
   salaryTracking,
   totalOutstanding = 0,
   formatCurrency,
@@ -76,6 +104,10 @@ export default function FinancialCycleCard({
   needsSalaryLink = false,
   language = 'en',
 }) {
+  if (isLoading && !cycle) {
+    return <CycleCardSkeleton label={t('cycle.loading', { fallback: 'Loading financial cycle' })} />;
+  }
+
   // Salary is the anchor of the whole model — without it there is no window to show, so we
   // ask for the link instead of inventing one.
   if (needsSalaryLink) {
@@ -102,11 +134,7 @@ export default function FinancialCycleCard({
   const salaryLate = salaryTracking?.status === 'late';
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-card rounded-2xl p-4"
-    >
+    <section className="glass-card rounded-2xl p-4">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-gray-900 dark:text-white">
@@ -234,6 +262,6 @@ export default function FinancialCycleCard({
           {t('cycle.openDetails', { fallback: 'Full breakdown' })}<ArrowRight className="h-3 w-3 rtl:rotate-180" />
         </button>
       </div>
-    </motion.section>
+    </section>
   );
 }

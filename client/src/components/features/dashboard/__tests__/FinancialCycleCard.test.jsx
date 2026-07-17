@@ -69,6 +69,11 @@ const renderCard = (props = {}) => render(
 );
 
 describe('FinancialCycleCard', () => {
+  it('reserves the card while the cycle query is loading', () => {
+    renderCard({ cycle: null, isLoading: true });
+    expect(screen.getByLabelText('Loading financial cycle')).toHaveAttribute('aria-busy', 'true');
+  });
+
   it('leads with the operating net rather than the account movement', () => {
     renderCard();
     expect(screen.getByText('₪10,682.37')).toBeInTheDocument();

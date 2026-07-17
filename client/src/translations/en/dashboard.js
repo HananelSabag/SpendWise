@@ -342,6 +342,7 @@ export default {
   // The salary-to-salary cycle — the window the user actually lives by.
   cycle: {
     title: "This financial cycle",
+    loading: "Loading financial cycle",
     hint: "From your salary to the next one",
     soFar: "so far",
     income: "Income",

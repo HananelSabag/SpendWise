@@ -36,8 +36,24 @@ export default function CycleBalanceStrip({
     bankAccounts, someBalancesUnavailable, isLoading,
   } = useBankBalance();
 
+  // Reserve the strip while its shared bank query hydrates. Returning null here made the tabs
+  // jump down after the rest of the cycle had already painted.
+  if (isLoading) {
+    return (
+      <section aria-busy="true" className={cn('min-h-[8.75rem] animate-pulse rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900', className)}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <div className="h-3 w-28 rounded bg-gray-200 dark:bg-gray-700/60" />
+            <div className="mt-3 h-8 w-40 rounded-lg bg-gray-200 dark:bg-gray-700/60" />
+          </div>
+          <div className="h-24 rounded-xl bg-gray-200 dark:bg-gray-700/60" />
+        </div>
+      </section>
+    );
+  }
+
   // Nothing to anchor to until at least one bank account exists.
-  if (isLoading || !hasSynced || !hasBankSource) return null;
+  if (!hasSynced || !hasBankSource) return null;
 
   const accountLabel = (a, i) =>
     `${institutionLabel(a.source, language)}${a.accountNumber ? ` · ${a.accountNumber}` : ''}` || `#${i}`;
@@ -80,14 +96,19 @@ export default function CycleBalanceStrip({
         {projectedBalance !== null && (
           <div className="rounded-xl bg-indigo-50/70 px-3 py-2.5 dark:bg-indigo-950/25">
             <div className="flex items-start justify-between gap-2">
-              <p className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              <p className="flex min-w-0 items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
                 {t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}
-                {lastBillDate && <span className="font-medium opacity-65">· {formatCycleDay(lastBillDate, language)}</span>}
                 <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}>
                   {useCardEstimate
                     ? t('cycle.balanceForecastHint', { fallback: "This uses a historical card estimate. Turn it off to count only purchases already accumulated." })
                     : t('cycle.balanceKnownHint', { fallback: 'This counts only card purchases already accumulated. The final bill can still grow.' })}
                 </InfoHint>
+              </p>
+              {lastBillDate && <span className="shrink-0 text-[10px] font-medium text-indigo-500 dark:text-indigo-400">{formatCycleDay(lastBillDate, language)}</span>}
+            </div>
+            <div className="mt-1 flex items-end justify-between gap-3">
+              <p className={cn('min-w-0 text-2xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
+                ~{formatCurrency(projectedBalance)}
               </p>
               {onCardEstimateChange && (
                 <button
@@ -95,7 +116,7 @@ export default function CycleBalanceStrip({
                   role="switch"
                   aria-checked={useCardEstimate}
                   onClick={() => onCardEstimateChange(!useCardEstimate)}
-                  className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
+                  className="inline-flex shrink-0 items-center gap-1.5 pb-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
                 >
                   {t('cycle.useEstimate', { fallback: 'Use estimate' })}
                   <span className={cn('relative h-4 w-7 rounded-full transition', useCardEstimate ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600')}>
@@ -104,9 +125,6 @@ export default function CycleBalanceStrip({
                 </button>
               )}
             </div>
-            <p className={cn('mt-0.5 text-2xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
-              ~{formatCurrency(projectedBalance)}
-            </p>
             <p className="text-[9px] font-bold text-indigo-500 dark:text-indigo-400">
               {useCardEstimate
                 ? t('cycle.estimateOnly', { fallback: 'Estimate only — based on recent bills' })

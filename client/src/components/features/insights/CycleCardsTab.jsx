@@ -23,7 +23,11 @@ const SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: '
 const cardName = (s) => SOURCE_NAME[s] || String(s || '').toUpperCase();
 const last4 = (n) => String(n || '').slice(-4);
 
-const signed = (value, formatCurrency) => `${Number(value) < 0 ? '−' : '+'}${formatCurrency(Math.abs(Number(value) || 0))}`;
+const signed = (value, formatCurrency) => {
+  const amount = Number(value) || 0;
+  if (amount === 0) return formatCurrency(0);
+  return `${amount < 0 ? '−' : '+'}${formatCurrency(Math.abs(amount))}`;
+};
 
 /** The purchases behind one tapped split, newest first. */
 function ChargeList({ group, formatCurrency, t, language }) {
@@ -137,7 +141,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
         const nextBill = cycle?.nextCardForecast?.bills?.find(
           (bill) => bill.source === card.source && bill.accountNumber === card.accountNumber,
         );
-        const title = `${cardName(card.source)} ••${last4(card.accountNumber)}`;
+        const title = `${cardName(card.source)} ••••${last4(card.accountNumber)}`;
         const modeLabel = passthrough
           ? t('cycle.modeDebit', { fallback: 'Debit — each purchase goes through on its own' })
           : day
@@ -147,25 +151,24 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
         return (
           <div key={`${card.source}-${card.accountNumber}`} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
             {/* Brand is quiet; the money is loud. */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="shrink-0 rounded-xl bg-violet-50 p-2 text-violet-500 dark:bg-violet-950/25"><CreditCard className="h-4 w-4" /></span>
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                    ••{last4(card.accountNumber)} · {modeLabel}
-                    <InfoHint title={t('cycle.howItSettles', { fallback: 'How it settles' })}>
-                      {passthrough
-                        ? t('cycle.modeDebitHint', { fallback: 'Every purchase hits your account separately, so there is no monthly bill to wait for.' })
-                        : t('cycle.modeCreditHint', { fallback: 'Purchases pile up and leave your account as one charge on this day. Foreign purchases often go through immediately instead.' })}
-                    </InfoHint>
-                  </p>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-300 dark:text-gray-600">{cardName(card.source)}</p>
-                </div>
+            <div className="flex min-w-0 items-start gap-2">
+              <span className="shrink-0 rounded-xl bg-violet-50 p-2 text-violet-500 dark:bg-violet-950/25"><CreditCard className="h-4 w-4" /></span>
+              <div className="min-w-0 pt-0.5">
+                <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{title}</p>
+                <p className="mt-0.5 flex items-start gap-1 text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                  <span>{modeLabel}</span>
+                  <InfoHint title={t('cycle.howItSettles', { fallback: 'How it settles' })}>
+                    {passthrough
+                      ? t('cycle.modeDebitHint', { fallback: 'Every purchase hits your account separately, so there is no monthly bill to wait for.' })
+                      : t('cycle.modeCreditHint', { fallback: 'Purchases pile up and leave your account as one charge on this day. Foreign purchases often go through immediately instead.' })}
+                  </InfoHint>
+                </p>
               </div>
-              <div className="shrink-0 text-end">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t('cycle.cardSpend', { fallback: 'Charged this cycle' })}</p>
-                <p className="text-2xl font-black tabular-nums text-gray-900 dark:text-white">{signed(split.total, formatCurrency)}</p>
-              </div>
+            </div>
+
+            <div className="mt-3 flex items-end justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-800/45">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t('cycle.cardSpend', { fallback: 'Charged this cycle' })}</p>
+              <p className="shrink-0 text-2xl font-black tabular-nums text-gray-900 dark:text-white">{signed(split.total, formatCurrency)}</p>
             </div>
 
             {split.statement.has || split.immediate.has ? (
@@ -199,12 +202,12 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
                   {t('cycle.nextBill', { fallback: 'Next bill' })} · {formatCycleDay(nextBill.chargeDate, language)}
                 </p>
                 <div className={cn('mt-1.5 grid gap-2', useCardEstimate && 'grid-cols-2')}>
-                  <div className="rounded-lg bg-white/75 px-2.5 py-2 dark:bg-gray-900/60">
+                  <div className="min-w-0 rounded-lg bg-white/75 px-2.5 py-2 dark:bg-gray-900/60">
                     <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{t('cycle.knownCardSpend', { fallback: 'Actually accumulated' })}</p>
                     <p className="text-base font-black tabular-nums text-gray-950 dark:text-white">{formatCurrency(nextBill.knownAmount)}</p>
                   </div>
                   {useCardEstimate && (
-                    <div className="rounded-lg bg-indigo-100/70 px-2.5 py-2 dark:bg-indigo-950/50">
+                    <div className="min-w-0 rounded-lg bg-indigo-100/70 px-2.5 py-2 dark:bg-indigo-950/50">
                       <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-300">{t('cycle.expectedCardBill', { fallback: 'Estimate only' })}</p>
                       <p className="text-base font-black tabular-nums text-indigo-950 dark:text-white">~{formatCurrency(nextBill.estimatedAmount)}</p>
                       {nextBill.historyCount > 0 && (

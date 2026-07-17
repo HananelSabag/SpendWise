@@ -6,6 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#3B82F6" />
     <meta name="description" content="SpendWise - Advanced financial management platform with analytics, admin system, and intelligent insights" />
+
+    <!-- Resolve the saved theme before the first paint. React used to learn the user's
+         dark-mode preference only after auth hydration, which produced a white flash on
+         cold loads (most visibly on /financial-cycle). -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        try {
+          var theme = sessionStorage.getItem('spendwise-session-theme');
+          if (!theme) {
+            var cachedAuth = JSON.parse(localStorage.getItem('spendwise-auth') || '{}');
+            var cachedUser = cachedAuth && cachedAuth.state && cachedAuth.state.user;
+            theme = cachedUser && (cachedUser.theme_preference || cachedUser.themePreference);
+          }
+          var followsSystem = !theme || theme === 'auto' || theme === 'system';
+          var dark = theme === 'dark' || (followsSystem && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          root.classList.toggle('dark', dark);
+          root.style.colorScheme = dark ? 'dark' : 'light';
+          root.style.backgroundColor = dark ? '#030712' : '#f9fafb';
+        } catch (e) {
+          root.style.backgroundColor = '#f9fafb';
+        }
+        root.classList.add('sw-theme-ready');
+      })();
+    </script>
     
     <!-- iPhone/iOS Universal Links Support -->
     <meta name="apple-itunes-app" content="app-argument=spendwise://verify" />

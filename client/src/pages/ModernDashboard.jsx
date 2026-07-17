@@ -114,6 +114,7 @@ export default function ModernDashboard() {
               −₪350. Retro calendar analysis lives on /insights; one screen states one truth. */}
           <FinancialCycleCard
             cycle={currentCycle.cycle}
+            isLoading={currentCycle.isLoading}
             salaryTracking={currentCycle.salaryTracking}
             totalOutstanding={currentCycle.totalOutstanding}
             needsSalaryLink={currentCycle.needsSalaryLink}

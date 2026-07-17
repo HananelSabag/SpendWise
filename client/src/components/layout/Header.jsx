@@ -142,7 +142,7 @@ const Header = () => {
     },
     {
       key: 'bank-sync',
-      label: t('bankSync.title') || 'Bank Sync',
+      label: t('bankSync.title', { fallback: currentLanguage === 'he' ? 'סנכרון בנק' : 'Bank Sync' }),
       href: '/bank-sync',
       icon: Building2,
       active: location.pathname.startsWith('/bank-sync')

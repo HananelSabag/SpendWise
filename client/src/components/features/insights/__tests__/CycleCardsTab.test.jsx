@@ -55,7 +55,7 @@ describe('CycleCardsTab', () => {
     render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
 
     fireEvent.click(screen.getByRole('button', { name: /Monthly bill/ }));
-    expect(screen.getByRole('region', { name: 'MAX ••2254' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'MAX ••••2254' })).toBeInTheDocument();
     expect(screen.getByText('Groceries')).toBeInTheDocument();
     expect(screen.queryByText('Online service')).not.toBeInTheDocument();
   });

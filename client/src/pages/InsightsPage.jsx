@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCurrency, useTranslation } from '../stores';
 import { useCycles } from '../hooks/useCycles';
 import BrandMark from '../components/common/BrandMark';
-import { LiquidTabs } from '../components/ui';
+import { LiquidTabs, PageSkeleton } from '../components/ui';
 import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
 import CycleCardsTab from '../components/features/insights/CycleCardsTab';
 import CycleDebtsTab from '../components/features/insights/CycleDebtsTab';
@@ -82,7 +82,7 @@ export default function InsightsPage() {
   }, []);
 
   if (isLoading && !cycles?.length) {
-    return <div className="min-h-screen animate-pulse bg-gray-50 dark:bg-gray-950" />;
+    return <PageSkeleton page="financial-cycle" />;
   }
 
   const empty = hasNoBankData || needsSalaryLink || !cycle;

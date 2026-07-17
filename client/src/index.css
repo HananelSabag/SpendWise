@@ -82,6 +82,12 @@
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
   }
 
+  /* The inline bootstrap in index.html resolves dark mode before CSS paints. Keep this
+     guard for cached/older HTML so an unresolved first frame never colour-fades in. */
+  html:not(.sw-theme-ready) body {
+    transition: none !important;
+  }
+
   :root {
     --sw-sidebar-width: 17rem;
   }

@@ -57,43 +57,96 @@ const Card = ({ children, className }) => (
 
 const DashboardSkeleton = () => (
   <Shell>
-    <div className="max-w-2xl mx-auto px-4 pt-4 pb-32 space-y-4 lg:max-w-6xl lg:pt-6">
-      {/* Balance card — large gradient card */}
+    <div className="mx-auto max-w-7xl space-y-4 px-4 pb-32 pt-4 lg:space-y-6 lg:px-8 lg:pt-6">
+      {/* Greeting header */}
+      <div className="flex items-center justify-between gap-4 py-1">
+        <div>
+          <T className="h-7 w-48" />
+          <T className="mt-2 h-3 w-28" />
+        </div>
+        <S className="h-10 w-10 rounded-full" />
+      </div>
+
+      {/* Balance card — same place and footprint as the real hero */}
       <S className="h-44 rounded-3xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700" />
 
-      {/* 2×2 stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[0, 1, 2, 3].map(i => (
-          <Card key={i} className="p-4">
-            <S className="w-8 h-8 rounded-lg mb-3" />
-            <T className="h-5 w-16 mb-2" />
-            <T className="h-3 w-20" />
-          </Card>
-        ))}
-      </div>
+      {/* Financial cycle — reserve the card that used to arrive late and open a gap */}
+      <Card className="min-h-[28rem] p-4">
+        <T className="h-4 w-36" />
+        <S className="mt-2 h-5 w-28 rounded-full" />
+        <div className="mt-5 space-y-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 dark:border-gray-700">
+              <T className="h-3 w-28" />
+              <T className="h-4 w-24" />
+            </div>
+          ))}
+        </div>
+        <S className="mt-4 h-16 rounded-xl" />
+        <S className="mt-4 h-24 rounded-xl" />
+      </Card>
 
-      {/* Quick-add row (mobile only) */}
-      <div className="grid grid-cols-2 gap-3 lg:hidden">
-        <S className="h-11 rounded-2xl" />
-        <S className="h-11 rounded-2xl" />
-      </div>
-
-      {/* "Recent" section header */}
-      <T className="h-5 w-36 mt-1" />
-
-      {/* Transaction rows */}
-      {[0, 1, 2, 3, 4].map(i => (
-        <Card key={i} className="flex items-center gap-3 p-4">
-          <S className="w-10 h-10 rounded-xl shrink-0" />
-          <div className="flex-1 space-y-2 min-w-0">
-            <T className="h-4 w-32" />
-            <T className="h-3 w-20" />
+      {/* Recent transactions — one stable card, matching the loaded widget */}
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <T className="h-5 w-40" />
+          <T className="h-4 w-16" />
+        </div>
+        {[0, 1, 2, 3, 4].map(i => (
+          <div key={i} className="flex items-center gap-3 border-t border-gray-100 py-3 first:border-0 dark:border-gray-700">
+            <S className="h-9 w-9 shrink-0 rounded-xl" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <T className="h-4 w-32" />
+              <T className="h-3 w-20" />
+            </div>
+            <T className="h-4 w-16 shrink-0" />
           </div>
-          <T className="h-4 w-16 shrink-0" />
-        </Card>
-      ))}
+        ))}
+      </Card>
     </div>
   </Shell>
+);
+
+// ─── Financial cycle ────────────────────────────────────────────────────────
+
+const FinancialCycleSkeleton = () => (
+  <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10" aria-busy="true">
+    <div className="border-b border-gray-200/70 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div className="mx-auto max-w-5xl px-4 py-3 lg:px-8">
+        <div className="flex items-center gap-3">
+          <S className="h-9 w-9 rounded-xl" />
+          <T className="h-5 w-36" />
+          <S className="ms-auto h-9 w-9 rounded-xl" />
+        </div>
+        <div className="mt-2 flex gap-2">
+          <S className="h-6 w-28 rounded-full" />
+          <S className="h-6 w-12 rounded-full" />
+        </div>
+      </div>
+    </div>
+    <div className="mx-auto max-w-5xl space-y-4 px-4 py-4 lg:px-8">
+      <Card className="min-h-[8.75rem] p-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <T className="h-3 w-28" />
+            <T className="mt-3 h-8 w-40" />
+          </div>
+          <S className="h-24 rounded-xl" />
+        </div>
+      </Card>
+      <S className="h-10 w-full rounded-2xl" />
+      <Card className="p-4">
+        <T className="h-3 w-40" />
+        <T className="mt-3 h-9 w-44" />
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <S className="h-20 rounded-2xl" />
+          <S className="h-20 rounded-2xl" />
+          <S className="h-20 rounded-2xl" />
+        </div>
+      </Card>
+      <Card className="h-28 p-4" />
+    </div>
+  </div>
 );
 
 // ─── Transactions ─────────────────────────────────────────────────────────────
@@ -294,6 +347,7 @@ const AdminSkeleton = () => (
 
 const SKELETONS = {
   dashboard:    DashboardSkeleton,
+  'financial-cycle': FinancialCycleSkeleton,
   transactions: TransactionsSkeleton,
   analytics:    AnalyticsSkeleton,
   profile:      ProfileSkeleton,
@@ -303,7 +357,7 @@ const SKELETONS = {
 
 /**
  * PageSkeleton
- * @param {'dashboard'|'transactions'|'analytics'|'profile'|'shopping'|'admin'} page
+ * @param {'dashboard'|'financial-cycle'|'transactions'|'analytics'|'profile'|'shopping'|'admin'} page
  */
 const PageSkeleton = ({ page = 'dashboard' }) => {
   const Comp = SKELETONS[page] ?? DashboardSkeleton;
