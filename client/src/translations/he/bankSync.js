@@ -115,6 +115,8 @@ export default {
   connecting: 'מתחבר...',
   connected: 'הבנק חובר!',
   connectedNote: 'הסנכרון הראשון ירוץ תוך כמה שעות. העסקאות יופיעו אוטומטית.',
+  connectionUpdated: 'החיבור עודכן',
+  connectionUpdatedNote: 'השינויים נשמרו. אפשר להפעיל סנכרון כשתהיה מוכן.',
   done: 'סיום',
 
   // שדות פרטי התחברות (לפי בנק)
@@ -128,6 +130,9 @@ export default {
   displayNameLabel: 'כינוי (אופציונלי)',
   displayNamePlaceholder: 'למשל: החשבון הראשי שלי',
   replacesExistingNote: 'המוסד הזה כבר מחובר — שמירה כאן מחליפה את פרטי ההתחברות השמורים.',
+  editCredentialsHint: 'אפשר לערוך רק את הכינוי, או למלא את כל שדות ההתחברות כדי להחליף את הפרטים השמורים. שדות ריקים משאירים את הפרטים הקיימים ללא שינוי.',
+  completeAllCredentials: 'כדי להחליף את פרטי ההתחברות צריך למלא את כל השדות.',
+  nicknameOnlyConfirm: 'רק הכינוי של החיבור ישתנה. פרטי ההתחברות השמורים יישארו ללא שינוי.',
   betaBadge: 'בטא',
   betaNote: 'המוסד הזה נתמך במלואו אבל עדיין לא נבדק מול חשבון אמיתי. אם סנכרון נכשל — ספרו לנו.',
 
@@ -144,6 +149,7 @@ export default {
   statusPaused: 'מושהה',
   statusError: 'דורש טיפול',
   pausedAfterFailures: 'הושהה אחרי כשלונות חוזרים — בדרך כלל סיסמת בנק שהשתנתה',
+  credentialsRejected: 'הבנק דחה את פרטי ההתחברות. הסנכרון נעצר מיד כדי להגן על החשבון.',
   tryAgain: 'נסה שוב',
   lastSyncLabel: 'סנכרון אחרון',
   neverSynced: 'טרם סונכרן',
@@ -170,6 +176,7 @@ export default {
   nextSyncAt: 'הסנכרון הידני הבא זמין ב-{{time}}',
   syncInFlight: 'סנכרון כבר רץ כרגע',
   connectionPaused: 'החיבור מושהה',
+  connectionRequiresAction: 'צריך לעדכן את החיבור לפני סנכרון נוסף',
 
   // היסטוריית סנכרונים
   recentSyncs: 'סנכרונים אחרונים',
@@ -183,6 +190,11 @@ export default {
 
   // עדכון פרטים
   updateCredentials: 'עדכן פרטי התחברות',
+  editConnection: 'עריכת חיבור',
+  edit: 'עריכה',
+  fixConnection: 'תקן חיבור',
+  saveChanges: 'שמור שינויים',
+  savingChanges: 'שומר...',
 
   // toggle סנכרון לכל חשבון
   accounts: 'חשבונות',

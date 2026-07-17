@@ -130,6 +130,7 @@ const ConnectBankModal = ({
   // Preselect a bank and jump straight to credentials — the "update
   // credentials" path from a failed connection card.
   initialBank = null,
+  connection = null,
   // bank_source ids that already have a connection: picking one of these
   // replaces its stored credentials (server upserts), so say so.
   existingSources = [],
@@ -150,6 +151,7 @@ const ConnectBankModal = ({
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
+  const isEditing = Boolean(connection?.id);
 
   // Wipe ALL state whenever the modal closes — credentials must not
   // survive in memory longer than the wizard session.
@@ -162,23 +164,43 @@ const ConnectBankModal = ({
 
   // Opened as "update credentials" for a specific bank → skip the picker.
   useEffect(() => {
-    if (isOpen && initialBank && BANK_FORMS[initialBank]) {
-      setBank(initialBank);
+    const selectedBank = connection?.bank_source || initialBank;
+    if (isOpen && selectedBank && BANK_FORMS[selectedBank]) {
+      setBank(selectedBank);
       setCreds({});
+      setDisplayName(connection?.display_name || '');
       setStep(1);
     }
-  }, [isOpen, initialBank]);
+  }, [isOpen, initialBank, connection]);
 
-  const fields = bank ? BANK_FORMS[bank].fields : [];
+  const activeBank = bank || connection?.bank_source || null;
+  const fields = activeBank ? BANK_FORMS[activeBank].fields : [];
+  const credentialsTouched = fields.some((f) => (creds[f.key] || '').length > 0);
   const credsComplete = fields.every((f) => (creds[f.key] || '').trim().length > 0);
+  const canContinue = isEditing ? (!credentialsTouched || credsComplete) : credsComplete;
+  const consentRequired = !isEditing || credentialsTouched;
+  // Edit mode is known from props on the first render. Derive the visible
+  // step immediately so the bank picker never flashes before the effect that
+  // synchronizes the internal wizard state runs.
+  const visibleStep = isEditing && step === 0 ? 1 : step;
 
   const handleSubmit = useCallback(async () => {
-    if (!bank || !credsComplete || !consent || submitting) return;
+    if (!activeBank || !canContinue || (consentRequired && !consent) || submitting) return;
     setSubmitting(true);
     try {
-      const publicKey = await bankConnectionsApi.getPublicKey();
-      const envelope = sealCredentials(creds, publicKey);
-      await bankConnectionsApi.create(bank, envelope, displayName.trim() || undefined);
+      let envelope;
+      if (!isEditing || credentialsTouched) {
+        const publicKey = await bankConnectionsApi.getPublicKey();
+        envelope = sealCredentials(creds, publicKey);
+      }
+      if (isEditing) {
+        await bankConnectionsApi.update(connection.id, {
+          displayName: displayName.trim(),
+          encryptedCredentials: envelope,
+        });
+      } else {
+        await bankConnectionsApi.create(activeBank, envelope, displayName.trim() || undefined);
+      }
 
       setCreds({}); // drop plaintext from state immediately
       setSucceeded(true);
@@ -189,10 +211,10 @@ const ConnectBankModal = ({
     } finally {
       setSubmitting(false);
     }
-  }, [bank, creds, credsComplete, consent, submitting, displayName, queryClient, onSuccess, toast, t]);
+  }, [activeBank, canContinue, consentRequired, consent, submitting, isEditing, credentialsTouched, creds, connection, displayName, queryClient, onSuccess, toast, t]);
 
   const stepTitle = succeeded
-    ? t('connected')
+    ? t(isEditing ? 'connectionUpdated' : 'connected')
     : [
         kindFilter === 'bank'
           ? t('stepPickBankOnly', { fallback: t('stepPickBank') })
@@ -201,10 +223,11 @@ const ConnectBankModal = ({
             : t('stepPickBank'),
         t('stepCredentials'),
         t('stepConfirm'),
-      ][step];
+      ][visibleStep];
 
-  const modalTitle =
-    kindFilter === 'bank'
+  const modalTitle = isEditing
+    ? t('editConnection')
+    : kindFilter === 'bank'
       ? t('addBank')
       : kindFilter === 'credit_card'
         ? t('addCard')
@@ -222,7 +245,7 @@ const ConnectBankModal = ({
                 key={s}
                 className={cn(
                   'h-1.5 rounded-full transition-all duration-300',
-                  i === step ? 'w-8 bg-primary-500' : i < step ? 'w-4 bg-primary-300' : 'w-4 bg-gray-200 dark:bg-gray-700',
+                  i === visibleStep ? 'w-8 bg-primary-500' : i < visibleStep ? 'w-4 bg-primary-300' : 'w-4 bg-gray-200 dark:bg-gray-700',
                 )}
               />
             ))}
@@ -239,7 +262,7 @@ const ConnectBankModal = ({
               <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
                 <Check className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{t('connectedNote')}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">{t(isEditing ? 'connectionUpdatedNote' : 'connectedNote')}</p>
               <button
                 onClick={onClose}
                 className="w-full py-3 rounded-xl bg-primary-500 hover:bg-primary-600 text-white font-semibold transition-colors"
@@ -254,7 +277,7 @@ const ConnectBankModal = ({
               kinds of thing (a bank has a real balance and direct debits; a
               credit company has itemized charges that later post as one
               summarized debit in the bank). */}
-          {!succeeded && step === 0 && (
+          {!succeeded && visibleStep === 0 && (
             <motion.div key="pick" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="space-y-4">
               {[
                 { kind: 'bank',        title: t('bankAccounts'), icon: Landmark,   provides: t('banksProvide') },
@@ -298,14 +321,19 @@ const ConnectBankModal = ({
           )}
 
           {/* ── Step 2: credentials ─────────────────────────────────── */}
-          {!succeeded && step === 1 && bank && (
+          {!succeeded && visibleStep === 1 && activeBank && (
             <motion.div key="creds" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="space-y-3">
-              {existingSources.includes(bank) && (
+              {isEditing && (
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 px-3 py-2 text-[11px] text-blue-700 dark:text-blue-300 leading-snug">
+                  {t('editCredentialsHint')}
+                </div>
+              )}
+              {!isEditing && existingSources.includes(activeBank) && (
                 <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 px-3 py-2 text-[11px] text-indigo-700 dark:text-indigo-300 leading-snug">
                   {t('replacesExistingNote')}
                 </div>
               )}
-              {!PROVEN_SOURCES.has(bank) && (
+              {!PROVEN_SOURCES.has(activeBank) && (
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
                   {t('betaNote')}
                 </div>
@@ -341,6 +369,10 @@ const ConnectBankModal = ({
                 </div>
               ))}
 
+              {isEditing && credentialsTouched && !credsComplete && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">{t('completeAllCredentials')}</p>
+              )}
+
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">
                   {t('displayNameLabel')}
@@ -358,7 +390,7 @@ const ConnectBankModal = ({
           )}
 
           {/* ── Step 3: security explainer + consent ────────────────── */}
-          {!succeeded && step === 2 && (
+          {!succeeded && visibleStep === 2 && (
             <motion.div key="confirm" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} className="space-y-4">
               <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 space-y-2.5">
                 <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-semibold text-sm">
@@ -373,7 +405,7 @@ const ConnectBankModal = ({
                 ))}
               </div>
 
-              <label className="flex items-start gap-3 cursor-pointer select-none">
+              {consentRequired && <label className="flex items-start gap-3 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={consent}
@@ -381,27 +413,32 @@ const ConnectBankModal = ({
                   className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-xs text-gray-600 dark:text-gray-300">{t('consentLabel')}</span>
-              </label>
+              </label>}
+              {!consentRequired && (
+                <p className="rounded-xl bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                  {t('nicknameOnlyConfirm')}
+                </p>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* ── Navigation ──────────────────────────────────────────────── */}
-        {!succeeded && step > 0 && (
+        {!succeeded && visibleStep > 0 && (
           <div className="flex gap-3">
-            <button
+            {!(isEditing && visibleStep === 1) && <button
               onClick={() => setStep((s) => s - 1)}
               disabled={submitting}
               className="flex items-center justify-center gap-1 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
             >
               <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
               {t('back')}
-            </button>
+            </button>}
 
-            {step === 1 && (
+            {visibleStep === 1 && (
               <button
                 onClick={() => setStep(2)}
-                disabled={!credsComplete}
+                disabled={!canContinue}
                 className="flex-1 flex items-center justify-center gap-1 py-3 rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-colors"
               >
                 {t('next')}
@@ -409,14 +446,14 @@ const ConnectBankModal = ({
               </button>
             )}
 
-            {step === 2 && (
+            {visibleStep === 2 && (
               <button
                 onClick={handleSubmit}
-                disabled={!consent || submitting}
+                disabled={(consentRequired && !consent) || submitting}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-colors"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {submitting ? t('connecting') : t('connect')}
+                {submitting ? t(isEditing ? 'savingChanges' : 'connecting') : t(isEditing ? 'saveChanges' : 'connect')}
               </button>
             )}
           </div>

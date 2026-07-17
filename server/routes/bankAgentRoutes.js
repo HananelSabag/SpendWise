@@ -23,6 +23,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { buildAgentClaimScope } = require('../services/agentClaimScope');
+const { normalizeAgentFailure } = require('../services/bankAgentFailureService');
 const { ingestAccounts } = require('../services/bankSyncService');
 const { enqueueDueJobs } = require('../services/syncSchedulingService');
 
@@ -144,7 +145,7 @@ router.post('/jobs/claim', async (req, res) => {
 // ── POST /jobs/:id/result ─────────────────────────────────────────────────────
 // Agent reports the outcome of a claimed job.
 // Body (success): { success: true,  accounts: [{ account_number, type, balance, txns }] }
-// Body (failure): { success: false, error: "message", transient?: boolean }
+// Body (failure): { success: false, error: "message", transient?: boolean, error_code?: string }
 //   transient=true marks expected, self-resolving declines (e.g. the agent's
 //   local scrape cooldown) — the job is recorded as failed with its message,
 //   but the connection's consecutive_failures counter is NOT incremented, so
@@ -153,7 +154,7 @@ router.post('/jobs/:id/result', async (req, res) => {
   const jobId = Number(req.params.id);
   if (!Number.isInteger(jobId)) return res.status(400).json({ error: 'Invalid job id' });
 
-  const { success, accounts, error: agentError, transient } = req.body || {};
+  const { success, accounts, error: agentError, transient, error_code: errorCode } = req.body || {};
   if (typeof success !== 'boolean') {
     return res.status(400).json({ error: 'success (boolean) is required' });
   }
@@ -219,11 +220,17 @@ router.post('/jobs/:id/result', async (req, res) => {
     }
 
     // ── Failure path ──
-    const errMsg = String(agentError || 'Unknown agent error').slice(0, 500);
-    const isTransient = transient === true;
+    const failure = normalizeAgentFailure({ agentError, transient, errorCode });
+    const errMsg = failure.rawError;
+    const isTransient = failure.transient;
     await client.query(
       `UPDATE bank_sync_jobs SET status='failed', finished_at=NOW(), result=$2 WHERE id=$1`,
-      [jobId, JSON.stringify({ error: errMsg, transient: isTransient })],
+      [jobId, JSON.stringify({
+        error: errMsg,
+        transient: isTransient,
+        code: failure.code,
+        terminal: failure.terminal,
+      })],
     );
 
     if (isTransient) {
@@ -238,16 +245,41 @@ router.post('/jobs/:id/result', async (req, res) => {
       `UPDATE bank_connections SET
          consecutive_failures = consecutive_failures + 1,
          last_error = $2,
-         status = CASE WHEN consecutive_failures + 1 >= $3 THEN 'error' ELSE status END
+         status = CASE WHEN $4 OR consecutive_failures + 1 >= $3 THEN 'error' ELSE status END
        WHERE id = $1
        RETURNING consecutive_failures, status`,
-      [job.connection_id, errMsg, AUTO_PAUSE_AFTER_FAILURES],
+      [job.connection_id, failure.userMessage, AUTO_PAUSE_AFTER_FAILURES, failure.terminal],
     );
+
+    if (failure.terminal) {
+      // A user-action failure must not leave already queued work behind. A
+      // running sibling result will be rejected because its row is no longer
+      // running, preventing stale credentials from re-breaking an edited link.
+      await client.query(
+        `UPDATE bank_sync_jobs SET
+           status='failed', finished_at=NOW(),
+           result=jsonb_build_object(
+             'error', 'Connection requires updated login details',
+             'code', 'CONNECTION_REQUIRES_ACTION',
+             'terminal', true
+           )
+         WHERE connection_id=$1 AND id<>$2 AND status IN ('pending','running')`,
+        [job.connection_id, jobId],
+      );
+    }
 
     await client.query('COMMIT');
     const { consecutive_failures, status } = failUpdate.rows[0];
-    logger.warn('bank-agent: job failed', { jobId, consecutive_failures, connectionStatus: status });
-    return res.json({ ok: true, consecutive_failures, connection_status: status });
+    logger.warn('bank-agent: job failed', {
+      jobId, consecutive_failures, connectionStatus: status,
+      code: failure.code, terminal: failure.terminal,
+    });
+    return res.json({
+      ok: true,
+      consecutive_failures,
+      connection_status: status,
+      terminal: failure.terminal,
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('bank-agent: result processing failed', { error: err.message, jobId });

@@ -34,6 +34,14 @@ export const bankConnectionsApi = {
   rename: (id, displayName) =>
     api.patch(`/bank-connections/${id}`, { display_name: displayName }).then((r) => r.data.connection),
 
+  /** Update the nickname and optionally replace the encrypted login details. */
+  update: (id, { displayName, encryptedCredentials } = {}) => {
+    const body = {};
+    if (displayName !== undefined) body.display_name = displayName;
+    if (encryptedCredentials !== undefined) body.encrypted_credentials = encryptedCredentials;
+    return api.patch(`/bank-connections/${id}`, body).then((r) => r.data.connection);
+  },
+
   /**
    * Permanent delete — the ciphertext is gone forever. Synced data is KEPT
    * unless purgeData is true, which also removes every transaction/account

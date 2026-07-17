@@ -35,7 +35,7 @@ export default function BankSyncPageV2() {
   const [tab, setTab] = useState('overview');
   const [showConnect, setShowConnect] = useState(false);
   const [connectKind, setConnectKind] = useState(null);
-  const [initialBank, setInitialBank] = useState(null);
+  const [editingConnection, setEditingConnection] = useState(null);
 
   const connectionsQuery = useQuery({
     queryKey: ['bankConnections', user?.id],
@@ -51,8 +51,13 @@ export default function BankSyncPageV2() {
   const sources = statsQuery.data?.sources || EMPTY_LIST;
   const groupedConnections = useMemo(() => split(connections, 'bank_source'), [connections]);
   const auto = nextAutoSync();
-  const openConnect = useCallback((bank = null, kind = null) => {
-    setInitialBank(bank);
+  const openConnect = useCallback((kind = null) => {
+    setEditingConnection(null);
+    setConnectKind(kind);
+    setShowConnect(true);
+  }, []);
+  const openEdit = useCallback((connection, kind = null) => {
+    setEditingConnection(connection);
     setConnectKind(kind);
     setShowConnect(true);
   }, []);
@@ -108,15 +113,15 @@ export default function BankSyncPageV2() {
 
         {tab === 'accounts' && (
           <div className="grid gap-7 lg:grid-cols-2">
-            <BankConnectionGroup kind="bank" items={groupedConnections.banks} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} />
-            <BankConnectionGroup kind="credit_card" items={groupedConnections.cards} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} />
+            <BankConnectionGroup kind="bank" items={groupedConnections.banks} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} onOpenEdit={openEdit} />
+            <BankConnectionGroup kind="credit_card" items={groupedConnections.cards} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} onOpenEdit={openEdit} />
           </div>
         )}
         {tab === 'agent' && <div className="mx-auto max-w-3xl"><SyncMethodPanel t={t} hasConnections={connections.length > 0} /></div>}
         {tab === 'help' && <div className="mx-auto max-w-3xl"><HowItWorksPanel t={t} defaultOpen /></div>}
       </main>
 
-      <ConnectBankModal isOpen={showConnect} onClose={() => { setShowConnect(false); setInitialBank(null); setConnectKind(null); }} initialBank={initialBank} kindFilter={connectKind} existingSources={connections.map((c) => c.bank_source)} />
+      <ConnectBankModal isOpen={showConnect} onClose={() => { setShowConnect(false); setEditingConnection(null); setConnectKind(null); }} connection={editingConnection} kindFilter={connectKind} existingSources={connections.map((c) => c.bank_source)} />
     </div>
   );
 }

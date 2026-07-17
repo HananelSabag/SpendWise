@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  RefreshCw, Clock, AlertCircle, Pause, Play, Trash2, Loader2, KeyRound,
+  RefreshCw, Clock, AlertCircle, Pause, Play, Trash2, Loader2, KeyRound, Pencil,
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../../hooks/useToast';
@@ -22,12 +22,22 @@ const SYNC_ERROR_KEYS = {
   SYNC_TOO_SOON: 'syncTooSoon',
   SYNC_IN_FLIGHT: 'syncInFlight',
   CONNECTION_PAUSED: 'connectionPaused',
+  CONNECTION_REQUIRES_ACTION: 'connectionRequiresAction',
+  CREDENTIALS_UPDATE_REQUIRED: 'connectionRequiresAction',
 };
+
+const CREDENTIAL_ACTION_CODES = new Set([
+  'AUTH_INVALID',
+  'PASSWORD_CHANGE_REQUIRED',
+  'ACCOUNT_BLOCKED',
+  'MFA_REQUIRED',
+  'CREDENTIALS_INVALID_FORMAT',
+]);
 
 // Mirrors MANUAL_SYNC_GAP_HOURS in server/routes/bankConnectionsRoutes.js.
 // Used only to show the user WHEN they'll be able to sync again — the
 // server is the actual source of truth/enforcement.
-export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCredentials }) {
+export default function BankConnectionCard({ conn, stat, t, lang, onEditConnection }) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const isAdmin = useIsAdmin();
@@ -116,6 +126,9 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
 
   const { tint } = bankBrand(conn.bank_source);
   const isError = conn.status === 'error';
+  const failureCode = conn.latest_job_result?.code;
+  const requiresCredentialAction = conn.latest_job_result?.terminal === true
+    && CREDENTIAL_ACTION_CODES.has(failureCode);
   const isPending = conn.latest_job_status === 'pending';
   const isRunning = conn.latest_job_status === 'running';
   const accounts = stat?.accounts || [];
@@ -178,16 +191,16 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
             >
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>{t('pausedAfterFailures')}</span>
+                <span>{t(requiresCredentialAction ? 'credentialsRejected' : 'pausedAfterFailures')}</span>
               </div>
               {/* The most common cause is a changed bank password — offer the
                   actual fix, not just pause/resume/delete. */}
-              {onUpdateCredentials && (
+              {onEditConnection && (
                 <button
-                  onClick={() => onUpdateCredentials(conn.bank_source)}
+                  onClick={() => onEditConnection(conn)}
                   className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-red-700 dark:text-red-200 underline underline-offset-2 hover:opacity-80"
                 >
-                  <KeyRound className="w-3 h-3" /> {t('updateCredentials')}
+                  <KeyRound className="w-3 h-3" /> {t(requiresCredentialAction ? 'fixConnection' : 'updateCredentials')}
                 </button>
               )}
             </motion.div>
@@ -247,7 +260,15 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
 
         {/* Actions */}
         <div className="mt-3 flex gap-2">
-          {isError ? (
+          {isError && requiresCredentialAction ? (
+            <button
+              onClick={() => onEditConnection?.(conn)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-xs font-semibold transition-colors bg-red-600 hover:bg-red-700"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              {t('fixConnection')}
+            </button>
+          ) : isError ? (
             <button
               onClick={() => retryMutation.mutate()}
               disabled={retryMutation.isPending}
@@ -272,7 +293,7 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
           </button>
           )}
 
-          {conn.status === 'active' ? (
+          {!isError && (conn.status === 'active' ? (
             <button
               onClick={() => statusMutation.mutate('paused')}
               disabled={statusMutation.isPending}
@@ -288,7 +309,17 @@ export default function BankConnectionCard({ conn, stat, t, lang, onUpdateCreden
             >
               <Play className="w-3.5 h-3.5" /> {t('resume')}
             </button>
-          )}
+          ))}
+
+          <button
+            onClick={() => onEditConnection?.(conn)}
+            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-xs font-medium hover:bg-white/70 dark:hover:bg-gray-800 transition-colors"
+            aria-label={t('editConnection')}
+            title={t('editConnection')}
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t('edit')}</span>
+          </button>
 
           <button
             onClick={() => setConfirmDelete(v => !v)}

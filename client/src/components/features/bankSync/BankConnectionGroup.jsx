@@ -16,6 +16,7 @@ const BankConnectionGroup = React.memo(function BankConnectionGroup({
   he,
   currentLanguage,
   onOpenConnect,
+  onOpenEdit,
 }) {
   const isCard = kind === 'credit_card';
   const Icon = isCard ? CreditCard : Landmark;
@@ -32,7 +33,7 @@ const BankConnectionGroup = React.memo(function BankConnectionGroup({
         </div>
         <button
           type="button"
-          onClick={() => onOpenConnect(null, kind)}
+          onClick={() => onOpenConnect(kind)}
           className={cn(
             'flex shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold text-white',
             isCard ? 'bg-violet-600' : 'bg-indigo-600',
@@ -50,12 +51,12 @@ const BankConnectionGroup = React.memo(function BankConnectionGroup({
           stat={sources.find((source) => source.source === conn.bank_source)}
           t={t}
           lang={currentLanguage}
-          onUpdateCredentials={(bank) => onOpenConnect(bank, kind)}
+          onEditConnection={(connection) => onOpenEdit(connection, kind)}
         />
       )) : (
         <button
           type="button"
-          onClick={() => onOpenConnect(null, kind)}
+          onClick={() => onOpenConnect(kind)}
           className="w-full rounded-2xl border-2 border-dashed border-gray-300 p-7 text-sm text-gray-500 dark:border-gray-700"
         >
           {isCard ? t('cardSectionEmpty') : t('bankSectionEmpty')}

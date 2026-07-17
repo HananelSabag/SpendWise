@@ -26,6 +26,13 @@ const MAX_CIPHERTEXT_LEN = 4096;      // sealed box of a creds JSON is well unde
 const MANUAL_SYNCS_PER_DAY = 2;
 const MANUAL_SYNC_GAP_HOURS = 3;
 
+function validCiphertext(value) {
+  return typeof value === 'string'
+    && value.length >= 32
+    && value.length <= MAX_CIPHERTEXT_LEN
+    && /^[A-Za-z0-9+/=]+$/.test(value);
+}
+
 const connectionsLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 60,
@@ -122,16 +129,15 @@ router.post('/', async (req, res) => {
   if (!VALID_SOURCES.includes(bank_source)) {
     return res.status(400).json({ error: 'Invalid bank_source' });
   }
-  if (typeof encrypted_credentials !== 'string' ||
-      encrypted_credentials.length < 32 ||
-      encrypted_credentials.length > MAX_CIPHERTEXT_LEN ||
-      !/^[A-Za-z0-9+/=]+$/.test(encrypted_credentials)) {
+  if (!validCiphertext(encrypted_credentials)) {
     return res.status(400).json({ error: 'Invalid encrypted_credentials' });
   }
   const name = typeof display_name === 'string' ? display_name.trim().slice(0, 100) : null;
 
+  const client = await db.getClient();
   try {
-    const result = await db.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       `INSERT INTO bank_connections (user_id, bank_source, encrypted_credentials, display_name)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (user_id, bank_source)
@@ -144,42 +150,108 @@ router.post('/', async (req, res) => {
        RETURNING id, bank_source, display_name, status, created_at`,
       [req.user.id, bank_source, encrypted_credentials, name],
     );
+    await client.query(
+      `UPDATE bank_sync_jobs SET
+         status='failed', finished_at=NOW(),
+         result='{"error":"Login details were replaced before this sync finished","transient":true}'::jsonb
+       WHERE connection_id=$1 AND status IN ('pending','running')`,
+      [result.rows[0].id],
+    );
+    await client.query('COMMIT');
     logger.info('bank-connections: created/updated', { userId: req.user.id, bank: bank_source });
     res.status(201).json({ ok: true, connection: result.rows[0] });
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error('bank-connections: create failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to create connection' });
+  } finally {
+    client.release();
   }
 });
 
 // ── PATCH /:id ────────────────────────────────────────────────────────────────
-// Pause / resume / rename. Body: { status?, display_name? }
+// Pause / resume / rename / replace login details.
+// Body: { status?, display_name?, encrypted_credentials? }
 router.patch('/:id', async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'Invalid id' });
 
-  const { status, display_name } = req.body;
+  const { status, display_name, encrypted_credentials } = req.body;
+  const hasDisplayName = Object.prototype.hasOwnProperty.call(req.body || {}, 'display_name');
+  const hasCredentials = Object.prototype.hasOwnProperty.call(req.body || {}, 'encrypted_credentials');
   if (status !== undefined && !['active', 'paused'].includes(status)) {
     return res.status(400).json({ error: 'status must be active or paused' });
   }
+  if (hasCredentials && !validCiphertext(encrypted_credentials)) {
+    return res.status(400).json({ error: 'Invalid encrypted_credentials' });
+  }
+  if (status === undefined && !hasDisplayName && !hasCredentials) {
+    return res.status(400).json({ error: 'No changes supplied' });
+  }
 
+  const client = await db.getClient();
   try {
-    const result = await db.query(
+    await client.query('BEGIN');
+    const current = await client.query(
+      `SELECT c.id, c.status,
+              j.result AS latest_job_result
+       FROM bank_connections c
+       LEFT JOIN LATERAL (
+         SELECT result FROM bank_sync_jobs
+         WHERE connection_id=c.id
+         ORDER BY requested_at DESC LIMIT 1
+       ) j ON true
+       WHERE c.id=$1 AND c.user_id=$2
+       FOR UPDATE OF c`,
+      [id, req.user.id],
+    );
+    if (current.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Connection not found' });
+    }
+
+    const latestResult = current.rows[0].latest_job_result;
+    if (status === 'active' && !hasCredentials && latestResult?.terminal === true) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'Update the login details before resuming this connection',
+        code: 'CREDENTIALS_UPDATE_REQUIRED',
+      });
+    }
+
+    const name = hasDisplayName && typeof display_name === 'string'
+      ? display_name.trim().slice(0, 100) || null
+      : null;
+    const result = await client.query(
       `UPDATE bank_connections SET
-         status               = COALESCE($3, status),
-         display_name         = COALESCE($4, display_name),
-         consecutive_failures = CASE WHEN $3 = 'active' THEN 0 ELSE consecutive_failures END,
-         last_error           = CASE WHEN $3 = 'active' THEN NULL ELSE last_error END
+         encrypted_credentials = CASE WHEN $3 THEN $4 ELSE encrypted_credentials END,
+         display_name          = CASE WHEN $5 THEN $6 ELSE display_name END,
+         status                = CASE WHEN $3 THEN 'active' ELSE COALESCE($7, status) END,
+         consecutive_failures  = CASE WHEN $3 OR $7 = 'active' THEN 0 ELSE consecutive_failures END,
+         last_error            = CASE WHEN $3 OR $7 = 'active' THEN NULL ELSE last_error END
        WHERE id = $1 AND user_id = $2
        RETURNING id, bank_source, display_name, status`,
-      [id, req.user.id, status ?? null,
-       typeof display_name === 'string' ? display_name.trim().slice(0, 100) : null],
+      [id, req.user.id, hasCredentials, encrypted_credentials ?? null,
+       hasDisplayName, name, status ?? null],
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Connection not found' });
+
+    if (hasCredentials) {
+      await client.query(
+        `UPDATE bank_sync_jobs SET
+           status='failed', finished_at=NOW(),
+           result='{"error":"Login details were replaced before this sync finished","transient":true}'::jsonb
+         WHERE connection_id=$1 AND status IN ('pending','running')`,
+        [id],
+      );
+    }
+    await client.query('COMMIT');
     res.json({ ok: true, connection: result.rows[0] });
   } catch (err) {
+    await client.query('ROLLBACK');
     logger.error('bank-connections: patch failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to update connection' });
+  } finally {
+    client.release();
   }
 });
 
@@ -282,7 +354,13 @@ router.post('/:id/sync', async (req, res) => {
     );
     if (conn.rows.length === 0) return res.status(404).json({ error: 'Connection not found' });
     if (conn.rows[0].status !== 'active') {
-      return res.status(409).json({ error: 'Connection is paused', code: 'CONNECTION_PAUSED' });
+      const requiresAction = conn.rows[0].status === 'error';
+      return res.status(409).json({
+        error: requiresAction
+          ? 'Update the connection before syncing again'
+          : 'Connection is paused',
+        code: requiresAction ? 'CONNECTION_REQUIRES_ACTION' : 'CONNECTION_PAUSED',
+      });
     }
 
     // Expire stale jobs so one dead job can't block "Sync Now" forever:

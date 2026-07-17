@@ -115,6 +115,8 @@ export default {
   connecting: 'Connecting...',
   connected: 'Bank connected!',
   connectedNote: 'The first sync will run within a few hours. Transactions appear automatically.',
+  connectionUpdated: 'Connection updated',
+  connectionUpdatedNote: 'Your changes were saved. You can start a sync when you are ready.',
   done: 'Done',
 
   // Credential fields (per bank)
@@ -128,6 +130,9 @@ export default {
   displayNameLabel: 'Nickname (optional)',
   displayNamePlaceholder: 'e.g. My main account',
   replacesExistingNote: 'This institution is already connected — saving here replaces its stored login details.',
+  editCredentialsHint: 'Edit the nickname below, or enter every login field to replace the saved credentials. Leave all login fields blank to keep them unchanged.',
+  completeAllCredentials: 'Complete every login field to replace the saved credentials.',
+  nicknameOnlyConfirm: 'Only the connection nickname will change. Your saved login details remain untouched.',
   betaBadge: 'beta',
   betaNote: 'This institution is fully supported but has not been battle-tested with a live account yet. If a sync fails, let us know.',
 
@@ -144,6 +149,7 @@ export default {
   statusPaused: 'Paused',
   statusError: 'Needs attention',
   pausedAfterFailures: 'Paused after repeated failures — usually a changed bank password',
+  credentialsRejected: 'The bank rejected these login details. Syncing stopped immediately to protect the account.',
   tryAgain: 'Try again',
   lastSyncLabel: 'Last sync',
   neverSynced: 'Never synced',
@@ -170,6 +176,7 @@ export default {
   nextSyncAt: 'Next manual sync available at {{time}}',
   syncInFlight: 'A sync is already in progress',
   connectionPaused: 'This connection is paused',
+  connectionRequiresAction: 'Update this connection before syncing again',
 
   // Jobs history
   recentSyncs: 'Recent syncs',
@@ -183,6 +190,11 @@ export default {
 
   // Update credentials
   updateCredentials: 'Update credentials',
+  editConnection: 'Edit connection',
+  edit: 'Edit',
+  fixConnection: 'Fix connection',
+  saveChanges: 'Save changes',
+  savingChanges: 'Saving...',
 
   // Per-account sync toggle
   accounts: 'Accounts',
