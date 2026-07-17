@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Laptop, Server, Check, Loader2, Download, KeyRound, HelpCircle } from 'lucide-react';
+import { Laptop, Server, Check, Loader2, Download, KeyRound, HelpCircle, ShieldCheck, ExternalLink } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '../../ui';
 import { useToast } from '../../../hooks/useToast';
@@ -21,6 +21,7 @@ import agentPairingApi from '../../../api/agentPairing';
 
 // Always points at the newest release — no client change needed per Agent build.
 const AGENT_DOWNLOAD_URL = 'https://github.com/HananelSabag/spendwise-agent/releases/latest/download/SpendWiseAgent-ForUsers.zip';
+const AGENT_SOURCE_URL = 'https://github.com/HananelSabag/spendwise-agent';
 
 export default function SyncMethodPanel({ t, hasConnections }) {
   const toast = useToast();
@@ -80,6 +81,38 @@ export default function SyncMethodPanel({ t, hasConnections }) {
       <div>
         <h2 className="text-sm font-bold text-gray-900 dark:text-white">{t('syncMethodTitle')}</h2>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{t('syncMethodSubtitle')}</p>
+      </div>
+
+      <div className="flex gap-3 rounded-lg border border-emerald-200/80 bg-emerald-50/70 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/25">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/50">
+          <ShieldCheck className="h-4 w-4 text-emerald-700 dark:text-emerald-300" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-bold text-emerald-950 dark:text-emerald-100">
+            {t('syncMethodSecurityTitle')}
+          </p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-emerald-800 dark:text-emerald-300">
+            {t('syncMethodSecurityRule')}
+          </p>
+          <details className="group mt-1.5">
+            <summary className="cursor-pointer select-none text-[11px] font-semibold text-emerald-700 marker:text-emerald-500 hover:text-emerald-900 dark:text-emerald-300 dark:hover:text-emerald-100">
+              {t('syncMethodSecurityDetails')}
+            </summary>
+            <div className="mt-2 space-y-1.5 border-t border-emerald-200/70 pt-2 text-[10px] leading-relaxed text-emerald-800 dark:border-emerald-800/60 dark:text-emerald-300">
+              <p>{t('syncMethodSecurityEncryption')}</p>
+              <p>{t('syncMethodSecurityLocalKey')}</p>
+              <p>{t('syncMethodSecurityData')}</p>
+              <a
+                href={AGENT_SOURCE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-semibold underline decoration-emerald-400 underline-offset-2 hover:text-emerald-950 dark:hover:text-emerald-100"
+              >
+                {t('syncMethodSecuritySource')} <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </details>
+        </div>
       </div>
 
       {isLoading ? (
