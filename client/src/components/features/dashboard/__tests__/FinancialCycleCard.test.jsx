@@ -88,7 +88,12 @@ describe('FinancialCycleCard', () => {
   it('shows what the account really did, so the deficit is explainable', () => {
     renderCard();
     expect(screen.getByText('₪7,321.80')).toBeInTheDocument();
-    expect(screen.getByText('What the account actually did')).toBeInTheDocument();
+    expect(screen.getByText('Change in your balance')).toBeInTheDocument();
+  });
+
+  it('marks an incomplete cycle before presenting understated figures', () => {
+    renderCard({ cycle: { ...CYCLE, partials: [{ source: 'max', chargeDate: '2026-05-10' }] } });
+    expect(screen.getByText('This cycle is incomplete')).toBeInTheDocument();
   });
 
   it('keeps the projection separate from settled figures', () => {
@@ -133,6 +138,6 @@ describe('FinancialCycleCard', () => {
   it('asks for a salary link instead of inventing a window', () => {
     renderCard({ needsSalaryLink: true, cycle: null });
     expect(screen.getByText('Link your salary to see your cycle')).toBeInTheDocument();
-    expect(screen.queryByText('What the account actually did')).not.toBeInTheDocument();
+    expect(screen.queryByText('Change in your balance')).not.toBeInTheDocument();
   });
 });

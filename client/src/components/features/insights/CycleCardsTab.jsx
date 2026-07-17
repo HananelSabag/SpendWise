@@ -1,27 +1,125 @@
 /**
- * One row per card, showing how it actually reaches the bank.
+ * One card at a time — money first, brand last.
  *
- * A credit card lumps a month of purchases into a single debit on its statement day; a debit
- * card sends every purchase through on its own. We detect which from the bank's own lines
- * rather than assuming (FINANCIAL_CYCLE_SPEC.md §2a), and this tab makes that visible — a user
- * comparing us against their statement should see exactly the same shape.
+ * The only question a user asks here is "how much did this card cost me this cycle, and on
+ * what?". So each card leads with its total, then splits into the monthly bill versus charges
+ * that hit the account directly (FINANCIAL_CYCLE_SPEC.md §2) — and every split opens into the
+ * exact purchases behind it. Brand names (MAX/CAL) are deliberately quiet: the number is the
+ * information, not the logo. How the card settles is detected from the bank's own lines, never
+ * assumed (§2a), so a user comparing us to their statement sees the same shape.
  */
 
-import React from 'react';
-import { AlertTriangle, CreditCard } from 'lucide-react';
+import React, { useState } from 'react';
+import { AlertTriangle, ChevronRight, Clock3, CreditCard } from 'lucide-react';
 
 import { InfoHint } from '../../ui';
+import { useIsMobile } from '../../../hooks/useIsMobile';
+import BottomSheet from '../../common/BottomSheet';
+import Modal from '../../ui/Modal';
 
 const SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex' };
+const cardName = (s) => SOURCE_NAME[s] || String(s || '').toUpperCase();
+const last4 = (n) => String(n || '').slice(-4);
 
-export default function CycleCardsTab({ cycle, formatCurrency, t }) {
+const shortDate = (iso, language) => {
+  if (!iso) return '';
+  const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' }).format(d);
+};
+
+const signed = (value, formatCurrency) => `${Number(value) < 0 ? '−' : '+'}${formatCurrency(Math.abs(Number(value) || 0))}`;
+
+/** The purchases behind one tapped split, newest first. */
+function ChargeList({ group, formatCurrency, t, language }) {
+  if (!group) return null;
+  const total = (group.txns || []).reduce((sum, txn) => sum + Number(txn.amount || 0), 0);
+  return (
+    <div className="space-y-3 p-4 sm:p-0">
+      <div className="flex items-end justify-between gap-3 rounded-2xl bg-gray-50 px-4 py-3 dark:bg-gray-800/70">
+        <div className="min-w-0">
+          <p className="text-xs text-gray-500">{group.meta}</p>
+          <p className="mt-0.5 text-[11px] text-gray-400">{t('cycle.rowsCounted', { fallback: 'transactions counted' })}: {(group.txns || []).length}</p>
+        </div>
+        <p className="shrink-0 text-lg font-black tabular-nums text-gray-950 dark:text-white">{signed(total, formatCurrency)}</p>
+      </div>
+      <div className="max-h-[60vh] space-y-1 overflow-y-auto sm:max-h-96">
+        {(group.txns || []).map((txn) => {
+          const income = Number(txn.amount) > 0;
+          return (
+            <div key={txn.id} className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/60">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{txn.description || '—'}</p>
+                <p className="mt-0.5 flex items-center gap-2 text-[11px] text-gray-400">
+                  <span>{shortDate(txn.date, language)}</span>
+                  {txn.installments && (
+                    <span className="text-indigo-500">{t('cycle.installment', { fallback: 'payment' })} {txn.installments.number}/{txn.installments.total}</span>
+                  )}
+                  {txn.currency && <span className="text-violet-500">{txn.currency}</span>}
+                  {txn.pending && (
+                    <span className="inline-flex items-center gap-1 text-amber-600"><Clock3 className="h-3 w-3" />{t('cycle.pending', { fallback: 'pending' })}</span>
+                  )}
+                </p>
+              </div>
+              <p className={`shrink-0 whitespace-nowrap text-sm font-black tabular-nums ${income ? 'text-emerald-600' : 'text-gray-950 dark:text-white'}`}>
+                {signed(txn.amount, formatCurrency)}
+              </p>
+            </div>
+          );
+        })}
+        {!(group.txns || []).length && <p className="py-8 text-center text-sm text-gray-500">{t('cycle.noRows', { fallback: 'Nothing here' })}</p>}
+      </div>
+    </div>
+  );
+}
+
+function ChargeRow({ label, meta, amount, formatCurrency, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex w-full items-center gap-3 rounded-xl bg-gray-50 px-3 py-2.5 text-start transition hover:bg-gray-100 dark:bg-gray-800/60 dark:hover:bg-gray-800"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-bold text-gray-800 dark:text-gray-100">{label}</span>
+        {meta && <span className="mt-0.5 block truncate text-[10px] text-gray-400">{meta}</span>}
+      </span>
+      <span className="shrink-0 whitespace-nowrap text-sm font-black tabular-nums text-gray-900 dark:text-white">{signed(amount, formatCurrency)}</span>
+      <ChevronRight className="h-4 w-4 shrink-0 opacity-35 transition group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
+    </button>
+  );
+}
+
+export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en' }) {
+  const isMobile = useIsMobile();
+  const [group, setGroup] = useState(null);
   const cards = cycle?.cards || [];
   const events = cycle?.expenses?.events || [];
   const unreconciled = cycle?.unreconciledCardEvents || [];
 
-  const totalFor = (card) => events
-    .filter((e) => e.source === card.source && e.accountNumber === card.accountNumber)
-    .reduce((sum, e) => sum + Number(e.total || 0), 0);
+  const countLabel = (n) => `${n} ${n === 1 ? t('cycle.txn', { fallback: 'transaction' }) : t('cycle.txns', { fallback: 'transactions' })}`;
+
+  /** Everything charged to this card this cycle, split into the monthly bill vs direct charges. */
+  const splitFor = (card) => {
+    const mine = events.filter((e) => e.source === card.source && e.accountNumber === card.accountNumber);
+    const bucket = (klass) => {
+      const evs = mine.filter((e) => e.class === klass);
+      return {
+        has: evs.length > 0,
+        total: evs.reduce((sum, e) => sum + Number(e.total || 0), 0),
+        count: evs.reduce((sum, e) => sum + Number(e.count || 0), 0),
+        chargeDate: evs.length === 1 ? evs[0].chargeDate : null,
+        txns: evs.flatMap((e) => e.txns || []),
+      };
+    };
+    return {
+      total: mine.reduce((sum, e) => sum + Number(e.total || 0), 0),
+      statement: bucket('statement'),
+      immediate: bucket('immediate'),
+    };
+  };
+
+  const detail = <ChargeList group={group} formatCurrency={formatCurrency} t={t} language={language} />;
 
   return (
     <div className="space-y-3">
@@ -36,42 +134,76 @@ export default function CycleCardsTab({ cycle, formatCurrency, t }) {
           </div>
         </div>
       )}
+
       {cards.map((card) => {
         const passthrough = card.settlement?.mode === 'passthrough';
         const day = card.statementDay?.certain ? card.statementDay.day : null;
+        const split = splitFor(card);
+        const title = `${cardName(card.source)} ••${last4(card.accountNumber)}`;
+        const modeLabel = passthrough
+          ? t('cycle.modeDebit', { fallback: 'Debit — each purchase goes through on its own' })
+          : day
+            ? `${t('cycle.billedOn', { fallback: 'Billed on the' })} ${day}`
+            : t('cycle.modeUnknown', { fallback: 'No billing day detected yet' });
+
         return (
-          <div key={`${card.source}-${card.accountNumber}`} className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
+          <div key={`${card.source}-${card.accountNumber}`} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+            {/* Brand is quiet; the money is loud. */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <span className="rounded-xl bg-violet-50 p-2 text-violet-500 dark:bg-violet-950/25"><CreditCard className="h-4 w-4" /></span>
+                <span className="shrink-0 rounded-xl bg-violet-50 p-2 text-violet-500 dark:bg-violet-950/25"><CreditCard className="h-4 w-4" /></span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-gray-900 dark:text-white">
-                    {SOURCE_NAME[card.source] || card.source} ••••{String(card.accountNumber || '').slice(-4)}
-                  </p>
-                  <p className="flex items-center gap-1 text-[11px] text-gray-400">
-                    {passthrough
-                      ? t('cycle.modeDebit', { fallback: 'Debit — each purchase goes through on its own' })
-                      : day
-                        ? `${t('cycle.billedOn', { fallback: 'Billed on the' })} ${day}`
-                        : t('cycle.modeUnknown', { fallback: 'No billing day detected yet' })}
+                  <p className="flex items-center gap-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    ••{last4(card.accountNumber)} · {modeLabel}
                     <InfoHint title={t('cycle.howItSettles', { fallback: 'How it settles' })}>
                       {passthrough
                         ? t('cycle.modeDebitHint', { fallback: 'Every purchase hits your account separately, so there is no monthly bill to wait for.' })
                         : t('cycle.modeCreditHint', { fallback: 'Purchases pile up and leave your account as one charge on this day. Foreign purchases often go through immediately instead.' })}
                     </InfoHint>
                   </p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-300 dark:text-gray-600">{cardName(card.source)}</p>
                 </div>
               </div>
-              <p className="shrink-0 text-lg font-black tabular-nums text-gray-900 dark:text-white">
-                {formatCurrency(totalFor(card))}
-              </p>
+              <div className="shrink-0 text-end">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t('cycle.cardSpend', { fallback: 'Charged this cycle' })}</p>
+                <p className="text-2xl font-black tabular-nums text-gray-900 dark:text-white">{signed(split.total, formatCurrency)}</p>
+              </div>
             </div>
+
+            {split.statement.has || split.immediate.has ? (
+              <div className="mt-3 space-y-1.5">
+                {split.statement.has && (
+                  <ChargeRow
+                    label={t('cycle.statementLine', { fallback: 'Monthly bill' })}
+                    meta={`${split.statement.chargeDate ? `${shortDate(split.statement.chargeDate, language)} · ` : ''}${countLabel(split.statement.count)}`}
+                    amount={split.statement.total}
+                    formatCurrency={formatCurrency}
+                    onClick={() => setGroup({ title, meta: t('cycle.statementLine', { fallback: 'Monthly bill' }), txns: split.statement.txns })}
+                  />
+                )}
+                {split.immediate.has && (
+                  <ChargeRow
+                    label={t('cycle.immediateLine', { fallback: 'Charged directly' })}
+                    meta={countLabel(split.immediate.count)}
+                    amount={split.immediate.total}
+                    formatCurrency={formatCurrency}
+                    onClick={() => setGroup({ title, meta: t('cycle.immediateLine', { fallback: 'Charged directly' }), txns: split.immediate.txns })}
+                  />
+                )}
+              </div>
+            ) : (
+              <p className="mt-3 text-center text-[11px] text-gray-400">{t('cycle.noCardCharges', { fallback: 'Nothing charged this cycle' })}</p>
+            )}
           </div>
         );
       })}
 
-      {!cards.length && (
-        <p className="py-8 text-center text-sm text-gray-500">{t('cycle.noCards', { fallback: 'No cards connected' })}</p>
+      {!cards.length && <p className="py-8 text-center text-sm text-gray-500">{t('cycle.noCards', { fallback: 'No cards connected' })}</p>}
+
+      {isMobile ? (
+        <BottomSheet isOpen={Boolean(group)} onClose={() => setGroup(null)} title={group?.title || ''} height="full">{detail}</BottomSheet>
+      ) : (
+        <Modal isOpen={Boolean(group)} onClose={() => setGroup(null)} title={group?.title || ''} size="lg">{detail}</Modal>
       )}
     </div>
   );

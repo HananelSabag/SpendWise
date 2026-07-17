@@ -138,6 +138,16 @@ export default function FinancialCycleCard({
         </div>
       )}
 
+      {/* An incomplete cycle understates what moved — flag it rather than show a real-looking number. */}
+      {cycle.partials?.length > 0 && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50/70 px-3 py-2 dark:border-orange-900/50 dark:bg-orange-950/20">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
+          <p className="text-[11px] font-semibold leading-tight text-orange-800 dark:text-orange-200">
+            {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
+          </p>
+        </div>
+      )}
+
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         <Line label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
         <Line label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
@@ -170,7 +180,7 @@ export default function FinancialCycleCard({
       <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
         <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
           <Landmark className="h-3.5 w-3.5" />
-          {t('cycle.bankMovement', { fallback: 'What the account actually did' })}
+          {t('cycle.bankMovement', { fallback: 'Change in your balance' })}
         </span>
         <span className={cn('tabular-nums text-sm font-bold', bankMovement < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
           {formatCurrency(bankMovement)}

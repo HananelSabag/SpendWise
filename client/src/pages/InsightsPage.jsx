@@ -16,13 +16,13 @@ import { useNavigate } from 'react-router-dom';
 
 import { useCurrency, useTranslation } from '../stores';
 import { useCycles } from '../hooks/useCycles';
-import { cn } from '../utils/helpers';
 import BrandMark from '../components/common/BrandMark';
 import { LiquidTabs } from '../components/ui';
 import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
 import CycleCardsTab from '../components/features/insights/CycleCardsTab';
 import CycleDebtsTab from '../components/features/insights/CycleDebtsTab';
 import CycleTrackingTab from '../components/features/insights/CycleTrackingTab';
+import CycleBalanceStrip from '../components/features/insights/CycleBalanceStrip';
 import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandidatePrompt';
 
 const TABS = ['overview', 'cards', 'debts', 'tracking'];
@@ -101,6 +101,11 @@ export default function InsightsPage() {
                   {t('cycle.soFar', { fallback: 'so far' })}
                 </span>
               )}
+              {cycle.partials?.length > 0 && (
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                  {t('cycle.partialBadge', { fallback: 'Partial' })}
+                </span>
+              )}
               {cycles.length > 1 && (
                 <select
                   value={cycleIndex ?? cycles.findIndex((c) => c === cycle)}
@@ -119,6 +124,9 @@ export default function InsightsPage() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-4 lg:px-8">
+        {/* The level the user navigates by — always in view, above the flow. */}
+        <CycleBalanceStrip formatCurrency={formatCurrency} t={t} language={currentLanguage} className="mb-4" />
+
         {empty ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-800 dark:bg-gray-900">
             <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -158,7 +166,7 @@ export default function InsightsPage() {
             {tab === 'overview' && (
               <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
             )}
-            {tab === 'cards' && <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} />}
+            {tab === 'cards' && <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} />}
             {tab === 'debts' && (
               <CycleDebtsTab loans={loans} totalOutstanding={totalOutstanding} recurring={recurring} formatCurrency={formatCurrency} t={t} />
             )}

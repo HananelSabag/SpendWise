@@ -351,7 +351,7 @@ export default {
     surplusHint: "You earned more than you spent",
     financing: "Borrowed this cycle",
     financingHint: "It covered the gap — and you pay it back",
-    bankMovement: "What the account actually did",
+    bankMovement: "Change in your balance",
     stillExpected: "Still expected before your next salary",
     projectedEnd: "Estimated end of cycle",
     outstanding: "Open debt",
@@ -379,7 +379,7 @@ export default {
     pageTitle: "Financial cycle",
     tab: { overview: "Overview", cards: "Cards", debts: "Debts", tracking: "Tracking" },
     netHint: "Income minus spending. Borrowed money is not income, so it is kept out of this number — it appears on its own line.",
-    bankHint: "Net plus borrowing. This always equals the real movement in your account.",
+    bankHint: "Net plus borrowing — exactly how much your balance rose or fell this cycle.",
     projectionHint: "An estimate from charges we have already seen repeat. It is never mixed into the settled numbers above.",
     pickCycle: "Choose cycle",
     noBankData: "Connect a bank to see your cycle",
@@ -419,7 +419,24 @@ export default {
     itIsIncome: "It is income",
     answeredOnce: "Answer once — we remember it from now on",
     savingAnswer: "Saving your answer...",
-    nothingToReview: "Nothing needs your attention"
+    nothingToReview: "Nothing needs your attention",
+    // Balance — the level in the account, shown next to the cycle's flow.
+    balance: "Account balance",
+    balanceHint: "What is in your checking account right now, across your connected banks. It is today's balance — it does not change with the cycle you are viewing.",
+    balanceUnavailable: "Not available",
+    balanceUnavailableHint: "This bank does not report a balance to us.",
+    balanceNow: "now",
+    balanceExcludesUnavailable: "Some accounts don't report a balance and are left out of this total.",
+    // Data quality — an incomplete cycle must never look like a real number (SPEC §11).
+    partialBadge: "Partial",
+    partialTitle: "This cycle is incomplete",
+    partialHint: "An older card statement from before your synced history is missing, so these figures understate what really moved. Newer cycles are complete.",
+    // Cards tab — money first, brand second.
+    cardSpend: "Charged this cycle",
+    statementLine: "Monthly bill",
+    immediateLine: "Charged directly",
+    seeCharges: "See charges",
+    noCardCharges: "Nothing charged this cycle"
   },
 
   period: {

@@ -25,6 +25,7 @@ import { useAuth, useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
 import apiClient from '../../../api/client';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
+import { computeBankBalance } from '../../../utils/bankBalance';
 
 // Brand gradient — feels like the SpendWise financial home, not a status panel.
 const HERO_GRADIENT = 'bg-gradient-to-br from-indigo-600 to-purple-700';
@@ -103,36 +104,18 @@ const ModernBalancePanel = ({ className = '' }) => {
     retry: 1,
   });
 
-  const hasSynced = sources && sources.length > 0;
-
-  // Latest sync timestamp across all sources
-  const lastSync = (sources || []).reduce((latest, src) => {
-    const d = src.last_sync ? new Date(src.last_sync) : null;
-    return !latest || (d && d > latest) ? d : latest;
-  }, null);
-
-  // A credit company never holds a balance, so only bank-kind sources feed the
-  // balance list. Every enabled account is listed (even ones without a balance,
-  // so the user sees the account exists); only real numbers reach the total.
-  const bankSources = (sources || []).filter(src => src.kind !== 'credit_card');
-  const hasBankSource = bankSources.length > 0;
-  const bankAccounts = bankSources.flatMap(src =>
-    (src.accounts || [])
-      .filter(a => a.enabled !== false)
-      .map(a => ({
-        source: src.source,
-        accountNumber: a.account_number || null,
-        balance: a.balance === null || a.balance === undefined ? null : Number(a.balance),
-        label: institutionLabel(src.source, currentLanguage) +
-          (a.account_number ? ` · ${a.account_number}` : ''),
-      }))
-  );
-  const accountsWithBalance = bankAccounts.filter(a => a.balance !== null);
-  const hasRealBalance   = accountsWithBalance.length > 0;
-  const totalRealBalance = accountsWithBalance.reduce((s, a) => s + a.balance, 0);
-  // "Break down into rows" once there is more than one bank account to show —
-  // a single account stays the clean big-number hero it always was.
-  const multiAccount = bankAccounts.length > 1;
+  // The balance reduction is shared with the financial-cycle page (utils/bankBalance) so the
+  // two screens can never disagree on how much is in the account. Only the labels stay here —
+  // they are language-specific. Presentation below is unchanged.
+  const {
+    hasSynced, lastSync, bankSources, hasBankSource,
+    bankAccounts: rawBankAccounts, accountsWithBalance,
+    hasRealBalance, totalRealBalance, multiAccount,
+  } = computeBankBalance(sources);
+  const bankAccounts = rawBankAccounts.map(a => ({
+    ...a,
+    label: institutionLabel(a.source, currentLanguage) + (a.accountNumber ? ` · ${a.accountNumber}` : ''),
+  }));
 
   // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading) {

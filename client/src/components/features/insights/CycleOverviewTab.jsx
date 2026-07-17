@@ -13,6 +13,13 @@ import { cn } from '../../../utils/helpers';
 import { InfoHint } from '../../ui';
 import CycleBreakdown from '../dashboard/CycleBreakdown';
 
+/** A projected date reads as "26 Jul", never a raw ISO stamp. */
+function formatDay(iso, language) {
+  const date = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' }).format(date);
+}
+
 function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrency, big = false }) {
   const tones = {
     positive: 'text-emerald-600 dark:text-emerald-400',
@@ -49,6 +56,21 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
         </div>
       )}
 
+      {/* An incomplete cycle understates what moved — say so, never let it read as a real number. */}
+      {cycle.partials?.length > 0 && (
+        <div className="flex items-start gap-2 rounded-2xl border border-orange-200 bg-orange-50/70 px-3 py-2 dark:border-orange-900/50 dark:bg-orange-950/20">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
+          <div>
+            <p className="text-xs font-bold text-orange-900 dark:text-orange-200">
+              {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-tight text-orange-800/80 dark:text-orange-200/70">
+              {t('cycle.partialHint', { fallback: 'An older card statement from before your synced history is missing, so these figures understate what really moved.' })}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* The number to feel, alone and dominant. */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
         <p className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
@@ -77,9 +99,9 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
             hintTitle={t('cycle.financing', { fallback: 'Borrowed' })}
             hint={t('cycle.financingHint', { fallback: 'It covered the gap — and you pay it back' })} />
         )}
-        <Figure label={t('cycle.bankMovement', { fallback: 'What the account actually did' })} value={bankMovement}
+        <Figure label={t('cycle.bankMovement', { fallback: 'Change in your balance' })} value={bankMovement}
           tone={bankMovement < 0 ? 'negative' : 'positive'} formatCurrency={formatCurrency}
-          hintTitle={t('cycle.bankMovement', { fallback: 'The account' })}
+          hintTitle={t('cycle.bankMovement', { fallback: 'Change in your balance' })}
           hint={t('cycle.bankHint', { fallback: 'Net plus borrowing. This always equals the real movement in your account.' })} />
       </div>
 
@@ -95,7 +117,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
           <ul className="mt-2 space-y-1">
             {projection.upcoming.map((item) => (
               <li key={`${item.kind}-${item.date}-${item.label}`} className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-gray-500 dark:text-gray-400">{item.date} · {item.label}</span>
+                <span className="truncate text-gray-500 dark:text-gray-400">{formatDay(item.date, language)} · {item.label}</span>
                 <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(item.amount)}</span>
               </li>
             ))}
