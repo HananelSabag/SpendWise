@@ -161,7 +161,9 @@ stronger key than description text. Proven on real Leumi data:
 - Direct bank transactions and immediate/debit-card charges use their **bank-hit date**. An
   aggregated monthly statement follows the cycle containing most of its underlying spend, using
   the amount-weighted median purchase date. Installments use their current `processedDate`, because
-  each installment is a current-period payment even when the original purchase is old. Therefore
+  each installment is a current-period payment even when the original purchase is old. Ownership
+  is clamped to the cycle the statement hits in or the one immediately before it — an old purchase
+  can never reopen a salary cycle from two months ago. Therefore
   salary on the 9th + Max/CAL statements on the 10th whose purchases all end on the 8th puts those
   statements (and their purchase breakdown) in the previous cycle. A spread credit linked to that
   statement follows it to the same spending cycle.

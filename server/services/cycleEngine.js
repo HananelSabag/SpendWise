@@ -289,7 +289,19 @@ function statementAttributionDate(event) {
 function inCardAttributionWindow(event, window) {
   if (!event?.chargeDate) return false;
   if (event.class !== 'statement') return inWindow(event.chargeDate, window);
-  return inWindow(statementAttributionDate(event), window);
+
+  const chargeDate = ilDate(event.chargeDate);
+  const attributionDate = statementAttributionDate(event);
+  if (!chargeDate || !attributionDate || chargeDate < window.start) return false;
+
+  // A statement can close the window it hits in or the immediately preceding salary window.
+  // Never let an old original purchase reopen a cycle from two months ago.
+  if (chargeDate >= addMonths(window.end, 1)) return false;
+
+  if (inWindow(chargeDate, window)) {
+    return attributionDate >= window.start;
+  }
+  return chargeDate >= window.end && attributionDate < window.end;
 }
 
 /** Collapse a provider description so the same payer matches across months. */

@@ -61,6 +61,21 @@ describe('monthly card close-out attribution', () => {
     expect(engine.statementAttributionDate(installment)).toBe('2026-07-10');
   });
 
+  test('never lets one old purchase push a statement back more than one salary cycle', () => {
+    const statement = {
+      class: 'statement',
+      chargeDate: '2026-07-10',
+      txns: [
+        { date: '2026-05-02', amount: -900 },
+        { date: '2026-07-02', amount: -300 },
+      ],
+    };
+
+    expect(engine.inCardAttributionWindow(statement, { start: '2026-05-01', end: '2026-06-01' })).toBe(false);
+    expect(engine.inCardAttributionWindow(statement, { start: '2026-06-01', end: '2026-07-01' })).toBe(true);
+    expect(engine.inCardAttributionWindow(statement, { start: '2026-07-01', end: '2026-08-01' })).toBe(false);
+  });
+
   test('moves the bill and linked spread together, while bank movement stays literal', () => {
     const juneSalary = bank(1, 1000, '2026-06-09', 'salary');
     const julySalary = bank(2, 1000, '2026-07-09', 'salary');
