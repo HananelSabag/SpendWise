@@ -234,6 +234,16 @@ doc/**
 !RENDER_REGION_MIGRATION.md
 !CODE_AUDIT_FINDINGS.md
 !DEAD_CODE_TO_DELETE.md
+# Agent/LLM context primer — canonical per-repo memory bank, tracked so it travels:
+!AGENTS.md
+!**/AGENTS.md
+!CLAUDE.md
+!**/CLAUDE.md
+!FINANCIAL_CYCLE_SPEC.md
+
+# Real financial data captured from the live API for the dev preview harness
+# (client/preview.html). Never commit a user's salary, employer or debts.
+client/src/dev/liveCycle.json
 
 # Explicitly ignore session/workflow logs
 doc/current-fix.md
