@@ -11,6 +11,7 @@ import React from 'react';
 import { AlertTriangle, ArrowRightLeft, Briefcase, CalendarCheck, HelpCircle } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
+import { formatCycleDay } from '../../../utils/cycleDate';
 import { InfoHint } from '../../ui';
 import SalaryCandidatePrompt from '../dashboard/SalaryCandidatePrompt';
 import WatchedMerchants from './WatchedMerchants';
@@ -33,6 +34,7 @@ export default function CycleTrackingTab({
   classifyingTransactionId = null,
   signatures = [],
   onSalarySelected,
+  language = 'en',
 }) {
   const status = salaryTracking?.status || 'unknown';
 
@@ -54,7 +56,7 @@ export default function CycleTrackingTab({
             <p className={cn('mt-0.5 text-[11px] font-semibold', STATUS_TONE[status])}>
               {status === 'late'
                 ? t('cycle.salaryLateShort', { fallback: 'Has not arrived' })
-                : `${t('cycle.nextExpected', { fallback: 'Next' })} ${salaryTracking.expectedNext}`}
+                : `${t('cycle.nextExpected', { fallback: 'Next' })} ${formatCycleDay(salaryTracking.expectedNext, language)}`}
             </p>
           </>
         ) : (
@@ -79,7 +81,7 @@ export default function CycleTrackingTab({
           </p>
           {salaryChange.candidates.map((c) => (
             <p key={c.date} className="mt-1 text-[11px] text-indigo-700 dark:text-indigo-300">
-              {c.date} · {c.description} · <span className="font-bold tabular-nums">{formatCurrency(c.amount)}</span>
+              {formatCycleDay(c.date, language)} · {c.description} · <span className="font-bold tabular-nums">{formatCurrency(c.amount)}</span>
             </p>
           ))}
         </div>
@@ -96,7 +98,7 @@ export default function CycleTrackingTab({
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{item.description}</p>
-                  <p className="mt-0.5 text-[11px] text-gray-500">{item.date}</p>
+                  <p className="mt-0.5 text-[11px] text-gray-500">{formatCycleDay(item.date, language)}</p>
                 </div>
                 <p className="shrink-0 text-base font-black tabular-nums text-emerald-600">+{formatCurrency(item.amount)}</p>
               </div>
@@ -104,7 +106,7 @@ export default function CycleTrackingTab({
               {item.matchedBill && (
                 <p className="mt-2 flex items-center gap-1 rounded-lg bg-gray-50 px-2 py-1.5 text-[11px] text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
                   <ArrowRightLeft className="h-3 w-3 shrink-0" />
-                  {t('cycle.matchesBill', { fallback: 'Matches your' })} {item.matchedBill.source?.toUpperCase()} ••••{String(item.matchedBill.accountNumber || '').slice(-4)} {t('cycle.billFrom', { fallback: 'bill from' })} {item.matchedBill.chargeDate}
+                  {t('cycle.matchesBill', { fallback: 'Matches your' })} {item.matchedBill.source?.toUpperCase()} ••••{String(item.matchedBill.accountNumber || '').slice(-4)} {t('cycle.billFrom', { fallback: 'bill from' })} {formatCycleDay(item.matchedBill.chargeDate, language)}
                 </p>
               )}
 

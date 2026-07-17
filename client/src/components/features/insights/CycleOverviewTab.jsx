@@ -10,15 +10,9 @@ import React from 'react';
 import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
+import { formatCycleDay } from '../../../utils/cycleDate';
 import { InfoHint } from '../../ui';
 import CycleBreakdown from '../dashboard/CycleBreakdown';
-
-/** A projected date reads as "26 Jul", never a raw ISO stamp. */
-function formatDay(iso, language) {
-  const date = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' }).format(date);
-}
 
 function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrency, big = false }) {
   const tones = {
@@ -117,7 +111,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
           <ul className="mt-2 space-y-1">
             {projection.upcoming.map((item) => (
               <li key={`${item.kind}-${item.date}-${item.label}`} className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-gray-500 dark:text-gray-400">{formatDay(item.date, language)} · {item.label}</span>
+                <span className="truncate text-gray-500 dark:text-gray-400">{formatCycleDay(item.date, language)} · {item.label}</span>
                 <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(item.amount)}</span>
               </li>
             ))}

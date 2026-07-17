@@ -168,7 +168,7 @@ export default function InsightsPage() {
             )}
             {tab === 'cards' && <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} />}
             {tab === 'debts' && (
-              <CycleDebtsTab loans={loans} totalOutstanding={totalOutstanding} recurring={recurring} formatCurrency={formatCurrency} t={t} />
+              <CycleDebtsTab loans={loans} totalOutstanding={totalOutstanding} recurring={recurring} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
             )}
             {tab === 'tracking' && (
               <CycleTrackingTab
@@ -180,9 +180,10 @@ export default function InsightsPage() {
                 onClassify={classify}
                 isClassifying={isClassifying}
                 classifyingTransactionId={classifyingTransactionId}
-                signatures={signatures}
-                onSalarySelected={refetch}
-              />
+                 signatures={signatures}
+                 onSalarySelected={refetch}
+                 language={currentLanguage}
+               />
             )}
           </>
         )}

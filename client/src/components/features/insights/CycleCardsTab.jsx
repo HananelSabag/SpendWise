@@ -14,19 +14,13 @@ import { AlertTriangle, ChevronRight, Clock3, CreditCard } from 'lucide-react';
 
 import { InfoHint } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { formatCycleDay } from '../../../utils/cycleDate';
 import BottomSheet from '../../common/BottomSheet';
 import Modal from '../../ui/Modal';
 
 const SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex' };
 const cardName = (s) => SOURCE_NAME[s] || String(s || '').toUpperCase();
 const last4 = (n) => String(n || '').slice(-4);
-
-const shortDate = (iso, language) => {
-  if (!iso) return '';
-  const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' }).format(d);
-};
 
 const signed = (value, formatCurrency) => `${Number(value) < 0 ? '−' : '+'}${formatCurrency(Math.abs(Number(value) || 0))}`;
 
@@ -51,7 +45,7 @@ function ChargeList({ group, formatCurrency, t, language }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{txn.description || '—'}</p>
                 <p className="mt-0.5 flex items-center gap-2 text-[11px] text-gray-400">
-                  <span>{shortDate(txn.date, language)}</span>
+                  <span>{formatCycleDay(txn.date, language)}</span>
                   {txn.installments && (
                     <span className="text-indigo-500">{t('cycle.installment', { fallback: 'payment' })} {txn.installments.number}/{txn.installments.total}</span>
                   )}
@@ -175,7 +169,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
                 {split.statement.has && (
                   <ChargeRow
                     label={t('cycle.statementLine', { fallback: 'Monthly bill' })}
-                    meta={`${split.statement.chargeDate ? `${shortDate(split.statement.chargeDate, language)} · ` : ''}${countLabel(split.statement.count)}`}
+                    meta={`${split.statement.chargeDate ? `${formatCycleDay(split.statement.chargeDate, language)} · ` : ''}${countLabel(split.statement.count)}`}
                     amount={split.statement.total}
                     formatCurrency={formatCurrency}
                     onClick={() => setGroup({ title, meta: t('cycle.statementLine', { fallback: 'Monthly bill' }), txns: split.statement.txns })}

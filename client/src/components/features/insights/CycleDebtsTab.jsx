@@ -10,7 +10,7 @@
 import React from 'react';
 import { Coins, Landmark } from 'lucide-react';
 
-import { cn } from '../../../utils/helpers';
+import { formatCycleDay } from '../../../utils/cycleDate';
 import { InfoHint } from '../../ui';
 
 function Bar({ repaid, principal }) {
@@ -25,7 +25,7 @@ function Bar({ repaid, principal }) {
   );
 }
 
-export default function CycleDebtsTab({ loans = [], totalOutstanding = 0, recurring = [], formatCurrency, t }) {
+export default function CycleDebtsTab({ loans = [], totalOutstanding = 0, recurring = [], formatCurrency, t, language = 'en' }) {
   const known = loans.filter((loan) => loan.principal > 0);
   /** "1 payments" / "1 loans" reads like a bug; both languages need the singular. */
   const count = (n, one, many) => `${n} ${n === 1 ? t(one.key, { fallback: one.fb }) : t(many.key, { fallback: many.fb })}`;
@@ -50,7 +50,7 @@ export default function CycleDebtsTab({ loans = [], totalOutstanding = 0, recurr
             <div className="min-w-0">
               <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{loan.description || t('cycle.loan', { fallback: 'Loan' })}</p>
               <p className="mt-0.5 text-[11px] text-gray-400">
-                {formatCurrency(loan.principal)} · {loan.disbursedOn} · {t('cycle.payDay', { fallback: 'day' })} {loan.paymentDay}
+                {formatCurrency(loan.principal)} · {formatCycleDay(loan.disbursedOn, language)} · {t('cycle.payDay', { fallback: 'day' })} {loan.paymentDay}
               </p>
             </div>
             <div className="shrink-0 text-end">
