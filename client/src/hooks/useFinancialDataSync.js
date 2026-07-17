@@ -5,6 +5,7 @@ export const FINANCIAL_QUERY_ROOTS = [
   'dashboard',
   'calendar-month-summary',
   'financial-cycle',
+  'cycles',
   'bankSyncStats',
   'bankBalances',
   'transactions',

@@ -35,6 +35,10 @@ export function useCycles() {
     queryFn: () => cyclesApi.list(),
     enabled: Boolean(isAuthenticated),
     ...queryConfigs.dashboard,
+    // Financial cycles are persisted for paint continuity, but their numbers must be checked
+    // against the server on every screen entry. A bank sync can finish while the app is closed.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const classificationMutation = useMutation({
@@ -75,6 +79,8 @@ export function useCurrentCycle() {
     queryFn: () => cyclesApi.current(),
     enabled: Boolean(isAuthenticated),
     ...queryConfigs.dashboard,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const data = query.data?.data || {};
