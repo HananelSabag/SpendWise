@@ -31,6 +31,10 @@ function slimTxn(txn) {
     processedDate: txn.processedDate,
     description: txn.description,
     amount: txn.amount,
+    // Needed by the provenance UI to group direct bank money per real account. These are
+    // display-safe fields already exposed elsewhere in authenticated bank-sync responses.
+    source: txn.source,
+    accountNumber: txn.accountNumber,
     pending: Boolean(txn.status && txn.status !== 'completed'),
     currency: txn.originalCurrency && txn.originalCurrency !== 'ILS' ? txn.originalCurrency : null,
     installments: txn.installments || null,

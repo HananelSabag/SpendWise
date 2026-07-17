@@ -20,19 +20,37 @@ import {
 } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
+import { formatCycleDay } from '../../../utils/cycleDate';
 import { useIsMobile } from '../../../hooks/useIsMobile';
+import { institutionLabel } from '../bankSync/bankSyncMeta';
 import BottomSheet from '../../common/BottomSheet';
 import Modal from '../../ui/Modal';
 
 const SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex', leumi: 'Leumi' };
 const sourceName = (source) => SOURCE_NAME[source] || String(source || '').toUpperCase();
 
-const shortDate = (iso, language) => {
-  if (!iso) return '';
-  const d = new Date(`${String(iso).slice(0, 10)}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' }).format(d);
-};
+const last4 = (value) => String(value || '').slice(-4);
+
+function bankAccountLabel(source, accountNumber, language, fallback) {
+  if (!source) return fallback;
+  const bank = institutionLabel(source, language) || sourceName(source);
+  return accountNumber ? `${bank} ••••${last4(accountNumber)}` : bank;
+}
+
+/** Keep provenance grouped by the account whose balance actually moved. */
+function groupByBankAccount(items) {
+  const groups = new Map();
+  (items || []).forEach((txn) => {
+    const key = `${txn.source || 'unknown'}:${txn.accountNumber || 'default'}`;
+    if (!groups.has(key)) {
+      groups.set(key, { key, source: txn.source, accountNumber: txn.accountNumber, txns: [], total: 0 });
+    }
+    const group = groups.get(key);
+    group.txns.push(txn);
+    group.total += Number(txn.amount || 0);
+  });
+  return [...groups.values()];
+}
 
 function Row({ icon: Icon, label, meta, amount, tone = 'neutral', formatCurrency, onClick }) {
   const tones = {
@@ -86,7 +104,7 @@ function DetailBody({ group, formatCurrency, t, language }) {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{txn.description || '—'}</p>
                 <p className="mt-0.5 flex items-center gap-2 text-[11px] text-gray-400">
-                  <span>{shortDate(txn.date, language)}</span>
+                  <span>{formatCycleDay(txn.date, language)}</span>
                   {txn.installments && (
                     <span className="text-indigo-500">
                       {t('cycle.installment', { fallback: 'payment' })} {txn.installments.number}/{txn.installments.total}
@@ -143,7 +161,7 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
     // One row per real bank debit the card produced.
     ...(expenses.events || []).map((event, index) => {
       const label = `${sourceName(event.source)} ••••${String(event.accountNumber || '').slice(-4)}`;
-      const meta = `${classLabel(event)} · ${shortDate(event.chargeDate, language)} · ${countLabel(event.count)}`;
+      const meta = `${classLabel(event)} · ${formatCycleDay(event.chargeDate, language)} · ${countLabel(event.count)}`;
       return {
         // Immediate debits can share a card and charge date, so the old three-part key was
         // not unique (the live MAX 8345 data has exactly this case).
@@ -157,32 +175,40 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
         onClick: () => setGroup({ title: label, meta, txns: event.txns || [] }),
       };
     }),
-    (expenses.directItems || []).length > 0 && {
-      key: 'bank-out',
-      icon: ArrowDownToLine,
-      label: t('cycle.bankOut', { fallback: 'Out of the account' }),
-      meta: countLabel(expenses.directItems.length),
-      amount: -expenses.direct,
-      tone: 'neutral',
-      onClick: () => setGroup({
-        title: t('cycle.bankOut', { fallback: 'Out of the account' }),
-        meta: t('cycle.bankOutHint', { fallback: 'Loans, standing orders, cash — straight from the bank' }),
-        txns: expenses.directItems,
-      }),
-    },
-    (income.items || []).length > 0 && {
-      key: 'income',
-      icon: ArrowUpFromLine,
-      label: t('cycle.incomeRow', { fallback: 'Into the account' }),
-      meta: countLabel(income.items.length),
-      amount: income.total,
-      tone: 'income',
-      onClick: () => setGroup({
-        title: t('cycle.incomeRow', { fallback: 'Into the account' }),
-        meta: t('cycle.incomeHint', { fallback: 'Money that is yours — borrowing is not counted here' }),
-        txns: income.items,
-      }),
-    },
+    ...groupByBankAccount(expenses.directItems).map((account) => {
+      const fallback = t('cycle.bankOut', { fallback: 'Out of the account' });
+      const label = bankAccountLabel(account.source, account.accountNumber, language, fallback);
+      return {
+        key: `bank-out-${account.key}`,
+        icon: ArrowDownToLine,
+        label,
+        meta: `${fallback} · ${countLabel(account.txns.length)}`,
+        amount: account.total,
+        tone: 'neutral',
+        onClick: () => setGroup({
+          title: label,
+          meta: t('cycle.bankOutHint', { fallback: 'Loans, standing orders, cash — straight from the bank' }),
+          txns: account.txns,
+        }),
+      };
+    }),
+    ...groupByBankAccount(income.items).map((account) => {
+      const fallback = t('cycle.incomeRow', { fallback: 'Into the account' });
+      const label = bankAccountLabel(account.source, account.accountNumber, language, fallback);
+      return {
+        key: `income-${account.key}`,
+        icon: ArrowUpFromLine,
+        label,
+        meta: `${fallback} · ${countLabel(account.txns.length)}`,
+        amount: account.total,
+        tone: 'income',
+        onClick: () => setGroup({
+          title: label,
+          meta: t('cycle.incomeHint', { fallback: 'Money that is yours — borrowing is not counted here' }),
+          txns: account.txns,
+        }),
+      };
+    }),
   ].filter(Boolean);
 
   // The compact state should scan like the old card: one meaningful row per card/account,
