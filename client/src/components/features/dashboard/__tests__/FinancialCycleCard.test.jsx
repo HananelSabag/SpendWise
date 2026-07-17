@@ -20,21 +20,22 @@ vi.mock('framer-motion', () => ({
 const formatCurrency = (value) => `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const t = (_key, options) => (options && options.fallback) || _key;
 
-/** Real running cycle: salary 13,327.75 in, a 12,805.22 card bill spread into a loan. */
+/** Real running cycle after post-salary statements close the previous cycle. */
 const CYCLE = {
   window: { index: 0, start: '2026-07-09', end: '2026-08-09', running: true, projectedEnd: true, salary: { date: '2026-07-09', amount: 13327.75, description: 'הורייזן טכנו-י' } },
   income: { salary: 13327.75, other: 0, total: 13327.75 },
-  expenses: { cards: 16601.79, direct: 2209.38, total: 18811.17, events: [] },
-  operatingNet: -5483.42,
-  financing: { total: 12805.22, count: 1 },
-  bankMovement: 7321.8,
+  expenses: { cards: 435.99, direct: 2209.39, total: 2645.38, events: [] },
+  operatingNet: 10682.37,
+  financing: { total: 0, count: 0 },
+  bankMovement: 8017.17,
+  timingAdjustment: -2665.2,
   projection: {
     upcoming: [
       { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה', certainty: 'estimated' },
       { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י', certainty: 'estimated' },
     ],
     upcomingTotal: -1171.86,
-    projectedOperatingNet: -6655.28,
+    projectedOperatingNet: 9510.51,
     estimate: true,
   },
   needsReview: [],
@@ -70,24 +71,20 @@ const renderCard = (props = {}) => render(
 describe('FinancialCycleCard', () => {
   it('leads with the operating net rather than the account movement', () => {
     renderCard();
-    // −5,483.42 is what the user must feel: they spent more than they earned this cycle.
-    expect(screen.getByText('₪-5,483.42')).toBeInTheDocument();
-    expect(screen.getByText('You are spending more than you earn')).toBeInTheDocument();
+    expect(screen.getByText('₪10,682.37')).toBeInTheDocument();
+    expect(screen.getByText('You earned more than you spent')).toBeInTheDocument();
   });
 
-  it('never lets borrowed money pass as income', () => {
+  it('does not carry the previous cycle card bill or spread into the new cycle', () => {
     renderCard();
-    // Income stays the salary alone — the ₪12,805.22 spread credit is financing, and had it
-    // been added to income the headline would read a comfortable +8,017 instead of −5,483.
     expect(screen.getByText('₪13,327.75')).toBeInTheDocument();
-    expect(screen.getByText('Borrowed this cycle')).toBeInTheDocument();
-    expect(screen.getByText('₪12,805.22')).toBeInTheDocument();
-    expect(screen.getByText('It covered the gap — and you pay it back')).toBeInTheDocument();
+    expect(screen.queryByText('Borrowed this cycle')).not.toBeInTheDocument();
+    expect(screen.queryByText('₪12,805.22')).not.toBeInTheDocument();
   });
 
   it('shows what the account really did, so the deficit is explainable', () => {
     renderCard();
-    expect(screen.getByText('₪7,321.80')).toBeInTheDocument();
+    expect(screen.getByText('₪8,017.17')).toBeInTheDocument();
     expect(screen.getByText('Change in your balance')).toBeInTheDocument();
   });
 
@@ -99,7 +96,7 @@ describe('FinancialCycleCard', () => {
   it('keeps the projection separate from settled figures', () => {
     renderCard();
     expect(screen.getByText('Still expected before your next salary')).toBeInTheDocument();
-    expect(screen.getByText('₪-6,655.28')).toBeInTheDocument();
+    expect(screen.getByText('₪9,510.51')).toBeInTheDocument();
     expect(screen.getByText(/פרעון הלוואה/)).toBeInTheDocument();
   });
 

@@ -3,9 +3,9 @@
  *
  * Provider-agnostic and I/O-free: feed it normalized transactions, get back charge
  * events, per-card statements, bank reconciliation and cycle windows. One field decides
- * all timing — `processedDate`, the day the money actually hits the bank. Nothing here
- * "computes" a billing cycle; the provider already told us when each charge lands, so we
- * only group by it.
+ * all cash timing — `processedDate`, the day the money actually hits the bank. Spending-cycle
+ * attribution can attach a monthly close-out to the cycle containing most of its purchases;
+ * that never changes the provider's bank date.
  *
  * Validated to the agora against real bank debits: see FINANCIAL_CYCLE_SPEC.md §7 and
  * `server/scripts/verify-cycle-engine.js`.
@@ -251,14 +251,45 @@ function reconcile(bankTxns, chargeEvents) {
   };
 }
 
-/**
- * The financial cycle window: [salaryDate, nextSalaryDate). An event ON the anchor day
- * belongs to the window that OPENS that day — salary on the 10th and the card bill on the
- * 10th are the same cycle, because that bill is paid out of that salary.
- */
+/** Literal bank-date window: [salaryDate, nextSalaryDate). Card-spend attribution is below. */
 function inWindow(hitDate, { start, end }) {
   const date = ilDate(hitDate);
   return Boolean(date) && date >= start && date < end;
+}
+
+/**
+ * Representative spending date for one indivisible monthly statement. Use the amount-weighted
+ * median purchase date, so the cycle containing most of the bill owns its total and breakdown.
+ * Installments are current-period payments even when the original purchase is old, so their
+ * effective date remains the provider's processed/statement date.
+ */
+function statementAttributionDate(event) {
+  const points = (event?.txns || [])
+    .map((txn) => ({
+      date: txn.installments ? event.chargeDate : ilDate(txn.date),
+      weight: Math.abs(Number(txn.amount) || 0),
+    }))
+    .filter((point) => point.date && point.weight > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (!points.length) return event?.chargeDate || null;
+
+  const midpoint = points.reduce((sum, point) => sum + point.weight, 0) / 2;
+  let cumulative = 0;
+  for (const point of points) {
+    cumulative += point.weight;
+    if (cumulative >= midpoint) return point.date;
+  }
+  return points[points.length - 1].date;
+}
+
+/**
+ * Monthly statements follow the spending they close; immediate/debit movements follow the exact
+ * day they hit the bank. Bank movement itself always remains chronological.
+ */
+function inCardAttributionWindow(event, window) {
+  if (!event?.chargeDate) return false;
+  if (event.class !== 'statement') return inWindow(event.chargeDate, window);
+  return inWindow(statementAttributionDate(event), window);
 }
 
 /** Collapse a provider description so the same payer matches across months. */
@@ -733,6 +764,7 @@ function buildCycle({
   const direct = bankTxns.filter((t) => !suppressed.has(t) && !isPending(t));
   const hitDate = (t) => ilDate(t.processedDate || t.date);
   const within = (t) => inWindow(hitDate(t), window);
+  const cardEventWithin = (event) => inCardAttributionWindow(event, window);
 
   const salaryTarget = salarySignature && normalizeDescription(salarySignature.normalizedDescription);
   const isSalary = (t) => Boolean(salaryTarget) && normalizeDescription(t.description).includes(salaryTarget);
@@ -790,12 +822,13 @@ function buildCycle({
         matchedBill: { chargeDate: hint.event.chargeDate, total: hint.event.total, source: hint.event.source, accountNumber: hint.event.accountNumber },
         daysApart: hint.daysApart,
         confirmed: false,
+        matchedEvent: hint.event,
       });
     }
   }
 
   const cardCharges = settledEvents.filter(
-    (e) => reconciledEvents.has(e) && !e.partial && inWindow(e.chargeDate, window),
+    (e) => reconciledEvents.has(e) && !e.partial && cardEventWithin(e),
   );
   const credits = direct.filter((t) => Number(t.amount) > 0 && within(t));
   const debits = direct.filter((t) => Number(t.amount) < 0 && within(t));
@@ -804,7 +837,11 @@ function buildCycle({
   // except borrowing.
   const salary = credits.filter(isSalary);
   const otherIncome = credits.filter((t) => !isSalary(t) && !financingTxns.has(t));
-  const financingIn = bankTxns.filter((t) => financingTxns.has(t) && within(t));
+  const financingIn = bankTxns.filter((t) => {
+    if (!financingTxns.has(t)) return false;
+    const linkedBill = suggestedFinancing.get(t)?.event;
+    return linkedBill ? cardEventWithin(linkedBill) : within(t);
+  });
   const taggedDebits = debits.map((t) => ({ txn: t, amount: round2(t.amount), fixedCharge: fixedFor(t) || null }));
 
   const incomeTotal = round2(sumAmounts(salary) + sumAmounts(otherIncome));
@@ -813,6 +850,10 @@ function buildCycle({
   const expensesTotal = round2(cardTotal + directTotal);
   const operatingNet = round2(incomeTotal - expensesTotal);
   const financingTotal = sumAmounts(financingIn);
+  // Literal account movement by bank-hit date. Close-out attribution can move a statement
+  // (and its linked spread credit) to the previous spending cycle, but never rewrites the bank.
+  const bankMovement = sumAmounts(bankTxns.filter((txn) => !isPending(txn) && within(txn)));
+  const timingAdjustment = round2(bankMovement - operatingNet - financingTotal);
   const salaryTracking = salarySignature ? trackSalary(bankTxns, salarySignature, { asOf }) : null;
   const nextCardForecast = window.running
     ? {
@@ -835,23 +876,28 @@ function buildCycle({
       total: expensesTotal,
     },
     /**
-     * Three lines that are all true at once, and never contradict each other:
-     *   operatingNet  — how you actually live: income vs spending. The number to feel.
-     *   financing     — borrowed money that arrived. It funded the gap, and you owe it back.
-     *   bankMovement  — operatingNet + financing = what really happened to the account.
-     * Counting financing as income would turn a −8,048 month into a comfortable +7,952 lie;
-     * hiding it would leave a −8,048 the user cannot explain. Show both.
+     * Three lines that are all true at once:
+     *   operatingNet  — attributed salary-cycle income vs spending.
+     *   financing     — borrowing attributed to the spending it funded.
+     *   bankMovement  — literal bank movement inside [salary date, next salary date).
+     * A close-out statement just after salary belongs to the previous spending cycle, while
+     * bankMovement keeps its real hit date. `timingAdjustment` is that bridge, not another fee.
      */
     operatingNet,
     financing: { total: financingTotal, items: financingIn, loans },
-    bankMovement: round2(operatingNet + financingTotal),
+    bankMovement,
+    timingAdjustment,
     net: operatingNet,
     /**
      * Credits the engine cannot prove — each carries a pre-filled `suggestion` so the user
      * answers with one tap instead of being interrogated. Answer once; it is remembered, and
      * a spread whose repayments later appear becomes a proven loan family and stops asking.
      */
-    needsReview: review.filter((r) => inWindow(ilDate(r.txn.processedDate || r.txn.date), window)),
+    needsReview: review.filter((r) => (
+      r.matchedEvent
+        ? cardEventWithin(r.matchedEvent)
+        : inWindow(ilDate(r.txn.processedDate || r.txn.date), window)
+    )),
     /**
      * For a running cycle: what is still expected before the next salary, and where the cycle
      * is heading. Labelled an estimate (שערוך) — never mixed into the settled numbers.
@@ -880,14 +926,14 @@ function buildCycle({
     // and the first card statements after it without counting a bill that already left.
     nextCardForecast,
     // Transparency: what the engine deliberately did not count in THIS window, and why.
-    reversals: reversals.filter((r) => inWindow(r.event.chargeDate, window)),
-    partials: settledEvents.filter((e) => e.partial && inWindow(e.chargeDate, window)),
+    reversals: reversals.filter((r) => cardEventWithin(r.event)),
+    partials: settledEvents.filter((e) => e.partial && cardEventWithin(e)),
     upcoming: allEvents.filter((e) => e.future),
     // A completed card event without a matching bank movement is evidence, not spend. Counting
     // it would violate the strongest invariant: bankMovement must equal the real account delta.
     // Keep it visible for review and count it only after the bank confirms it.
     unreconciledCardEvents: unmatchedEvents.filter(
-      (event) => !event.partial && inWindow(event.chargeDate, window),
+      (event) => !event.partial && cardEventWithin(event),
     ),
     cards: cardViews.map((cv) => ({
       source: cv.source,
@@ -925,6 +971,8 @@ module.exports = {
   estimateNextCardBills,
   buildCycle,
   inWindow,
+  statementAttributionDate,
+  inCardAttributionWindow,
   SETTLEMENT_MODES,
   MIN_STATEMENT_CONFIDENCE,
 };

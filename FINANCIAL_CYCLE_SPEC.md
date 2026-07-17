@@ -13,8 +13,10 @@ Every scraped transaction (israeli-bank-scrapers, all providers) carries:
 `category`, `identifier`, `status` (completed|pending), and for installments `installments{number,total}`.
 
 **`processedDate` is the ONLY thing that decides when money moves.** We never "compute" a billing
-cycle — the provider already tells us when each charge hits. We only group by it. This was proven:
+line — the provider already tells us when each charge hits. We only group by it. This was proven:
 grouping card txns by `processedDate` reproduces the bank's actual debit lines exactly (§7).
+Spending-cycle attribution is separate: a monthly close-out whose underlying spend belongs before
+salary closes the cycle that just ended (§4), without changing its real bank date.
 
 ⚠️ **Timezone**: raw dates are Asia/Jerusalem local midnight serialized to UTC (e.g.
 `2026-07-09T21:00:00Z` = Israel **2026-07-10**). Always bucket by the **Asia/Jerusalem** calendar date,
@@ -86,7 +88,8 @@ expenses    (card charges + direct bank debits)
 operatingNet = income − expenses     ← how you actually live. The number to feel.
 financing    (loans drawn, spread credits)               borrowed — you owe it back
 ──────────────────────────────────────────────────────
-bankMovement = operatingNet + financing   ← MUST equal the real account delta
+timingAdjustment = post-salary close-outs attributed to the prior spending cycle
+bankMovement = operatingNet + financing + timingAdjustment   ← real account delta by bank date
 ```
 - **Money in is income** — Bit/Paybox/all digital wallets are ordinary transactions (in = income,
   out = expense). No special logic; the user remembers a given Bit was a refund.
@@ -155,13 +158,19 @@ stronger key than description text. Proven on real Leumi data:
 ## 4. THE FINANCIAL CYCLE (מחזור פיננסי) — the only view the user feels
 - **Anchor = salary.** Window = `[salaryDate, nextSalaryDate)`. Calendar month is NOT used for the
   headline (it's retro-only, in Insights).
-- Assign every event to a window by its **bank-hit date** (`processedDate` for card charges, `date`
-  for direct bank txns). Boundary rule: an event on the anchor day belongs to the window **starting**
-  that day (salary on the 10th + Max bill on the 10th ⇒ same window — you pay this bill from this
-  salary). A card charge a day or two before the anchor belongs to the closing window.
-- **Headline = money in vs money out through the bank** in the window (`source_kind <> 'credit_card'`
-  for direct bank + reconciled card statements + immediate charges + manual). One number the user
-  lives by: "this cycle: in 13,328 / out 14,064 / net −736".
+- Direct bank transactions and immediate/debit-card charges use their **bank-hit date**. An
+  aggregated monthly statement follows the cycle containing most of its underlying spend, using
+  the amount-weighted median purchase date. Installments use their current `processedDate`, because
+  each installment is a current-period payment even when the original purchase is old. Therefore
+  salary on the 9th + Max/CAL statements on the 10th whose purchases all end on the 8th puts those
+  statements (and their purchase breakdown) in the previous cycle. A spread credit linked to that
+  statement follows it to the same spending cycle.
+  This attribution never rewrites `bankMovement`, which remains the literal sum by bank-hit date;
+  `timingAdjustment` explains the difference and is not another charge.
+- **Headline = income vs spending attributed to the salary cycle**: direct bank and immediate-card
+  movements by bank date, monthly statements by their representative spending date. `bankMovement`
+  separately states the literal cash movement between salary dates. One number the user lives by:
+  "this cycle: in 13,328 / out 3,841 / net +9,487" without re-counting the bill that already closed.
 - Weekend drift: salary/charges may shift ±1–2 days (Fri/Sat). Anchor detection uses tolerance; don't
   treat a 1-day shift as a missed/extra event.
 

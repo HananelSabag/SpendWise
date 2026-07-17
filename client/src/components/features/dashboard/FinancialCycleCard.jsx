@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, ArrowRight, CalendarRange, Coins, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
+import { InfoHint } from '../../ui';
 import CycleBreakdown from './CycleBreakdown';
 
 /**
@@ -181,6 +182,9 @@ export default function FinancialCycleCard({
         <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
           <Landmark className="h-3.5 w-3.5" />
           {t('cycle.bankMovement', { fallback: 'Change in your balance' })}
+          <InfoHint title={t('cycle.bankMovement', { fallback: 'Change in your balance' })}>
+            {t('cycle.bankHint', { fallback: 'The literal change in the bank between salary dates.' })}
+          </InfoHint>
         </span>
         <span className={cn('tabular-nums text-sm font-bold', bankMovement < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
           {formatCurrency(bankMovement)}

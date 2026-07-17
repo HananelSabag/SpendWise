@@ -96,7 +96,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
         <Figure label={t('cycle.bankMovement', { fallback: 'Change in your balance' })} value={bankMovement}
           tone={bankMovement < 0 ? 'negative' : 'positive'} formatCurrency={formatCurrency}
           hintTitle={t('cycle.bankMovement', { fallback: 'Change in your balance' })}
-          hint={t('cycle.bankHint', { fallback: 'Net plus borrowing. This always equals the real movement in your account.' })} />
+          hint={t('cycle.bankHint', { fallback: 'The literal change in the bank between salary dates.' })} />
       </div>
 
       {projection && projection.upcoming.length > 0 && (

@@ -19,9 +19,10 @@ describe('cycle reconciliation invariant', () => {
       cards: [{ source: 'isracard', accountNumber: '9999', txns: [
         // Older statement evidence makes the July event a complete cycle rather than the
         // deliberately excluded first/partial statement in a newly scraped card history.
-        card(4, -10, '2026-04-23', '2026-05-02'),
-        card(5, -12, '2026-05-23', '2026-06-02'),
-        card(3, -24.31, '2026-06-23', '2026-07-02'),
+        card(4, -10, '2026-04-23', '2026-05-12'),
+        card(5, -12, '2026-05-23', '2026-06-12'),
+        // The purchase itself is in July, so this statement belongs to the July salary cycle.
+        card(3, -24.31, '2026-07-11', '2026-07-12'),
       ] }],
       window: {
         start: '2026-07-01', end: '2026-08-01', running: true,

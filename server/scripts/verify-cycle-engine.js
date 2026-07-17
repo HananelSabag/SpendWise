@@ -197,14 +197,17 @@ function main() {
   }
 
   const running = cycles.find((c) => c.window.running);
+  const closing = running ? cycles[cycles.indexOf(running) - 1] : null;
   check('running cycle exists', Boolean(running), 'no running cycle built from salary events');
   if (running) {
     console.log('\n  --- running-cycle checks ---');
     console.log(`${check('running cycle salary', Math.abs(running.income.salary.total - 13327.75) <= 0.01, `expected 13,327.75, got ${nis(running.income.salary.total)}`)}  salary = ${nis(running.income.salary.total)}`);
-    // The July Max bill was spread into installments: the bank credited it straight back,
-    // so it must NOT be charged to this cycle.
-    const spread = running.reversals.find((r) => Math.abs(r.amount - 12805.22) <= 0.01);
-    console.log(`${check('spread bill reversed', Boolean(spread), 'the 12,805.22 bill + its "פריסה לתשלומים" credit must net to zero')}  reversal detected = ${Boolean(spread)}`);
+    // The July statement landed one day after salary and closes the cycle that just ended.
+    const julyStatementInRunning = running.expenses.cards.events.some((event) => (
+      event.chargeDate === '2026-07-10' && event.class === 'statement'
+    ));
+    const spread = closing?.reversals.find((r) => Math.abs(r.amount - 12805.22) <= 0.01);
+    console.log(`${check('post-salary statement closes previous cycle', !julyStatementInRunning && Boolean(spread), 'the 10/07 bill and spread must belong to the cycle closing at the 09/07 salary')}  current has July statement = ${julyStatementInRunning}`);
     // Guard the false positives that a loose matcher produced: a Bit transfer must never
     // "reverse" a statement, and a debit-card refund must never cancel itself.
     const bogus = cycles.flatMap((c) => c.reversals).filter((r) => r.daysApart > 3 || Math.abs(r.amount) < 100);
@@ -252,9 +255,10 @@ function main() {
   // ---- Classification is the user's, reconciliation is not negotiable --------------------
   console.log('\n=== CREDIT CLASSIFICATION (suggest → user decides) ===');
   const julyWindow = windows[windows.length - 1];
+  const closingWindow = windows[windows.length - 2];
   const asked = engine.buildCycle({
-    bankTxns, cards, window: julyWindow, asOf,
-    salarySignature: { normalizedDescription: 'הורייזן טכנו' },
+    bankTxns, cards, window: closingWindow, asOf,
+    salarySignature: { normalizedDescription: closingWindow.salary.txn.description },
   });
   const ask = asked.needsReview.find((r) => Math.abs(r.amount - 12805.22) <= 0.01);
   console.log(`${check('spread is asked, not assumed', Boolean(ask) && ask.suggestion === 'financing' && ask.confirmed === false, 'the spread credit must be surfaced with a pre-filled suggestion')}  asks about ${ask ? nis(ask.amount) : '—'} with suggestion "${ask ? ask.suggestion : '—'}" (${ask ? ask.reason : '—'})`);

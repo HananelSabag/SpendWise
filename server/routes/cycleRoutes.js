@@ -93,6 +93,7 @@ function slimCycle(cycle) {
     operatingNet: cycle.operatingNet,
     financing: { total: cycle.financing.total, count: cycle.financing.items.length },
     bankMovement: cycle.bankMovement,
+    timingAdjustment: cycle.timingAdjustment,
     projection: cycle.projection,
     nextCardForecast: cycle.nextCardForecast,
     needsReview: cycle.needsReview.map((r) => ({

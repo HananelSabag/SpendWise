@@ -379,7 +379,7 @@ export default {
     pageTitle: "Financial cycle",
     tab: { overview: "Overview", cards: "Cards", debts: "Debts", tracking: "Tracking" },
     netHint: "Income minus spending. Borrowed money is not income, so it is kept out of this number — it appears on its own line.",
-    bankHint: "Net plus borrowing — exactly how much your balance rose or fell this cycle.",
+    bankHint: "The literal change in the bank between salary dates. A card bill just after salary closes the previous spending cycle, but stays on its real bank date here.",
     projectionHint: "An estimate from charges we have already seen repeat. It is never mixed into the settled numbers above.",
     pickCycle: "Choose cycle",
     noBankData: "Connect a bank to see your cycle",
