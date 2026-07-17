@@ -121,7 +121,7 @@ export default function ModernDashboard() {
             formatCurrency={formatCurrency}
             t={t}
             language={currentLanguage}
-            onOpenCycle={() => navigate('/financial-cycle')}
+            onOpenCycle={(tab) => navigate(tab ? `/financial-cycle?tab=${tab}` : '/financial-cycle')}
             onLinkSalary={() => navigate('/financial-cycle')}
           />
 

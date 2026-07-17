@@ -28,6 +28,15 @@ import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandid
 const TABS = ['overview', 'cards', 'debts', 'tracking'];
 const CARD_ESTIMATE_KEY = 'spendwise-use-card-estimate';
 
+function initialCycleTab() {
+  try {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    return TABS.includes(requested) ? requested : 'overview';
+  } catch (_) {
+    return 'overview';
+  }
+}
+
 function savedCardEstimatePreference() {
   try {
     return localStorage.getItem(CARD_ESTIMATE_KEY) !== 'false';
@@ -55,7 +64,7 @@ export default function InsightsPage() {
   const navigate = useNavigate();
   const { t, currentLanguage } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(initialCycleTab);
   const [cycleIndex, setCycleIndex] = useState(null);
   const [useCardEstimate, setUseCardEstimate] = useState(savedCardEstimatePreference);
   const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,

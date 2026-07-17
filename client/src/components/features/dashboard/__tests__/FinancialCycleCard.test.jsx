@@ -42,6 +42,12 @@ const CYCLE = {
   reversals: [],
   partials: [],
   cards: [],
+  nextCardForecast: {
+    bills: [{
+      source: 'max', accountNumber: '2254', chargeDate: '2026-08-10',
+      knownAmount: 2823.79, knownCount: 16,
+    }],
+  },
 };
 
 const CYCLE_WITH_BREAKDOWN = {
@@ -103,6 +109,16 @@ describe('FinancialCycleCard', () => {
     expect(screen.getByText('Still expected before your next salary')).toBeInTheDocument();
     expect(screen.getByText('₪9,510.51')).toBeInTheDocument();
     expect(screen.getByText(/פרעון הלוואה/)).toBeInTheDocument();
+  });
+
+  it('surfaces the known next card bill and opens its card breakdown', () => {
+    const onOpenCycle = vi.fn();
+    renderCard({ onOpenCycle });
+
+    const nextBill = screen.getByRole('button', { name: /MAX .*2254.*16 transactions.*2,823.79/ });
+    expect(nextBill).toBeInTheDocument();
+    fireEvent.click(nextBill);
+    expect(onOpenCycle).toHaveBeenCalledWith('cards');
   });
 
   it('keeps the dashboard compact until the user asks for every source row', () => {
