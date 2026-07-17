@@ -225,7 +225,7 @@ function App() {
           // here is "survive a reload during a server outage", not eternal data.
           maxAge: 24 * 60 * 60 * 1000,
           // Bump this if the cache shape ever changes (forces a clean rehydrate).
-          buster: 'spendwise-cache-v1',
+          buster: 'spendwise-cache-v2',
           dehydrateOptions: {
             // Don't persist mutations or in-flight queries. Only successful data.
             shouldDehydrateQuery: (query) =>
