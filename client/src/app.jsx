@@ -225,7 +225,9 @@ function App() {
           // here is "survive a reload during a server outage", not eternal data.
           maxAge: 24 * 60 * 60 * 1000,
           // Bump this if the cache shape ever changes (forces a clean rehydrate).
-          buster: 'spendwise-cache-v2',
+          // v3 adds the exact purchases behind nextCardForecast.bills[].knownAmount.
+          // Rehydrating v2 would leave that amount non-openable until the old cache expires.
+          buster: 'spendwise-cache-v3',
           dehydrateOptions: {
             // Don't persist mutations or in-flight queries. Only successful data.
             shouldDehydrateQuery: (query) =>
