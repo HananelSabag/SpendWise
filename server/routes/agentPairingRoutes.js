@@ -135,15 +135,75 @@ router.post('/confirm', confirmLimiter, async (req, res) => {
       [userId, publicKey, hashToken(deviceToken), safeLabel],
     );
 
+    const ownerResult = await client.query(
+      `SELECT
+         COALESCE(
+           NULLIF(BTRIM(CONCAT_WS(' ', first_name, last_name)), ''),
+           NULLIF(BTRIM(username), ''),
+           NULLIF(SPLIT_PART(email, '@', 1), ''),
+           'SpendWise user'
+         ) AS owner_name,
+         CASE WHEN language_preference IN ('he', 'en')
+           THEN language_preference
+           ELSE 'en'
+         END AS language
+       FROM users
+       WHERE id = $1`,
+      [userId],
+    );
+    const owner = ownerResult.rows[0] || { owner_name: '', language: 'en' };
+
     await client.query('COMMIT');
     logger.info('agent-pairing: device paired', { userId });
-    res.json({ ok: true, device_token: deviceToken });
+    res.json({
+      ok: true,
+      device_token: deviceToken,
+      owner_name: owner.owner_name,
+      language: owner.language,
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     logger.error('agent-pairing: confirm failed', { error: err.message });
     res.status(500).json({ error: 'Failed to confirm pairing' });
   } finally {
     client.release();
+  }
+});
+
+// A paired Worker uses this on startup to refresh safe display metadata. The
+// device token never grants access to the user's general profile or session;
+// this endpoint returns only the name/language used by the local Worker UI.
+router.get('/device-profile', browserLimiter, async (req, res) => {
+  const deviceToken = req.headers['x-device-token'];
+  if (!deviceToken) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const result = await db.query(
+      `UPDATE agent_devices d
+       SET last_seen_at = NOW()
+       FROM users u
+       WHERE d.user_id = u.id
+         AND d.device_token_hash = $1
+         AND d.status = 'active'
+       RETURNING
+         d.label,
+         COALESCE(
+           NULLIF(BTRIM(CONCAT_WS(' ', u.first_name, u.last_name)), ''),
+           NULLIF(BTRIM(u.username), ''),
+           NULLIF(SPLIT_PART(u.email, '@', 1), ''),
+           'SpendWise user'
+         ) AS owner_name,
+         CASE WHEN u.language_preference IN ('he', 'en')
+           THEN u.language_preference
+           ELSE 'en'
+         END AS language`,
+      [hashToken(String(deviceToken))],
+    );
+    if (result.rows.length === 0) return res.status(401).json({ error: 'Unauthorized' });
+    res.json({ ok: true, ...result.rows[0] });
+  } catch (err) {
+    logger.error('agent-pairing: device profile failed', { error: err.message });
+    res.status(500).json({ error: 'Failed to fetch device profile' });
   }
 });
 
