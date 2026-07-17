@@ -121,14 +121,14 @@ const Header = () => {
   const navItems = useMemo(() => ([
     {
       key: 'dashboard',
-      label: t('nav.dashboard') || 'Dashboard',
+      label: t('nav.dashboard', { fallback: currentLanguage === 'he' ? 'לוח בקרה' : 'Dashboard' }),
       href: '/',
       icon: LayoutDashboard,
       active: location.pathname === '/'
     },
     {
       key: 'transactions',
-      label: t('nav.transactions') || 'Transactions',
+      label: t('nav.transactions', { fallback: currentLanguage === 'he' ? 'עסקאות' : 'Transactions' }),
       href: '/transactions',
       icon: CreditCard,
       active: location.pathname.startsWith('/transactions')
@@ -152,26 +152,26 @@ const Header = () => {
   const accountItems = useMemo(() => ([
     {
       key: 'profile',
-      label: t('nav.profile') || 'Profile',
+      label: t('nav.profile', { fallback: currentLanguage === 'he' ? 'פרופיל' : 'Profile' }),
       href: '/profile',
       icon: User,
       active: location.pathname.startsWith('/profile')
     },
     ...(hasAdminAccess ? [{
       key: 'admin',
-      label: t('nav.admin') || 'Admin',
+      label: t('nav.admin', { fallback: currentLanguage === 'he' ? 'ניהול' : 'Admin' }),
       href: '/admin',
       icon: Shield,
       active: location.pathname.startsWith('/admin')
     }] : []),
     ...(isSuperAdmin ? [{
       key: 'settings',
-      label: t('nav.systemSettings') || 'System Settings',
+      label: t('nav.systemSettings', { fallback: currentLanguage === 'he' ? 'הגדרות מערכת' : 'System Settings' }),
       href: '/admin/settings',
       icon: Settings,
       active: location.pathname.startsWith('/admin/settings')
     }] : [])
-  ]), [hasAdminAccess, isSuperAdmin, location.pathname, t]);
+  ]), [currentLanguage, hasAdminAccess, isSuperAdmin, location.pathname, t]);
 
   const toolItems = useMemo(() => ([
     {
@@ -182,7 +182,7 @@ const Header = () => {
     },
     {
       key: 'help',
-      label: t('nav.help') || 'Help',
+      label: t('nav.help', { fallback: currentLanguage === 'he' ? 'עזרה' : 'Help' }),
       icon: HelpCircle,
       onClick: () => openModal('onboarding')
     }
@@ -252,7 +252,7 @@ const Header = () => {
                   {t('common.appName', { fallback: 'SpendWise' })}
                 </p>
                 <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                  {t('nav.overview') || 'Overview'}
+                  {t('nav.overview', { fallback: currentLanguage === 'he' ? 'סקירה' : 'Overview' })}
                 </p>
               </div>
             )}
@@ -276,8 +276,8 @@ const Header = () => {
             type="button"
             onClick={() => setIsCollapsed(false)}
             className="mx-auto mt-3 p-2 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-            title={t('common.openMenu') || 'Open menu'}
-            aria-label={t('common.openMenu') || 'Open menu'}
+            title={t('common.openMenu', { fallback: currentLanguage === 'he' ? 'פתח תפריט' : 'Open menu' })}
+            aria-label={t('common.openMenu', { fallback: currentLanguage === 'he' ? 'פתח תפריט' : 'Open menu' })}
           >
             {isRTL ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           </button>
@@ -301,7 +301,7 @@ const Header = () => {
           <div className="space-y-1">
             {!isCollapsed && (
               <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                {t('nav.navigation') || 'Navigation'}
+                {t('nav.navigation', { fallback: currentLanguage === 'he' ? 'ניווט' : 'Navigation' })}
               </p>
             )}
             {navItems.map((item) => <NavButton key={item.key} item={item} />)}
@@ -310,7 +310,7 @@ const Header = () => {
           <div className="space-y-1">
             {!isCollapsed && (
               <p className="px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                {t('nav.tools') || 'Tools'}
+                {t('nav.tools', { fallback: currentLanguage === 'he' ? 'כלים' : 'Tools' })}
               </p>
             )}
             {toolItems.map((item) => <NavButton key={item.key} item={item} />)}
@@ -342,7 +342,7 @@ const Header = () => {
               />
               <div className="min-w-0 flex-1 text-start">
                 <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                  {user?.name || user?.username || t('common.user')}
+                  {user?.name || user?.username || t('common.user', { fallback: currentLanguage === 'he' ? 'משתמש' : 'User' })}
                 </p>
                 <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user?.email}</p>
               </div>
@@ -350,8 +350,8 @@ const Header = () => {
                 type="button"
                 onClick={handleLogout}
                 className="p-2 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                title={t('auth.logout')}
-                aria-label={t('auth.logout')}
+                title={t('auth.logout', { fallback: currentLanguage === 'he' ? 'התנתק' : 'Logout' })}
+                aria-label={t('auth.logout', { fallback: currentLanguage === 'he' ? 'התנתק' : 'Logout' })}
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -363,8 +363,8 @@ const Header = () => {
               type="button"
               onClick={handleLogout}
               className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-              title={t('auth.logout')}
-              aria-label={t('auth.logout')}
+              title={t('auth.logout', { fallback: currentLanguage === 'he' ? 'התנתק' : 'Logout' })}
+              aria-label={t('auth.logout', { fallback: currentLanguage === 'he' ? 'התנתק' : 'Logout' })}
             >
               <LogOut className="w-4 h-4" />
             </button>
