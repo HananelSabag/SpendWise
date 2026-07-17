@@ -17,8 +17,12 @@ import { cn } from '../../../utils/helpers';
 import { InfoHint } from '../../ui';
 import { useBankBalance } from '../../../hooks/useBankBalance';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
+import { formatCycleDay } from '../../../utils/cycleDate';
+import { projectBalanceAfterNextBills } from '../../../utils/bankBalance';
 
-export default function CycleBalanceStrip({ formatCurrency, t, language = 'en', className }) {
+const signed = (value, formatCurrency) => `${Number(value) < 0 ? '−' : '+'}${formatCurrency(Math.abs(Number(value) || 0))}`;
+
+export default function CycleBalanceStrip({ cycle, formatCurrency, t, language = 'en', className }) {
   const {
     hasSynced, hasBankSource, hasRealBalance, totalRealBalance,
     bankAccounts, someBalancesUnavailable, isLoading,
@@ -29,29 +33,59 @@ export default function CycleBalanceStrip({ formatCurrency, t, language = 'en', 
 
   const accountLabel = (a, i) =>
     `${institutionLabel(a.source, language)}${a.accountNumber ? ` · ${a.accountNumber}` : ''}` || `#${i}`;
+  const forecast = cycle?.nextCardForecast;
+  const projectedBalance = hasRealBalance ? projectBalanceAfterNextBills(totalRealBalance, cycle) : null;
+  const lastBillDate = forecast?.bills?.reduce(
+    (latest, bill) => !latest || bill.chargeDate > latest ? bill.chargeDate : latest,
+    null,
+  );
 
   return (
     <section className={cn('rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900', className)}>
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-        <Wallet className="h-3.5 w-3.5" />
-        {t('cycle.balance', { fallback: 'Account balance' })}
-        <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:bg-gray-800 dark:text-gray-500">
-          {t('cycle.balanceNow', { fallback: 'now' })}
-        </span>
-        <InfoHint title={t('cycle.balance', { fallback: 'Account balance' })}>
-          {t('cycle.balanceHint', { fallback: "What is in your checking account right now, across your connected banks. It is today's balance." })}
-        </InfoHint>
-      </p>
+      <div className={cn('grid gap-3', projectedBalance !== null && 'sm:grid-cols-2')}>
+        <div>
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+            <Wallet className="h-3.5 w-3.5" />
+            {t('cycle.balance', { fallback: 'Account balance' })}
+            <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+              {t('cycle.balanceNow', { fallback: 'now' })}
+            </span>
+            <InfoHint title={t('cycle.balance', { fallback: 'Account balance' })}>
+              {t('cycle.balanceHint', { fallback: "What is in your checking account right now, across your connected banks. It is today's balance." })}
+            </InfoHint>
+          </p>
 
-      {hasRealBalance ? (
-        <p className={cn('mt-1 text-3xl font-black tabular-nums', totalRealBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
-          {formatCurrency(totalRealBalance)}
-        </p>
-      ) : (
-        <p className="mt-1 text-xl font-bold text-gray-400 dark:text-gray-500">
-          {t('cycle.balanceUnavailable', { fallback: 'Not available' })}
-        </p>
-      )}
+          {hasRealBalance ? (
+            <p className={cn('mt-1 text-3xl font-black tabular-nums', totalRealBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
+              {formatCurrency(totalRealBalance)}
+            </p>
+          ) : (
+            <p className="mt-1 text-xl font-bold text-gray-400 dark:text-gray-500">
+              {t('cycle.balanceUnavailable', { fallback: 'Not available' })}
+            </p>
+          )}
+        </div>
+
+        {projectedBalance !== null && (
+          <div className="rounded-xl bg-indigo-50/70 px-3 py-2.5 dark:bg-indigo-950/25">
+            <p className="flex items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+              {t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}
+              {lastBillDate && <span className="font-medium opacity-65">· {formatCycleDay(lastBillDate, language)}</span>}
+              <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}>
+                {t('cycle.balanceForecastHint', { fallback: "Today's balance, plus what remains before salary, plus salary, minus the next card bills." })}
+              </InfoHint>
+            </p>
+            <p className={cn('mt-0.5 text-2xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
+              ~{formatCurrency(projectedBalance)}
+            </p>
+            <p className="mt-1 flex flex-wrap gap-x-2 text-[10px] font-medium tabular-nums text-gray-500 dark:text-gray-400">
+              <span>{t('cycle.untilSalaryShort', { fallback: 'until salary' })} {signed(cycle?.projection?.upcomingTotal || 0, formatCurrency)}</span>
+              <span>{t('cycle.salaryShort', { fallback: 'salary' })} {signed(forecast.salaryAmount, formatCurrency)}</span>
+              <span>{t('cycle.cardsShort', { fallback: 'cards' })} −{formatCurrency(forecast.estimatedTotal)}</span>
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* More than one account: show each so the total is never a mystery blend. */}
       {bankAccounts.length > 1 && (

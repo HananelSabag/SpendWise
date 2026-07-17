@@ -133,6 +133,9 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
         const passthrough = card.settlement?.mode === 'passthrough';
         const day = card.statementDay?.certain ? card.statementDay.day : null;
         const split = splitFor(card);
+        const nextBill = cycle?.nextCardForecast?.bills?.find(
+          (bill) => bill.source === card.source && bill.accountNumber === card.accountNumber,
+        );
         const title = `${cardName(card.source)} ••${last4(card.accountNumber)}`;
         const modeLabel = passthrough
           ? t('cycle.modeDebit', { fallback: 'Debit — each purchase goes through on its own' })
@@ -187,6 +190,26 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
               </div>
             ) : (
               <p className="mt-3 text-center text-[11px] text-gray-400">{t('cycle.noCardCharges', { fallback: 'Nothing charged this cycle' })}</p>
+            )}
+
+            {nextBill && (
+              <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                <div className="flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+                      {t('cycle.nextBill', { fallback: 'Next bill' })} · {formatCycleDay(nextBill.chargeDate, language)}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                      {t('cycle.knownCardSpend', { fallback: 'Already accumulated' })} {formatCurrency(nextBill.knownAmount)}
+                      {nextBill.historyCount > 0 && <> · {t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `average of ${nextBill.historyCount} recent bills` })}</>}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-end">
+                    <p className="text-[10px] font-semibold text-gray-400">{t('cycle.expectedCardBill', { fallback: 'Expected' })}</p>
+                    <p className="text-lg font-black tabular-nums text-indigo-950 dark:text-white">~{formatCurrency(nextBill.estimatedAmount)}</p>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         );

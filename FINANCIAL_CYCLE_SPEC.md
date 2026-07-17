@@ -189,8 +189,15 @@ lets it **project** the next occurrence into the current/next cycle.
 `projectUpcoming` — for the running cycle: settled-so-far + what is still expected before the next
 salary ⇒ estimated end-of-cycle (labelled שערוך, never mixed into settled numbers).
 - Only projects series already **proven** to exist (loan families, recurring identifier series) plus
-  the salary. **Card charges are never projected** — the provider already gave us their real future
-  dates (§2), so we use those instead of inventing any.
+  the salary. Card charges **inside the current salary window** use the provider's real future dates
+  (§2); no invented amount is mixed into the current-cycle result.
+- A separate, explicitly estimated **post-salary cash point** answers what the account may hold after
+  the next salary and the card statements immediately following it. For every aggregated card, the
+  provider's purchases already assigned to that statement are a hard floor; until the statement is
+  final, estimate it as `max(known amount, average of up to 3 recent complete statements)`. Debit /
+  passthrough cards have no monthly statement and are excluded. Formula: today's real checking
+  balance + still-upcoming movements before salary + expected salary − estimated next card bills.
+  A statement that already left the bank is therefore never subtracted twice.
 - **A series can hold more than one rhythm**: insurance `42209` bills on **both the 1st and the 10th**
   under one identifier. Project each recurring day-of-month separately — "last date + 1 month" jumps
   to 10/08 (outside the window) and silently loses the 01/08 hit.

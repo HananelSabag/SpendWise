@@ -436,7 +436,16 @@ export default {
     statementLine: "Monthly bill",
     immediateLine: "Charged directly",
     seeCharges: "See charges",
-    noCardCharges: "Nothing charged this cycle"
+    noCardCharges: "Nothing charged this cycle",
+    nextBill: "Next bill",
+    expectedCardBill: "Expected",
+    knownCardSpend: "Already accumulated",
+    historyAverage: "average of {{count}} recent bills",
+    balanceAfterNextBills: "After next salary and card bills",
+    balanceForecastHint: "Today's balance, minus what is still expected before salary, plus the expected salary, minus the next card bills. This is an estimate until the bills are charged.",
+    untilSalaryShort: "until salary",
+    salaryShort: "salary",
+    cardsShort: "cards"
   },
 
   period: {

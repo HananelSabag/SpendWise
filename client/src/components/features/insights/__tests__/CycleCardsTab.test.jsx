@@ -33,6 +33,12 @@ const cycle = {
       },
     ],
   },
+  nextCardForecast: {
+    bills: [{
+      source: 'max', accountNumber: '2254', chargeDate: '2026-08-10',
+      knownAmount: 300, historicalAverage: 1100, historyCount: 2, estimatedAmount: 1100,
+    }],
+  },
   unreconciledCardEvents: [],
 };
 
@@ -52,5 +58,13 @@ describe('CycleCardsTab', () => {
     expect(screen.getByRole('region', { name: 'MAX ••2254' })).toBeInTheDocument();
     expect(screen.getByText('Groceries')).toBeInTheDocument();
     expect(screen.queryByText('Online service')).not.toBeInTheDocument();
+  });
+
+  it('separates the next bill estimate from what already charged this cycle', () => {
+    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
+
+    expect(screen.getByText('~₪1100.00')).toBeInTheDocument();
+    expect(screen.getByText(/Already accumulated ₪300.00/)).toBeInTheDocument();
+    expect(screen.getByText(/10 Aug/)).toBeInTheDocument();
   });
 });

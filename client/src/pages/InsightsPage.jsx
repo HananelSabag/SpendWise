@@ -125,7 +125,7 @@ export default function InsightsPage() {
 
       <main className="mx-auto max-w-5xl px-4 py-4 lg:px-8">
         {/* The level the user navigates by — always in view, above the flow. */}
-        <CycleBalanceStrip formatCurrency={formatCurrency} t={t} language={currentLanguage} className="mb-4" />
+        <CycleBalanceStrip cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} className="mb-4" />
 
         {empty ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-800 dark:bg-gray-900">

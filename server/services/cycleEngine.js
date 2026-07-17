@@ -466,8 +466,9 @@ function nextOccurrence(dayOfMonth, afterDate) {
  * Only projects series we have already proven exist. A family can hold more than one rhythm
  * (insurance `42209` bills on BOTH the 1st and the 10th), so each recurring day-of-month is
  * projected separately — projecting only "last date + 1 month" silently loses the other half.
- * Card charges are not projected at all: the provider already told us their real future dates
- * (§2), so we use those rather than invent them.
+ * Card charges inside the current salary window are not projected: the provider already told us
+ * their real future dates (§2), so we use those rather than invent them. The separately labelled
+ * post-salary forecast is built by `estimateNextCardBills` and never enters this settled total.
  */
 function projectUpcoming({
   window,
@@ -516,6 +517,68 @@ function projectUpcoming({
 
   items.sort((a, b) => a.date.localeCompare(b.date));
   return { items, total: sumAmounts(items) };
+}
+
+/** Calendar date for a statement day on or after an ISO boundary. */
+function statementDateOnOrAfter(day, boundary) {
+  if (!Number.isInteger(Number(day)) || !boundary) return null;
+  const [year, month] = String(boundary).slice(0, 10).split('-').map(Number);
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const candidate = `${year}-${String(month).padStart(2, '0')}-${String(Math.min(Number(day), lastDay)).padStart(2, '0')}`;
+  return candidate >= boundary ? candidate : addMonths(candidate, 1);
+}
+
+/**
+ * Forecast the first aggregated card bills after the next salary boundary.
+ *
+ * The provider gives us the amount already assigned to that future statement, but more
+ * purchases can still join it. Until the bank actually charges the bill, use the larger of
+ * (a) the amount already known and (b) the average of up to three recent complete statements.
+ * Debit/passthrough cards are excluded because they have no monthly bill.
+ */
+function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), historySize = 3 } = {}) {
+  const today = ilDate(asOf);
+  const bills = [];
+
+  for (const card of cardViews || []) {
+    const view = card.view || card;
+    if (view.settlement?.mode === SETTLEMENT_MODES.PASSTHROUGH) continue;
+    if (!view.statementDay?.certain || !view.statementDay.day) continue;
+
+    const chargeDate = statementDateOnOrAfter(view.statementDay.day, afterDate);
+    if (!chargeDate) continue;
+    const statements = (view.events || []).filter((event) => event.class === 'statement');
+    const knownEvent = statements.find((event) => event.chargeDate === chargeDate);
+    const knownAmount = round2(Math.abs(Number(knownEvent?.total || 0)));
+    const history = statements
+      .filter((event) => !event.partial && event.chargeDate < chargeDate && event.chargeDate <= today)
+      .sort((a, b) => b.chargeDate.localeCompare(a.chargeDate))
+      .slice(0, historySize);
+    const historicalAverage = history.length
+      ? round2(history.reduce((sum, event) => sum + Math.abs(Number(event.total || 0)), 0) / history.length)
+      : 0;
+    const estimatedAmount = round2(Math.max(knownAmount, historicalAverage));
+
+    if (!estimatedAmount && !knownAmount) continue;
+    bills.push({
+      source: card.source,
+      accountNumber: card.accountNumber,
+      chargeDate,
+      knownAmount,
+      knownCount: Number(knownEvent?.count || 0),
+      historicalAverage,
+      historyCount: history.length,
+      estimatedAmount,
+      certainty: knownEvent && knownAmount >= historicalAverage ? 'known' : 'estimated',
+    });
+  }
+
+  bills.sort((a, b) => a.chargeDate.localeCompare(b.chargeDate));
+  return {
+    bills,
+    knownTotal: round2(bills.reduce((sum, bill) => sum + bill.knownAmount, 0)),
+    estimatedTotal: round2(bills.reduce((sum, bill) => sum + bill.estimatedAmount, 0)),
+  };
 }
 
 /**
@@ -750,6 +813,14 @@ function buildCycle({
   const expensesTotal = round2(cardTotal + directTotal);
   const operatingNet = round2(incomeTotal - expensesTotal);
   const financingTotal = sumAmounts(financingIn);
+  const salaryTracking = salarySignature ? trackSalary(bankTxns, salarySignature, { asOf }) : null;
+  const nextCardForecast = window.running
+    ? {
+        salaryDate: salaryTracking?.expectedNext || window.end,
+        salaryAmount: round2(salaryTracking?.typicalAmount || window.salary.amount || 0),
+        ...estimateNextCardBills(cardViews, { afterDate: window.end, asOf }),
+      }
+    : null;
 
   return {
     window,
@@ -796,7 +867,7 @@ function buildCycle({
           excludeTxns: suppressed,
         }),
         futureCardEvents: allEvents.filter((e) => e.future),
-        salaryTracking: salarySignature ? trackSalary(bankTxns, salarySignature, { asOf }) : null,
+        salaryTracking,
       });
       return {
         upcoming: upcoming.items,
@@ -805,6 +876,9 @@ function buildCycle({
         estimate: true,
       };
     })(),
+    // Forward-looking cash point: today's balance can be projected through the next salary
+    // and the first card statements after it without counting a bill that already left.
+    nextCardForecast,
     // Transparency: what the engine deliberately did not count in THIS window, and why.
     reversals: reversals.filter((r) => inWindow(r.event.chargeDate, window)),
     partials: settledEvents.filter((e) => e.partial && inWindow(e.chargeDate, window)),
@@ -848,6 +922,7 @@ module.exports = {
   deriveRecurringCharges,
   nextOccurrence,
   projectUpcoming,
+  estimateNextCardBills,
   buildCycle,
   inWindow,
   SETTLEMENT_MODES,

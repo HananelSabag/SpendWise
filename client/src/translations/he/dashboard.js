@@ -425,7 +425,16 @@ export default {
     statementLine: "מחזור חיוב",
     immediateLine: "חיוב מיידי",
     seeCharges: "לפירוט",
-    noCardCharges: "לא חויב כלום במחזור"
+    noCardCharges: "לא חויב כלום במחזור",
+    nextBill: "החיוב הבא",
+    expectedCardBill: "צפי",
+    knownCardSpend: "כבר נצבר",
+    historyAverage: "ממוצע של {{count}} חיובים אחרונים",
+    balanceAfterNextBills: "אחרי המשכורת והאשראי",
+    balanceForecastHint: "היתרה של היום, פחות מה שעוד צפוי עד המשכורת, ועוד המשכורת הצפויה, פחות חיובי האשראי הבאים. זה אומדן עד שהחיובים יורדים בפועל.",
+    untilSalaryShort: "עד המשכורת",
+    salaryShort: "משכורת",
+    cardsShort: "אשראי"
   },
 
   period: {

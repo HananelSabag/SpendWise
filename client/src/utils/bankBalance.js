@@ -57,4 +57,22 @@ export function computeBankBalance(sources) {
   };
 }
 
+/**
+ * Project today's real balance through the next salary and the card bills immediately after it.
+ * `upcomingTotal` contains only movements that have not happened yet, so a statement that already
+ * left the account is deliberately not subtracted a second time.
+ */
+export function projectBalanceAfterNextBills(currentBalance, cycle) {
+  const forecast = cycle?.nextCardForecast;
+  const current = Number(currentBalance);
+  const untilSalary = Number(cycle?.projection?.upcomingTotal || 0);
+  const salary = Number(forecast?.salaryAmount);
+  const cards = Number(forecast?.estimatedTotal);
+
+  if (!cycle?.window?.running || !forecast?.bills?.length) return null;
+  if (![current, untilSalary, salary, cards].every(Number.isFinite)) return null;
+
+  return current + untilSalary + salary - cards;
+}
+
 export default computeBankBalance;
