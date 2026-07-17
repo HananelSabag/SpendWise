@@ -202,10 +202,25 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
                   {t('cycle.nextBill', { fallback: 'Next bill' })} · {formatCycleDay(nextBill.chargeDate, language)}
                 </p>
                 <div className={cn('mt-1.5 grid gap-2', useCardEstimate && 'grid-cols-2')}>
-                  <div className="min-w-0 rounded-lg bg-white/75 px-2.5 py-2 dark:bg-gray-900/60">
-                    <p className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{t('cycle.knownCardSpend', { fallback: 'Actually accumulated' })}</p>
-                    <p className="text-base font-black tabular-nums text-gray-950 dark:text-white">{formatCurrency(nextBill.knownAmount)}</p>
-                  </div>
+                  <button
+                    type="button"
+                    disabled={!nextBill.knownTxns?.length}
+                    onClick={() => setGroup({
+                      title,
+                      meta: `${t('cycle.nextBill', { fallback: 'Next bill' })} · ${formatCycleDay(nextBill.chargeDate, language)}`,
+                      txns: nextBill.knownTxns || [],
+                    })}
+                    className="group min-w-0 rounded-lg bg-white/75 px-2.5 py-2 text-start transition enabled:hover:bg-white disabled:cursor-default dark:bg-gray-900/60 dark:enabled:hover:bg-gray-900"
+                  >
+                    <span className="flex items-center justify-between gap-1">
+                      <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{t('cycle.knownCardSpend', { fallback: 'Actually accumulated' })}</span>
+                      {nextBill.knownTxns?.length > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-40 rtl:rotate-180" />}
+                    </span>
+                    <span className="block text-base font-black tabular-nums text-gray-950 dark:text-white">{formatCurrency(nextBill.knownAmount)}</span>
+                    {nextBill.knownCount > 0 && (
+                      <span className="mt-0.5 block text-[9px] text-gray-400">{countLabel(nextBill.knownCount)}</span>
+                    )}
+                  </button>
                   {useCardEstimate && (
                     <div className="min-w-0 rounded-lg bg-indigo-100/70 px-2.5 py-2 dark:bg-indigo-950/50">
                       <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-300">{t('cycle.expectedCardBill', { fallback: 'Estimate only' })}</p>

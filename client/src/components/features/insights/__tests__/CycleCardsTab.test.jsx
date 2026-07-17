@@ -36,7 +36,9 @@ const cycle = {
   nextCardForecast: {
     bills: [{
       source: 'max', accountNumber: '2254', chargeDate: '2026-08-10',
-      knownAmount: 300, historicalAverage: 1100, historyCount: 2, estimatedAmount: 1100,
+      knownAmount: 300, knownCount: 1,
+      knownTxns: [{ id: 'future-1', date: '2026-07-15', description: 'Future groceries', amount: -300 }],
+      historicalAverage: 1100, historyCount: 2, estimatedAmount: 1100,
     }],
   },
   unreconciledCardEvents: [],
@@ -67,6 +69,14 @@ describe('CycleCardsTab', () => {
     expect(screen.getByText('Actually accumulated')).toBeInTheDocument();
     expect(screen.getByText('₪300.00')).toBeInTheDocument();
     expect(screen.getByText(/10 Aug/)).toBeInTheDocument();
+  });
+
+  it('opens the purchases already assigned to the next bill', () => {
+    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Actually accumulated/ }));
+    expect(screen.getByText('Future groceries')).toBeInTheDocument();
+    expect(screen.queryByText('Online service')).not.toBeInTheDocument();
   });
 
   it('can hide the historical estimate without hiding the actual accumulated amount', () => {

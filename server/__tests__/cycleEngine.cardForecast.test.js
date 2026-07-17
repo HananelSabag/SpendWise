@@ -10,7 +10,11 @@ function cardView({ mode = SETTLEMENT_MODES.AGGREGATED, futureTotal = -300 } = {
       events: [
         { class: 'statement', chargeDate: '2026-06-10', total: -1000, count: 10, partial: false },
         { class: 'statement', chargeDate: '2026-07-10', total: -1200, count: 12, partial: false },
-        { class: 'statement', chargeDate: '2026-08-10', total: futureTotal, count: 3, partial: false, future: true },
+        {
+          class: 'statement', chargeDate: '2026-08-10', total: futureTotal, count: 3,
+          partial: false, future: true,
+          txns: [{ id: 'future-1', amount: futureTotal, date: '2026-07-15' }],
+        },
       ],
     },
   };
@@ -28,6 +32,7 @@ describe('next card-bill forecast', () => {
       accountNumber: '2254',
       chargeDate: '2026-08-10',
       knownAmount: 300,
+      knownTxns: [{ id: 'future-1', amount: -300, date: '2026-07-15' }],
       historicalAverage: 1100,
       historyCount: 2,
       estimatedAmount: 1100,

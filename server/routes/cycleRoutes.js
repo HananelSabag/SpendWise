@@ -59,6 +59,18 @@ function slimEvent(event) {
 }
 
 function slimCycle(cycle) {
+  const forecast = cycle.nextCardForecast
+    ? {
+        ...cycle.nextCardForecast,
+        bills: (cycle.nextCardForecast.bills || []).map((bill) => ({
+          ...bill,
+          knownTxns: (bill.knownTxns || [])
+            .map(slimTxn)
+            .sort((a, b) => String(b.date).localeCompare(String(a.date))),
+        })),
+      }
+    : null;
+
   return {
     window: {
       index: cycle.window.index,
@@ -95,7 +107,7 @@ function slimCycle(cycle) {
     bankMovement: cycle.bankMovement,
     timingAdjustment: cycle.timingAdjustment,
     projection: cycle.projection,
-    nextCardForecast: cycle.nextCardForecast,
+    nextCardForecast: forecast,
     needsReview: cycle.needsReview.map((r) => ({
       transactionId: r.txn.id,
       amount: r.amount,

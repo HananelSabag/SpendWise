@@ -609,6 +609,10 @@ function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), histor
       chargeDate,
       knownAmount,
       knownCount: Number(knownEvent?.count || 0),
+      // Keep the provider-assigned purchases behind the known amount. The API slims these
+      // before sending them to the client; carrying them here makes "already accumulated"
+      // auditable instead of a number with no provenance.
+      knownTxns: knownEvent?.txns || [],
       historicalAverage,
       historyCount: history.length,
       estimatedAmount,
