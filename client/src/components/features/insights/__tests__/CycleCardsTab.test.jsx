@@ -21,10 +21,11 @@ const cycle = {
   ],
   expenses: {
     events: [
+      // The bill still building this cycle (bills 10/08) is a card expense now, flagged accruing.
       {
-        source: 'max', accountNumber: '2254', class: 'statement', chargeDate: '2026-07-10',
-        total: -100, count: 1,
-        txns: [{ id: 'statement-1', date: '2026-07-01', description: 'Groceries', amount: -100 }],
+        source: 'max', accountNumber: '2254', class: 'statement', chargeDate: '2026-08-10',
+        total: -300, count: 1, accruing: true, future: true,
+        txns: [{ id: 'accr-1', date: '2026-07-15', description: 'Future groceries', amount: -300 }],
       },
       {
         source: 'max', accountNumber: '2254', class: 'immediate', chargeDate: '2026-07-08',
@@ -37,7 +38,6 @@ const cycle = {
     bills: [{
       source: 'max', accountNumber: '2254', chargeDate: '2026-08-10',
       knownAmount: 300, knownCount: 1,
-      knownTxns: [{ id: 'future-1', date: '2026-07-15', description: 'Future groceries', amount: -300 }],
       historicalAverage: 1100, historyCount: 2, estimatedAmount: 1100,
     }],
   },
@@ -45,45 +45,46 @@ const cycle = {
 };
 
 describe('CycleCardsTab', () => {
-  it('leads with the card total and splits monthly from direct charges', () => {
+  it('leads with the card total and splits the building bill from direct charges', () => {
     render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
 
-    expect(screen.getByText('−₪150.00')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Monthly bill/ })).toBeInTheDocument();
+    // 300 building + 50 charged directly = 350 this cycle.
+    expect(screen.getByText(/350\.00/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bill building/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Charged directly/ })).toBeInTheDocument();
-  });
-
-  it('opens the exact purchases behind a charge group', () => {
-    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
-
-    fireEvent.click(screen.getByRole('button', { name: /Monthly bill/ }));
-    expect(screen.getByRole('region', { name: 'MAX ••••2254' })).toBeInTheDocument();
-    expect(screen.getByText('Groceries')).toBeInTheDocument();
-    expect(screen.queryByText('Online service')).not.toBeInTheDocument();
-  });
-
-  it('separates the next bill estimate from what already charged this cycle', () => {
-    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
-
-    expect(screen.getByText('~₪1100.00')).toBeInTheDocument();
-    expect(screen.getByText('Actually accumulated')).toBeInTheDocument();
-    expect(screen.getByText('₪300.00')).toBeInTheDocument();
     expect(screen.getByText(/10 Aug/)).toBeInTheDocument();
   });
 
-  it('opens the purchases already assigned to the next bill', () => {
+  it('opens the exact purchases behind the building bill', () => {
     render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
 
-    fireEvent.click(screen.getByRole('button', { name: /Actually accumulated/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Bill building/ }));
+    expect(screen.getByRole('region', { name: 'MAX ••••2254' })).toBeInTheDocument();
     expect(screen.getByText('Future groceries')).toBeInTheDocument();
     expect(screen.queryByText('Online service')).not.toBeInTheDocument();
   });
 
-  it('can hide the historical estimate without hiding the actual accumulated amount', () => {
+  it('opens the exact purchases behind a direct charge', () => {
+    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /Charged directly/ }));
+    expect(screen.getByText('Online service')).toBeInTheDocument();
+    expect(screen.queryByText('Future groceries')).not.toBeInTheDocument();
+  });
+
+  it('flags how much bigger the building bill may still grow, not a parallel figure', () => {
+    render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" />);
+
+    expect(screen.getByText(/May grow to/)).toBeInTheDocument();
+    expect(screen.getByText(/~₪1100\.00/)).toBeInTheDocument();
+    // The old parallel "actually accumulated" box is gone — the amount is the expense row itself.
+    expect(screen.queryByText('Actually accumulated')).not.toBeInTheDocument();
+  });
+
+  it('hides the growth hint when the estimate is turned off, keeping the bill as an expense', () => {
     render(<CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language="en" useCardEstimate={false} />);
 
-    expect(screen.queryByText('~₪1100.00')).not.toBeInTheDocument();
-    expect(screen.getByText('₪300.00')).toBeInTheDocument();
-    expect(screen.getByText('Actually accumulated')).toBeInTheDocument();
+    expect(screen.queryByText(/May grow to/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bill building/ })).toBeInTheDocument();
   });
 });

@@ -258,13 +258,15 @@ function inWindow(hitDate, { start, end }) {
 }
 
 /**
- * Representative spending date for one indivisible monthly statement. Use the amount-weighted
- * median purchase date, so the cycle containing most of the bill owns its total and breakdown.
- * Installments are current-period payments even when the original purchase is old, so their
- * effective date remains the provider's processed/statement date.
+ * Representative spending date for one indivisible monthly statement: the amount-weighted median
+ * purchase date, so the cycle containing most of the bill owns its total and breakdown. Only real
+ * spending votes — a refund inside the statement is not spending and must not pull the median
+ * (SPEC §3c corner). Installments are current-period payments even when the original purchase is
+ * old, so their effective date is the provider's processed/statement date.
  */
 function statementAttributionDate(event) {
   const points = (event?.txns || [])
+    .filter((txn) => Number(txn.amount) < 0)
     .map((txn) => ({
       date: txn.installments ? event.chargeDate : ilDate(txn.date),
       weight: Math.abs(Number(txn.amount) || 0),
@@ -283,25 +285,50 @@ function statementAttributionDate(event) {
 }
 
 /**
+ * Amount-weighted split of a statement's spending around a boundary date. Only money actually
+ * spent (negative charges) decides which cycle owns the bill — a refund is not spending, so it
+ * never votes. Installments count on the day they are paid (the statement's charge date), not
+ * their old original purchase date.
+ */
+function statementSpendSplit(event, boundary) {
+  let before = 0;
+  let total = 0;
+  for (const txn of event?.txns || []) {
+    const amount = Number(txn.amount) || 0;
+    if (amount >= 0) continue;
+    const date = txn.installments ? event.chargeDate : ilDate(txn.date);
+    if (!date) continue;
+    const weight = Math.abs(amount);
+    total += weight;
+    if (date < boundary) before += weight;
+  }
+  return { before: round2(before), after: round2(total - before), total: round2(total) };
+}
+
+/**
  * Monthly statements follow the spending they close; immediate/debit movements follow the exact
- * day they hit the bank. Bank movement itself always remains chronological.
+ * day they hit the bank. Bank movement itself always remains chronological. On a dead-even 50/50
+ * split the day the bank actually charges the bill breaks the tie (SPEC §3c corner).
  */
 function inCardAttributionWindow(event, window) {
   if (!event?.chargeDate) return false;
   if (event.class !== 'statement') return inWindow(event.chargeDate, window);
 
   const chargeDate = ilDate(event.chargeDate);
-  const attributionDate = statementAttributionDate(event);
-  if (!chargeDate || !attributionDate || chargeDate < window.start) return false;
+  if (!chargeDate || chargeDate < window.start) return false;
 
   // A statement can close the window it hits in or the immediately preceding salary window.
   // Never let an old original purchase reopen a cycle from two months ago.
   if (chargeDate >= addMonths(window.end, 1)) return false;
 
-  if (inWindow(chargeDate, window)) {
-    return attributionDate >= window.start;
-  }
-  return chargeDate >= window.end && attributionDate < window.end;
+  const chargeInWindow = inWindow(chargeDate, window);
+  const boundary = chargeInWindow ? window.start : window.end;
+  const { before, after, total } = statementSpendSplit(event, boundary);
+  // Nothing to weigh, or a dead-even split ⇒ the charge day decides.
+  if (!total || Math.abs(before - after) <= AMOUNT_EPSILON) return chargeInWindow;
+
+  // Otherwise the cycle holding the majority of the spending owns the bill.
+  return chargeInWindow ? after > before : before > after;
 }
 
 /** Collapse a provider description so the same payer matches across months. */
@@ -843,9 +870,22 @@ function buildCycle({
     }
   }
 
-  const cardCharges = settledEvents.filter(
+  const settledCardCharges = settledEvents.filter(
     (e) => reconciledEvents.has(e) && !e.partial && cardEventWithin(e),
   );
+  // Running cycle only: a monthly statement whose purchases were made in this window but which
+  // the bank has not charged yet (it settles next month, outside the window). Those purchases
+  // are real spending you did THIS cycle, so they belong in this cycle's card expense even
+  // though no bank line exists for them yet. bankMovement stays literal (the debit lands next
+  // window), so `timingAdjustment` carries the gap. Flagged `accruing` so the UI shows a bill
+  // that is still building, not one that already left the account.
+  const accruingCardCharges = window.running
+    ? allEvents
+        .filter((e) => e.future && e.class === 'statement' && !e.partial
+          && ilDate(e.chargeDate) >= window.end && cardEventWithin(e))
+        .map((e) => ({ ...e, accruing: true }))
+    : [];
+  const cardCharges = [...settledCardCharges, ...accruingCardCharges];
   const credits = direct.filter((t) => Number(t.amount) > 0 && within(t));
   const debits = direct.filter((t) => Number(t.amount) < 0 && within(t));
 

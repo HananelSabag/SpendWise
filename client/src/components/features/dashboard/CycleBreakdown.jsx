@@ -148,9 +148,14 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
   if (!cycle) return null;
   const { expenses, income } = cycle;
 
-  const classLabel = (event) => (event.class === 'statement'
-    ? t('cycle.classStatement', { fallback: 'Monthly bill' })
-    : t('cycle.classImmediate', { fallback: 'Charged directly' }));
+  const classLabel = (event) => {
+    if (event.class !== 'statement') return t('cycle.classImmediate', { fallback: 'Charged directly' });
+    // A statement still building this cycle: its purchases count now, but the bank charges it
+    // next month — so it reads as a bill in progress, not one that already left the account.
+    return event.accruing
+      ? t('cycle.classAccruing', { fallback: 'Bill building' })
+      : t('cycle.classStatement', { fallback: 'Monthly bill' });
+  };
 
   /** "1 transactions" reads like a bug to a user; both languages need the singular. */
   const countLabel = (n) => `${n} ${n === 1
@@ -161,7 +166,8 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
     // One row per real bank debit the card produced.
     ...(expenses.events || []).map((event, index) => {
       const label = `${sourceName(event.source)} ••••${String(event.accountNumber || '').slice(-4)}`;
-      const meta = `${classLabel(event)} · ${formatCycleDay(event.chargeDate, language)} · ${countLabel(event.count)}`;
+      const when = `${event.accruing ? `${t('cycle.billsOn', { fallback: 'bills' })} ` : ''}${formatCycleDay(event.chargeDate, language)}`;
+      const meta = `${classLabel(event)} · ${when} · ${countLabel(event.count)}`;
       return {
         // Immediate debits can share a card and charge date, so the old three-part key was
         // not unique (the live MAX 8345 data has exactly this case).

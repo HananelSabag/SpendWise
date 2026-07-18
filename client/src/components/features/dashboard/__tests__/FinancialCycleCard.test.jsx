@@ -24,18 +24,27 @@ const t = (_key, options) => (options && options.fallback) || _key;
 const CYCLE = {
   window: { index: 0, start: '2026-07-09', end: '2026-08-09', running: true, projectedEnd: true, salary: { date: '2026-07-09', amount: 13327.75, description: 'הורייזן טכנו-י' } },
   income: { salary: 13327.75, other: 0, total: 13327.75 },
-  expenses: { cards: 435.99, direct: 2209.39, total: 2645.38, events: [] },
-  operatingNet: 10682.37,
+  // The MAX bill still building this cycle (it bills 10/08) is counted now as a card expense,
+  // not floated off in a separate "next bill" box.
+  expenses: {
+    cards: 3259.78, direct: 2209.39, total: 5469.17,
+    events: [{
+      source: 'max', accountNumber: '2254', class: 'statement', chargeDate: '2026-08-10',
+      count: 16, total: -2823.79, accruing: true, future: true,
+      txns: [{ id: 'accr-1', amount: -2823.79, description: 'MAX purchases this cycle', date: '2026-07-15' }],
+    }],
+  },
+  operatingNet: 7858.58,
   financing: { total: 0, count: 0 },
   bankMovement: 8017.17,
-  timingAdjustment: -2665.2,
+  timingAdjustment: 158.59,
   projection: {
     upcoming: [
       { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה', certainty: 'estimated' },
       { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י', certainty: 'estimated' },
     ],
     upcomingTotal: -1171.86,
-    projectedOperatingNet: 9510.51,
+    projectedOperatingNet: 6686.72,
     estimate: true,
   },
   needsReview: [],
@@ -45,7 +54,7 @@ const CYCLE = {
   nextCardForecast: {
     bills: [{
       source: 'max', accountNumber: '2254', chargeDate: '2026-08-10',
-      knownAmount: 2823.79, knownCount: 16,
+      knownAmount: 2823.79, knownCount: 16, estimatedAmount: 2823.79,
     }],
   },
 };
@@ -82,7 +91,7 @@ describe('FinancialCycleCard', () => {
 
   it('leads with the operating net rather than the account movement', () => {
     renderCard();
-    expect(screen.getByText('₪10,682.37')).toBeInTheDocument();
+    expect(screen.getByText('₪7,858.58')).toBeInTheDocument();
     expect(screen.getByText('You earned more than you spent')).toBeInTheDocument();
   });
 
@@ -107,18 +116,17 @@ describe('FinancialCycleCard', () => {
   it('keeps the projection separate from settled figures', () => {
     renderCard();
     expect(screen.getByText('Still expected before your next salary')).toBeInTheDocument();
-    expect(screen.getByText('₪9,510.51')).toBeInTheDocument();
+    expect(screen.getByText('₪6,686.72')).toBeInTheDocument();
     expect(screen.getByText(/פרעון הלוואה/)).toBeInTheDocument();
   });
 
-  it('surfaces the known next card bill and opens its card breakdown', () => {
-    const onOpenCycle = vi.fn();
-    renderCard({ onOpenCycle });
-
-    const nextBill = screen.getByRole('button', { name: /MAX .*2254.*16 transactions.*2,823.79/ });
-    expect(nextBill).toBeInTheDocument();
-    fireEvent.click(nextBill);
-    expect(onOpenCycle).toHaveBeenCalledWith('cards');
+  it('counts the building card bill inside this cycle, not in a separate next-bill box', () => {
+    renderCard();
+    // The accruing MAX bill lives in the expense breakdown now, flagged as still building.
+    expect(screen.queryByText('Next bill')).not.toBeInTheDocument();
+    expect(screen.getByText('MAX ••••2254')).toBeInTheDocument();
+    expect(screen.getByText(/Bill building/)).toBeInTheDocument();
+    expect(screen.getByText(/2,823\.79/)).toBeInTheDocument();
   });
 
   it('keeps the dashboard compact until the user asks for every source row', () => {

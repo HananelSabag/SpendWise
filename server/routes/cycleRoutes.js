@@ -51,6 +51,9 @@ function slimEvent(event) {
     accountNumber: event.accountNumber,
     partial: Boolean(event.partial),
     future: Boolean(event.future),
+    // A statement still building this cycle — its purchases are counted now, but the bank
+    // charges it next month, so the UI labels it "bills on <date>" rather than a past debit.
+    accruing: Boolean(event.accruing),
     // The provenance of this exact charge, newest purchase first.
     txns: (event.txns || [])
       .map(slimTxn)

@@ -15,7 +15,6 @@ import { AlertTriangle, ChevronRight, Clock3, CreditCard } from 'lucide-react';
 import { InfoHint } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatCycleDay } from '../../../utils/cycleDate';
-import { cn } from '../../../utils/helpers';
 import BottomSheet from '../../common/BottomSheet';
 import Modal from '../../ui/Modal';
 
@@ -108,6 +107,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
         total: evs.reduce((sum, e) => sum + Number(e.total || 0), 0),
         count: evs.reduce((sum, e) => sum + Number(e.count || 0), 0),
         chargeDate: evs.length === 1 ? evs[0].chargeDate : null,
+        accruing: evs.some((e) => e.accruing),
         txns: evs.flatMap((e) => e.txns || []),
       };
     };
@@ -142,6 +142,14 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
           (bill) => bill.source === card.source && bill.accountNumber === card.accountNumber,
         );
         const title = `${cardName(card.source)} ••••${last4(card.accountNumber)}`;
+        // A statement whose purchases were made this cycle but which the bank charges next month
+        // is counted now as a bill in progress — labelled "building", dated by when it bills.
+        const statementLabel = split.statement.accruing
+          ? t('cycle.classAccruing', { fallback: 'Bill building' })
+          : t('cycle.statementLine', { fallback: 'Monthly bill' });
+        const statementWhen = split.statement.chargeDate
+          ? `${split.statement.accruing ? `${t('cycle.billsOn', { fallback: 'bills' })} ` : ''}${formatCycleDay(split.statement.chargeDate, language)} · `
+          : '';
         const modeLabel = passthrough
           ? t('cycle.modeDebit', { fallback: 'Debit — each purchase goes through on its own' })
           : day
@@ -175,11 +183,11 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
               <div className="mt-3 space-y-1.5">
                 {split.statement.has && (
                   <ChargeRow
-                    label={t('cycle.statementLine', { fallback: 'Monthly bill' })}
-                    meta={`${split.statement.chargeDate ? `${formatCycleDay(split.statement.chargeDate, language)} · ` : ''}${countLabel(split.statement.count)}`}
+                    label={statementLabel}
+                    meta={`${statementWhen}${countLabel(split.statement.count)}`}
                     amount={split.statement.total}
                     formatCurrency={formatCurrency}
-                    onClick={() => setGroup({ title, meta: t('cycle.statementLine', { fallback: 'Monthly bill' }), txns: split.statement.txns })}
+                    onClick={() => setGroup({ title, meta: statementLabel, txns: split.statement.txns })}
                   />
                 )}
                 {split.immediate.has && (
@@ -196,42 +204,18 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
               <p className="mt-3 text-center text-[11px] text-gray-400">{t('cycle.noCardCharges', { fallback: 'Nothing charged this cycle' })}</p>
             )}
 
-            {nextBill && (
-              <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/60 px-3 py-2.5 dark:border-indigo-900/50 dark:bg-indigo-950/20">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
-                  {t('cycle.nextBill', { fallback: 'Next bill' })} · {formatCycleDay(nextBill.chargeDate, language)}
-                </p>
-                <div className={cn('mt-1.5 grid gap-2', useCardEstimate && 'grid-cols-2')}>
-                  <button
-                    type="button"
-                    disabled={!nextBill.knownTxns?.length}
-                    onClick={() => setGroup({
-                      title,
-                      meta: `${t('cycle.nextBill', { fallback: 'Next bill' })} · ${formatCycleDay(nextBill.chargeDate, language)}`,
-                      txns: nextBill.knownTxns || [],
-                    })}
-                    className="group min-w-0 rounded-lg bg-white/75 px-2.5 py-2 text-start transition enabled:hover:bg-white disabled:cursor-default dark:bg-gray-900/60 dark:enabled:hover:bg-gray-900"
-                  >
-                    <span className="flex items-center justify-between gap-1">
-                      <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400">{t('cycle.knownCardSpend', { fallback: 'Actually accumulated' })}</span>
-                      {nextBill.knownTxns?.length > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-40 rtl:rotate-180" />}
-                    </span>
-                    <span className="block text-base font-black tabular-nums text-gray-950 dark:text-white">{formatCurrency(nextBill.knownAmount)}</span>
-                    {nextBill.knownCount > 0 && (
-                      <span className="mt-0.5 block text-[9px] text-gray-400">{countLabel(nextBill.knownCount)}</span>
-                    )}
-                  </button>
-                  {useCardEstimate && (
-                    <div className="min-w-0 rounded-lg bg-indigo-100/70 px-2.5 py-2 dark:bg-indigo-950/50">
-                      <p className="text-[9px] font-bold text-indigo-600 dark:text-indigo-300">{t('cycle.expectedCardBill', { fallback: 'Estimate only' })}</p>
-                      <p className="text-base font-black tabular-nums text-indigo-950 dark:text-white">~{formatCurrency(nextBill.estimatedAmount)}</p>
-                      {nextBill.historyCount > 0 && (
-                        <p className="text-[9px] text-gray-500 dark:text-gray-400">{t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `average of ${nextBill.historyCount} recent bills` })}</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+            {/* The bill is already counted above as it builds; this only flags how much bigger it
+                may still get by the time the bank charges it, based on recent statements. */}
+            {nextBill && split.statement.accruing && useCardEstimate
+              && Number(nextBill.estimatedAmount) > Number(nextBill.knownAmount) && (
+              <p className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-[11px] leading-snug dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                <span className="font-semibold text-indigo-700 dark:text-indigo-300">
+                  {t('cycle.mayGrowTo', { fallback: 'May grow to' })} ~{formatCurrency(nextBill.estimatedAmount)}
+                </span>
+                {nextBill.historyCount > 0 && (
+                  <span className="text-gray-500 dark:text-gray-400"> · {t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `average of ${nextBill.historyCount} recent bills` })}</span>
+                )}
+              </p>
             )}
           </div>
         );

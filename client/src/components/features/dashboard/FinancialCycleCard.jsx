@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { AlertTriangle, ArrowRight, CalendarRange, Coins, CreditCard, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarRange, Coins, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { InfoHint } from '../../ui';
@@ -41,9 +41,6 @@ function formatDay(iso, language) {
   if (Number.isNaN(date.getTime())) return iso;
   return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' }).format(date);
 }
-
-const CARD_SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex' };
-const cardLabel = (bill) => `${CARD_SOURCE_NAME[bill.source] || String(bill.source || '').toUpperCase()} ••••${String(bill.accountNumber || '').slice(-4)}`;
 
 function Line({ label, value, hint, formatCurrency, tone = 'neutral', bold = false }) {
   const tones = {
@@ -133,7 +130,6 @@ export default function FinancialCycleCard({
   if (!cycle) return null;
 
   const { window, income, expenses, operatingNet, financing, bankMovement, projection } = cycle;
-  const knownNextBills = (cycle.nextCardForecast?.bills || []).filter((bill) => Number(bill.knownAmount) > 0);
   const isDeficit = operatingNet < 0;
   const salaryLate = salaryTracking?.status === 'late';
 
@@ -231,36 +227,6 @@ export default function FinancialCycleCard({
         language={language}
         compactRowLimit={2}
       />
-
-      {/* Future statement purchases are not current-cycle expenses yet, but hiding them makes
-          the dashboard useless for the next bank debit. Keep them in their own compact box. */}
-      {knownNextBills.length > 0 && (
-        <div className="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/55 px-3 py-2 dark:border-indigo-900/50 dark:bg-indigo-950/20">
-          <p className="flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-            <CreditCard className="h-3.5 w-3.5" />
-            {t('cycle.nextBill', { fallback: 'Next bill' })}
-          </p>
-          <div className="mt-1 divide-y divide-indigo-100/80 dark:divide-indigo-900/40">
-            {knownNextBills.map((bill) => (
-              <button
-                key={`${bill.source}-${bill.accountNumber}-${bill.chargeDate}`}
-                type="button"
-                onClick={() => onOpenCycle?.('cards')}
-                className="group flex w-full items-center gap-2 py-2 text-start"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11px] font-bold text-gray-800 dark:text-gray-100">{cardLabel(bill)}</span>
-                  <span className="block truncate text-[10px] text-gray-500 dark:text-gray-400">
-                    {formatDay(bill.chargeDate, language)} · {bill.knownCount} {t('cycle.txns', { fallback: 'transactions' })}
-                  </span>
-                </span>
-                <span className="shrink-0 tabular-nums text-sm font-black text-gray-950 dark:text-white">−{formatCurrency(bill.knownAmount)}</span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-40 transition group-hover:translate-x-0.5 rtl:rotate-180 rtl:group-hover:-translate-x-0.5" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* An estimate, kept visually separate from the settled figures above. */}
       {projection && projection.upcoming.length > 0 && (
