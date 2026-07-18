@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { Heart, Github, ExternalLink } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import { useTranslation } from '../../stores';
 import BrandMark from '../common/BrandMark';
@@ -40,17 +40,16 @@ const Footer = () => {
           {/* Single row: brand · legal links · contact */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
-            {/* Brand */}
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-              <BrandMark size="sm" />
-              <span className="font-bold text-indigo-600 dark:text-indigo-400">SpendWise</span>
-              <span className="text-gray-300 dark:text-gray-700">·</span>
-              <span className="flex items-center gap-1">
-                {t('footer.madeWith', { fallback: 'Made with' })}
-                <Heart className="w-3.5 h-3.5 text-red-500 inline" />
+            {/* Brand + author credit — professional, no filler */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400 shrink-0">
+              <span className="flex items-center gap-1.5">
+                <BrandMark size="sm" />
+                <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">SpendWise</span>
               </span>
               <span className="text-gray-300 dark:text-gray-700">·</span>
-              <span>© {currentYear}</span>
+              <span>© {currentYear} {t('footer.madeBy', { fallback: 'Made by Hananel Sabag' })}</span>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <span>{t('footer.allRights', { fallback: 'All rights reserved' })}</span>
             </div>
 
             {/* Legal + contact */}

@@ -71,7 +71,7 @@ export default {
     // Contact
     contact: {
       title: 'Contact us about privacy',
-      email: 'Email: privacy@spendwise.com',
+      email: 'Email: spendwise.verifiction@gmail.com',
       phone: 'Phone: +1-555-0123',
       address: 'Address: 123 Technology Street, San Francisco, CA'
     },

@@ -28,6 +28,8 @@ export default {
   
   // Development info
   madeWith: 'Made with love using',
+  madeBy: 'Made by Hananel Sabag',
+  allRights: 'All rights reserved',
   byTeam: 'by SpendWise Team',
   poweredBy: 'Powered by advanced technologies',
 }; 

@@ -28,6 +28,8 @@ export default {
   
   // מידע על הפיתוח
   madeWith: 'נוצר באהבה עם',
+  madeBy: 'נעשה על ידי חננאל סבג',
+  allRights: 'כל הזכויות שמורות',
   byTeam: 'על ידי צוות SpendWise',
   poweredBy: 'מופעל על ידי טכנולוגיות מתקדמות',
 }; 

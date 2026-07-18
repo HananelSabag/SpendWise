@@ -80,7 +80,7 @@ export default {
   googleOnlyUser: "חשבון זה משתמש בהתחברות גוגל. אנא השתמשו בכפתור 'המשך עם גוגל' למטה.",
   passwordNotSet: "לא הוגדרה סיסמה לחשבון זה. אנא התחברו עם גוגל או השתמשו ב'שכחתי סיסמה' כדי להגדיר אחת.",
   contactSupport: "אם הבעיה נמשכת, אנא פנו אלינו בכתובת:",
-  supportEmail: "spendwise.verification@gmail.com",
+  supportEmail: "spendwise.verifiction@gmail.com",
   loginSuccess: "ברוכים השבים!",
   googleLoginSuccess: "ההתחברות עם גוגל הצליחה!",
   biometricLoginSuccess: "ההתחברות הביומטרית הצליחה!",

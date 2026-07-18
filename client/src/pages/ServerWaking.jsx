@@ -302,10 +302,10 @@ const ServerWaking = () => {
             {t('needHelp', { fallback: 'Need help?' })}
           </p>
           <a
-            href="mailto:spendwise.verification@gmail.com"
+            href="mailto:spendwise.verifiction@gmail.com"
             className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium text-sm transition-colors"
           >
-            spendwise.verification@gmail.com
+            spendwise.verifiction@gmail.com
           </a>
         </motion.div>
       </motion.div>

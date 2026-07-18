@@ -237,9 +237,7 @@ const PrivacyPolicyModal = ({ isOpen, onClose, onAccept }) => {
                     {t('privacy.contact.title')}
                   </h4>
                   <div className="space-y-2 text-sm text-blue-800 dark:text-blue-200">
-                    <p>{t('privacy.contact.email')}: privacy@spendwise.com</p>
-                    <p>{t('privacy.contact.address')}: 123 Privacy Street, Data City, DC 12345</p>
-                    <p>{t('privacy.contact.phone')}: +1 (555) 123-4567</p>
+                    <p>{t('privacy.contact.email')}: spendwise.verifiction@gmail.com</p>
                   </div>
                 </div>
               </div>

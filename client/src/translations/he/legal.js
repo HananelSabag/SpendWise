@@ -72,7 +72,7 @@ export default {
     // צור קשר
     contact: {
       title: 'צור קשר בנושאי פרטיות',
-      email: 'אימייל: privacy@spendwise.com',
+      email: 'אימייל: spendwise.verifiction@gmail.com',
       phone: 'טלפון: 03-1234567',
       address: 'כתובת: רחוב הטכנולוגיה 123, תל אביב'
     },

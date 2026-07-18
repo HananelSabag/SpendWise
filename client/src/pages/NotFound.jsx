@@ -112,7 +112,7 @@ const NotFound = () => {
             <HelpCircle className="w-4 h-4" />
             <span>{t('common.needHelp', { fallback: 'Need help?' })}</span>
             <a 
-              href="mailto:spendwise.verification@gmail.com" 
+              href="mailto:spendwise.verifiction@gmail.com"
               className="text-primary-600 dark:text-primary-400 hover:underline"
             >
               {t('nav.contactSupport', { fallback: 'Contact Support' })}

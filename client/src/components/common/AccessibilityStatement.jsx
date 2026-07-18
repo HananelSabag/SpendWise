@@ -410,10 +410,10 @@ const AccessibilityStatement = ({
                       {t('statement.contact.email.description')}
                     </p>
                     <a 
-                      href="mailto:accessibility@spendwise.com"
+                      href="mailto:spendwise.verifiction@gmail.com"
                       className="text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      accessibility@spendwise.com
+                      spendwise.verifiction@gmail.com
                     </a>
                   </div>
                 </div>

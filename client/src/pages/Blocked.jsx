@@ -150,7 +150,7 @@ const Blocked = () => {
             {t('pages.blocked.logout', { fallback: currentLanguage === 'he' ? 'התנתק' : 'Log out' })}
           </button>
           <a
-            href="mailto:support@spendwise.app"
+            href="mailto:spendwise.verifiction@gmail.com"
             className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white"
           >
             {t('pages.blocked.contact', { fallback: currentLanguage === 'he' ? 'צור קשר עם התמיכה' : 'Contact Support' })}

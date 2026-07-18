@@ -80,7 +80,7 @@ export default {
   googleOnlyUser: "This account uses Google sign-in. Please use the 'Continue with Google' button below.",
   passwordNotSet: "No password is set for this account. Please login with Google or use 'Forgot Password' to set one.",
   contactSupport: "If this problem persists, please contact us at:",
-  supportEmail: "spendwise.verification@gmail.com",
+  supportEmail: "spendwise.verifiction@gmail.com",
   loginSuccess: "Welcome back!",
   googleLoginSuccess: "Google login successful!",
   biometricLoginSuccess: "Biometric login successful!",
