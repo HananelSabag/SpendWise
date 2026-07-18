@@ -28,17 +28,17 @@ import {
 // Called on both logout and login (before new user's queries fire).
 const clearAllCaches = () => {
   // 1. In-memory TanStack Query cache (the main culprit)
-  try { queryClient.clear(); } catch (_) {}
+  try { queryClient.clear(); } catch (_) { /* best-effort cache cleanup */ }
   // 2. TanStack persisted cache in localStorage
-  try { localStorage.removeItem('spendwise-query-cache'); } catch (_) {}
+  try { localStorage.removeItem('spendwise-query-cache'); } catch (_) { /* storage unavailable */ }
   // 3. Axios-level response cache (SpendWiseAPIClient.cache)
-  try { window.__spendWiseAPI?.cache?.clear?.(); } catch (_) {}
+  try { window.__spendWiseAPI?.cache?.clear?.(); } catch (_) { /* client not initialized */ }
   // 4. PWA Service-Worker cache (no-store headers now cover this, belt-and-suspenders)
   try {
     if ('caches' in window) {
       caches.keys().then(names => names.forEach(n => caches.delete(n)));
     }
-  } catch (_) {}
+  } catch (_) { /* Cache API unavailable */ }
 };
 
 // ✅ Auth Store
@@ -242,7 +242,7 @@ export const useAuthStore = create(
                 return { 
                   success: true, 
                   message: result.message,
-                  requiresVerification: true 
+                  requiresVerification: !!result.requiresVerification
                 };
               } else {
                 set((state) => {
@@ -265,17 +265,11 @@ export const useAuthStore = create(
 
           // Verify email
           verifyEmail: async (token) => {
-            try {
-              const result = await authAPI.verifyEmail({ token });
-              
-              if (result.success && result.user) {
-                get().actions.setUser(result.user);
-              }
-
-              return result;
-            } catch (error) {
-              throw error;
+            const result = await authAPI.verifyEmail({ token });
+            if (result.success && result.user) {
+              get().actions.setUser(result.user);
             }
+            return result;
           },
 
           // ✅ ADD: Get fresh profile data from server
@@ -400,7 +394,7 @@ export const useAuthStore = create(
                 sessionStorage.removeItem('spendwise-session-theme');
                 sessionStorage.removeItem('spendwise-session-accessibility');
                 sessionStorage.removeItem('spendwise-session-language');
-              } catch (_) {}
+              } catch (_) { /* session storage unavailable */ }
 
               // Reset state
               get().actions.reset();
@@ -430,7 +424,7 @@ export const useAuthStore = create(
               try {
                 sessionStorage.removeItem('spendwise-session-theme');
                 sessionStorage.removeItem('spendwise-session-accessibility');
-              } catch (_) {}
+              } catch (_) { /* session storage unavailable */ }
               sessionEnded();
               get().actions.reset();
               
@@ -494,10 +488,10 @@ export const useAuthStore = create(
               let hasSessionLanguageOverride = false;
               try {
                 hasSessionThemeOverride = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('spendwise-session-theme');
-              } catch (_) {}
+              } catch (_) { /* session storage unavailable */ }
               try {
                 hasSessionLanguageOverride = typeof sessionStorage !== 'undefined' && !!sessionStorage.getItem('spendwise-session-language');
-              } catch (_) {}
+              } catch (_) { /* session storage unavailable */ }
 
               // ✅ Sync with app store (FIXED: Direct import approach like Profile page) with override guard
               try {

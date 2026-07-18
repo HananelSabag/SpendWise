@@ -110,7 +110,7 @@ class EmailService {
   }
 
   async sendPasswordReset(email, token) {
-    const url = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    const url = `${process.env.CLIENT_URL}/reset-password/${token}`;
     return this._send({
       to: email,
       subject: 'Reset Your SpendWise Password',

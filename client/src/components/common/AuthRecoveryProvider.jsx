@@ -14,7 +14,7 @@ import { useEffect } from 'react';
 import { warmUpServer } from '../../auth/serverHealth';
 import { useAuthStore } from '../../stores/authStore';
 
-const AUTH_PAGES = ['/login', '/register', '/auth/login', '/auth/register', '/auth/verify-email', '/auth/password-reset'];
+const AUTH_PAGES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 
 const AuthRecoveryProvider = ({ children }) => {
   useEffect(() => {
@@ -31,26 +31,41 @@ const AuthRecoveryProvider = ({ children }) => {
 
     // 3. The single place that reacts to a dead session.
     //    refreshManager guarantees this fires at most once per session.
-    const onAuthLogout = () => {
+    const onAuthLogout = (event) => {
       try {
         useAuthStore.getState().actions.reset();
-      } catch (_) {}
+      } catch (_) { /* store may be unavailable during teardown */ }
 
-      // Blocked users stay on the blocked page
-      const isBlocked = window.location?.pathname === '/blocked' ||
+      const isBlocked = event?.detail?.reason === 'USER_BLOCKED' ||
+        window.location?.pathname === '/blocked' ||
         (() => { try { return localStorage.getItem('blockedSession') === '1'; } catch (_) { return false; } })();
-      if (isBlocked) return;
+      if (isBlocked) {
+        if (window.location?.pathname !== '/blocked') {
+          if (window.spendWiseNavigate) window.spendWiseNavigate('/blocked', { replace: true });
+          else window.location.replace('/blocked');
+        }
+        return;
+      }
 
-      try { window.authToasts?.sessionExpired?.(); } catch (_) {}
+      try { window.authToasts?.sessionExpired?.(); } catch (_) { /* optional toast layer */ }
 
-      if (!AUTH_PAGES.includes(window.location.pathname)) {
+      if (!AUTH_PAGES.some((path) => window.location.pathname === path || window.location.pathname.startsWith(`${path}/`))) {
         if (window.spendWiseNavigate) window.spendWiseNavigate('/login', { replace: true });
         else window.location.replace('/login');
       }
     };
 
     window.addEventListener('auth:logout', onAuthLogout);
-    return () => window.removeEventListener('auth:logout', onAuthLogout);
+    const onStorage = (event) => {
+      if (event.key === 'refreshToken' && event.oldValue && !event.newValue) {
+        onAuthLogout();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('auth:logout', onAuthLogout);
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
 
   return children;

@@ -164,6 +164,17 @@ const validate = {
     next();
   },
 
+  refreshToken: (req, res, next) => {
+    const { refreshToken } = req.body;
+    if (typeof refreshToken !== 'string' || refreshToken.length < 20 || refreshToken.length > 4096 || refreshToken.split('.').length !== 3) {
+      return res.status(400).json(createValidationError(
+        'INVALID_REFRESH_TOKEN',
+        'A valid refresh token is required'
+      ));
+    }
+    next();
+  },
+
   /**
    * Validate email for resend verification
    */
@@ -541,62 +552,13 @@ const validate = {
   passwordSet: (req, res, next) => {
     const { newPassword } = req.body;
 
-    // Required fields check
-    if (!newPassword) {
+    if (!validators.password(newPassword)) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'New password is required',
-          details: {
-            newPassword: 'New password is required'
-          }
-        }
-      });
-    }
-
-    // Password strength validation
-    if (newPassword.length < 8) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Password must be at least 8 characters long',
-          details: { newPassword: 'Password too short' }
-        }
-      });
-    }
-
-    // Additional password strength checks
-    if (!/(?=.*[a-z])/.test(newPassword)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Password must contain at least one lowercase letter',
-          details: { newPassword: 'Missing lowercase letter' }
-        }
-      });
-    }
-
-    if (!/(?=.*[A-Z])/.test(newPassword)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Password must contain at least one uppercase letter',
-          details: { newPassword: 'Missing uppercase letter' }
-        }
-      });
-    }
-
-    if (!/(?=.*\d)/.test(newPassword)) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Password must contain at least one number',
-          details: { newPassword: 'Missing number' }
+          message: 'Password must be 8-128 characters and include at least one letter and one number',
+          details: { newPassword: 'Password does not meet the required policy' }
         }
       });
     }
@@ -623,29 +585,13 @@ const validate = {
       });
     }
 
-    // Password strength validation
-    if (newPassword.length < 8) {
+    if (!validators.password(newPassword)) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'New password must be at least 8 characters long',
-          details: { newPassword: 'Password too short' }
-        }
-      });
-    }
-
-    // Password complexity check
-    const hasLetter = /[a-zA-Z]/.test(newPassword);
-    const hasNumber = /\d/.test(newPassword);
-    
-    if (!hasLetter || !hasNumber) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'New password must contain at least one letter and one number',
-          details: { newPassword: 'Password not complex enough' }
+          message: 'Password must be 8-128 characters and include at least one letter and one number',
+          details: { newPassword: 'Password does not meet the required policy' }
         }
       });
     }

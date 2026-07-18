@@ -37,7 +37,10 @@ const auth = async (req, res, next) => {
   try {
 
 
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authorization = req.header('Authorization');
+    const token = typeof authorization === 'string' && authorization.startsWith('Bearer ')
+      ? authorization.slice(7).trim()
+      : null;
     
     if (!token) {
       return res.status(401).json({
@@ -53,6 +56,12 @@ const auth = async (req, res, next) => {
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.typ === 'refresh') {
+        throw new jwt.JsonWebTokenError('refresh token cannot be used as access token');
+      }
+      if (!Number.isInteger(Number(decoded.userId)) || Number(decoded.userId) <= 0) {
+        throw new jwt.JsonWebTokenError('access token has invalid subject');
+      }
     } catch (jwtError) {
       logger.warn('⚠️ JWT verification failed', {
         ip: req.ip,
@@ -85,6 +94,8 @@ const auth = async (req, res, next) => {
           email, 
           username, 
           role,
+          is_active,
+          auth_token_version,
           email_verified, 
           onboarding_completed,
           language_preference,
@@ -181,10 +192,23 @@ const auth = async (req, res, next) => {
       // Add restrictions to user object (error-safe)
       user.restrictions = isRestricted ? [{ restriction_type: 'blocked', reason: restrictionReason }] : [];
       user.isBlocked = isRestricted;
-      user.isDeleted = false; // Only set to true if specifically deleted
+      user.isDeleted = !user.is_active;
 
       // Cache the user data
       userCache.set(cacheKey, user);
+    }
+
+    if (!user.is_active) {
+      return res.status(403).json({
+        success: false,
+        error: { code: 'ACCOUNT_DEACTIVATED', message: 'This account has been deactivated.' }
+      });
+    }
+    if (Number(decoded.ver || 0) !== Number(user.auth_token_version || 0)) {
+      return res.status(401).json({
+        success: false,
+        error: { code: 'SESSION_REVOKED', message: 'This session has been revoked.' }
+      });
     }
 
     // Check if user is blocked or deleted
@@ -248,6 +272,7 @@ const auth = async (req, res, next) => {
 
     // Add user to request object
     req.user = user;
+    req.auth = decoded;
     
     // Log admin access for security monitoring
     if (['admin', 'super_admin'].includes(user.role)) {
@@ -303,7 +328,10 @@ const auth = async (req, res, next) => {
  */
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
+    const authorization = req.header('Authorization');
+    const token = typeof authorization === 'string' && authorization.startsWith('Bearer ')
+      ? authorization.slice(7).trim()
+      : null;
     
     if (!token) {
       // No token provided - continue without user
@@ -313,7 +341,9 @@ const optionalAuth = async (req, res, next) => {
     // Try to verify token, but don't fail if invalid
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded.typ === 'refresh') return next();
       const userId = decoded.userId;
+      if (!Number.isInteger(Number(userId)) || Number(userId) <= 0) return next();
       
       // Optional auth only needs a small user shape. Keep that cache entry
       // separate from the full auth cache so it cannot poison protected
@@ -325,9 +355,16 @@ const optionalAuth = async (req, res, next) => {
       if (!user) {
         // Fetch user from database
         const result = await db.query(
-          `SELECT id, email, first_name, last_name, role, is_active, onboarding_completed, google_id, avatar
-           FROM users
-           WHERE id = $1 AND is_active = true`,
+          `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.is_active,
+                  u.auth_token_version, u.onboarding_completed, u.google_id, u.avatar,
+                  EXISTS (
+                    SELECT 1 FROM user_restrictions r
+                     WHERE r.user_id = u.id AND r.is_active = true
+                       AND r.restriction_type = 'blocked'
+                       AND (r.expires_at IS NULL OR r.expires_at > NOW())
+                  ) AS is_blocked
+             FROM users u
+            WHERE u.id = $1 AND u.is_active = true`,
           [userId]
         );
         
@@ -337,7 +374,12 @@ const optionalAuth = async (req, res, next) => {
         }
       }
       
-      if (user) {
+      if (
+        user &&
+        !user.isBlocked &&
+        !user.is_blocked &&
+        Number(decoded.ver || 0) === Number(user.auth_token_version || 0)
+      ) {
         req.user = user;
       }
     } catch (tokenError) {
@@ -375,11 +417,12 @@ const clearUserCache = (userId) => {
  * 🔑 Generate JWT Tokens
  * Creates access and refresh tokens for user
  */
-const generateTokens = (user) => {
+const generateTokens = (user, { sessionId = null, refreshTokenId = null } = {}) => {
   const payload = {
     userId: user.id,
     email: user.email,
-    role: user.role || 'user'
+    role: user.role || 'user',
+    ver: Number(user.auth_token_version || 0)
   };
 
   // ✅ FIX: Use environment variables with fallback to defaults
@@ -387,13 +430,18 @@ const generateTokens = (user) => {
   const refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || process.env.JWT_REFRESH_EXPIRE_TIME || '7d';
 
   const accessToken = jwt.sign(
-    payload,
+    { ...payload, typ: 'access', ...(sessionId ? { sid: sessionId } : {}) },
     process.env.JWT_SECRET,
     { expiresIn: accessTokenExpiry }
   );
 
   const refreshToken = jwt.sign(
-    payload,
+    {
+      ...payload,
+      typ: 'refresh',
+      ...(sessionId ? { sid: sessionId } : {}),
+      ...(refreshTokenId ? { jti: refreshTokenId } : {}),
+    },
     process.env.JWT_REFRESH_SECRET,
     { expiresIn: refreshTokenExpiry }
   );

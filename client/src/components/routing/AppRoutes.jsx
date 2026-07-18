@@ -40,6 +40,16 @@ export const AppRoutes = ({ isAuthenticated }) => (
       ) : <SmartRedirect />
     } />
 
+    <Route path="/reset-password/:token" element={
+      !isAuthenticated ? (
+        <RouteErrorBoundary routeName="PasswordReset">
+          <Suspense fallback={<RouteLoadingFallback route="password reset" />}>
+            <LazyComponents.PasswordReset />
+          </Suspense>
+        </RouteErrorBoundary>
+      ) : <SmartRedirect />
+    } />
+
     <Route path="/verify-email/:token" element={
       !isAuthenticated ? (
         <RouteErrorBoundary routeName="VerifyEmail">

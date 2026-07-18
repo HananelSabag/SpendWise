@@ -9,8 +9,8 @@ import { api } from "./client.js";
 import { jwtDecode } from "jwt-decode";
 import { normalizeUserData } from "../utils/userNormalizer";
 import { simpleGoogleAuth } from "../services/simpleGoogleAuth.js";
-import { setTokens, clearTokens } from "../auth/tokenStorage.js";
-import { ensureFreshToken } from "../auth/refreshManager.js";
+import { getRefreshToken, setTokens, clearTokens } from "../auth/tokenStorage.js";
+import { ensureFreshToken, sessionStarted } from "../auth/refreshManager.js";
 
 // Quiet noisy debug logs in production; keep minimal in dev
 if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_MODE === "true") {
@@ -91,7 +91,7 @@ export const authAPI = {
         success: true,
         user: normalizedUser,
         token,
-        refreshToken: response.data.refreshToken,
+        refreshToken: rt,
       };
     } catch (error) {
       console.error("Login error:", error);
@@ -258,6 +258,18 @@ export const authAPI = {
     return this.processGoogleCredential(credential);
   },
 
+  async linkGoogleCredential(credential) {
+    try {
+      const response = await api.client.post('/users/auth/google/link', { idToken: credential });
+      return { success: true, user: normalizeUserData(response.data?.data) };
+    } catch (error) {
+      return {
+        success: false,
+        error: normalizeAuthError(error, 'Failed to link Google account', 'GOOGLE_LINK_ERROR'),
+      };
+    }
+  },
+
   async processGoogleCredential(credential) {
     // ✅ Validate credential
     if (!credential || typeof credential !== "string") {
@@ -271,29 +283,19 @@ export const authAPI = {
     }
 
     // ✅ Extract user info
-    let userInfo = { email: "", name: "", picture: "" };
+    let userInfo = null;
 
     try {
-      const decoded = jwtDecode(credential);
-      userInfo = {
-        email: decoded.email || "",
-        name: decoded.name || "",
-        picture: decoded.picture || "",
-      };
+      userInfo = jwtDecode(credential);
     } catch (decodeError) {
       throw new Error("Failed to decode Google ID token");
     }
 
-    if (!userInfo.email) {
-      throw new Error("No email found in Google credential");
-    }
+    if (!userInfo) throw new Error("Invalid Google credential");
 
     // ✅ Send to backend
     const payload = {
       idToken: credential,
-      email: userInfo.email,
-      name: userInfo.name,
-      picture: userInfo.picture,
     };
 
     const response = await api.client.post("/users/auth/google", payload);
@@ -334,7 +336,7 @@ export const authAPI = {
       success: true,
       user: normalizedUser,
       token,
-      refreshToken: response.data.refreshToken,
+      refreshToken: rt,
     };
   },
 
@@ -385,25 +387,24 @@ export const authAPI = {
 
   // ✅ Logout
   async logout() {
+    const refreshToken = getRefreshToken();
     try {
       // Sign out from Google (if available)
       if (window.google?.accounts?.id) {
         window.google.accounts.id.disableAutoSelect();
       }
 
-      clearTokens();
-
-      // Optional: Call backend logout endpoint
       try {
-        await api.client.post("/users/logout");
+        await api.client.post("/users/logout", { refreshToken });
       } catch (e) {
         // Ignore logout errors
       }
 
       return { success: true };
     } catch (error) {
-      clearTokens();
       return { success: true }; // Always succeed for logout
+    } finally {
+      clearTokens();
     }
   },
 
@@ -423,7 +424,8 @@ export const authAPI = {
   // ✅ Verify Email
   async verifyEmail(token) {
     try {
-      const response = await api.client.post("/users/verify-email", { token });
+      const rawToken = token?.token || token;
+      const response = await api.client.post("/users/verify-email", { token: rawToken });
 
       return {
         success: true,
@@ -473,7 +475,7 @@ export const authAPI = {
   // ✅ Password Reset Request
   async requestPasswordReset(email) {
     try {
-      const response = await api.client.post("/users/password-reset-request", {
+      const response = await api.client.post("/users/password-reset", {
         email: email.trim().toLowerCase(),
       });
 
@@ -497,11 +499,13 @@ export const authAPI = {
   },
 
   // ✅ Password Reset
-  async resetPassword(token, newPassword) {
+  async resetPassword(tokenOrPayload, newPassword) {
     try {
-      const response = await api.client.post("/users/password-reset", {
+      const token = tokenOrPayload?.token || tokenOrPayload;
+      const password = tokenOrPayload?.password || newPassword;
+      const response = await api.client.post("/users/password-reset/confirm", {
         token,
-        newPassword,
+        password,
       });
 
       return {
@@ -529,6 +533,11 @@ export const authAPI = {
       const response = await api.client.post("/users/set-password", {
         newPassword,
       });
+      const tokens = response.data?.data?.tokens;
+      if (tokens?.accessToken && tokens?.refreshToken) {
+        setTokens({ access: tokens.accessToken, refresh: tokens.refreshToken });
+        sessionStarted();
+      }
 
       return {
         success: true,
@@ -556,6 +565,11 @@ export const authAPI = {
         currentPassword,
         newPassword,
       });
+      const tokens = response.data?.data?.tokens;
+      if (tokens?.accessToken && tokens?.refreshToken) {
+        setTokens({ access: tokens.accessToken, refresh: tokens.refreshToken });
+        sessionStarted();
+      }
 
       return {
         success: true,

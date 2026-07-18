@@ -5,13 +5,15 @@
  */
 
 import { api } from './client.js';
+import { jwtDecode } from 'jwt-decode';
+import { getAccessToken } from '../auth/tokenStorage.js';
 
 // ✅ Admin API Module
 export const adminAPI = {
   // ✅ Get Admin Dashboard Overview
   async getDashboard() {
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+      const token = getAccessToken();
       if (!token) return { success: false, error: { code: 'NO_TOKEN' } };
       const response = await api.cachedRequest('/admin/dashboard', {
         method: 'GET'
@@ -103,7 +105,6 @@ export const adminAPI = {
         page = 1,
         limit = 50,
         search = '',
-        status = 'all',
         role = 'all',
         sortBy = 'created_at',
         sortOrder = 'desc'
@@ -530,11 +531,10 @@ export const adminAPI = {
     hasAdminAccess() {
       // ⚠️ WARNING: This is for UI display purposes only!
       // All actual security checks must be done server-side
-      const token = localStorage.getItem('accessToken');
+      const token = getAccessToken();
       if (!token) return false;
 
       try {
-        const { jwtDecode } = require('jwt-decode');
         const decoded = jwtDecode(token);
         // Note: Client-side JWT can be tampered with - server validation required
         return ['admin', 'super_admin'].includes(decoded.role);
@@ -547,11 +547,10 @@ export const adminAPI = {
     isSuperAdmin() {
       // ⚠️ WARNING: This is for UI display purposes only!
       // All actual security checks must be done server-side
-      const token = localStorage.getItem('accessToken');
+      const token = getAccessToken();
       if (!token) return false;
 
       try {
-        const { jwtDecode } = require('jwt-decode');
         const decoded = jwtDecode(token);
         // Note: Client-side JWT can be tampered with - server validation required
         return decoded.role === 'super_admin';
@@ -621,4 +620,4 @@ export const adminAPI = {
   }
 };
 
-export default adminAPI; 
+export default adminAPI;

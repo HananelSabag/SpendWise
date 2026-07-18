@@ -6,7 +6,7 @@
 
 const { User } = require('../../models/User');
 const { OAuth2Client } = require('google-auth-library');
-const { generateTokens, verifyToken } = require('../../middleware/auth');
+const { verifyToken } = require('../../middleware/auth');
 const { normalizeUserData } = require('../../utils/userNormalizer');
 const errorCodes = require('../../utils/errorCodes');
 const { asyncHandler } = require('../../middleware/errorHandler');
@@ -14,6 +14,35 @@ const logger = require('../../utils/logger');
 const emailService = require('../../services/emailService');
 const { generateVerificationToken } = require('../../utils/tokenGenerator');
 const db = require('../../config/db');
+const { digest, issueSession, rotateSession, revokeSession } = require('../../services/authSessionService');
+
+async function assertUserMayAuthenticate(user) {
+  if (!user?.is_active) throw { ...errorCodes.ACCOUNT_DEACTIVATED };
+
+  try {
+    const result = await db.query(
+      `SELECT restriction_type, reason, expires_at
+         FROM user_restrictions
+        WHERE user_id = $1 AND is_active = true
+          AND (expires_at IS NULL OR expires_at > NOW())`,
+      [user.id],
+      'auth_login_restrictions'
+    );
+    const blocked = result.rows.find((item) => item.restriction_type === 'blocked');
+    if (blocked) {
+      throw {
+        code: 'USER_BLOCKED',
+        message: 'Your account has been temporarily blocked.',
+        reason: blocked.reason,
+        expires_at: blocked.expires_at,
+        status: 403
+      };
+    }
+  } catch (error) {
+    if (error.code === 'USER_BLOCKED') throw error;
+    throw { code: 'SERVICE_UNAVAILABLE', message: 'Service temporarily unavailable', status: 503 };
+  }
+}
 
 const authController = {
   /**
@@ -77,7 +106,7 @@ const authController = {
       await db.query(`
         INSERT INTO email_verification_tokens (user_id, token, expires_at)
         VALUES ($1, $2, $3)
-      `, [user.id, verificationToken, expiresAt], 'create_verification_token');
+      `, [user.id, digest(verificationToken), expiresAt], 'create_verification_token');
 
       // Respect email_verification_required: if false, auto-verify
       let requireVerification = true;
@@ -119,9 +148,11 @@ const authController = {
             id: user.id,
             email: user.email,
             username: user.username,
-            email_verified: user.email_verified
+            email_verified: requireVerification ? user.email_verified : true
           },
-          message: 'Registration successful. Please check your email for verification.'
+          message: requireVerification
+            ? 'Registration successful. Please check your email for verification.'
+            : 'Registration successful.'
         },
         metadata: {
           duration: `${duration}ms`,
@@ -166,8 +197,8 @@ const authController = {
         };
       }
 
-      // Generate JWT tokens
-      const { accessToken, refreshToken } = generateTokens(user);
+      await assertUserMayAuthenticate(user);
+      const { accessToken, refreshToken } = await issueSession(user, req);
 
       // ✅ CLEANED: Use centralized user normalization
       const normalizedUser = normalizeUserData(user);
@@ -208,7 +239,7 @@ const authController = {
       });
 
       // ✅ Handle all auth-related errors with proper codes
-      if (error.message === 'Invalid credentials') {
+      if (error.message === 'Invalid credentials' || error.message === 'Invalid email or password') {
         throw { ...errorCodes.INVALID_CREDENTIALS };
       }
 
@@ -243,16 +274,23 @@ const authController = {
       // here to mint fresh tokens. index.js refuses to boot without
       // JWT_REFRESH_SECRET, so there is no legitimate fallback case.
       const decoded = verifyToken(refreshToken, process.env.JWT_REFRESH_SECRET);
+      if (decoded.typ && decoded.typ !== 'refresh') {
+        throw { code: 'INVALID_REFRESH_TOKEN', message: 'Invalid refresh token type', status: 401 };
+      }
       const userId = decoded.userId;
 
       // Get fresh user data
       const user = await User.findById(userId);
       if (!user) {
         throw {
-          code: 'USER_NOT_FOUND',
-          message: 'User not found',
-          status: 404
+          code: 'SESSION_REVOKED',
+          message: 'This session is no longer valid.',
+          status: 401
         };
+      }
+
+      if (Number(decoded.ver || 0) !== Number(user.auth_token_version || 0)) {
+        throw { code: 'SESSION_REVOKED', message: 'This session has been revoked.', status: 401 };
       }
 
       if (!user.is_active) {
@@ -289,7 +327,12 @@ const authController = {
       }
 
       // Generate new tokens
-      const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+      const { accessToken, refreshToken: newRefreshToken } = await rotateSession(
+        refreshToken,
+        user,
+        decoded,
+        req
+      );
 
       // ✅ CLEANED: Use centralized user normalization
       const normalizedUser = normalizeUserData(user);
@@ -344,7 +387,8 @@ const authController = {
    */
   googleAuth: asyncHandler(async (req, res) => {
     const start = Date.now();
-    let { idToken, email, name, picture } = req.body;
+    const { idToken } = req.body;
+    let email = '';
 
     if (!idToken) {
       throw {
@@ -360,6 +404,15 @@ const authController = {
         throw { ...errorCodes.SERVER_ERROR, details: 'Server GOOGLE_CLIENT_ID is not configured' };
       }
 
+      const googleSetting = await db.query(
+        `SELECT setting_value FROM system_settings WHERE setting_key = 'google_oauth_enabled' LIMIT 1`,
+        [],
+        'google_oauth_setting'
+      );
+      if (googleSetting.rows[0]?.setting_value === false || googleSetting.rows[0]?.setting_value === 'false') {
+        throw { code: 'GOOGLE_AUTH_DISABLED', message: 'Google sign-in is currently disabled.', status: 403 };
+      }
+
       const oauthClient = new OAuth2Client(clientIdPrimary);
       const ticket = await oauthClient.verifyIdToken({
         idToken,
@@ -367,11 +420,11 @@ const authController = {
       });
 
       const payload = ticket.getPayload();
-      email = (email || payload?.email || '').toLowerCase();
-      name = name || payload?.name || '';
-      picture = picture || payload?.picture || '';
+      email = (payload?.email || '').trim().toLowerCase();
+      const name = payload?.name || '';
+      const picture = payload?.picture || '';
 
-      if (!email) {
+      if (!email || payload?.email_verified !== true || !payload?.sub) {
         throw { ...errorCodes.VALIDATION_ERROR, details: 'Email not present in verified Google token' };
       }
 
@@ -385,7 +438,11 @@ const authController = {
       if (!user) {
         // ✅ FIXED: New Google user - create WITHOUT password hash
         logger.info('🆕 Creating new Google-only user (NO PASSWORD)', { email });
-        const username = name || email.split('@')[0];
+        const usernameBase = (name || email.split('@')[0])
+          .toLowerCase()
+          .replace(/[^a-z0-9_-]/g, '')
+          .slice(0, 38) || 'user';
+        const username = `${usernameBase}_${googleUserId.slice(0, 8)}`;
 
         user = await User.createGoogleOnlyUser(email, username, {
           google_id: googleUserId,
@@ -403,6 +460,7 @@ const authController = {
         });
       } else {
         // ✅ EDGE CASE: Existing user signing in with Google
+        if (!user.is_active) throw { ...errorCodes.ACCOUNT_DEACTIVATED };
         const hadGoogleAuth = !!user.google_id;
         const hadRegularAuth = !!user.password_hash;
 
@@ -414,6 +472,14 @@ const authController = {
         });
 
         // Update existing user with Google info if not already set
+        if (user.google_id && user.google_id !== googleUserId) {
+          throw {
+            code: 'GOOGLE_ACCOUNT_MISMATCH',
+            message: 'This email is linked to a different Google account.',
+            status: 409
+          };
+        }
+
         const updateData = { email_verified: true };
 
         // Link Google account if not already linked
@@ -473,7 +539,8 @@ const authController = {
       }
 
       // Generate JWT tokens
-      const { accessToken, refreshToken } = generateTokens(user);
+      await assertUserMayAuthenticate(user);
+      const { accessToken, refreshToken } = await issueSession(user, req);
 
       // ✅ CLEANED: Use centralized user normalization
       const normalizedUser = normalizeUserData(user);
@@ -516,6 +583,49 @@ const authController = {
     }
   }),
 
+  linkGoogle: asyncHandler(async (req, res) => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) throw { ...errorCodes.SERVER_ERROR, details: 'Server GOOGLE_CLIENT_ID is not configured' };
+    const googleSetting = await db.query(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'google_oauth_enabled' LIMIT 1`,
+      [],
+      'google_oauth_link_setting'
+    );
+    if (googleSetting.rows[0]?.setting_value === false || googleSetting.rows[0]?.setting_value === 'false') {
+      throw { code: 'GOOGLE_AUTH_DISABLED', message: 'Google sign-in is currently disabled.', status: 403 };
+    }
+
+    const oauthClient = new OAuth2Client(clientId);
+    const ticket = await oauthClient.verifyIdToken({ idToken: req.body.idToken, audience: clientId });
+    const payload = ticket.getPayload();
+    const email = (payload?.email || '').trim().toLowerCase();
+    if (!payload?.sub || payload?.email_verified !== true || email !== req.user.email.toLowerCase()) {
+      throw {
+        code: 'GOOGLE_EMAIL_MISMATCH',
+        message: 'Choose the Google account with the same email as your SpendWise account.',
+        status: 409
+      };
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
+    if (user.google_id && user.google_id !== payload.sub) {
+      throw { code: 'GOOGLE_ACCOUNT_MISMATCH', message: 'A different Google account is already linked.', status: 409 };
+    }
+
+    const updated = await User.update(user.id, {
+      google_id: payload.sub,
+      oauth_provider: 'google',
+      oauth_provider_id: payload.sub,
+      email_verified: true,
+      ...(!user.profile_picture_url && payload.picture
+        ? { profile_picture_url: payload.picture, avatar: payload.picture }
+        : {})
+    });
+
+    res.json({ success: true, data: normalizeUserData(updated) });
+  }),
+
   /**
    * 🚀 Logout with token cleanup
    * @route POST /api/v1/users/logout
@@ -524,6 +634,7 @@ const authController = {
     const start = Date.now();
 
     try {
+      await revokeSession(req.body?.refreshToken, 'logout');
       // Get user from auth middleware (may be null if auth failed)
       const userId = req.user?.id;
 

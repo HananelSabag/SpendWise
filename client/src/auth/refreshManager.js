@@ -36,7 +36,7 @@ function apiBase() {
 }
 
 function emit(name, detail) {
-  try { window.dispatchEvent(new CustomEvent(name, { detail })); } catch (_) {}
+  try { window.dispatchEvent(new CustomEvent(name, { detail })); } catch (_) { /* non-browser runtime */ }
 }
 
 function clearTimers() {
@@ -50,12 +50,16 @@ function fatalLogout(reason) {
   loggedOut = true;
   clearTimers();
   clearTokens();
+  if (reason === 'USER_BLOCKED') {
+    try { localStorage.setItem('blockedSession', '1'); } catch (_) { /* storage unavailable */ }
+  }
   emit('auth:logout', { reason });
 }
 
 /** Called after login/refresh stores fresh tokens — re-arms everything. */
 export function sessionStarted() {
   loggedOut = false;
+  try { localStorage.removeItem('blockedSession'); } catch (_) { /* storage unavailable */ }
   scheduleProactiveRefresh();
 }
 
@@ -109,6 +113,22 @@ export function ensureFreshToken() {
       return { ok: true, token: access };
     } catch (err) {
       const status = err?.response?.status || 0;
+      const code = err?.response?.data?.error?.code || '';
+
+      // Another tab may have rotated the shared localStorage token while this
+      // request was in flight. The server returns 409 during its short grace
+      // window; adopt the already-written access token instead of logging out.
+      if (status === 409 && code === 'SESSION_ALREADY_ROTATED') {
+        const currentRefresh = getRefreshToken();
+        const currentAccess = getAccessToken();
+        if (currentRefresh && currentRefresh !== refreshToken && currentAccess) {
+          loggedOut = false;
+          scheduleProactiveRefresh();
+          return { ok: true, token: currentAccess };
+        }
+        scheduleRetry();
+        return { ok: false, transient: true };
+      }
 
       if (status === 401 || status === 403) {
         // The refresh token itself was rejected — the session is genuinely over.

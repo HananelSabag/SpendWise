@@ -54,6 +54,27 @@ const productionErrors = {
  * Format error response for production
  */
 const formatError = (err, isDevelopment = false) => {
+  // Controllers may define production-safe domain errors that are not part of
+  // the static catalog (for example refresh rotation/replay outcomes). Only
+  // preserve them when an explicit 4xx status is attached; database/internal
+  // errors still fall through to the generic production response.
+  const explicitStatus = Number(err.status || err.statusCode);
+  if (
+    typeof err.code === 'string' &&
+    /^[A-Z][A-Z0-9_]{2,63}$/.test(err.code) &&
+    explicitStatus >= 400 && explicitStatus < 500
+  ) {
+    return {
+      error: {
+        code: err.code,
+        message: err.message || 'Request rejected',
+        ...(err.reason ? { reason: err.reason } : {}),
+        ...(err.expires_at ? { expires_at: err.expires_at } : {}),
+        timestamp: new Date().toISOString()
+      }
+    };
+  }
+
   // Check if it's a known error code
   if (err.code && Object.values(errorCodes).some(ec => ec.code === err.code)) {
     return {

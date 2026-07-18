@@ -12,6 +12,7 @@ import { useAuthStore } from '../../stores';
 import TopProgressBar from './TopProgressBar.jsx';
 import { api } from '../../api';
 import { useAppStore } from '../../stores/appStore';
+import { getAccessToken, clearTokens } from '../../auth/tokenStorage';
 
 // Fetch fresh profile with cold-start-aware retry.
 // Returns { success, user?, errorCode?, status? }
@@ -24,8 +25,6 @@ async function fetchProfileWithRetry(authActions, maxAttempts = 3) {
     }
 
     const status = result.error?.status || 0;
-    const code   = result.error?.code   || '';
-
     // Hard auth failures — don't retry, caller handles these
     if (status === 401 || status === 403) {
       return result;
@@ -57,7 +56,7 @@ const AppInitializer = ({ children }) => {
         authActions.initialize();
 
         // 2. If we have a token, validate it against the server
-        const token = localStorage.getItem('accessToken') || localStorage.getItem('authToken');
+        const token = getAccessToken();
         if (token) {
           const result = await fetchProfileWithRetry(authActions, 3);
 
@@ -71,9 +70,7 @@ const AppInitializer = ({ children }) => {
             if (status === 401) {
               // Token is genuinely expired / invalid — clear it so the user
               // sees the login page on their next navigation instead of stale data
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('refreshToken');
+              clearTokens();
               authActions.reset();
             } else if (status === 403) {
               if (code === 'USER_BLOCKED') {
@@ -85,9 +82,7 @@ const AppInitializer = ({ children }) => {
                 }
               } else {
                 // Other 403 (deactivated etc.) — treat like 401
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('refreshToken');
+                clearTokens();
                 authActions.reset();
               }
             }
@@ -113,7 +108,7 @@ const AppInitializer = ({ children }) => {
             window.__SW_GOOGLE_OAUTH_ENABLED__ = googleEnabled;
             window.__SW_SUPPORT_EMAIL__ = supportEmail;
           }
-        } catch (_) {}
+        } catch (_) { /* optional admin settings */ }
 
         setIsInitialized(true);
       } catch (_) {

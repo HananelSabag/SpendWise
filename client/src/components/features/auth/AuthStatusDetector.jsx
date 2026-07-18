@@ -7,8 +7,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Shield, Key, Check, AlertCircle, Link2, 
-  Lock, CheckCircle, Settings, RefreshCw, Bug
+  Key, AlertCircle, Link2,
+  Lock, CheckCircle, Settings, RefreshCw
 } from 'lucide-react';
 import { Button, Card } from '../../ui';
 import { cn } from '../../../utils/helpers';
@@ -22,16 +22,14 @@ const AuthStatusDetector = ({
   className = "", 
   context = "profile", // "profile" or "onboarding"
   onNavigateToSecurity, 
-  onPasswordSetup, 
-  onGoogleLink,
-  showDebug = false
+  onPasswordSetup,
+  onGoogleLink
 }) => {
   const { t } = useTranslation('auth');
   const [authStatus, setAuthStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [verification, setVerification] = useState(null);
 
   // Load authentication status
   const loadAuthStatus = async () => {
@@ -56,22 +54,6 @@ const AuthStatusDetector = ({
     }
   };
 
-  // Verify authentication status
-  const verifyAuthStatus = async () => {
-    try {
-      const result = await authStatusAPI.verifyAuthStatus();
-      setVerification(result);
-      
-      if (result.success) {
-        toast.success('Authentication status verified successfully');
-      } else {
-        toast.error('Authentication status verification failed');
-      }
-    } catch (err) {
-      toast.error('Failed to verify authentication status');
-    }
-  };
-
   // Load on mount
   useEffect(() => {
     loadAuthStatus();
@@ -84,12 +66,14 @@ const AuthStatusDetector = ({
         const credential = await simpleGoogleAuth.signInOnce();
 
         if (credential) {
-          const result = await authAPI.googleLogin(credential);
+          const result = await authAPI.linkGoogleCredential(credential);
           
           if (result.success) {
             // Refresh auth status
             await loadAuthStatus();
             toast.success('Google account linked successfully!');
+          } else {
+            throw new Error(result.error?.message || 'Google account linking failed');
           }
         }
       } else {
@@ -320,27 +304,6 @@ const AuthStatusDetector = ({
                     </Button>
                   );
                 })}
-              </div>
-            )}
-
-            {/* Debug Controls */}
-            {showDebug && (
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <Button
-                  onClick={verifyAuthStatus}
-                  size="sm"
-                  variant="outline"
-                  className="w-full justify-center"
-                >
-                  <Bug className="w-4 h-4 mr-2" />
-                  Verify Status
-                </Button>
-                
-                {verification && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Verification: {verification.success ? '✅ Passed' : '❌ Failed'}
-                  </div>
-                )}
               </div>
             )}
 

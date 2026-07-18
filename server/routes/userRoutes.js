@@ -11,7 +11,7 @@ const passwordController = require('../controllers/auth/passwordController');
 const profileController = require('../controllers/auth/profileController');
 const { uploadProfilePicture } = require('../middleware/upload');
 const validate = require('../middleware/validate');
-const { emailVerificationLimiter, authLimiter } = require('../middleware/rateLimiter');
+const { emailVerificationLimiter, authLimiter, refreshLimiter } = require('../middleware/rateLimiter');
 const rateLimit = require('express-rate-limit');
 const { securityMiddleware } = require('../middleware/security'); // 🛡️ Enhanced security
 
@@ -84,6 +84,13 @@ router.post('/auth/google',
   authController.googleAuth
 );
 
+router.post('/auth/google/link',
+  auth,
+  authLimiter,
+  validate.googleAuth,
+  authController.linkGoogle
+);
+
 /**
  * 🔄 Token Refresh
  * @route   POST /api/v1/users/refresh-token
@@ -91,7 +98,8 @@ router.post('/auth/google',
  * @access  Public
  */
 router.post('/refresh-token',
-  authLimiter,
+  refreshLimiter,
+  validate.refreshToken,
   authController.refreshToken
 );
 

@@ -35,6 +35,24 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true
 });
 
+// Refresh is called proactively and may race across browser tabs. Keep abuse
+// protection without applying the five-attempt login ceiling to normal session
+// maintenance or transient infrastructure failures.
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: {
+    error: {
+      code: 'REFRESH_RATE_LIMIT',
+      message: 'Too many token refresh attempts, please try again later',
+      retryAfter: 900
+    }
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true
+});
+
 // Transaction creation limiter
 const createTransactionLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -94,9 +112,9 @@ const emailVerificationLimiter = rateLimit({
 module.exports = {
   apiLimiter,
   authLimiter,
+  refreshLimiter,
   createTransactionLimiter,
   getSummaryLimiter,
   getTransactionsLimiter,
   emailVerificationLimiter // NEW: Add email verification limiter
 };
-

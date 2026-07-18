@@ -63,6 +63,12 @@ describe('generateTokens', () => {
     const decoded = jwt.verify(refreshToken, REFRESH_SECRET);
     expect(decoded.userId).toBe(7);
   });
+
+  it('marks access and refresh tokens with distinct token types', () => {
+    const { accessToken, refreshToken } = generateTokens({ id: 1, email: 'x@y.com' });
+    expect(jwt.verify(accessToken, SECRET).typ).toBe('access');
+    expect(jwt.verify(refreshToken, REFRESH_SECRET).typ).toBe('refresh');
+  });
 });
 
 // ─────────────────────────────────────────────────────

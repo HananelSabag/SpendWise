@@ -12,6 +12,41 @@ const emailService = require('../../services/emailService');
 const { generateVerificationToken } = require('../../utils/tokenGenerator');
 const bcrypt = require('bcrypt');
 const db = require('../../config/db');
+const { digest, issueSession, revokeAllForUser } = require('../../services/authSessionService');
+const { clearUserCache } = require('../../middleware/auth');
+
+const isStrongPassword = (password) => (
+  typeof password === 'string' &&
+  password.length >= 8 &&
+  password.length <= 128 &&
+  /[A-Za-z]/.test(password) &&
+  /[0-9]/.test(password)
+);
+
+async function updatePasswordAndRevokeOtherSessions(userId, passwordHash, reason, returning) {
+  const client = await db.getClient();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE users
+          SET password_hash = $1,
+              auth_token_version = auth_token_version + 1,
+              updated_at = NOW()
+        WHERE id = $2 AND is_active = true
+        RETURNING ${returning}`,
+      [passwordHash, userId]
+    );
+    if (result.rowCount !== 1) throw { ...errorCodes.NOT_FOUND, details: 'User not found' };
+    await revokeAllForUser(userId, reason, null, client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
 
 const passwordController = {
   /**
@@ -38,8 +73,13 @@ const passwordController = {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
     await db.query(
+      `UPDATE password_reset_tokens SET used = true WHERE user_id = $1 AND used = false`,
+      [user.id],
+      'invalidate_password_reset_tokens'
+    );
+    await db.query(
       `INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
-      [user.id, token, expiresAt],
+      [user.id, digest(token), expiresAt],
       'create_password_reset_token'
     );
 
@@ -62,8 +102,9 @@ const passwordController = {
       `SELECT prt.user_id, u.email
        FROM password_reset_tokens prt
        JOIN users u ON u.id = prt.user_id
-       WHERE prt.token = $1 AND prt.used = false AND prt.expires_at > NOW()`,
-      [token],
+       WHERE (prt.token = $1 OR prt.token = $2)
+         AND prt.used = false AND prt.expires_at > NOW()`,
+      [token, digest(token)],
       'validate_password_reset_token'
     );
 
@@ -83,24 +124,54 @@ const passwordController = {
     if (!token || !password) {
       return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'Token and password are required' } });
     }
-    if (password.length < 8) {
-      return res.status(400).json({ success: false, error: { code: 'WEAK_PASSWORD', message: 'Password must be at least 8 characters' } });
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ success: false, error: { code: 'WEAK_PASSWORD', message: 'Password must be 8-128 characters and include at least one letter and one number' } });
     }
 
-    // Validate token
-    const tok = await db.query(
-      `SELECT user_id FROM password_reset_tokens WHERE token = $1 AND used = false AND expires_at > NOW()`,
-      [token],
-      'confirm_password_reset_token'
-    );
-    if (tok.rows.length === 0) {
-      return res.status(400).json({ success: false, error: { code: 'TOKEN_EXPIRED', message: 'Reset link is invalid or expired' } });
-    }
-
-    const userId = tok.rows[0].user_id;
     const hashed = await bcrypt.hash(password, 12);
-    await db.query(`UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`, [hashed, userId], 'reset_password_update');
-    await db.query(`UPDATE password_reset_tokens SET used = true WHERE token = $1`, [token], 'reset_password_mark_used');
+    const client = await db.getClient();
+    let userId;
+    try {
+      await client.query('BEGIN');
+      const tok = await client.query(
+        `UPDATE password_reset_tokens
+            SET used = true
+          WHERE (token = $1 OR token = $2)
+            AND used = false AND expires_at > NOW()
+          RETURNING user_id`,
+        [token, digest(token)]
+      );
+      if (tok.rows.length === 0) {
+        throw Object.assign(new Error('Reset link is invalid or expired'), { code: 'TOKEN_EXPIRED', status: 400 });
+      }
+      userId = tok.rows[0].user_id;
+      const updatedUser = await client.query(
+        `UPDATE users
+            SET password_hash = $1,
+                auth_token_version = auth_token_version + 1,
+                updated_at = NOW()
+          WHERE id = $2 AND is_active = true`,
+        [hashed, userId]
+      );
+      if (updatedUser.rowCount !== 1) {
+        throw Object.assign(new Error('Reset link is invalid or expired'), { code: 'TOKEN_EXPIRED', status: 400 });
+      }
+      await client.query(
+        `UPDATE auth_sessions
+            SET revoked_at = COALESCE(revoked_at, NOW()),
+                revoked_reason = COALESCE(revoked_reason, 'password_reset')
+          WHERE user_id = $1 AND revoked_at IS NULL`,
+        [userId]
+      );
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
+    UserCache.invalidate(String(userId));
+    clearUserCache(userId);
 
     res.json({ success: true, message: 'Password has been reset successfully' });
   }),
@@ -127,8 +198,14 @@ const passwordController = {
     const token = generateVerificationToken();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await db.query(
+      `UPDATE email_verification_tokens SET used = true, used_at = NOW()
+        WHERE user_id = $1 AND used = false`,
+      [user.id],
+      'invalidate_verification_tokens'
+    );
+    await db.query(
       `INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
-      [user.id, token, expiresAt],
+      [user.id, digest(token), expiresAt],
       'create_verification_token_resend'
     );
 
@@ -149,48 +226,41 @@ const passwordController = {
     }
 
     try {
-      // Get verification token
-      const tokenResult = await db.query(`
-        SELECT user_id, expires_at, used
-        FROM email_verification_tokens
-        WHERE token = $1
-      `, [token], 'get_verification_token');
+      const client = await db.getClient();
+      let tokenData;
+      try {
+        await client.query('BEGIN');
+        const tokenResult = await client.query(`
+          UPDATE email_verification_tokens
+             SET used = true, used_at = NOW()
+           WHERE (token = $1 OR token = $2)
+             AND used = false AND expires_at > NOW()
+           RETURNING user_id
+        `, [token, digest(token)]);
 
-      if (tokenResult.rows.length === 0) {
-        throw {
-          code: 'INVALID_TOKEN',
-          message: 'Invalid verification token',
-          status: 400
-        };
+        if (tokenResult.rows.length === 0) {
+          throw Object.assign(new Error('Verification token is invalid, expired, or already used'), {
+            code: 'INVALID_TOKEN', status: 400
+          });
+        }
+        tokenData = tokenResult.rows[0];
+        const updatedUser = await client.query(
+          `UPDATE users SET email_verified = true, updated_at = NOW()
+            WHERE id = $1 AND is_active = true`,
+          [tokenData.user_id]
+        );
+        if (updatedUser.rowCount !== 1) {
+          throw Object.assign(new Error('Verification token is invalid'), { code: 'INVALID_TOKEN', status: 400 });
+        }
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
+      } finally {
+        client.release();
       }
-
-      const tokenData = tokenResult.rows[0];
-
-      if (tokenData.used) {
-        throw {
-          code: 'TOKEN_ALREADY_USED',
-          message: 'Verification token has already been used',
-          status: 400
-        };
-      }
-
-      if (new Date() > new Date(tokenData.expires_at)) {
-        throw {
-          code: 'TOKEN_EXPIRED',
-          message: 'Verification token has expired',
-          status: 400
-        };
-      }
-
-      // Mark user as verified
-      await User.update(tokenData.user_id, { email_verified: true });
-
-      // Mark token as used
-      await db.query(`
-        UPDATE email_verification_tokens
-        SET used = true, used_at = NOW()
-        WHERE token = $1
-      `, [token], 'mark_token_used');
+      UserCache.invalidate(String(tokenData.user_id));
+      clearUserCache(tokenData.user_id);
 
       const duration = Date.now() - start;
       logger.info('✅ Email verified successfully', {
@@ -214,7 +284,6 @@ const passwordController = {
     } catch (error) {
       const duration = Date.now() - start;
       logger.warn('❌ Email verification failed', {
-        token: token?.substring(0, 8) + '...',
         error: error.message,
         duration: `${duration}ms`
       });
@@ -239,10 +308,10 @@ const passwordController = {
       };
     }
 
-    if (newPassword.length < 8) {
+    if (!isStrongPassword(newPassword)) {
       throw {
         ...errorCodes.VALIDATION_ERROR,
-        details: { newPassword: 'New password must be at least 8 characters' }
+        details: { newPassword: 'Password must be 8-128 characters and include at least one letter and one number' }
       };
     }
 
@@ -296,15 +365,14 @@ const passwordController = {
       // Hash new password
       const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
-      // Update password in database
-      const updateQuery = `
-        UPDATE users
-        SET password_hash = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING id, email, username
-      `;
-
-      const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
+      const updateResult = await updatePasswordAndRevokeOtherSessions(
+        userId,
+        hashedNewPassword,
+        'password_changed',
+        'id, email, username, auth_token_version'
+      );
+      clearUserCache(userId);
+      const tokens = await issueSession({ ...req.user, ...updateResult.rows[0] }, req);
 
       // ✅ CRITICAL: Invalidate ALL cache after password change - Ensures fresh data on next login
       UserCache.invalidate(userId);
@@ -312,15 +380,11 @@ const passwordController = {
       UserCache.invalidate(`email:${user.email.toLowerCase()}`);
       UserCache.invalidate(`user:email:${user.email.toLowerCase()}`);
 
-      // NUCLEAR OPTION: Clear entire cache to be absolutely sure
-      UserCache.clear();
-
       // Log the password change for debugging
       logger.info('🔐 PASSWORD CHANGED - Cache cleared completely', {
         userId,
         email: user.email,
-        passwordHashLength: hashedNewPassword.length,
-        passwordHashPrefix: hashedNewPassword.substring(0, 10) + '...'
+        sessionsRevoked: true
       });
 
       const duration = Date.now() - start;
@@ -337,7 +401,8 @@ const passwordController = {
         data: {
           id: updateResult.rows[0].id,
           email: updateResult.rows[0].email,
-          username: updateResult.rows[0].username
+          username: updateResult.rows[0].username,
+          tokens
         },
         metadata: {
           updated: true,
@@ -402,18 +467,25 @@ const passwordController = {
         };
       }
 
+      if (user.password_hash && user.password_hash.length > 0) {
+        throw {
+          code: 'PASSWORD_ALREADY_SET',
+          message: 'A password is already set. Use change password instead.',
+          status: 409
+        };
+      }
+
       // Hash new password
       const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
-      // Update password in database
-      const updateQuery = `
-        UPDATE users
-        SET password_hash = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING id, email, username, oauth_provider
-      `;
-
-      const updateResult = await db.query(updateQuery, [hashedNewPassword, userId]);
+      const updateResult = await updatePasswordAndRevokeOtherSessions(
+        userId,
+        hashedNewPassword,
+        'password_set',
+        'id, email, username, oauth_provider, auth_token_version'
+      );
+      clearUserCache(userId);
+      const tokens = await issueSession({ ...req.user, ...updateResult.rows[0] }, req);
 
       // ✅ CRITICAL: Invalidate ALL cache after password update - This fixes the authentication issue!
       UserCache.invalidate(userId);
@@ -421,15 +493,11 @@ const passwordController = {
       UserCache.invalidate(`email:${user.email.toLowerCase()}`);
       UserCache.invalidate(`user:email:${user.email.toLowerCase()}`);
 
-      // NUCLEAR OPTION: Clear entire cache to be absolutely sure
-      UserCache.clear();
-
       // Log the password update for debugging
       logger.info('🔐 PASSWORD SET - Cache cleared completely', {
         userId,
         email: user.email,
-        passwordHashLength: hashedNewPassword.length,
-        passwordHashPrefix: hashedNewPassword.substring(0, 10) + '...'
+        sessionsRevoked: true
       });
 
       const duration = Date.now() - start;
@@ -448,7 +516,8 @@ const passwordController = {
           id: updateResult.rows[0].id,
           email: updateResult.rows[0].email,
           username: updateResult.rows[0].username,
-          hybridLoginEnabled: true
+          hybridLoginEnabled: true,
+          tokens
         },
         metadata: {
           updated: true,

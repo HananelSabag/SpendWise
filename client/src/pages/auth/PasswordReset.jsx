@@ -8,17 +8,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Key, ArrowLeft, Mail, Shield
-} from 'lucide-react';
+import { Key, ArrowLeft } from 'lucide-react';
 
 // ✅ Import Zustand stores and enhanced API
-import { 
-  useAuth, 
-  useTranslation, 
-  useTheme,
-  useNotifications 
-} from '../../stores';
+import { useTranslation, useNotifications } from '../../stores';
 
 // ✅ Import components
 import { PasswordResetRequestForm, NewPasswordForm } from '../../components/features/auth/PasswordResetForm';
@@ -31,9 +24,7 @@ import { cn } from '../../utils/helpers';
 
 const PasswordReset = () => {
   // ✅ Zustand stores
-  const { actions: authActions } = useAuth();
-  const { t, currentLanguage, setLanguage, isRTL } = useTranslation('auth');
-  const { isDark } = useTheme();
+  const { t, isRTL } = useTranslation('auth');
   const { addNotification } = useNotifications();
 
   const { token } = useParams();
@@ -79,7 +70,7 @@ const PasswordReset = () => {
     };
 
     validateToken();
-  }, [token, api, addNotification, t]);
+  }, [token, addNotification, t]);
 
   // ✅ Handle password reset request
   const handleResetRequest = useCallback(async (formData) => {
@@ -112,7 +103,7 @@ const PasswordReset = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [api, addNotification, t]);
+  }, [addNotification, t]);
 
   // ✅ Handle new password submission
   const handleNewPassword = useCallback(async (formData) => {
@@ -141,13 +132,13 @@ const PasswordReset = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [token, api, addNotification, t]);
+  }, [token, addNotification, t]);
 
   // ✅ Handle step back
   const handleStepBack = useCallback(() => {
     if (step === 'reset') {
       setStep('request');
-      navigate('/auth/password-reset');
+      navigate('/forgot-password');
     }
   }, [step, navigate]);
 

@@ -6,10 +6,13 @@
 
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
-const { generateVerificationToken } = require('../utils/tokenGenerator');
 const errorCodes = require('../utils/errorCodes');
 const logger = require('../utils/logger');
 const { UserCache } = require('./UserCache');
+
+// Keeps the missing-user path computationally comparable to a real password
+// check, reducing email-enumeration timing differences.
+const DUMMY_PASSWORD_HASH = '$2b$12$u5ZtuglH5qMV1cK/uu.02O3i1rV9QFOzlFMR1LhHHWQs.Vx19CMfC';
 
 // ✅ Simplified User Model - Core Functionality Only
 class User {
@@ -24,9 +27,6 @@ class User {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, 12);
 
-      // Generate verification token
-      const verificationToken = generateVerificationToken();
-
       const query = `
         INSERT INTO users (
           email, username, password_hash, verification_token,
@@ -34,15 +34,14 @@ class User {
           language_preference, currency_preference, theme_preference,
           created_at, updated_at
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
-        RETURNING id, email, username, first_name, last_name, created_at, updated_at,
-                  email_verified, language_preference, currency_preference, theme_preference
+        RETURNING *
       `;
 
       const values = [
         email.toLowerCase(),
         username?.toLowerCase(),
         hashedPassword,
-        verificationToken,
+        null,
         firstName || null,
         lastName  || null,
         'en',
@@ -59,10 +58,7 @@ class User {
 
       logger.info('User created successfully', { userId: user.id, email: user.email });
 
-      return {
-        ...user,
-        verificationToken // Return for email verification
-      };
+      return user;
     } catch (error) {
       logger.error('User creation failed', { error: error.message, email });
       
@@ -92,7 +88,7 @@ class User {
 
       const query = `
         SELECT 
-          id, email, username, password_hash, role, email_verified, is_active,
+          id, email, username, password_hash, role, email_verified, is_active, auth_token_version,
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, preferences,
           language_preference, theme_preference, currency_preference,
@@ -167,7 +163,7 @@ class User {
 
       const query = `
         SELECT 
-          id, email, username, password_hash, role, email_verified, is_active,
+          id, email, username, password_hash, role, email_verified, is_active, auth_token_version,
           last_login_at, created_at, updated_at,
           first_name, last_name, avatar, preferences, login_attempts, locked_until,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
@@ -235,6 +231,7 @@ class User {
       const user = await this.findByEmail(email);
 
       if (!user) {
+        await bcrypt.compare(password || '', DUMMY_PASSWORD_HASH);
         logger.debug('Authentication failed: User not found', { email });
         throw new Error('Invalid email or password');
       }
@@ -242,6 +239,13 @@ class User {
       if (!user.is_active) {
         logger.warn('Authentication failed: Account deactivated', { email, userId: user.id });
         throw { ...errorCodes.ACCOUNT_DEACTIVATED };
+      }
+
+      if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) {
+        throw {
+          ...errorCodes.ACCOUNT_LOCKED,
+          details: { lockedUntil: new Date(user.locked_until).toISOString() }
+        };
       }
 
       // ✅ Check user authentication methods  
@@ -359,7 +363,7 @@ class User {
         // Ignore empty updates gracefully for profile endpoint
         logger.warn('No valid fields in update request, returning current user', { userId });
         const current = await db.query(
-          `SELECT id, email, username, role, email_verified,
+           `SELECT id, email, username, role, email_verified, is_active, auth_token_version,
                   first_name, last_name, avatar, preferences, created_at, updated_at,
                   onboarding_completed, language_preference, theme_preference, currency_preference,
                   google_id, oauth_provider, oauth_provider_id, profile_picture_url
@@ -387,7 +391,7 @@ class User {
         UPDATE users 
         SET ${setClause}
         WHERE id = $${paramCount} AND is_active = true
-        RETURNING id, email, username, role, email_verified,
+        RETURNING id, email, username, role, email_verified, is_active, auth_token_version,
                  first_name, last_name, avatar, preferences, created_at, updated_at,
                  onboarding_completed, language_preference, theme_preference, currency_preference,
                  google_id, oauth_provider, oauth_provider_id, profile_picture_url
@@ -425,6 +429,7 @@ class User {
 
       // Invalidate cache
       UserCache.invalidate(userId);
+      UserCache.invalidate(`user:email:${user.email.toLowerCase()}`);
 
       // Cache updated user
       UserCache.set(`user:${userId}`, user);
@@ -453,6 +458,7 @@ class User {
     `;
 
     await db.query(query, [userId]);
+    UserCache.invalidate(String(userId));
   }
 
   static async resetLoginAttempts(userId) {
@@ -463,6 +469,7 @@ class User {
     `;
 
     await db.query(query, [userId]);
+    UserCache.invalidate(String(userId));
   }
 
   static async updateLastLogin(userId) {
@@ -487,9 +494,6 @@ class User {
         throw new Error('Google ID is required for Google-only user');
       }
 
-      // Generate verification token
-      const verificationToken = generateVerificationToken();
-
       const query = `
         INSERT INTO users (
           email, username, password_hash, verification_token, 
@@ -512,7 +516,7 @@ class User {
         email.toLowerCase(),
         username,
         '', // ✅ EMPTY STRING instead of NULL (satisfies NOT NULL constraint)
-        verificationToken,
+        null,
         true, // email_verified (Google verified)
         true, // is_active
         googleData.google_id,
