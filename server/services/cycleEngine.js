@@ -362,9 +362,9 @@ function findSalaryEvents(bankTxns, signature) {
 }
 
 /**
- * Turn salary payments into cycle windows: [salary N, salary N+1). The final window runs
- * to the *projected* next salary (same day-of-month next month), because the running cycle
- * has not closed yet.
+ * Turn salary payments into cycle windows. The salary at `start` is the opening cash anchor;
+ * economically it closes the work cycle that just ended, so `closingSalary` is the next salary.
+ * The final window runs to the projected next salary because that closing payment is not in yet.
  */
 function buildWindows(salaryEvents, { asOf = new Date() } = {}) {
   if (!salaryEvents.length) return [];
@@ -376,6 +376,7 @@ function buildWindows(salaryEvents, { asOf = new Date() } = {}) {
       start: salary.date,
       end,
       salary,
+      closingSalary: next || null,
       projectedEnd: !next,
       running: !next && ilDate(asOf) < end,
     };
@@ -586,12 +587,18 @@ function projectUpcoming({
   }
 
   if (salaryTracking && salaryTracking.expectedNext && salaryTracking.status !== 'unknown'
-      && inWindow(salaryTracking.expectedNext, window) && salaryTracking.expectedNext > today) {
+      && (inWindow(salaryTracking.expectedNext, window) || salaryTracking.expectedNext === window.end)
+      && salaryTracking.expectedNext >= today) {
     items.push({ kind: 'salary', date: salaryTracking.expectedNext, amount: salaryTracking.typicalAmount, label: 'salary', certainty: 'estimated' });
   }
 
   items.sort((a, b) => a.date.localeCompare(b.date));
-  return { items, total: sumAmounts(items) };
+  return {
+    items,
+    total: sumAmounts(items),
+    beforeSalaryTotal: sumAmounts(items.filter((item) => item.kind !== 'salary')),
+    salaryTotal: sumAmounts(items.filter((item) => item.kind === 'salary')),
+  };
 }
 
 /** Calendar date for a statement day on or after an ISO boundary. */
@@ -966,7 +973,13 @@ function buildCycle({
 
   // Money in is income (Bit, Paybox, grants, interest are ordinary transactions) — everything
   // except borrowing.
-  const salary = credits.filter(isSalary);
+  // The salary that opened this window belongs to the cycle that just closed. Counting it here
+  // is the exact bug that made the 09/07 salary look like July income. A closed window receives
+  // its next salary instead; a running window has no settled salary yet and shows the expected
+  // payment only inside the explicitly estimated projection below.
+  const salary = window.closingSalary?.txn && !isPending(window.closingSalary.txn)
+    ? [window.closingSalary.txn]
+    : [];
   const otherIncome = credits.filter((t) => !isSalary(t) && !financingTxns.has(t));
   const financingIn = bankTxns.filter((t) => {
     if (!financingTxns.has(t)) return false;
@@ -1045,7 +1058,9 @@ function buildCycle({
       });
       return {
         upcoming: upcoming.items,
-        upcomingTotal: upcoming.total,
+        // Kept salary-exclusive for the existing "until salary" cash-forecast formula.
+        upcomingTotal: upcoming.beforeSalaryTotal,
+        estimatedSalary: upcoming.salaryTotal,
         projectedOperatingNet: round2(operatingNet + upcoming.total),
         estimate: true,
       };

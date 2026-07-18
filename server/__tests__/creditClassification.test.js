@@ -60,7 +60,9 @@ describe('credit classifications', () => {
       creditClassifications: [{ transactionId: 2, class: 'financing' }],
     });
 
-    expect(cycle.income.total).toBe(1050);
+    // The salary at the opening boundary belongs to the previous cycle; the unclassified
+    // second credit is the only current income.
+    expect(cycle.income.total).toBe(50);
     expect(cycle.financing.total).toBe(100);
     expect(cycle.bankMovement).toBe(1150);
   });

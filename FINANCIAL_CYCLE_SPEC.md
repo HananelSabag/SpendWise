@@ -156,8 +156,11 @@ stronger key than description text. Proven on real Leumi data:
   evidence, and degrade gracefully where a provider makes every identifier unique (Max/CAL do).
 
 ## 4. THE FINANCIAL CYCLE (מחזור פיננסי) — the only view the user feels
-- **Anchor = salary.** Window = `[salaryDate, nextSalaryDate)`. Calendar month is NOT used for the
-  headline (it's retro-only, in Insights).
+- **Anchor = salary boundary.** The literal bank-movement window remains
+  `[salaryDate, nextSalaryDate)`, but the salary at its opening boundary is payment for the work
+  cycle that just ended. It therefore closes the previous cycle and is never counted again as
+  settled income in the new running cycle. Until the next salary actually arrives, it appears only
+  as an explicitly estimated projection. Calendar month is not used for the headline.
 - Direct bank transactions and immediate/debit-card charges use their **bank-hit date**. An
   aggregated monthly statement follows the cycle containing most of its underlying spend, using
   the amount-weighted median purchase date. Installments use their current `processedDate`, because
@@ -169,10 +172,11 @@ stronger key than description text. Proven on real Leumi data:
   statement follows it to the same spending cycle.
   This attribution never rewrites `bankMovement`, which remains the literal sum by bank-hit date;
   `timingAdjustment` explains the difference and is not another charge.
-- **Headline = income vs spending attributed to the salary cycle**: direct bank and immediate-card
+- **Headline = income vs spending attributed to the work cycle**: direct bank and immediate-card
   movements by bank date, monthly statements by their representative spending date. `bankMovement`
-  separately states the literal cash movement between salary dates. One number the user lives by:
-  "this cycle: in 13,328 / out 3,841 / net +9,487" without re-counting the bill that already closed.
+  separately states the literal cash movement between salary dates. The running cycle starts with
+  zero settled salary; the next expected salary is visually separated as an estimate and becomes
+  settled income only when it arrives and closes that cycle.
 - Weekend drift: salary/charges may shift ±1–2 days (Fri/Sat). Anchor detection uses tolerance; don't
   treat a 1-day shift as a missed/extra event.
 
@@ -215,8 +219,10 @@ salary ⇒ estimated end-of-cycle (labelled שערוך, never mixed into settled
 - **A series can hold more than one rhythm**: insurance `42209` bills on **both the 1st and the 10th**
   under one identifier. Project each recurring day-of-month separately — "last date + 1 month" jumps
   to 10/08 (outside the window) and silently loses the 01/08 hit.
-- Verified on the running cycle (asOf 16/07, window 09/07→09/08): settled operating −4,788.05 +
-  upcoming (loan 26/07 −1,098.85, insurance 01/08 −73.01) ⇒ **projected −5,959.91**.
+- Verified on the running cycle (asOf 16/07, window 09/07→09/08): the 09/07 salary is excluded
+  from settled income, then the estimated 09/08 salary and upcoming debits are added only in the
+  projection. This preserves the estimated closing picture without pretending the salary already
+  belongs to the running cycle.
 - Each item carries `certainty`: `proven` (a real future card date, a loan family) vs `estimated`
   (a recurring series' typical amount).
 
@@ -240,9 +246,11 @@ The engine MUST reproduce these. Source: agent `scraped-data/raw-*.json`.
 - Salary-anchored cycles (user1, salary "הורייזן טכנו" 09/07 = 13,327.75; previously "גלש\"ן שווקים"):
   | window | income | expenses | operating net | financing | bank movement | real bank |
   |---|---|---|---|---|---|---|
-  | 08/05 → 09/06 | 16,263.37 | 25,551.49 | −9,288.12 | 0 | −9,288.12 | (partial window) |
-  | 09/06 → 09/07 | 10,329.91 | 24,458.98 | **−14,129.07** | +16,000.00 | +1,870.93 | **+1,870.93 ✓** |
-  | 09/07 → 09/08 (running) | 13,327.75 | 18,115.80 | **−4,788.05** | +12,805.22 | +8,017.17 | **+8,017.17 ✓** |
+  | 08/05 → 09/06 | 16,580.37 | 44,499.49 | −27,919.12 | 0 | −9,288.12 | **−9,288.12 ✓** |
+  | 09/06 → 09/07 | 13,497.66 | 20,981.40 | **−7,483.74** | +28,805.22 | +1,870.93 | **+1,870.93 ✓** |
+  | 09/07 → 09/08 (running) | 0.00 | 4,123.26 | **−4,123.26** | 0 | +8,017.17 | **+8,017.17 ✓** |
+  The running cycle then projects the estimated 09/08 salary and remaining recurring debits to an
+  estimated close of **+8,032.63**; none of that estimate is mixed into the settled 0.00 income.
 - Loans derived with no manual entry: #2158001 ₪25,000 → outstanding **21,914.65**; #3926001 ₪16,000
   → outstanding **14,913.56**. Recurring series offered for labelling: #2529001 (old loan, day 26),
   #42209 (insurance) — and card settlements are correctly NOT offered.

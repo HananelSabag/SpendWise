@@ -9,6 +9,10 @@ const safeRetention = fs.readFileSync(
   path.join(__dirname, '..', 'DB Migrations', '28_cycle_aggregates_and_safe_retention.sql'),
   'utf8'
 );
+const cycleAggregateV2 = fs.readFileSync(
+  path.join(__dirname, '..', 'DB Migrations', '31_cycle_aggregate_salary_boundary_version.sql'),
+  'utf8'
+);
 
 describe('operational data-retention migration guardrails', () => {
   it('defaults manual execution to a non-destructive dry run', () => {
@@ -56,5 +60,11 @@ describe('operational data-retention migration guardrails', () => {
     expect(safeRetention).toContain('bank_movement NUMERIC(14,2) NOT NULL');
     expect(safeRetention).toContain('category_totals JSONB NOT NULL');
     expect(safeRetention).not.toMatch(/DELETE\s+FROM\s+transactions\b/i);
+  });
+
+  it('invalidates only derived cycle aggregates after the salary-boundary rule changes', () => {
+    expect(cycleAggregateV2).toContain('calculation_version');
+    expect(cycleAggregateV2).toMatch(/DELETE FROM financial_cycle_aggregates/i);
+    expect(cycleAggregateV2).not.toMatch(/DELETE\s+FROM\s+transactions\b/i);
   });
 });

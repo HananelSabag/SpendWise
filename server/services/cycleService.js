@@ -422,13 +422,14 @@ async function persistClosedCycleAggregates(userId, cycles) {
     await db.query(
       `INSERT INTO financial_cycle_aggregates (
          user_id, cycle_start, cycle_end, income, expenses, operating_net,
-         financing, bank_movement, timing_adjustment, category_totals, calculated_at
+         financing, bank_movement, timing_adjustment, category_totals,
+         calculation_version, calculated_at
        )
        SELECT $1, (item->>'start')::date, (item->>'end')::date,
               (item->>'income')::numeric, (item->>'expenses')::numeric,
               (item->>'operatingNet')::numeric, (item->>'financing')::numeric,
               (item->>'bankMovement')::numeric, (item->>'timingAdjustment')::numeric,
-              COALESCE(item->'categories', '{}'::jsonb), now()
+              COALESCE(item->'categories', '{}'::jsonb), 2, now()
          FROM jsonb_array_elements($2::jsonb) item
        ON CONFLICT (user_id, cycle_start) DO UPDATE SET
          cycle_end = EXCLUDED.cycle_end,
@@ -439,6 +440,7 @@ async function persistClosedCycleAggregates(userId, cycles) {
          bank_movement = EXCLUDED.bank_movement,
          timing_adjustment = EXCLUDED.timing_adjustment,
          category_totals = EXCLUDED.category_totals,
+         calculation_version = EXCLUDED.calculation_version,
          calculated_at = now()`,
       [userId, JSON.stringify(payload)],
     );
@@ -494,6 +496,7 @@ async function loadStoredYear(userId, year) {
               financing, bank_movement, timing_adjustment, category_totals
          FROM financial_cycle_aggregates
         WHERE user_id = $1
+          AND calculation_version = 2
           AND cycle_start >= make_date($2, 1, 1)
           AND cycle_start < make_date($2 + 1, 1, 1)
         ORDER BY cycle_start`,

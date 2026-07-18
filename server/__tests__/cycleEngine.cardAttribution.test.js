@@ -193,10 +193,12 @@ describe('monthly card close-out attribution', () => {
     expect(accruing).toBeTruthy();
     expect(accruing.chargeDate).toBe('2026-08-10');
     expect(accruing.total).toBe(-250);
-    expect(current.operatingNet).toBe(750);
+    // The 09/07 salary closes the prior economic cycle; this running cycle has no actual
+    // salary yet, so only its spending is settled and the next salary remains a projection.
+    expect(current.operatingNet).toBe(-250);
     // The bank has not charged the 08-10 bill, so it never touches this window's real movement.
     expect(current.bankMovement).toBe(1000);
-    expect(current.timingAdjustment).toBe(250);
+    expect(current.timingAdjustment).toBe(1250);
   });
 
   test('a closed cycle never accrues a future statement', () => {

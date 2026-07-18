@@ -58,7 +58,7 @@ Notation: `table(rows@2026-07-16): key columns [notes]`. FKs mostly → `users.i
 - `data_retention_settings(1, single row id=1)` + `data_retention_runs(7)` — conservative auto-cleanup of operational data (see fn `run_data_retention`).
 - **DB functions** (public): `run_data_retention(dry)`, `preview_data_retention`, `run_maintenance`, `database_health_check`, `cleanup_expired_tokens`, admin RPCs (`get_admin_users_overview`, `get_admin_activity_log(_v2)`, `admin_manage_settings`), `get_dashboard_summary` / `get_monthly_summary` (partly legacy — aggregation now in JS `services/dashboardService.js`), plus orphans from dropped features (`generate_recurring_transactions`, `update_future_transactions` — reference dead category/recurring tables; leave alone, trigger deps).
 - **Triggers**: only `shopping_items` BEFORE UPDATE → `update_shopping_items_updated_at`.
-- **Migrations**: `server/DB Migrations/01..30_*.sql` (30 = clear obsolete plaintext verification tokens; 29 = revocable auth sessions/token version; 28 = durable financial-cycle aggregates and safe retention gate). Apply new ones transactionally and verify the live schema afterward.
+- **Migrations**: `server/DB Migrations/01..31_*.sql` (31 = cycle-aggregate calculation version for closing-salary attribution; 30 = clear obsolete plaintext verification tokens; 29 = revocable auth sessions/token version; 28 = durable financial-cycle aggregates and safe retention gate). Apply new ones transactionally and verify the live schema afterward.
 
 ## 5. SERVER CODE MAP  (`server/`)
 - entry `index.js`; DB pool `config/db.js` (idleTimeout 15min + pre-warm — fixes Supabase TLS-handshake slow-query); `config/institutions.js` (bank/card registry).
@@ -105,7 +105,7 @@ Notation: `table(rows@2026-07-16): key columns [notes]`. FKs mostly → `users.i
 ## 9b. 2026-07-18 cycle performance + retention update
 - `cycleService` now bounds raw loading to two years plus context, prepares card/reconciliation/loan facts once per request, builds only one window for `/cycles/current`, and keeps exact results in a 15-second server cache.
 - The live dashboard shell now loads only the recent rows it renders. Balance and current-cycle data keep dedicated user-scoped React Query entries and are prefetched together immediately after login.
-- Migrations 28–30 were applied to production on 2026-07-19. Migration 28 adds `financial_cycle_aggregates`, cycle query indexes, and a disabled-by-default retention gate. Migration 29 adds hashed, rotating auth sessions and `users.auth_token_version`; migration 30 clears the obsolete plaintext verification-token field.
+- Migrations 28–31 were applied to production on 2026-07-19. Migration 28 adds `financial_cycle_aggregates`, cycle query indexes, and a disabled-by-default retention gate. Migration 29 adds hashed, rotating auth sessions and `users.auth_token_version`; migration 30 clears the obsolete plaintext verification-token field; migration 31 versions cycle aggregates for closing-salary attribution and removes only stale derived rows.
 - `/cycles/yearly/:year` powers the yearly review. Closed complete cycles are stored durably; current-year data can fall back to live raw calculations.
 - Old unused calendar/runway dashboard components, hooks, routes, and services were removed. Do not recreate them; the salary-cycle engine is the financial source of truth.
 

@@ -20,10 +20,10 @@ vi.mock('framer-motion', () => ({
 const formatCurrency = (value) => `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const t = (_key, options) => (options && options.fallback) || _key;
 
-/** Real running cycle after post-salary statements close the previous cycle. */
+/** Real running cycle after the opening salary and post-salary statements close the prior cycle. */
 const CYCLE = {
   window: { index: 0, start: '2026-07-09', end: '2026-08-09', running: true, projectedEnd: true, salary: { date: '2026-07-09', amount: 13327.75, description: 'הורייזן טכנו-י' } },
-  income: { salary: 13327.75, other: 0, total: 13327.75 },
+  income: { salary: 0, other: 0, total: 0, items: [] },
   // The MAX bill still building this cycle (it bills 10/08) is counted now as a card expense,
   // not floated off in a separate "next bill" box.
   expenses: {
@@ -34,16 +34,18 @@ const CYCLE = {
       txns: [{ id: 'accr-1', amount: -2823.79, description: 'MAX purchases this cycle', date: '2026-07-15' }],
     }],
   },
-  operatingNet: 7858.58,
+  operatingNet: -5469.17,
   financing: { total: 0, count: 0 },
   bankMovement: 8017.17,
-  timingAdjustment: 158.59,
+  timingAdjustment: 13486.34,
   projection: {
     upcoming: [
       { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה', certainty: 'estimated' },
       { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י', certainty: 'estimated' },
+      { kind: 'salary', date: '2026-08-09', amount: 13327.75, label: 'salary', certainty: 'estimated' },
     ],
     upcomingTotal: -1171.86,
+    estimatedSalary: 13327.75,
     projectedOperatingNet: 6686.72,
     estimate: true,
   },
@@ -61,10 +63,6 @@ const CYCLE = {
 
 const CYCLE_WITH_BREAKDOWN = {
   ...CYCLE,
-  income: {
-    ...CYCLE.income,
-    items: [{ id: 'salary', amount: 13327.75, description: 'Salary', date: '2026-07-09' }],
-  },
   expenses: {
     ...CYCLE.expenses,
     direct: 40,
@@ -91,12 +89,14 @@ describe('FinancialCycleCard', () => {
 
   it('leads with the operating net rather than the account movement', () => {
     renderCard();
-    expect(screen.getByText('₪7,858.58')).toBeInTheDocument();
-    expect(screen.getByText('You earned more than you spent')).toBeInTheDocument();
+    expect(screen.getAllByText('₪-5,469.17')).toHaveLength(2);
+    expect(screen.getByText('You are spending more than you earn')).toBeInTheDocument();
   });
 
-  it('does not carry the previous cycle card bill or spread into the new cycle', () => {
+  it('keeps the opening salary out of settled income and only in the estimate', () => {
     renderCard();
+    expect(screen.getByText('₪0.00')).toBeInTheDocument();
+    expect(screen.getByText(/Aug 9.*salary/)).toBeInTheDocument();
     expect(screen.getByText('₪13,327.75')).toBeInTheDocument();
     expect(screen.queryByText('Borrowed this cycle')).not.toBeInTheDocument();
     expect(screen.queryByText('₪12,805.22')).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ describe('FinancialCycleCard', () => {
     expect(screen.getByText('CAL ••••2222')).toBeInTheDocument();
     expect(screen.queryByText('Isracard ••••3333')).not.toBeInTheDocument();
 
-    const showMore = screen.getByRole('button', { name: 'Show 5 more' });
+    const showMore = screen.getByRole('button', { name: 'Show 4 more' });
     expect(showMore).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(showMore);
 

@@ -25,7 +25,45 @@ describe('cycle reconciliation invariant', () => {
     }).map((event) => event.txn.id)).toEqual([1]);
   });
 
-  test('a reviewed bonus stays income but no longer inflates the salary line', () => {
+  test('the opening salary closes the prior cycle while the next salary stays estimated', () => {
+    const juneSalary = bank(1, 1000, '2026-06-09', 'acme payroll');
+    const julySalary = bank(2, 1200, '2026-07-09', 'acme payroll');
+    const events = [juneSalary, julySalary].map((txn) => ({
+      date: txn.processedDate,
+      amount: txn.amount,
+      txn,
+    }));
+    const windows = engine.buildWindows(events, { asOf: new Date('2026-07-20T12:00:00+03:00') });
+    const signature = {
+      normalizedDescription: 'acme payroll', bankSource: 'yahav', accountNumber: '123',
+    };
+
+    const closed = engine.buildCycle({
+      bankTxns: [juneSalary, julySalary],
+      window: windows[0],
+      asOf: new Date('2026-07-20T12:00:00+03:00'),
+      salarySignature: signature,
+    });
+    const current = engine.buildCycle({
+      bankTxns: [juneSalary, julySalary],
+      window: windows[1],
+      asOf: new Date('2026-07-20T12:00:00+03:00'),
+      salarySignature: signature,
+    });
+
+    expect(closed.income.salary.total).toBe(1200);
+    expect(closed.income.salary.items.map((txn) => txn.id)).toEqual([2]);
+    expect(current.income.salary.total).toBe(0);
+    expect(current.income.total).toBe(0);
+    expect(current.projection.upcoming).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'salary', date: '2026-08-09', amount: 1100, certainty: 'estimated' }),
+    ]));
+    expect(current.projection.upcomingTotal).toBe(0);
+    expect(current.projection.estimatedSalary).toBe(1100);
+    expect(current.projection.projectedOperatingNet).toBe(1100);
+  });
+
+  test('a reviewed bonus stays current income but the opening salary does not', () => {
     const salary = bank(1, 1000, '2026-07-01', 'acme payroll');
     const bonus = bank(2, 500, '2026-07-02', 'acme payroll bonus');
     const cycle = engine.buildCycle({
@@ -40,9 +78,9 @@ describe('cycle reconciliation invariant', () => {
       salaryClassifications: [{ transactionId: 2, classification: 'bonus' }],
     });
 
-    expect(cycle.income.salary.total).toBe(1000);
+    expect(cycle.income.salary.total).toBe(0);
     expect(cycle.income.other.total).toBe(500);
-    expect(cycle.income.total).toBe(1500);
+    expect(cycle.income.total).toBe(500);
   });
 
   test('an unreconciled card event stays visible but cannot change bank movement', () => {

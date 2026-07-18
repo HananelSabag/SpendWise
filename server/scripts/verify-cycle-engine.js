@@ -201,7 +201,7 @@ function main() {
   check('running cycle exists', Boolean(running), 'no running cycle built from salary events');
   if (running) {
     console.log('\n  --- running-cycle checks ---');
-    console.log(`${check('running cycle salary', Math.abs(running.income.salary.total - 13327.75) <= 0.01, `expected 13,327.75, got ${nis(running.income.salary.total)}`)}  salary = ${nis(running.income.salary.total)}`);
+    console.log(`${check('opening salary belongs to the prior cycle', Math.abs(running.income.salary.total) <= 0.01, `expected 0 settled salary, got ${nis(running.income.salary.total)}`)}  settled salary = ${nis(running.income.salary.total)}`);
     // The July statement landed one day after salary and closes the cycle that just ended.
     const julyStatementInRunning = running.expenses.cards.events.some((event) => (
       event.chargeDate === '2026-07-10' && event.class === 'statement'
@@ -248,8 +248,10 @@ function main() {
     // Insurance bills on BOTH the 1st and the 10th under one identifier; projecting only
     // "last + 1 month" would jump to 10/08 (outside the window) and lose the 01/08 hit.
     const insuranceFirst = proj.upcoming.find((i) => i.date === '2026-08-01');
+    const nextSalary = proj.upcoming.find((i) => i.kind === 'salary' && i.date === '2026-08-09');
     console.log(`${check('projects the loan due on the 26th', Boolean(loanDue), 'the ~1,098 loan payment on 26/07 must be projected')}  loan on 26/07 projected`);
     console.log(`${check('projects each rhythm in a series', Boolean(insuranceFirst), 'insurance hits the 1st AND the 10th — the 01/08 occurrence must not be lost')}  insurance on 01/08 projected`);
+    console.log(`${check('projects the next salary without settling it early', Boolean(nextSalary), 'the 09/08 salary must appear only as an estimate')}  next salary projected`);
   }
 
   // ---- Classification is the user's, reconciliation is not negotiable --------------------
