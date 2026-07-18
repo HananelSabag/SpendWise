@@ -31,24 +31,24 @@ export default {
     // Sections
     sections: {
       dataCollection: {
-        title: 'Data Collection',
-        content: 'We collect only the information necessary to operate the service'
+        title: 'What we collect',
+        content: 'Your account details (name, email) and the bank and credit-card transactions you choose to sync. Any bank or card login credentials you provide are used only to fetch your own data and are stored encrypted — never shared or sold.'
       },
       dataUsage: {
-        title: 'Data Usage',
-        content: 'Information is used to improve the service and provide a personalized user experience'
+        title: 'How we use it',
+        content: 'Only to show you your own balances, transactions and financial cycle inside SpendWise. Your financial data is never sold or used for advertising.'
       },
       dataSecurity: {
-        title: 'Data Security',
-        content: 'We use advanced encryption technologies to protect information'
+        title: 'Security',
+        content: 'Data is kept in a managed cloud database and credentials are stored encrypted. No system is perfectly secure, so you use the service at your own responsibility.'
       },
       thirdParty: {
-        title: 'Third Parties',
-        content: 'We do not share personal information with third parties without your consent'
+        title: 'Third parties',
+        content: 'SpendWise is an independent personal project, not affiliated with or endorsed by any bank or credit-card company. Your data is not shared with third parties beyond the infrastructure needed to run the service.'
       },
       userRights: {
-        title: 'User Rights',
-        content: 'You have the right to access, correct, and delete your personal information'
+        title: 'Your data, your control',
+        content: 'You can view, correct, disconnect a source, or delete your account and data at any time.'
       }
     },
     
@@ -71,9 +71,7 @@ export default {
     // Contact
     contact: {
       title: 'Contact us about privacy',
-      email: 'Email: spendwise.verifiction@gmail.com',
-      phone: 'Phone: +1-555-0123',
-      address: 'Address: 123 Technology Street, San Francisco, CA'
+      email: 'Email: spendwise.verifiction@gmail.com'
     },
     
     // Links
@@ -100,20 +98,20 @@ export default {
     // Sections
     sections: {
       agreement: {
-        title: 'Usage Agreement',
-        content: 'Using the service constitutes agreement to these terms'
+        title: 'Agreement',
+        content: 'SpendWise is a personal, non-commercial project by an individual, provided free of charge. By using it you accept these terms, and you confirm you are at least 18 years old.'
       },
       services: {
-        title: 'Service Description',
-        content: 'SpendWise provides personal financial management solutions'
+        title: 'What the service is',
+        content: 'SpendWise lets you view and organise your own bank and credit-card activity that you connect using your own credentials. It is an informational tool only — NOT financial, investment, tax or legal advice — and is not affiliated with or endorsed by any bank or credit-card company. All trademarks belong to their owners.'
       },
       privacy: {
-        title: 'Privacy and Security',
-        content: 'We are committed to protecting your personal information'
+        title: 'Your credentials & data',
+        content: 'You connect your own accounts at your own responsibility. Credentials are stored encrypted and used only to fetch your data; see the Privacy Policy. You can delete your data at any time.'
       },
       liability: {
-        title: 'Liability and Limitations',
-        content: 'The service is provided as-is without special warranty'
+        title: 'As-is & liability',
+        content: 'The service is provided "as is", without warranty of any kind, and may contain errors — always verify figures against your bank. To the maximum extent permitted by law, the operator (a private individual, not a registered company) is not liable for any damage arising from use of the service. These terms are governed by the laws of the State of Israel.'
       }
     },
     
