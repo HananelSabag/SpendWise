@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Building2,
-  BarChart3,
+  Wallet,
   Calculator,
   ChevronLeft,
   ChevronRight,
@@ -137,7 +137,7 @@ const Header = () => {
       key: 'financial-cycle',
       label: currentLanguage === 'he' ? 'מחזור פיננסי' : 'Financial Cycle',
       href: '/financial-cycle',
-      icon: BarChart3,
+      icon: Wallet,
       active: location.pathname.startsWith('/financial-cycle') || location.pathname.startsWith('/insights')
     },
     {

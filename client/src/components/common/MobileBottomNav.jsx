@@ -19,7 +19,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, CreditCard, User,
   PlusCircle, MinusCircle, Calculator,
-  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, BarChart3,
+  Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, Wallet, ChevronRight,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -91,6 +91,12 @@ const FullNav = () => {
   const { isDark, setTheme } = useTheme();
   const toast    = useToast();
   const isAdmin  = useIsAdmin();
+  const { user } = useAuth();
+
+  const displayName = user?.firstName || user?.first_name || user?.name || user?.username
+    || user?.email?.split('@')[0] || (currentLanguage === 'he' ? 'משתמש' : 'User');
+  const avatarUrl = user?.avatar || user?.profile_picture_url || user?.profilePicture;
+  const initial = String(displayName).charAt(0).toUpperCase();
 
   const { notifications, unreadCount, markAllRead } = useNotifications();
 
@@ -137,13 +143,15 @@ const FullNav = () => {
 
   // ── Tab definitions ───────────────────────────────────────────────────────
 
+  // Profile moved off the tab bar into the menu sheet below — the salary-to-salary cycle earns
+  // its slot far more than an account page does. Bank Sync stays; both are the core of the app.
   const tabs = useMemo(() => [
-    { key: 'dashboard',    label: t('nav.dashboard')    || 'Home',         icon: Home,       href: '/',             exact: true },
-    { key: 'transactions', label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
+    { key: 'dashboard',       label: t('nav.dashboard')    || 'Home',         icon: Home,       href: '/',             exact: true },
+    { key: 'transactions',    label: t('nav.transactions') || 'Transactions', icon: CreditCard, href: '/transactions' },
     null, // center FAB slot
-    { key: 'bank-sync',    label: t('bankSync.title')   || 'Bank Sync',    icon: Building2,  href: '/bank-sync' },
-    { key: 'profile',      label: t('nav.profile')      || 'Profile',      icon: User,       href: '/profile' },
-  ], [t, loadedModulesCount]); // eslint-disable-line
+    { key: 'financial-cycle', label: t('nav.financialCycle') || (currentLanguage === 'he' ? 'מחזור פיננסי' : 'Financial Cycle'), icon: Wallet, href: '/financial-cycle' },
+    { key: 'bank-sync',       label: t('bankSync.title')   || 'Bank Sync',    icon: Building2,  href: '/bank-sync' },
+  ], [t, currentLanguage, loadedModulesCount]); // eslint-disable-line
 
   const isActive = useCallback((tab) => {
     if (!tab) return false;
@@ -179,13 +187,6 @@ const FullNav = () => {
   // ── Tool shortcuts ────────────────────────────────────────────────────────
 
   const toolActions = useMemo(() => [
-    {
-      key: 'financial-cycle',
-      label: t('nav.financialCycle') || (currentLanguage === 'he' ? 'מחזור פיננסי' : 'Financial Cycle'),
-      icon: BarChart3,
-      iconTint: 'text-indigo-500 dark:text-indigo-400',
-      action: () => closeAndGo('/financial-cycle'),
-    },
     {
       key: 'exchange',
       label: currentLanguage === 'he' ? 'המרת מטבע' : 'Exchange',
@@ -352,6 +353,23 @@ const FullNav = () => {
               </button>
             </div>
           </div>
+
+          {/* ── Account — Profile as a full row, not a cramped tab ────── */}
+          <button
+            onClick={() => closeAndGo('/profile')}
+            className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-start active:scale-[0.98] transition-all dark:border-gray-700 dark:bg-gray-800"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-base font-bold text-white">
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                : (initial || <User className="h-5 w-5" />)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{displayName}</p>
+              {user?.email && <p className="truncate text-xs text-gray-400 dark:text-gray-500">{user.email}</p>}
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 rtl:rotate-180" />
+          </button>
 
           {/* ── Finance — 2 col (neutral cards, colored icon chips) ──── */}
           <div className="grid grid-cols-2 gap-3">
