@@ -45,7 +45,7 @@ export function useCycles() {
   const classificationMutation = useMutation({
     mutationFn: ({ transactionId, class: klass, reason }) =>
       cyclesApi.classifyCredit(transactionId, { class: klass, reason }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cycles'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
   });
 
   const data = query.data?.data || EMPTY;

@@ -11,7 +11,6 @@ import { Globe, Loader2 } from 'lucide-react';
 import {
   useAuth,
   useTranslation,
-  useTheme,
   useNotifications
 } from '../../stores';
 import { useAuthToasts } from '../../hooks/useAuthToasts';
@@ -25,7 +24,6 @@ import cyclesApi from '../../api/cycles';
 import { queryClient } from '../../config/queryClient';
 import { takePendingGoogleCredential } from '../../services/simpleGoogleAuth';
 import { Button } from '../../components/ui';
-import { cn } from '../../utils/helpers';
 import { resolveAuthReturnPath } from '../../utils/authReturnPath';
 
 function warmFinancialHome(userId) {
@@ -50,8 +48,8 @@ function warmFinancialHome(userId) {
       staleTime: 30_000,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['bankBalances', userId],
-      queryFn: () => apiClient.get('/bank-sync/stats', { params: { periodOffset: 0 } })
+      queryKey: ['bankSyncStats', userId],
+      queryFn: () => apiClient.get('/bank-sync/stats')
         .then((response) => response.data.sources || []),
       staleTime: 5 * 60_000,
     }),

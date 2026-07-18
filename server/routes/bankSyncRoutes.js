@@ -28,10 +28,11 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
+const { invalidateCycleCache } = require('../services/cycleService');
+const { invalidateDashboardCache } = require('../services/dashboardService');
 const { auth } = require('../middleware/auth');
 const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
 const { VALID_SOURCES, INSTITUTIONS, institutionKind } = require('../config/institutions');
-const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 // ── Strict rate limiter ───────────────────────────────────────────────────────
 // Tighter than the main API limiter: this endpoint should only be called by
@@ -134,6 +135,10 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
     const { inserted, skipped } = await ingestAccounts(client, userId, source, accounts);
 
     await client.query('COMMIT');
+    // Invalidate only after the transaction is visible. Invalidating inside
+    // ingestAccounts allowed a concurrent read to repopulate stale data before COMMIT.
+    invalidateCycleCache(userId);
+    invalidateDashboardCache(userId);
     logger.info('bank-sync: completed', { userId, source, inserted, skipped });
     res.json({ ok: true, inserted, skipped });
   } catch (err) {
@@ -146,15 +151,11 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
 });
 
 // ── GET /bank-sync/stats ─────────────────────────────────────────────────────
-// Returns per-source statistics for the logged-in user's bank transactions.
-// Used by the SpendWise client to display the Bank Sync dashboard.
+// Operational sync/account state only. Financial totals belong exclusively to
+// the salary-cycle endpoints and are never recomputed here by calendar month.
 router.get('/stats', auth, async (req, res) => {
   const userId = req.user.id;
   try {
-    // Money figures (income/expense) are scoped to the user's current
-    // financial period so this page and the dashboard tell the same story;
-    // transaction COUNTS stay all-time — they're sync-health, not money.
-    const period = getCalendarPeriod(req.query.periodOffset);
     const result = await db.query(
       `WITH sources AS (
          SELECT DISTINCT bank_source AS source
@@ -166,28 +167,19 @@ router.get('/stats', auth, async (req, res) => {
          WHERE user_id = $1
        ),
        tx AS (
-         SELECT
-           t.*,
-           t.date AS activity_date
+         SELECT t.id, t.bank_source, t.bank_account_number,
+                t.date AS activity_date, t.created_at
          FROM transactions t
-         LEFT JOIN bank_accounts ba_filter
-           ON ba_filter.user_id = t.user_id
-          AND ba_filter.bank_source = t.bank_source
-          AND ba_filter.account_number = COALESCE(t.bank_account_number, '')
          WHERE t.user_id = $1
            AND t.bank_source IS NOT NULL
            AND t.deleted_at IS NULL
-           AND COALESCE(ba_filter.enabled, true) = true
        ),
        tx_stats AS (
          SELECT
            bank_source AS source,
            COUNT(id)::int AS total,
            MAX(created_at) AS last_transaction_sync,
-           COALESCE(SUM(CASE WHEN type='income'  AND activity_date >= $2 AND activity_date < $3 THEN 1 ELSE 0 END), 0)::int AS income_count,
-           COALESCE(SUM(CASE WHEN type='expense' AND activity_date >= $2 AND activity_date < $3 THEN 1 ELSE 0 END), 0)::int AS expense_count,
-           COALESCE(SUM(CASE WHEN type='income'  AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_income,
-           COALESCE(SUM(CASE WHEN type='expense' AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_expense
+           MAX(activity_date) AS last_transaction_at
          FROM tx
          GROUP BY bank_source
        ),
@@ -198,18 +190,13 @@ router.get('/stats', auth, async (req, res) => {
          GROUP BY bank_source
        ),
        acct_tx_stats AS (
-         -- Same shape as tx_stats but broken out per account/card, not just
-         -- per institution — a bank login or card company can expose more
-         -- than one account/card (bank_accounts is keyed on account_number),
-         -- and each one needs its own "how much moved through this specific
-         -- account/card" figure, not one number shared across all of them.
+         -- Operational activity per account/card. Disabled accounts keep their
+         -- all-time count; enabled controls financial inclusion, not history.
          SELECT
            bank_source AS source,
            COALESCE(bank_account_number, '') AS account_number,
            COUNT(id)::int AS total,
-           MAX(activity_date) AS last_transaction_at,
-           COALESCE(SUM(CASE WHEN type='income'  AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_income,
-           COALESCE(SUM(CASE WHEN type='expense' AND activity_date >= $2 AND activity_date < $3 THEN amount ELSE 0 END), 0) AS total_expense
+           MAX(activity_date) AS last_transaction_at
          FROM tx
          GROUP BY bank_source, COALESCE(bank_account_number, '')
        )
@@ -217,10 +204,7 @@ router.get('/stats', auth, async (req, res) => {
          s.source                                                             AS source,
          COALESCE(ts.total, 0)::int                                           AS total,
          GREATEST(ts.last_transaction_sync, ast.last_account_sync)            AS last_sync,
-         COALESCE(ts.income_count, 0)::int                                    AS income_count,
-         COALESCE(ts.expense_count, 0)::int                                   AS expense_count,
-         COALESCE(ts.total_income, 0)                                         AS total_income,
-         COALESCE(ts.total_expense, 0)                                        AS total_expense,
+         ts.last_transaction_at                                               AS last_transaction_at,
          COALESCE(
             (SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
                'account_number',      ba.account_number,
@@ -229,8 +213,6 @@ router.get('/stats', auth, async (req, res) => {
                'enabled',             ba.enabled,
                'last_synced_at',      ba.last_synced_at,
                'transaction_count',   COALESCE(act.total, 0),
-               'income',              COALESCE(act.total_income, 0),
-               'expense',             COALESCE(act.total_expense, 0),
                'last_transaction_at', act.last_transaction_at
             ) ORDER BY ba.account_number)
              FROM bank_accounts ba
@@ -242,8 +224,8 @@ router.get('/stats', auth, async (req, res) => {
        FROM sources s
        LEFT JOIN tx_stats ts ON ts.source = s.source
        LEFT JOIN acct_stats ast ON ast.source = s.source
-       ORDER BY last_sync DESC`,
-      [userId, period.start, period.end],
+       ORDER BY last_sync DESC NULLS LAST`,
+      [userId],
     );
     const sources = result.rows.map((r) => ({
       ...r,
@@ -253,12 +235,6 @@ router.get('/stats', auth, async (req, res) => {
     res.json({
       ok: true,
       sources,
-      period: {
-        start: period.start,
-        end: period.end,
-        offset: period.offset,
-        isCurrent: period.isCurrent,
-      },
     });
   } catch (err) {
     logger.error('bank-sync stats failed', { error: err.message, userId });

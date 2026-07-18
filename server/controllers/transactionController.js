@@ -163,18 +163,13 @@ const transactionController = {
 
   updateSalaryReview: asyncHandler(async (req, res) => {
     const data = await saveSalaryReview(req.user.id, req.body?.decisions);
+    invalidateCycleCache(req.user.id);
     res.json({ success: true, data });
   }),
 
   /**
-   * Card-billing financial cycle: current/previous economic activity plus
-   * explicit upcoming cash commitments and the real checking balance.
-   * @route GET /api/v1/transactions/cycle
-   */
-  /**
-   * Get dashboard data: financial-period summary, category/pattern
-   * breakdown, bank costs, per-institution activity, recent transactions.
-   * All aggregation lives in services/dashboardService.js.
+   * Get the dashboard shell's recent transactions. Balance and the current
+   * financial cycle use their dedicated cached endpoints.
    * @route GET /api/v1/transactions/dashboard
    */
   getDashboardData: asyncHandler(async (req, res) => {

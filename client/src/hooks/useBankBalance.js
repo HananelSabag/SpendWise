@@ -1,9 +1,8 @@
 /**
  * useBankBalance — current bank balance, shared by the dashboard hero and the cycle page.
  *
- * Wraps the same /bank-sync/stats query the hero already uses (identical queryKey, so the two
- * screens share one cache and one network call) and reduces it through computeBankBalance so
- * the "how much is in the account" number is defined exactly once (see utils/bankBalance).
+ * Wraps the operational /bank-sync/stats query used by Bank Sync, Transactions, and the
+ * dashboard (one user-scoped cache/network call), then reduces it through computeBankBalance.
  */
 
 import { useMemo } from 'react';
@@ -17,8 +16,8 @@ export function useBankBalance() {
   const user = useAuthUser();
 
   const query = useQuery({
-    queryKey: ['bankBalances', user?.id],
-    queryFn: () => apiClient.get('/bank-sync/stats', { params: { periodOffset: 0 } }).then((r) => r.data.sources || []),
+    queryKey: ['bankSyncStats', user?.id],
+    queryFn: () => apiClient.get('/bank-sync/stats').then((r) => r.data.sources || []),
     enabled: Boolean(user?.id),
     staleTime: 5 * 60_000,
     retry: 1,

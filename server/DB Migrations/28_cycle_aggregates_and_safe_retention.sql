@@ -83,7 +83,11 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.run_data_retention_unchecked(BOOLEAN) FROM PUBLIC;
+-- Migration 20 granted service_role access to the original function. Function
+-- renames preserve ACLs, so revoke that inherited grant as well or callers can
+-- bypass the new safety gate by invoking the renamed implementation directly.
+REVOKE ALL ON FUNCTION public.run_data_retention_unchecked(BOOLEAN)
+  FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.run_data_retention(BOOLEAN) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.run_data_retention(BOOLEAN) TO service_role;
 

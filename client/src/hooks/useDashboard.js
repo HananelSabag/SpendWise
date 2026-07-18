@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { api } from '../api';
 import { useAuthStore } from '../stores/authStore';
@@ -10,7 +10,6 @@ const EMPTY_DASHBOARD = { recentTransactions: [], isEmpty: true };
 
 export const useDashboard = () => {
   const { isAuthenticated, user } = useAuthStore();
-  const queryClient = useQueryClient();
   const queryKey = useMemo(() => ['dashboard', user?.id], [user?.id]);
   const query = useQuery({
     queryKey,
@@ -28,20 +27,24 @@ export const useDashboard = () => {
       return { recentTransactions, isEmpty: recentTransactions.length === 0 };
     }, []),
   });
+  const refetchDashboard = query.refetch;
 
   const refresh = useCallback(async () => {
     try {
-      await queryClient.invalidateQueries({ queryKey });
-      await query.refetch();
+      const result = await refetchDashboard();
+      if (result.isError) throw result.error;
       window.dispatchEvent(new CustomEvent('dashboard-refreshed'));
       return { success: true };
     } catch (error) {
       return { success: false, error };
     }
-  }, [queryClient, queryKey, query]);
+  }, [refetchDashboard]);
 
   return {
-    data: query.data || (query.isLoading ? null : EMPTY_DASHBOARD),
+    // Preserve a real error state for ModernDashboard. Returning the empty fallback on
+    // failure made the dashboard silently look like an account with no transactions and
+    // made DashboardError unreachable.
+    data: query.data || (query.isLoading || query.isError ? null : EMPTY_DASHBOARD),
     error: query.error,
     isLoading: query.isLoading,
     isError: query.isError,

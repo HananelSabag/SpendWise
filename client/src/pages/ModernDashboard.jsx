@@ -1,7 +1,7 @@
 /**
  * ModernDashboard — one responsive financial home, stating one truth: the balance you have
- * and the salary-to-salary cycle you are living in. Calendar-month retrospectives live on
- * /insights, deliberately away from the headline.
+ * and the salary-to-salary cycle you are living in. Deeper history uses the same cycle model
+ * on /insights and the yearly review.
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -110,10 +110,9 @@ export default function ModernDashboard() {
         <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:space-y-6 lg:px-8 lg:py-6">
           <ModernBalancePanel />
 
-          {/* The salary-to-salary cycle is the only headline here. The calendar month used to
-              sit under the balance and contradicted it — it counted a loan as income (₪26,150.97
-              "earned" against a real ₪13,327.75), turning a ₪5,483 deficit into a comfortable
-              −₪350. Retro calendar analysis lives on /insights; one screen states one truth. */}
+          {/* The salary-to-salary cycle is the only headline here. The removed calendar-month
+              card contradicted it by counting financing as income, so every current money
+              surface now reads from the same cycle engine. */}
           <FinancialCycleCard
             cycle={currentCycle.cycle}
             isLoading={currentCycle.isLoading}

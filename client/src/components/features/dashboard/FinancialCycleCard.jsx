@@ -1,6 +1,6 @@
 /**
  * The financial cycle — salary to salary. This is the number the user actually lives by,
- * so it leads the dashboard while the calendar month is retro detail on /insights.
+ * so it is the dashboard's single financial headline and matches the full cycle page.
  *
  * Shows the three lines that are all true at once (FINANCIAL_CYCLE_SPEC.md §3c): what you
  * earned vs spent (operatingNet), what you borrowed (financing), and what the account really

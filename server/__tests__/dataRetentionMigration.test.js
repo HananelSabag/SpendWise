@@ -46,6 +46,9 @@ describe('operational data-retention migration guardrails', () => {
     expect(safeRetention).toMatch(/enabled BOOLEAN NOT NULL DEFAULT false/i);
     expect(safeRetention).toContain("'reason', 'retention_disabled'");
     expect(safeRetention).toContain('run_data_retention_unchecked(false)');
+    expect(safeRetention).toMatch(
+      /run_data_retention_unchecked\(BOOLEAN\)[\s\S]*FROM PUBLIC, anon, authenticated, service_role/i,
+    );
   });
 
   it('keeps durable cycle totals before raw data can ever be pruned', () => {

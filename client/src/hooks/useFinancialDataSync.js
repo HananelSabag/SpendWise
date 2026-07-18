@@ -5,7 +5,6 @@ export const FINANCIAL_QUERY_ROOTS = [
   'dashboard',
   'cycles',
   'bankSyncStats',
-  'bankBalances',
   'transactions',
 ];
 

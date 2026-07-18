@@ -1,9 +1,8 @@
 /**
  * BankAccountRow - one account/card under a synced source, with an on/off
- * switch. Real bank accounts show balance; credit-card accounts show what
- * that specific card charged instead (they have no bank balance). Either
- * way, a second line always says how many transactions and as-of when, so
- * the number the toggle sits next to is never a mystery.
+ * switch. Real bank accounts show balance; credit-card accounts have no
+ * balance, so they show sync activity only. Financial totals live exclusively
+ * in the salary-cycle surfaces.
  */
 
 import React from 'react';
@@ -52,21 +51,7 @@ export default function BankAccountRow({ account, connectionId, t, lang, hideBal
         )}
       </div>
       <div className="flex min-w-[104px] items-center justify-end gap-2.5 shrink-0">
-        {hideBalance ? (
-          <div className="text-end">
-            <span className={cn(
-              'text-sm font-bold tabular-nums block leading-tight',
-              enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through',
-            )}>
-              {txCount > 0 ? formatILS(account.expense, lang) : '-'}
-            </span>
-            {txCount > 0 && (
-              <span className="text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-wide">
-                {t('chargedLabel', { fallback: 'charged' })}
-              </span>
-            )}
-          </div>
-        ) : (
+        {!hideBalance && (
           <span className={cn(
             'text-sm font-bold tabular-nums',
             enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through',

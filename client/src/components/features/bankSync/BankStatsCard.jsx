@@ -1,13 +1,13 @@
 /**
- * BankStatsCard — synced-data summary for one bank: transaction counts,
- * income/expense totals, last sync, and per-account balances with toggles.
+ * BankStatsCard — operational sync health for one institution: transaction count,
+ * last sync, and per-account balances/toggles. Financial totals belong to the cycle engine.
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
-import { bankBrand, institutionKind, formatDateTime, formatILS } from './bankSyncMeta';
+import { bankBrand, institutionKind, formatDateTime } from './bankSyncMeta';
 import { BankIcon } from './BankBits';
 import BankAccountRow from './BankAccountRow';
 
@@ -35,31 +35,10 @@ export default function BankStatsCard({ stat, connectionId, t, lang }) {
         </div>
       </div>
 
-      {/* Count (all-time, sync health) / income / expense (current period,
-          same scope as the dashboard so the two pages tell one story) */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        <div className="rounded-lg bg-white/70 dark:bg-gray-900/40 py-2.5 text-center">
-          <p className="text-lg font-bold text-gray-900 dark:text-white tabular-nums">{stat.total}</p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('transactionsShort')}</p>
-        </div>
-        <div className="rounded-lg bg-white/70 dark:bg-gray-900/40 py-2.5 text-center">
-          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tabular-nums flex items-center justify-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" />{formatILS(stat.total_income, lang)}
-          </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">{t('income')}</p>
-        </div>
-        <div className="rounded-lg bg-white/70 dark:bg-gray-900/40 py-2.5 text-center">
-          <p className="text-sm font-bold text-red-500 dark:text-red-400 tabular-nums flex items-center justify-center gap-1">
-            <TrendingDown className="w-3.5 h-3.5" />{formatILS(stat.total_expense, lang)}
-          </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            {isCreditCard ? t('cardCharges') : t('expenses')}
-          </p>
-        </div>
+      <div className="mt-4 flex items-center justify-between rounded-lg bg-white/70 px-3 py-2.5 dark:bg-gray-900/40">
+        <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{t('transactionsShort')}</p>
+        <p className="text-lg font-bold tabular-nums text-gray-900 dark:text-white">{stat.total}</p>
       </div>
-      <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500 leading-snug">
-        {isCreditCard ? t('cardStatsScopeNote') : t('statsScopeNote')}
-      </p>
 
       {/* Accounts + per-account toggle */}
       <div className="mt-3 rounded-lg bg-white/70 dark:bg-gray-900/40 px-3 py-1.5">

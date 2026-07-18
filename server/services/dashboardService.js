@@ -3,6 +3,7 @@
 const { Transaction } = require('../models/Transaction');
 
 const CACHE_TTL_MS = 15_000;
+const MAX_CACHE_ENTRIES = 200;
 const cache = new Map();
 
 async function buildDashboardData(userId) {
@@ -17,6 +18,13 @@ async function buildDashboardData(userId) {
       model: 'financial_home_v2',
     },
   };
+  const now = Date.now();
+  for (const [candidate, entry] of cache) {
+    if (entry.expiresAt <= now) cache.delete(candidate);
+  }
+  while (!cache.has(userId) && cache.size >= MAX_CACHE_ENTRIES) {
+    cache.delete(cache.keys().next().value);
+  }
   cache.set(userId, { value, expiresAt: Date.now() + CACHE_TTL_MS });
   return value;
 }

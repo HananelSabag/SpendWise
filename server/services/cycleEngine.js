@@ -349,8 +349,13 @@ function normalizeDescription(text) {
 function findSalaryEvents(bankTxns, signature) {
   if (!signature || !signature.normalizedDescription) return [];
   const target = normalizeDescription(signature.normalizedDescription);
+  const signatureAccount = signature.accountNumber == null
+    ? null
+    : String(signature.accountNumber);
   return bankTxns
     .filter((t) => Number(t.amount) > 0 && !isPending(t))
+    .filter((t) => !signature.bankSource || t.source === signature.bankSource)
+    .filter((t) => signatureAccount === null || String(t.accountNumber) === signatureAccount)
     .filter((t) => normalizeDescription(t.description).includes(target))
     .map((t) => ({ date: ilDate(t.processedDate || t.date), amount: round2(t.amount), txn: t }))
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -873,6 +878,7 @@ function buildCycle({
   salarySignature = null,
   fixedCharges = [],
   creditClassifications = [],
+  salaryClassifications = [],
   preparedData = null,
 } = {}) {
   const prepared = preparedData || prepareCycleData({
@@ -908,7 +914,18 @@ function buildCycle({
   const cardEventWithin = (event) => inCardAttributionWindow(event, window);
 
   const salaryTarget = salarySignature && normalizeDescription(salarySignature.normalizedDescription);
-  const isSalary = (t) => Boolean(salaryTarget) && normalizeDescription(t.description).includes(salaryTarget);
+  const salaryClassificationById = new Map(salaryClassifications.map((item) => [
+    Number(item.transactionId), item.classification,
+  ]));
+  const salaryAccount = salarySignature?.accountNumber == null
+    ? null
+    : String(salarySignature.accountNumber);
+  const isSalary = (t) => Boolean(salaryTarget)
+    && (!salaryClassificationById.has(Number(t.id))
+      || salaryClassificationById.get(Number(t.id)) === 'salary')
+    && (!salarySignature.bankSource || t.source === salarySignature.bankSource)
+    && (salaryAccount === null || String(t.accountNumber) === salaryAccount)
+    && normalizeDescription(t.description).includes(salaryTarget);
   const fixedFor = (t) => fixedCharges.find(
     (f) => normalizeDescription(t.description).includes(normalizeDescription(f.normalizedDescription)),
   );

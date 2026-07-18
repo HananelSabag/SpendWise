@@ -19,12 +19,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, RefreshCw, Plus, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { useAuth, useCurrency, useTranslation } from '../../../stores';
+import { useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
-import apiClient from '../../../api/client';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
-import { computeBankBalance } from '../../../utils/bankBalance';
+import { useBankBalance } from '../../../hooks/useBankBalance';
 
 // Brand gradient — feels like the SpendWise financial home, not a status panel.
 const HERO_GRADIENT = 'bg-gradient-to-br from-indigo-600 to-purple-700';
@@ -94,15 +92,6 @@ const AccountRow = ({ label, balance, formatCurrency, unavailableLabel }) => (
 const ModernBalancePanel = ({ className = '' }) => {
   const { formatCurrency } = useCurrency();
   const { t, currentLanguage } = useTranslation('bankSync');
-  const { user } = useAuth();
-
-  const { data: sources, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ['bankBalances', user?.id],
-    queryFn: () => apiClient.get('/bank-sync/stats', { params: { periodOffset: 0 } }).then(r => r.data.sources || []),
-    staleTime: 5 * 60_000,
-    retry: 1,
-  });
-
   // The balance reduction is shared with the financial-cycle page (utils/bankBalance) so the
   // two screens can never disagree on how much is in the account. Only the labels stay here —
   // they are language-specific. Presentation below is unchanged.
@@ -110,7 +99,8 @@ const ModernBalancePanel = ({ className = '' }) => {
     hasSynced, lastSync, bankSources, hasBankSource,
     bankAccounts: rawBankAccounts, accountsWithBalance,
     hasRealBalance, totalRealBalance, multiAccount,
-  } = computeBankBalance(sources);
+    isLoading, isError, refetch, isFetching,
+  } = useBankBalance();
   const bankAccounts = rawBankAccounts.map(a => ({
     ...a,
     label: institutionLabel(a.source, currentLanguage) + (a.accountNumber ? ` · ${a.accountNumber}` : ''),
@@ -133,7 +123,7 @@ const ModernBalancePanel = ({ className = '' }) => {
   // ── Load failure — say so. NEVER show the "connect a bank" CTA on an
   // error: telling a user with connected banks that they have none is the
   // fastest way to make a finance app feel untrustworthy. ──
-  if (isError && !sources) {
+  if (isError && !hasSynced) {
     return (
       <div className={cn(
         'rounded-2xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20',

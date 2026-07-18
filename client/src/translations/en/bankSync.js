@@ -17,16 +17,11 @@ export default {
   totalExcludesUnavailable: 'Total excludes accounts that don\'t share a balance',
   unavailable: 'Not available',
   unavailableNote: '{{bank}} does not expose account balance yet',
-  balanceNeedsBank: 'Connect a bank account to see your balance — credit companies show charges only',
+  balanceNeedsBank: 'Connect a bank account to see your balance — credit companies show synced card activity without a balance',
   mainAccount: 'Main account',
   balanceUnavailableNote: 'This bank does not expose account balance yet — check your bank\'s website directly',
 
-  // Transaction summary
-  income: 'Income',
-  expenses: 'Expenses',
-  cardCharges: 'Statement charges',
-  netActivity: 'Net Activity',
-  transactions: '{{count}} transactions',
+  // Operational sync count
   transactionsShort: 'Txns',
 
   // Time
@@ -96,12 +91,6 @@ export default {
     dedupeBody: 'When itemized card purchases exist, the later bank settlement is reconciliation evidence, not new spending.',
     connectFirst: 'Connect your first bank or credit company',
   },
-
-  // Financial cycle — the setting that drives every dashboard period summary
-  financialCycleTitle: 'Financial cycle',
-  financialCycleValue: 'Your financial month starts on day {{day}}',
-  financialCycleHint: 'All dashboard summaries use this period — separate from your live bank balance. Tap a day to change it.',
-  financialCycleSaved: 'Financial cycle updated',
 
   // Wizard steps
   stepPickBank: 'Choose your bank',
@@ -203,7 +192,6 @@ export default {
   accountDisabledHint: 'Transactions from this account are not imported',
   accountAsOf: '{{count}} transactions · as of {{date}}',
   accountNoActivity: 'No transactions synced yet',
-  chargedLabel: 'charged',
 
   // Sync method — Default Host vs. the user's own paired computer
   syncMethodTitle: 'How your syncs run',
@@ -249,10 +237,6 @@ export default {
   sourceModelBankText: 'Shows real balance, salary/income, transfers, cash withdrawals, fees, loans, and the monthly card-payment withdrawal.',
   sourceModelCardTitle: 'Credit company',
   sourceModelCardText: 'Shows itemized card purchases. It has no bank balance; when purchase details exist, SpendWise does not count the bank card-payment withdrawal again.',
-
-  // Stats card scope — money figures follow the financial period, counts don't
-  statsScopeNote: 'Income and expenses cover the selected calendar month; the transaction count is everything ever synced.',
-  cardStatsScopeNote: 'Card activity uses the factual purchase date. Statement/payment dates remain separate verification metadata; the transaction count is everything ever synced.',
 
   // How it works
   howItWorks: 'How does it work?',

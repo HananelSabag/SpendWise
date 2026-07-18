@@ -11,6 +11,7 @@ const { institutionKind } = require('../config/institutions');
 const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 15_000;
+const MAX_CACHE_ENTRIES = 200;
 const resultCache = new Map();
 
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type, description, notes,
@@ -32,13 +33,18 @@ function cacheGet(key) {
 }
 
 function cacheSet(key, value) {
-  resultCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
-  if (resultCache.size > 200) {
-    const now = Date.now();
-    for (const [candidate, entry] of resultCache) {
-      if (entry.expiresAt <= now) resultCache.delete(candidate);
+  const now = Date.now();
+  for (const [candidate, entry] of resultCache) {
+    if (entry.expiresAt <= now) resultCache.delete(candidate);
+  }
+  // Expired cleanup alone does not bound a busy multi-user process. Evict the
+  // oldest inserted entry before adding a new key so memory cannot grow forever.
+  if (!resultCache.has(key)) {
+    while (resultCache.size >= MAX_CACHE_ENTRIES) {
+      resultCache.delete(resultCache.keys().next().value);
     }
   }
+  resultCache.set(key, { value, expiresAt: now + CACHE_TTL_MS });
   return value;
 }
 
@@ -134,6 +140,7 @@ async function loadSalarySignatures(userId) {
     normalizedDescription: row.normalized_description,
     displayDescription: row.display_description,
     bankSource: row.bank_source,
+    accountNumber: row.bank_account_number == null ? null : String(row.bank_account_number),
     monthOffset: row.month_offset,
     cycleAnchor: row.cycle_anchor !== false,
   }));
@@ -151,6 +158,20 @@ async function loadCreditClassifications(userId) {
     transactionId: row.transaction_id,
     class: row.class,
     reason: row.reason,
+  }));
+}
+
+async function loadSalaryClassifications(userId) {
+  const { rows } = await db.query(
+    `SELECT transaction_id, classification
+       FROM transaction_month_overrides
+      WHERE user_id = $1
+        AND classification IN ('salary', 'bonus', 'other')`,
+    [userId],
+  );
+  return rows.map((row) => ({
+    transactionId: row.transaction_id,
+    classification: row.classification,
   }));
 }
 
@@ -187,10 +208,17 @@ function effectiveSalaryAnchors(signatures) {
   return anchors.length ? anchors : signatures;
 }
 
-function findSalaryWindows(bankTxns, signatures, asOf) {
+function findSalaryWindows(bankTxns, signatures, asOf, salaryClassifications = []) {
+  const classifications = new Map(salaryClassifications.map((item) => [
+    Number(item.transactionId), item.classification,
+  ]));
   const anchors = effectiveSalaryAnchors(signatures);
   const events = anchors
     .flatMap((signature) => engine.findSalaryEvents(bankTxns, signature)
+      .filter((event) => {
+        const reviewed = classifications.get(Number(event.txn.id));
+        return !reviewed || reviewed === 'salary';
+      })
       .map((event) => ({ ...event, signature })))
     .sort((a, b) => a.date.localeCompare(b.date));
   return { anchors, events, windows: engine.buildWindows(events, { asOf }) };
@@ -200,14 +228,15 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
   const today = isoDate(asOf);
   const startDate = engine.addMonths(today, -months);
   const endDate = engine.addMonths(today, 2);
-  const [data, signatures, storedClassifications] = await Promise.all([
+  const [data, signatures, storedClassifications, salaryClassifications] = await Promise.all([
     loadUserData(userId, { startDate, endDate }),
     loadSalarySignatures(userId),
     creditClassifications === undefined
       ? loadCreditClassifications(userId)
       : Promise.resolve(creditClassifications),
+    loadSalaryClassifications(userId),
   ]);
-  return { ...data, signatures, storedClassifications };
+  return { ...data, signatures, storedClassifications, salaryClassifications };
 }
 
 function emptyCycleResult(status, signatures, loans = []) {
@@ -238,7 +267,9 @@ async function getFinancialCycles(userId, {
     if (cached) return cached;
   }
 
-  const { bankTxns, cards, signatures, storedClassifications } = await loadCycleInputs(userId, {
+  const {
+    bankTxns, cards, signatures, storedClassifications, salaryClassifications,
+  } = await loadCycleInputs(userId, {
     asOf,
     months: (boundedYears * 12) + 2,
     creditClassifications,
@@ -253,7 +284,9 @@ async function getFinancialCycles(userId, {
   });
   if (!signatures.length) return emptyCycleResult('salary_not_linked', signatures, prepared.loans);
 
-  const { anchors, events, windows } = findSalaryWindows(bankTxns, signatures, asOf);
+  const { events, windows } = findSalaryWindows(
+    bankTxns, signatures, asOf, salaryClassifications,
+  );
   if (!events.length) return emptyCycleResult('salary_never_seen', signatures, prepared.loans);
   const cycles = windows.map((window) => engine.buildCycle({
     bankTxns,
@@ -262,9 +295,16 @@ async function getFinancialCycles(userId, {
     asOf,
     salarySignature: window.salary.signature,
     creditClassifications: storedClassifications,
+    salaryClassifications,
     preparedData: prepared,
   }));
-  const latest = anchors[anchors.length - 1];
+  const salaryTrackingTxns = bankTxns.filter((txn) => {
+    const reviewed = salaryClassifications.find(
+      (item) => Number(item.transactionId) === Number(txn.id),
+    );
+    return !reviewed || reviewed.classification === 'salary';
+  });
+  const latest = events[events.length - 1].signature;
   const result = {
     status: 'ok',
     cycles,
@@ -273,8 +313,8 @@ async function getFinancialCycles(userId, {
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: prepared.recurring,
-    salaryTracking: engine.trackSalary(bankTxns, latest, { asOf }),
-    salaryChange: engine.detectSalaryChange(bankTxns, latest, {
+    salaryTracking: engine.trackSalary(salaryTrackingTxns, latest, { asOf }),
+    salaryChange: engine.detectSalaryChange(salaryTrackingTxns, latest, {
       asOf,
       cards: [],
       excludeTxns: prepared.reversals.map((reversal) => reversal.creditTxn),
@@ -295,7 +335,9 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     if (cached) return cached;
   }
 
-  const { bankTxns, cards, signatures, storedClassifications } = await loadCycleInputs(userId, {
+  const {
+    bankTxns, cards, signatures, storedClassifications, salaryClassifications,
+  } = await loadCycleInputs(userId, {
     asOf,
     months: CONTEXT_MONTHS,
   });
@@ -309,7 +351,9 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
   });
   if (!signatures.length) return emptyCycleResult('salary_not_linked', signatures, prepared.loans);
 
-  const { anchors, events, windows } = findSalaryWindows(bankTxns, signatures, asOf);
+  const { events, windows } = findSalaryWindows(
+    bankTxns, signatures, asOf, salaryClassifications,
+  );
   if (!events.length) return emptyCycleResult('salary_never_seen', signatures, prepared.loans);
   const window = windows.find((candidate) => candidate.running) || windows[windows.length - 1];
   const current = engine.buildCycle({
@@ -319,7 +363,14 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     asOf,
     salarySignature: window.salary.signature,
     creditClassifications: storedClassifications,
+    salaryClassifications,
     preparedData: prepared,
+  });
+  const salaryTrackingTxns = bankTxns.filter((txn) => {
+    const reviewed = salaryClassifications.find(
+      (item) => Number(item.transactionId) === Number(txn.id),
+    );
+    return !reviewed || reviewed.classification === 'salary';
   });
   const result = {
     status: 'ok',
@@ -329,7 +380,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: prepared.recurring,
-    salaryTracking: engine.trackSalary(bankTxns, anchors[anchors.length - 1], { asOf }),
+    salaryTracking: engine.trackSalary(salaryTrackingTxns, window.salary.signature, { asOf }),
     salaryChange: null,
   };
   return skipCache ? result : cacheSet(cacheKey, result);

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../../api';
 import { useTranslation } from '../../../stores';
+import { useAuthUser } from '../../../stores/authStore';
 
 export default function SalaryCandidatePrompt({
   formatCurrency,
@@ -11,14 +12,15 @@ export default function SalaryCandidatePrompt({
   onSelected,
 }) {
   const { t } = useTranslation('dashboard');
+  const user = useAuthUser();
   const queryClient = useQueryClient();
   // Keep the onboarding session available after the first choice so a joint
   // account can select a second salary before leaving the page.
   const [startedWithoutIdentity] = useState(() => !hasSalaryIdentity);
   const shouldOfferSelection = startedWithoutIdentity || salaryIdentityCount < 2;
   const candidates = useQuery({
-    queryKey: ['salaryCandidates'],
-    enabled: shouldOfferSelection,
+    queryKey: ['salaryCandidates', user?.id],
+    enabled: shouldOfferSelection && Boolean(user?.id),
     queryFn: async () => {
       const result = await api.transactions.getSalaryCandidates();
       if (!result.success) throw new Error(result.error?.message || 'Failed to load salary candidates');
@@ -38,12 +40,11 @@ export default function SalaryCandidatePrompt({
       // The dashboard's current-cycle query may be inactive while onboarding lives on the
       // full cycle page. Drop that cached pre-link response so returning home cannot briefly
       // repeat the "link your salary" prompt after the salary was already saved.
-      queryClient.removeQueries({ queryKey: ['cycles'] });
+      queryClient.removeQueries({ queryKey: ['cycles', user?.id] });
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['salaryCandidates'] }),
-        queryClient.invalidateQueries({ queryKey: ['financial-cycle'] }),
-        queryClient.invalidateQueries({ queryKey: ['cycles'] }),
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['salaryCandidates', user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard', user?.id] }),
       ]);
       await onSelected?.();
     },

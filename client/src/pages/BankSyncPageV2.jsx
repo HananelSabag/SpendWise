@@ -43,12 +43,12 @@ export default function BankSyncPageV2() {
     staleTime: 30_000,
   });
   const statsQuery = useQuery({
-    queryKey: ['bankSyncStats', user?.id, 0],
-    queryFn: () => apiClient.get('/bank-sync/stats', { params: { periodOffset: 0 } }).then((r) => r.data),
+    queryKey: ['bankSyncStats', user?.id],
+    queryFn: () => apiClient.get('/bank-sync/stats').then((r) => r.data.sources || []),
     staleTime: 60_000,
   });
   const connections = connectionsQuery.data || EMPTY_LIST;
-  const sources = statsQuery.data?.sources || EMPTY_LIST;
+  const sources = statsQuery.data || EMPTY_LIST;
   const groupedConnections = useMemo(() => split(connections, 'bank_source'), [connections]);
   const auto = nextAutoSync();
   const openConnect = useCallback((kind = null) => {

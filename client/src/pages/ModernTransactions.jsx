@@ -14,6 +14,7 @@ import { Search, Filter, X, CheckCircle, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useTranslation, useCurrency } from '../stores';
+import { useAuthUser } from '../stores/authStore';
 import { useTransactions } from '../hooks/useTransactions';
 import { useDebounce } from '../hooks/useDebounce';
 import { useTransactionActions } from '../hooks/useTransactionActions';
@@ -304,8 +305,9 @@ const DesktopTransactions = ({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const ModernTransactions = () => {
-  const { t, isRTL, currentLanguage } = useTranslation('transactions');
+  const { isRTL, currentLanguage } = useTranslation('transactions');
   const { formatCurrency } = useCurrency();
+  const user = useAuthUser();
   const isMobile = useIsMobile();
 
   // ── UI state (declared before hooks that depend on them) ──
@@ -361,11 +363,12 @@ const ModernTransactions = () => {
 
   const { deleteTransaction, freshBulkDelete } = useTransactionActions();
 
-  // Synced sources (+ their accounts) for the filter chips — from
-  // /bank-sync/stats, shared with the dashboard's cache key.
+  // Synced sources (+ their accounts) for the filter chips. This is the same
+  // user-scoped operational payload used by Bank Sync; no financial totals live here.
   const { data: syncedSources = [] } = useQuery({
-    queryKey: ['bankSyncStats'],
+    queryKey: ['bankSyncStats', user?.id],
     queryFn: () => apiClient.get('/bank-sync/stats').then((r) => r.data.sources || []),
+    enabled: Boolean(user?.id),
     staleTime: 5 * 60_000,
   });
   const { data: merchantWatchData } = useQuery({

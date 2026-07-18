@@ -11,6 +11,40 @@ const card = (id, amount, date, processedDate) => ({
 });
 
 describe('cycle reconciliation invariant', () => {
+  test('salary signatures remain scoped to the linked bank account', () => {
+    const linked = bank(1, 1000, '2026-07-01', 'acme payroll');
+    const otherAccount = {
+      ...bank(2, 900, '2026-07-01', 'acme payroll'),
+      accountNumber: '456',
+    };
+
+    expect(engine.findSalaryEvents([linked, otherAccount], {
+      normalizedDescription: 'acme payroll',
+      bankSource: 'yahav',
+      accountNumber: '123',
+    }).map((event) => event.txn.id)).toEqual([1]);
+  });
+
+  test('a reviewed bonus stays income but no longer inflates the salary line', () => {
+    const salary = bank(1, 1000, '2026-07-01', 'acme payroll');
+    const bonus = bank(2, 500, '2026-07-02', 'acme payroll bonus');
+    const cycle = engine.buildCycle({
+      bankTxns: [salary, bonus],
+      window: {
+        start: '2026-07-01', end: '2026-08-01', running: true,
+        salary: { date: '2026-07-01', amount: 1000, txn: salary },
+      },
+      salarySignature: {
+        normalizedDescription: 'acme payroll', bankSource: 'yahav', accountNumber: '123',
+      },
+      salaryClassifications: [{ transactionId: 2, classification: 'bonus' }],
+    });
+
+    expect(cycle.income.salary.total).toBe(1000);
+    expect(cycle.income.other.total).toBe(500);
+    expect(cycle.income.total).toBe(1500);
+  });
+
   test('an unreconciled card event stays visible but cannot change bank movement', () => {
     const salary = bank(1, 1000, '2026-07-01', 'salary');
     const directExpense = bank(2, -100, '2026-07-03', 'rent');

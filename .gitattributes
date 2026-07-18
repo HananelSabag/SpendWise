@@ -1,5 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+.gitattributes text eol=lf
 
 # JS and TS files must always use LF for tools to work
 *.js text eol=lf
@@ -19,5 +20,6 @@
 # Python
 *.py text diff=python
 
-# Documents
-*.md text diff=markdown 
+# Database migrations and repository documentation
+*.sql text eol=lf
+*.md text eol=lf diff=markdown
