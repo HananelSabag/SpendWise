@@ -30,14 +30,16 @@ const AccessibilityFab = () => {
         aria-label={t('accessibility.showFab')}
         title={t('accessibility.showFab')}
         onClick={toggleHidden}
-        className="fixed bottom-4 right-4 z-40 w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition"
+        className="fixed right-4 z-[60] w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 hover:bg-gray-400 dark:hover:bg-gray-600 transition bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-4"
       />
     );
   }
 
   return (
     <>
-      <div className="fixed bottom-4 right-4 z-40 flex items-center gap-2 pb-safe">
+      {/* Above the mobile bottom-nav (which is z-100 and was covering this at bottom-4, so it
+          only ever showed on desktop). Kept reachable everywhere for accessibility compliance. */}
+      <div className="fixed right-4 z-[60] flex items-center gap-2 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] lg:bottom-4">
         <button
           aria-label={t('accessibility.openSettings')}
           onClick={() => setOpen(true)}
