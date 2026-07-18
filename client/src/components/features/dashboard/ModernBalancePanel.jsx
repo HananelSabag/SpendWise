@@ -18,7 +18,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Building2, RefreshCw, Landmark, CreditCard, Plus, AlertCircle } from 'lucide-react';
+import { Building2, RefreshCw, Plus, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth, useCurrency, useTranslation } from '../../../stores';
@@ -185,8 +185,8 @@ const ModernBalancePanel = ({ className = '' }) => {
 
   // ── Synced — balance hero ────────────────────────────────────────────────────
   return (
-    <div className={cn('rounded-2xl overflow-hidden shadow-lg text-white', HERO_GRADIENT, className)}>
-      <div className="p-5">
+    <div className={cn('rounded-2xl overflow-hidden shadow-md text-white', HERO_GRADIENT, className)}>
+      <div className="p-4">
 
         {/* Top row — title + freshness + refresh */}
         <div className="flex items-center justify-between mb-3">
@@ -287,24 +287,6 @@ const ModernBalancePanel = ({ className = '' }) => {
             )}
           </div>
         )}
-
-        {/* Source chips — icon distinguishes a real bank account from a credit
-            company (which never has a real balance here) */}
-        <div className="flex flex-wrap gap-1.5 mt-4">
-          {sources.map(src => {
-            const ChipIcon = src.kind === 'credit_card' ? CreditCard : Landmark;
-            return (
-              <span
-                key={src.source}
-                className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/20 font-medium"
-              >
-                <ChipIcon className="w-2.5 h-2.5" />
-                {institutionLabel(src.source, currentLanguage)}
-                <span className="opacity-60">· {t('transactions', { count: src.total })}</span>
-              </span>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

@@ -89,7 +89,9 @@ export default function ModernDashboard() {
           />
         </div>
 
-        <header className="glass-card sticky top-0 z-20 rounded-none border-x-0 border-t-0 px-4 py-3 lg:static lg:mx-auto lg:max-w-7xl lg:border-0 lg:bg-transparent lg:px-8 lg:pt-6 lg:shadow-none">
+        {/* Not sticky: the greeting is the least important thing here, and pinning it ate the
+            top of the mobile viewport before the balance — the first thing you actually want. */}
+        <header className="rounded-none px-4 py-3 lg:mx-auto lg:max-w-7xl lg:px-8 lg:pt-6">
           <div className="flex items-center gap-3">
             <BrandMark size="sm" className="lg:hidden" />
             <div className="min-w-0 flex-1">
