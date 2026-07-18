@@ -27,7 +27,6 @@ import QuickMonthSelector from '../components/features/transactions/QuickMonthSe
 import EditTransactionModal from '../components/features/transactions/modals/EditTransactionModal';
 import TransactionDetailSheet from '../components/features/transactions/TransactionDetailSheet';
 import DeleteTransaction from '../components/features/transactions/DeleteTransaction';
-import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton';
 import BottomSheet from '../components/common/BottomSheet';
 
 import { DEFAULT_FILTERS, countActiveFilters } from '../components/features/transactions/list/filterUtils';
@@ -585,10 +584,6 @@ const ModernTransactions = () => {
           }}
         />
 
-      {/* No onClick — the FAB dispatches 'transaction:add', handled by the
-          global UnifiedTransactionActions; it broadcasts 'transactions:refetch'
-          on success, which this page already listens for. */}
-      <FloatingAddTransactionButton />
     </>
   );
 };

@@ -11,6 +11,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   LogOut,
+  Plus,
   Settings,
   Shield,
   User,
@@ -284,6 +285,22 @@ const Header = () => {
         )}
 
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+          {/* Quick add lives in the drawer now — the old floating + button overlapped the
+              sidebar and is gone. Available from every page, not just dashboard/transactions. */}
+          <button
+            type="button"
+            onClick={() => { try { window.dispatchEvent(new CustomEvent('transaction:add', { detail: { type: 'expense' } })); } catch (_) {} }}
+            title={isCollapsed ? t('transactions.addTransaction', { fallback: currentLanguage === 'he' ? 'הוסף תנועה' : 'Add transaction' }) : undefined}
+            aria-label={t('transactions.addTransaction', { fallback: currentLanguage === 'he' ? 'הוסף תנועה' : 'Add transaction' })}
+            className={cn(
+              'flex w-full items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 min-h-[44px]',
+              isCollapsed && 'justify-center px-2',
+            )}
+          >
+            <Plus className="w-5 h-5 shrink-0" />
+            {!isCollapsed && <span className="truncate">{t('transactions.addTransaction', { fallback: currentLanguage === 'he' ? 'הוסף תנועה' : 'Add transaction' })}</span>}
+          </button>
+
           {(isAdmin || isSuperAdmin) && maintenanceMode && (
             <div className={cn(
               'flex items-center gap-2 rounded-lg border border-yellow-300 bg-yellow-50 px-3 py-2 text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',

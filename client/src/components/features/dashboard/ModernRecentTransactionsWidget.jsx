@@ -6,11 +6,10 @@
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
-import { ArrowRight, Plus, RefreshCw } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import { useTranslation, useCurrency } from '../../../stores';
 import { useTransactions } from '../../../hooks/useTransactions';
 import { useTransactionActions } from '../../../hooks/useTransactionActions';
-import { cn } from '../../../utils/helpers';
 import ModernTransactionCard from '../transactions/ModernTransactionCard';
 import TransactionDetailSheet from '../transactions/TransactionDetailSheet';
 import EditTransactionModal from '../transactions/modals/EditTransactionModal';
@@ -40,9 +39,7 @@ const ModernRecentTransactionsWidget = ({
 
   const allTransactions = preloadedTransactions ?? ownQuery.transactions;
   const loading = preloadedTransactions ? preloadedLoading : ownQuery.loading;
-  const refetch = ownQuery.refetch;
 
-  const [refreshing, setRefreshing] = useState(false);
   const [detailTransaction, setDetailTransaction] = useState(null);
   const [editTransaction, setEditTransaction] = useState(null);
   const [editMode, setEditMode] = useState('edit');
@@ -53,20 +50,6 @@ const ModernRecentTransactionsWidget = ({
   const refreshDashboard = useCallback(() => {
     window.dispatchEvent(new CustomEvent('dashboard-refresh-requested'));
   }, []);
-
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      if (preloadedTransactions) {
-        refreshDashboard();
-        await new Promise((r) => setTimeout(r, 1200));
-      } else {
-        await refetch?.();
-      }
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refetch, preloadedTransactions, refreshDashboard]);
 
   const onOpenDetail = useCallback((tx) => setDetailTransaction(tx), []);
   const onEdit = useCallback((tx, mode = 'edit') => { setEditTransaction(tx); setEditMode(mode); }, []);
@@ -109,24 +92,15 @@ const ModernRecentTransactionsWidget = ({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        {total > 0 && (
           <button
-            onClick={handleRefresh}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            aria-label={t('refresh', { fallback: 'Refresh' })}
+            onClick={onViewAll}
+            className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors"
           >
-            <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
+            {t('recentTransactions.viewAll')}
+            <ArrowRight className="w-3 h-3 rtl:rotate-180" />
           </button>
-          {total > 0 && (
-            <button
-              onClick={onViewAll}
-              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium hover:text-blue-700 transition-colors"
-            >
-              {t('recentTransactions.viewAll')}
-              <ArrowRight className="w-3 h-3 rtl:rotate-180" />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Content */}

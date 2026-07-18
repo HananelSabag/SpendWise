@@ -198,14 +198,6 @@ const ModernBalancePanel = ({ className = '' }) => {
             {timeLabel && (
               <span className="text-[11px] opacity-60">{t('updatedAt', { time: timeLabel })}</span>
             )}
-            <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="opacity-60 hover:opacity-100 transition-opacity"
-              title={t('refresh')}
-            >
-              <RefreshCw className={cn('w-3.5 h-3.5', isFetching && 'animate-spin')} />
-            </button>
           </div>
         </div>
 

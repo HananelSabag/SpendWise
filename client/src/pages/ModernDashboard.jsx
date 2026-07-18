@@ -16,7 +16,6 @@ import { cn } from '../utils/helpers';
 import { PageSkeleton } from '../components/ui';
 
 import BrandMark from '../components/common/BrandMark';
-import FloatingAddTransactionButton from '../components/common/FloatingAddTransactionButton.jsx';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import FinancialCycleCard from '../components/features/dashboard/FinancialCycleCard';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
@@ -95,11 +94,12 @@ export default function ModernDashboard() {
           <div className="flex items-center gap-3">
             <BrandMark size="sm" className="lg:hidden" />
             <div className="min-w-0 flex-1">
+              {/* No manual refresh control: the data auto-refreshes (query hooks) and mobile has
+                  pull-to-refresh. A row of refresh buttons was just noise. */}
               <GreetingHeader
                 greeting={greeting}
                 user={user}
                 navigate={navigate}
-                onRefresh={isMobile ? undefined : handleRefresh}
                 compact={isMobile}
                 t={t}
               />
@@ -135,8 +135,6 @@ export default function ModernDashboard() {
           />
         </main>
       </div>
-
-      <FloatingAddTransactionButton />
     </>
   );
 }
