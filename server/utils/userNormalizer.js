@@ -65,13 +65,6 @@ const normalizeUserData = (user) => {
     profile_picture_url: user.profile_picture_url || null,
     profilePicture: user.profile_picture_url || user.avatar || null, // Unified access
     
-    // ✅ Optional Profile Data
-    phone: user.phone || '',
-    bio: user.bio || '',
-    location: user.location || '',
-    website: user.website || '',
-    birthday: user.birthday || null,
-    
     // ✅ OAuth Info (comprehensive coverage)
     oauth_provider: user.oauth_provider || null,
     oauthProvider: user.oauth_provider || null,

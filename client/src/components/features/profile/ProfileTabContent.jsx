@@ -9,14 +9,15 @@ import PersonalInfo from './PersonalInfo';
 // section — previously duplicated verbatim in both places.
 export const ProfileTabContent = ({ sectionId, user, authToasts, updateProfile, t }) => {
   switch (sectionId) {
-    case 'personal':
+    // Account = identity + preferences in one place (was two tabs).
+    case 'account':
       return (
-        <div>
+        <div className="space-y-4">
           <AvatarSection user={user} authToasts={authToasts} />
           <PersonalInfo user={user} onUpdate={updateProfile} />
+          <PreferencesTab user={user} authToasts={authToasts} />
         </div>
       );
-    case 'preferences': return <PreferencesTab user={user} authToasts={authToasts} />;
     case 'security':    return <SecurityTab authToasts={authToasts} />;
     case 'export':      return <ExportTab t={t} />;
     default:             return null;

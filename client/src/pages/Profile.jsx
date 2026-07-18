@@ -32,18 +32,18 @@ const Profile = () => {
   const [showExport, setShowExport] = useState(false);
 
   const initialTab = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState(VALID.includes(initialTab) ? initialTab : 'personal');
+  const [activeTab, setActiveTab] = useState(VALID.includes(initialTab) ? initialTab : 'account');
 
   // Keep the active tab in sync with the URL (deep links + OS back gesture).
   useEffect(() => {
     const tab = searchParams.get('tab');
     if (VALID.includes(tab)) setActiveTab(tab);
-    else if (!tab) setActiveTab('personal');
+    else if (!tab) setActiveTab('account');
   }, [searchParams]);
 
   const handleSelect = useCallback((tabId) => {
     setActiveTab(tabId);
-    setSearchParams(tabId !== 'personal' ? { tab: tabId } : {}, { replace: true });
+    setSearchParams(tabId !== 'account' ? { tab: tabId } : {}, { replace: true });
   }, [setSearchParams]);
 
   const tabItems = useMemo(

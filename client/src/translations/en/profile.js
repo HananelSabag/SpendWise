@@ -14,6 +14,8 @@ export default {
   tabs: {
     personal: "Personal Info",
     personalDesc: "Name, avatar, contact info",
+    account: "Account",
+    accountDesc: "Name, language, theme & home screen",
     preferences: "Preferences",
     preferencesDesc: "Language, theme, home screen",
     security: "Security",

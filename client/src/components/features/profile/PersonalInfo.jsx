@@ -4,7 +4,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import {
-  User, Mail, Phone, MapPin, Calendar, Link, FileText,
+  User, Mail,
   Edit3, Save, X, CheckCircle, AlertCircle
 } from 'lucide-react';
 
@@ -104,11 +104,6 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
     first_name: u.first_name || u.firstName || '',
     last_name:  u.last_name  || u.lastName  || '',
     email:      u.email      || '',
-    phone:      u.phone      || '',
-    bio:        u.bio        || '',
-    location:   u.location   || u.address   || '',
-    website:    u.website    || '',
-    birthday:   u.birthday   || u.dateOfBirth || '',
   });
 
   const [personalData, setPersonalData] = useState(() => buildData(user));
@@ -267,61 +262,7 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
               readOnly
               required
             />
-            <FieldRow
-              id="phone"
-              label={t('personal.phone', { fallback: 'Phone' })}
-              value={personalData.phone}
-              onChange={v => update('phone', v)}
-              type="tel"
-              icon={Phone}
-              placeholder={t('personal.phonePlaceholder', { fallback: '+1 234 567 8900' })}
-              maxLength={20}
-              isEditing={isEditing}
-            />
-            <FieldRow
-              id="birthday"
-              label={t('personal.birthday', { fallback: 'Birthday' })}
-              value={personalData.birthday}
-              onChange={v => update('birthday', v)}
-              type="date"
-              icon={Calendar}
-              placeholder={t('personal.notSet')}
-              isEditing={isEditing}
-            />
-            <FieldRow
-              id="location"
-              label={t('personal.location', { fallback: 'Location' })}
-              value={personalData.location}
-              onChange={v => update('location', v)}
-              icon={MapPin}
-              placeholder={t('personal.locationPlaceholder', { fallback: 'City, Country' })}
-              maxLength={255}
-              isEditing={isEditing}
-            />
           </div>
-
-          {/* Full-width fields */}
-          <FieldRow
-            id="website"
-            label={t('personal.website', { fallback: 'Website' })}
-            value={personalData.website}
-            onChange={v => update('website', v)}
-            type="url"
-            icon={Link}
-            placeholder="https://your-website.com"
-            isEditing={isEditing}
-          />
-          <FieldRow
-            id="bio"
-            label={t('personal.bio', { fallback: 'Bio' })}
-            value={personalData.bio}
-            onChange={v => update('bio', v)}
-            icon={FileText}
-            placeholder={t('personal.bioPlaceholder', { fallback: 'Tell us about yourself…' })}
-            maxLength={500}
-            multiline
-            isEditing={isEditing}
-          />
         </div>
       </div>
 

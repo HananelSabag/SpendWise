@@ -15,6 +15,8 @@ export default {
   tabs: {
     personal: "מידע אישי",
     personalDesc: "שם, תמונה, פרטי קשר",
+    account: "חשבון",
+    accountDesc: "שם, שפה, ערכת נושא ומסך בית",
     preferences: "העדפות",
     preferencesDesc: "שפה, ערכת נושא, מסך בית",
     security: "אבטחה",

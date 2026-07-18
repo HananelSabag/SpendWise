@@ -94,8 +94,7 @@ class User {
         SELECT 
           id, email, username, password_hash, role, email_verified, is_active,
           last_login_at, created_at, updated_at,
-          first_name, last_name, avatar, phone, bio, location,
-          website, birthday, preferences,
+          first_name, last_name, avatar, preferences,
           language_preference, theme_preference, currency_preference,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
           onboarding_completed, login_attempts, locked_until, verification_token
@@ -144,7 +143,6 @@ class User {
       if (user.updated_at) user.updated_at = user.updated_at.toISOString();
       if (user.last_login_at) user.last_login_at = user.last_login_at.toISOString();
       if (user.locked_until) user.locked_until = user.locked_until.toISOString();
-      if (user.birthday) user.birthday = user.birthday.toISOString();
 
       // Cache the result
       UserCache.set(cacheKey, user);
@@ -171,8 +169,7 @@ class User {
         SELECT 
           id, email, username, password_hash, role, email_verified, is_active,
           last_login_at, created_at, updated_at,
-          first_name, last_name, avatar, phone, bio, location,
-          website, birthday, preferences, login_attempts, locked_until,
+          first_name, last_name, avatar, preferences, login_attempts, locked_until,
           oauth_provider, google_id, oauth_provider_id, profile_picture_url,
           onboarding_completed, verification_token,
           language_preference, theme_preference, currency_preference
@@ -219,7 +216,6 @@ class User {
       if (user.updated_at) user.updated_at = user.updated_at.toISOString();
       if (user.last_login_at) user.last_login_at = user.last_login_at.toISOString();
       if (user.locked_until) user.locked_until = user.locked_until.toISOString();
-      if (user.birthday) user.birthday = user.birthday.toISOString();
 
       // Cache the result
       UserCache.set(cacheKey, user);
@@ -340,8 +336,7 @@ class User {
     try {
       const allowedFields = [
         'email', 'username', 'password_hash', 'email_verified', 'role',
-        'first_name', 'last_name', 'avatar', 'phone', 'bio', 'location',
-        'website', 'birthday', 'preferences', 'is_active', 'last_login_at',
+        'first_name', 'last_name', 'avatar', 'preferences', 'is_active', 'last_login_at',
         'login_attempts', 'locked_until', 'google_id', 'oauth_provider',
         'oauth_provider_id', 'profile_picture_url', 'onboarding_completed',
         'language_preference', 'theme_preference', 'currency_preference'
@@ -365,8 +360,7 @@ class User {
         logger.warn('No valid fields in update request, returning current user', { userId });
         const current = await db.query(
           `SELECT id, email, username, role, email_verified,
-                  first_name, last_name, avatar, phone, bio, location,
-                  website, birthday, preferences, created_at, updated_at,
+                  first_name, last_name, avatar, preferences, created_at, updated_at,
                   onboarding_completed, language_preference, theme_preference, currency_preference,
                   google_id, oauth_provider, oauth_provider_id, profile_picture_url
            FROM users WHERE id = $1`,
@@ -394,8 +388,7 @@ class User {
         SET ${setClause}
         WHERE id = $${paramCount} AND is_active = true
         RETURNING id, email, username, role, email_verified,
-                 first_name, last_name, avatar, phone, bio, location,
-                 website, birthday, preferences, created_at, updated_at,
+                 first_name, last_name, avatar, preferences, created_at, updated_at,
                  onboarding_completed, language_preference, theme_preference, currency_preference,
                  google_id, oauth_provider, oauth_provider_id, profile_picture_url
       `;

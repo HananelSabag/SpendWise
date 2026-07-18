@@ -470,8 +470,7 @@ const validate = {
    */
   profileUpdate: (req, res, next) => {
     const {
-      username, email, first_name, last_name, firstName, lastName, phone, bio,
-      location, website, birthday, preferences
+      username, email, first_name, last_name, firstName, lastName, preferences
     } = req.body;
 
     // ✅ NORMALIZE: Handle both camelCase and snake_case field names
@@ -518,45 +517,6 @@ const validate = {
       ));
     }
 
-    // Validate phone if provided
-    if (phone !== undefined && (typeof phone !== 'string' || phone.length > 20)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_PHONE',
-        'Phone must be a string with maximum 20 characters'
-      ));
-    }
-
-    // Validate bio if provided
-    if (bio !== undefined && (typeof bio !== 'string' || bio.length > 500)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_BIO',
-        'Bio must be a string with maximum 500 characters'
-      ));
-    }
-
-    // Validate location if provided
-    if (location !== undefined && (typeof location !== 'string' || location.length > 255)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_LOCATION',
-        'Location must be a string with maximum 255 characters'
-      ));
-    }
-
-    // Validate website if provided
-    if (website !== undefined && (typeof website !== 'string' || !website.match(/^https?:\/\/.+/))) {
-      return res.status(400).json(createValidationError(
-        'INVALID_WEBSITE',
-        'Website must be a valid URL starting with http:// or https://'
-      ));
-    }
-
-    // Validate birthday if provided
-    if (birthday !== undefined && !validators.date(birthday)) {
-      return res.status(400).json(createValidationError(
-        'INVALID_BIRTHDAY',
-        'Birthday must be a valid date'
-      ));
-    }
 
     // Validate preferences if provided
     if (preferences !== undefined) {
