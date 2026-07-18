@@ -9,10 +9,6 @@ const removal = fs.readFileSync(
   path.join(__dirname, '..', 'DB Migrations', '22_remove_billing_cycle_day.sql'),
   'utf8',
 );
-const monthlyService = fs.readFileSync(
-  path.join(__dirname, '..', 'services', 'monthlyAccountingService.js'),
-  'utf8',
-);
 const { getCalendarPeriod } = require('../utils/calendarPeriod');
 
 describe('calendar-month accounting migrations', () => {
@@ -34,8 +30,4 @@ describe('calendar-month accounting migrations', () => {
     expect(previous).toMatchObject({ start: '2026-06-01', end: '2026-07-01', daysElapsed: 30 });
   });
 
-  test('never estimates salary or net', () => {
-    expect(monthlyService).not.toMatch(/salary_estimate|estimatedIncome|net:\s*\{[^}]*estimated/);
-    expect(monthlyService).toContain('actualIncome - committed');
-  });
 });

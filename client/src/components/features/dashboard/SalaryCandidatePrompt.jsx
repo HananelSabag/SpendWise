@@ -38,7 +38,7 @@ export default function SalaryCandidatePrompt({
       // The dashboard's current-cycle query may be inactive while onboarding lives on the
       // full cycle page. Drop that cached pre-link response so returning home cannot briefly
       // repeat the "link your salary" prompt after the salary was already saved.
-      queryClient.removeQueries({ queryKey: ['cycles', 'current'] });
+      queryClient.removeQueries({ queryKey: ['cycles'] });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['salaryCandidates'] }),
         queryClient.invalidateQueries({ queryKey: ['financial-cycle'] }),

@@ -86,6 +86,16 @@ export const AppRoutes = ({ isAuthenticated }) => (
       </ProtectedRoute>
     } />
 
+    <Route path="/financial-cycle/yearly/:year" element={
+      <ProtectedRoute>
+        <RouteErrorBoundary routeName="Yearly Review">
+          <Suspense fallback={<RouteLoadingFallback route="yearly review" />}>
+            <LazyComponents.YearlyReviewPage />
+          </Suspense>
+        </RouteErrorBoundary>
+      </ProtectedRoute>
+    } />
+
     <Route path="/insights" element={
       <ProtectedRoute>
         <Navigate replace to="/financial-cycle" />

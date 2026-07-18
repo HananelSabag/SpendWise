@@ -11,7 +11,7 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ArrowLeft, CalendarRange, RefreshCw } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarRange, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { useCurrency, useTranslation } from '../stores';
@@ -108,6 +108,15 @@ export default function InsightsPage() {
             <h1 className="min-w-0 flex-1 truncate text-base font-black text-gray-950 dark:text-white">
               {t('cycle.pageTitle', { fallback: 'Financial cycle' })}
             </h1>
+            <button
+              type="button"
+              onClick={() => navigate(`/financial-cycle/yearly/${cycle?.window?.start?.slice(0, 4) || new Date().getFullYear()}`)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-50 px-2.5 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/30 dark:text-indigo-300"
+              aria-label={t('cycle.yearlyTitle', { fallback: 'Yearly review' })}
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline">{t('cycle.yearlyShort', { fallback: 'Year' })}</span>
+            </button>
             <button type="button" onClick={refetch} className="rounded-xl p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('refresh', { fallback: 'Refresh' })}>
               <RefreshCw className="h-4 w-4" />
             </button>

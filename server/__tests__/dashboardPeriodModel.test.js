@@ -6,17 +6,15 @@ const service = fs.readFileSync(
   'utf8',
 );
 
-describe('dashboard calendar-month model guardrails', () => {
-  it('uses factual purchase dates for calendar aggregation', () => {
-    expect(service).toContain('getCalendarPeriod(requestedOffset)');
-    expect(service).not.toContain('COALESCE(t.bank_processed_date, t.date)');
+describe('dashboard shell performance guardrails', () => {
+  it('loads only the recent rows used by the live dashboard', () => {
+    expect(service).toContain('Transaction.getRecent(userId, 10)');
+    expect(service).not.toContain('getAvailableMonths');
+    expect(service).not.toContain('calendarActivity');
   });
 
-  it('loads recent transactions from the selected period', () => {
-    expect(service).toContain('Transaction.getRecentForPeriod');
-  });
-
-  it('passes the requested history offset through the calendar period helper', () => {
-    expect(service).toContain('getCalendarPeriod(requestedOffset)');
+  it('uses a short server cache for repeated home loads', () => {
+    expect(service).toContain('CACHE_TTL_MS = 15_000');
+    expect(service).toContain('cache.get(userId)');
   });
 });

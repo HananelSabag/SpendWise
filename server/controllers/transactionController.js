@@ -10,13 +10,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
 const db = require('../config/db');
 const { INSTITUTIONS } = require('../config/institutions');
-const { buildDashboardData } = require('../services/dashboardService');
-const {
-  getCalendarMonthSummary,
-  getCalendarMonthDetails,
-} = require('../services/calendarMonthSummaryService');
-const { buildOverview: buildMonthlyOverview } = require('../services/monthlyAccountingService');
-const { buildRunwayOverview } = require('../services/cycleRunwayService');
+const { buildDashboardData, invalidateDashboardCache } = require('../services/dashboardService');
+const { invalidateCycleCache } = require('../services/cycleService');
 const { buildSalaryReview, saveSalaryReview } = require('../services/salaryReviewService');
 const { createWatch, removeWatch, getWatched } = require('../services/merchantWatchService');
 const { classifyTransaction } = require('../services/financialClassificationService');
@@ -25,6 +20,11 @@ const { getCalendarPeriod } = require('../utils/calendarPeriod');
 const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
   .map(([source]) => source);
+
+function invalidateHomeCaches(userId) {
+  invalidateDashboardCache(userId);
+  invalidateCycleCache(userId);
+}
 
 const transactionController = {
   getMerchantWatches: asyncHandler(async (req, res) => {
@@ -152,6 +152,7 @@ const transactionController = {
                     updated_at=NOW()
       RETURNING id, bank_source, bank_account_number, display_description, month_offset, cycle_anchor
     `, [req.user.id, row.bank_source, row.bank_account_number, row.normalized_description, row.description, row.id, cycleAnchor]);
+    invalidateCycleCache(req.user.id);
     res.status(201).json({ success: true, data: saved.rows[0] });
   }),
 
@@ -165,67 +166,11 @@ const transactionController = {
     res.json({ success: true, data });
   }),
 
-  getMonthlyAccounting: asyncHandler(async (req, res) => {
-    const data = await buildMonthlyOverview(req.user.id);
-    res.json({ success: true, data });
-  }),
-
   /**
    * Card-billing financial cycle: current/previous economic activity plus
    * explicit upcoming cash commitments and the real checking balance.
    * @route GET /api/v1/transactions/cycle
    */
-  getCycleRunway: asyncHandler(async (req, res) => {
-    const data = await buildRunwayOverview(req.user.id);
-    res.json({ success: true, data });
-  }),
-
-  updateCycleProjection: asyncHandler(async (req, res) => {
-    const input = req.body || {};
-    const amount = (value, field) => {
-      if (value === null || value === undefined || value === '') return null;
-      const parsed = Number(value);
-      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000000) {
-        const error = new Error(`${field} must be between 0 and 100,000,000`);
-        error.statusCode = 400;
-        throw error;
-      }
-      return Math.round((parsed + Number.EPSILON) * 100) / 100;
-    };
-    const date = (value, field) => {
-      if (!value) return null;
-      const text = String(value);
-      const parsed = new Date(`${text}T00:00:00Z`);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(text)
-        || Number.isNaN(parsed.getTime())
-        || parsed.toISOString().slice(0, 10) !== text) {
-        const error = new Error(`${field} must be a valid YYYY-MM-DD date`);
-        error.statusCode = 400;
-        throw error;
-      }
-      return text;
-    };
-    const settings = {
-      enabled: input.enabled === true,
-      expectedIncome: amount(input.expectedIncome ?? input.expectedSalary, 'expectedIncome'),
-      expectedIncomeDate: date(input.expectedIncomeDate ?? input.expectedSalaryDate, 'expectedIncomeDate'),
-      expectedCharge: amount(input.expectedCharge, 'expectedCharge'),
-      expectedChargeDate: date(input.expectedChargeDate, 'expectedChargeDate'),
-      expectedChargeLabel: String(input.expectedChargeLabel || '').trim().slice(0, 80),
-    };
-    const result = await db.query(`
-      UPDATE users
-         SET preferences = jsonb_set(
-           COALESCE(preferences, '{}'::jsonb),
-           '{runway_projection}',
-           $2::jsonb,
-           true
-         ), updated_at=NOW()
-       WHERE id=$1
-       RETURNING preferences->'runway_projection' AS settings
-    `, [req.user.id, JSON.stringify(settings)]);
-    res.json({ success: true, data: result.rows[0]?.settings || settings });
-  }),
   /**
    * Get dashboard data: financial-period summary, category/pattern
    * breakdown, bank costs, per-institution activity, recent transactions.
@@ -241,25 +186,6 @@ const transactionController = {
       logger.error('Dashboard data fetch failed', { userId, error: error.message });
       throw error;
     }
-  }),
-
-  /** Exact posted transaction totals for one selected calendar month. */
-  getCalendarMonthSummary: asyncHandler(async (req, res) => {
-    const data = await getCalendarMonthSummary(req.user.id, req.query.periodOffset);
-    res.json({ success: true, data });
-  }),
-
-  /** Lazy, group-scoped transaction evidence for the calendar summary. */
-  getCalendarMonthDetails: asyncHandler(async (req, res) => {
-    const group = String(req.query.group || '').slice(0, 160);
-    if (!group) {
-      return res.status(400).json({ success: false, error: { message: 'group is required' } });
-    }
-    const data = await getCalendarMonthDetails(req.user.id, req.query.periodOffset, group);
-    if (!data) {
-      return res.status(404).json({ success: false, error: { message: 'Calendar detail group not found' } });
-    }
-    res.json({ success: true, data });
   }),
 
   /**
@@ -426,6 +352,7 @@ const transactionController = {
       };
 
       const transaction = await Transaction.create(transactionData, userId);
+      invalidateHomeCaches(userId);
 
       res.status(201).json({
         success: true,
@@ -479,6 +406,7 @@ const transactionController = {
       }
 
       const transaction = await Transaction.update(id, updateData, userId);
+      invalidateHomeCaches(userId);
 
       res.json({
         success: true,
@@ -521,6 +449,7 @@ const transactionController = {
           error: 'Transaction not found'
         });
       }
+      invalidateHomeCaches(userId);
 
       res.json({
         success: true,
@@ -593,6 +522,7 @@ const transactionController = {
           }
         });
       }
+      invalidateHomeCaches(userId);
 
       // Response format that matches client expectations
       res.json({

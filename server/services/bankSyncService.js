@@ -9,6 +9,8 @@
  */
 
 const logger = require('../utils/logger');
+const { invalidateCycleCache } = require('./cycleService');
+const { invalidateDashboardCache } = require('./dashboardService');
 const { institutionKind } = require('../config/institutions');
 const { getRepresentativeRates } = require('./exchangeRateService');
 
@@ -784,6 +786,8 @@ async function ingestAccounts(client, userId, source, accounts) {
   }
 
   logger.info('bank-sync: ingested', { userId, source, inserted, skipped });
+  invalidateCycleCache(userId);
+  invalidateDashboardCache(userId);
   return { inserted, skipped };
 }
 

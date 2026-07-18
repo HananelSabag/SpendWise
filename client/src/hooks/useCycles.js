@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import cyclesApi from '../api/cycles';
-import { useIsAuthenticated } from '../stores/authStore';
+import { useAuthUser, useIsAuthenticated } from '../stores/authStore';
 import { queryConfigs } from '../config/queryClient';
 
 const EMPTY = {
@@ -28,17 +28,18 @@ const EMPTY = {
 
 export function useCycles() {
   const isAuthenticated = useIsAuthenticated();
+  const user = useAuthUser();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['cycles', 'list'],
-    queryFn: () => cyclesApi.list(),
-    enabled: Boolean(isAuthenticated),
+    queryKey: ['cycles', user?.id, 'list', 2],
+    queryFn: () => cyclesApi.list({ years: 2 }),
+    enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
-    // Financial cycles are persisted for paint continuity, but their numbers must be checked
-    // against the server on every screen entry. A bank sync can finish while the app is closed.
-    staleTime: 0,
-    refetchOnMount: 'always',
+    // Keep recent cycle history warm between screens; mutations and bank syncs invalidate it.
+    // The short stale window also covers changes that arrive while the app is closed.
+    staleTime: 60_000,
+    refetchOnMount: true,
   });
 
   const classificationMutation = useMutation({
@@ -73,14 +74,15 @@ export function useCycles() {
 
 export function useCurrentCycle() {
   const isAuthenticated = useIsAuthenticated();
+  const user = useAuthUser();
 
   const query = useQuery({
-    queryKey: ['cycles', 'current'],
+    queryKey: ['cycles', user?.id, 'current'],
     queryFn: () => cyclesApi.current(),
-    enabled: Boolean(isAuthenticated),
+    enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 30_000,
+    refetchOnMount: true,
   });
 
   const data = query.data?.data || {};
@@ -91,6 +93,39 @@ export function useCurrentCycle() {
     salaryTracking: data.salaryTracking || null,
     totalOutstanding: data.totalOutstanding || 0,
     needsSalaryLink: data.status === 'salary_not_linked' || data.status === 'salary_never_seen',
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  };
+}
+
+export function useCycleYears() {
+  const isAuthenticated = useIsAuthenticated();
+  const user = useAuthUser();
+  const query = useQuery({
+    queryKey: ['cycles', user?.id, 'years'],
+    queryFn: () => cyclesApi.years(),
+    enabled: Boolean(isAuthenticated && user?.id),
+    staleTime: 10 * 60_000,
+  });
+  return {
+    years: query.data?.data?.years || [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+  };
+}
+
+export function useYearlyReview(year) {
+  const isAuthenticated = useIsAuthenticated();
+  const user = useAuthUser();
+  const query = useQuery({
+    queryKey: ['cycles', user?.id, 'yearly', Number(year)],
+    queryFn: () => cyclesApi.yearly(year),
+    enabled: Boolean(isAuthenticated && user?.id && Number.isInteger(Number(year))),
+    staleTime: 5 * 60_000,
+  });
+  return {
+    review: query.data?.data || null,
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,

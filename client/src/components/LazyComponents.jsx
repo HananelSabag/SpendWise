@@ -97,6 +97,11 @@ export const InsightsPage = createLazyComponent(
   'InsightsPage'
 );
 
+export const YearlyReviewPage = createLazyComponent(
+  () => import('../pages/YearlyReviewPage.jsx'),
+  'YearlyReviewPage'
+);
+
 // ✅ Utility Pages
 export const NotFound = createLazyComponent(
   () => import('../pages/NotFound.jsx'),

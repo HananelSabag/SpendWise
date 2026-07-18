@@ -12,8 +12,7 @@
  *
  * A credit company (max/isracard/cal) NEVER has a balance — only charges — so
  * it never appears in the balance list or the total; it stays a source chip.
- * Per-source charges and period income/expense live in SourcesOverview /
- * PeriodSummary — this hero doesn't duplicate them.
+ * Income and spending live in the salary-cycle card; this hero stays balance-only.
  */
 
 import React, { useEffect, useRef, useState } from 'react';

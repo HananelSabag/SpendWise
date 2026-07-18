@@ -141,58 +141,6 @@ const transactionAPI = {
     }
   },
 
-  /** Aggregated posted transaction facts for one calendar month. */
-  async getCalendarMonthSummary(params = {}) {
-    try {
-      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
-      const response = await apiClient.client.get('/transactions/calendar-month-summary', { params });
-      return { success: true, data: response.data?.data || response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  /** Lazy transaction evidence for one calendar summary row. */
-  async getCalendarMonthDetails(params = {}) {
-    try {
-      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
-      const response = await apiClient.client.get('/transactions/calendar-month-details', { params });
-      return { success: true, data: response.data?.data || response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  async getMonthlyAccounting() {
-    try {
-      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
-      const response = await apiClient.client.get('/transactions/monthly-accounting');
-      return { success: true, data: response.data?.data || response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  async getCycleRunway() {
-    try {
-      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
-      const response = await apiClient.client.get('/transactions/cycle');
-      return { success: true, data: response.data?.data || response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
-  async updateCycleProjection(settings) {
-    try {
-      if (!getAccessToken()) return { success: false, error: { code: 'NO_TOKEN' }, data: null };
-      const response = await apiClient.client.put('/transactions/cycle/projection', settings);
-      return { success: true, data: response.data?.data || response.data };
-    } catch (error) {
-      return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };
-    }
-  },
-
   async getSalaryCandidates() {
     try {
       const response = await apiClient.client.get('/transactions/salary-candidates');

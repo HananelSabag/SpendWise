@@ -17,7 +17,13 @@ const express = require('express');
 const router = express.Router();
 const { auth } = require('../middleware/auth');
 const logger = require('../utils/logger');
-const { getFinancialCycles, saveCreditClassification } = require('../services/cycleService');
+const {
+  getFinancialCycles,
+  getCurrentFinancialCycle,
+  getYearReview,
+  getAvailableCycleYears,
+  saveCreditClassification,
+} = require('../services/cycleService');
 
 /**
  * Every number on screen must be openable: "which purchases actually built this bill".
@@ -131,7 +137,8 @@ function slimCycle(cycle) {
 
 router.get('/', auth, async (req, res, next) => {
   try {
-    const result = await getFinancialCycles(req.user.id);
+    const years = Math.max(1, Math.min(Number(req.query.years) || 2, 5));
+    const result = await getFinancialCycles(req.user.id, { years });
     res.json({
       success: true,
       data: {
@@ -190,9 +197,37 @@ router.put('/credits/:transactionId/classification', auth, async (req, res, next
   }
 });
 
+router.get('/years', auth, async (req, res, next) => {
+  try {
+    const years = await getAvailableCycleYears(req.user.id);
+    return res.json({ success: true, data: { years } });
+  } catch (error) {
+    logger.error('GET /cycles/years failed', { userId: req.user && req.user.id, error: error.message });
+    return next(error);
+  }
+});
+
+router.get('/yearly/:year', auth, async (req, res, next) => {
+  const year = Number(req.params.year);
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    return res.status(400).json({ success: false, error: 'Invalid year' });
+  }
+  try {
+    const review = await getYearReview(req.user.id, year);
+    return res.json({ success: true, data: review });
+  } catch (error) {
+    logger.error('GET /cycles/yearly/:year failed', {
+      userId: req.user && req.user.id,
+      year,
+      error: error.message,
+    });
+    return next(error);
+  }
+});
+
 router.get('/current', auth, async (req, res, next) => {
   try {
-    const result = await getFinancialCycles(req.user.id);
+    const result = await getCurrentFinancialCycle(req.user.id);
     res.json({
       success: true,
       data: {

@@ -1,41 +1,60 @@
 /**
- * cycleService — feeds the pure cycleEngine with a user's real data.
- *
- * The engine (services/cycleEngine.js) knows nothing about Postgres; this is the only place
- * that translates our stored rows into the engine's normalized shape and back. See
- * FINANCIAL_CYCLE_SPEC.md for the model, and `scripts/verify-cycle-engine.js` for the
- * regression oracle the engine is held to.
- *
- * @module services/cycleService
+ * Database orchestration for the pure financial-cycle engine.
+ * Queries are bounded, expensive engine facts are prepared once per request,
+ * and closed-cycle totals can survive future raw-transaction retention.
  */
 
 const db = require('../config/db');
 const engine = require('./cycleEngine');
 const { institutionKind } = require('../config/institutions');
 
+const HISTORY_YEARS = 2;
+const CONTEXT_MONTHS = 26;
+const CACHE_TTL_MS = 15_000;
+const resultCache = new Map();
+
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type, description, notes,
   date::text AS date, transaction_datetime, bank_processed_date::text AS bank_processed_date,
   bank_status, bank_sync_id, original_amount, original_currency, charged_currency,
-  txn_kind, installment_number, installment_total`;
+  raw_category, txn_kind, installment_number, installment_total`;
 
-/**
- * The provider's own identifier, which `bank_sync_id` carries as its last colon-separated
- * segment (see bankSyncService: banks get `source:acct:date:e|i+amount:rawId`, card companies
- * get `source:acct:rawId`). It is the key that ties a loan to its repayments (SPEC §3d), so
- * losing it would cost us loan tracking entirely.
- */
+function isoDate(value = new Date()) {
+  return engine.ilDate(value);
+}
+
+function cacheGet(key) {
+  const hit = resultCache.get(key);
+  if (!hit || hit.expiresAt <= Date.now()) {
+    if (hit) resultCache.delete(key);
+    return null;
+  }
+  return hit.value;
+}
+
+function cacheSet(key, value) {
+  resultCache.set(key, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  if (resultCache.size > 200) {
+    const now = Date.now();
+    for (const [candidate, entry] of resultCache) {
+      if (entry.expiresAt <= now) resultCache.delete(candidate);
+    }
+  }
+  return value;
+}
+
+function invalidateCycleCache(userId) {
+  const prefix = `${userId}:`;
+  for (const key of resultCache.keys()) {
+    if (key.startsWith(prefix)) resultCache.delete(key);
+  }
+}
+
 function extractIdentifier(bankSyncId) {
   if (!bankSyncId) return null;
   const parts = String(bankSyncId).split(':');
   return parts.length ? parts[parts.length - 1] : null;
 }
 
-/**
- * Our rows store a positive `amount` plus a `type`; the engine works in signed amounts, where
- * negative means money left the account. `bank_processed_date` is the day the money actually
- * moves and is the engine's only timing truth — fall back to `date` only when a provider never
- * supplied one.
- */
 function toNormalized(row) {
   const signed = row.type === 'income' ? Number(row.amount) : -Number(row.amount);
   return {
@@ -50,6 +69,7 @@ function toNormalized(row) {
     notes: row.notes || '',
     identifier: extractIdentifier(row.bank_sync_id),
     originalCurrency: row.original_currency,
+    rawCategory: row.raw_category || null,
     txnKind: row.txn_kind,
     installments: row.installment_number && row.installment_total
       ? { number: row.installment_number, total: row.installment_total }
@@ -57,15 +77,20 @@ function toNormalized(row) {
   };
 }
 
-/** Every live synced row for a user, split the way the engine wants it: bank vs cards. */
-async function loadUserData(userId) {
+async function loadUserData(userId, { startDate = null, endDate = null } = {}) {
   const { rows } = await db.query(
-    `/* cycle engine source rows */
+    `/* bounded cycle engine source rows */
      SELECT ${SELECT_COLUMNS}
        FROM transactions
       WHERE user_id = $1
         AND deleted_at IS NULL
         AND bank_source IS NOT NULL
+        AND ($2::date IS NULL
+          OR bank_processed_date >= $2::date
+          OR (bank_processed_date IS NULL AND date >= $2::date))
+        AND ($3::date IS NULL
+          OR bank_processed_date <= $3::date
+          OR (bank_processed_date IS NULL AND date <= $3::date))
         AND NOT EXISTS (
           SELECT 1
             FROM bank_accounts disabled_account
@@ -75,12 +100,11 @@ async function loadUserData(userId) {
              AND disabled_account.enabled = false
         )
       ORDER BY COALESCE(bank_processed_date, date), id`,
-    [userId],
+    [userId, startDate, endDate],
   );
 
   const bankTxns = [];
   const cardsByKey = new Map();
-
   for (const row of rows) {
     const txn = toNormalized(row);
     if (institutionKind(row.bank_source) === 'credit_card') {
@@ -93,11 +117,9 @@ async function loadUserData(userId) {
       bankTxns.push(txn);
     }
   }
-
   return { bankTxns, cards: [...cardsByKey.values()] };
 }
 
-/** The user's confirmed salary identities (SPEC §5 link 1). */
 async function loadSalarySignatures(userId) {
   const { rows } = await db.query(
     `SELECT id, bank_source, bank_account_number, normalized_description, display_description,
@@ -107,17 +129,16 @@ async function loadSalarySignatures(userId) {
       ORDER BY id`,
     [userId],
   );
-  return rows.map((r) => ({
-    id: r.id,
-    normalizedDescription: r.normalized_description,
-    displayDescription: r.display_description,
-    bankSource: r.bank_source,
-    monthOffset: r.month_offset,
-    cycleAnchor: r.cycle_anchor !== false,
+  return rows.map((row) => ({
+    id: row.id,
+    normalizedDescription: row.normalized_description,
+    displayDescription: row.display_description,
+    bankSource: row.bank_source,
+    monthOffset: row.month_offset,
+    cycleAnchor: row.cycle_anchor !== false,
   }));
 }
 
-/** User-confirmed meanings for credits the engine could only suggest (SPEC section 3e). */
 async function loadCreditClassifications(userId) {
   const { rows } = await db.query(
     `SELECT transaction_id, class, reason
@@ -133,11 +154,6 @@ async function loadCreditClassifications(userId) {
   }));
 }
 
-/**
- * Persist one answer without trusting a browser-supplied user id or arbitrary transaction.
- * The INSERT ... SELECT proves that the row is this user's live, settled bank credit. Repeating
- * the same answer is an idempotent update, which makes double taps harmless.
- */
 async function saveCreditClassification(userId, transactionId, klass, reason = null) {
   const { rows } = await db.query(
     `INSERT INTO credit_classifications (transaction_id, user_id, class, reason)
@@ -157,6 +173,7 @@ async function saveCreditClassification(userId, transactionId, klass, reason = n
     [transactionId, userId, klass, reason],
   );
   if (!rows.length) return null;
+  invalidateCycleCache(userId);
   return {
     transactionId: rows[0].transaction_id,
     class: rows[0].class,
@@ -165,42 +182,79 @@ async function saveCreditClassification(userId, transactionId, klass, reason = n
   };
 }
 
-/**
- * Build every financial cycle for a user, newest last, plus the standing facts the control
- * centre needs (loans, series awaiting a label, salary tracking, job-change suspicion).
- *
- * With no salary linked there is no anchor and therefore no cycle — we return the reason
- * rather than inventing a window, so the UI can ask the user to link their salary (SPEC §5).
- */
-async function getFinancialCycles(userId, { asOf = new Date(), creditClassifications } = {}) {
-  const [{ bankTxns, cards }, signatures, storedClassifications] = await Promise.all([
-    loadUserData(userId),
+function effectiveSalaryAnchors(signatures) {
+  const anchors = signatures.filter((signature) => signature.cycleAnchor !== false);
+  return anchors.length ? anchors : signatures;
+}
+
+function findSalaryWindows(bankTxns, signatures, asOf) {
+  const anchors = effectiveSalaryAnchors(signatures);
+  const events = anchors
+    .flatMap((signature) => engine.findSalaryEvents(bankTxns, signature)
+      .map((event) => ({ ...event, signature })))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { anchors, events, windows: engine.buildWindows(events, { asOf }) };
+}
+
+async function loadCycleInputs(userId, { asOf, months, creditClassifications }) {
+  const today = isoDate(asOf);
+  const startDate = engine.addMonths(today, -months);
+  const endDate = engine.addMonths(today, 2);
+  const [data, signatures, storedClassifications] = await Promise.all([
+    loadUserData(userId, { startDate, endDate }),
     loadSalarySignatures(userId),
     creditClassifications === undefined
       ? loadCreditClassifications(userId)
       : Promise.resolve(creditClassifications),
   ]);
+  return { ...data, signatures, storedClassifications };
+}
 
-  if (!bankTxns.length) {
-    return { status: 'no_bank_data', cycles: [], signatures, loans: [], recurring: [] };
+function emptyCycleResult(status, signatures, loans = []) {
+  return {
+    status,
+    cycles: [],
+    current: null,
+    signatures,
+    loans,
+    totalOutstanding: loans.reduce((sum, loan) => sum + loan.outstanding, 0),
+    recurring: [],
+    salaryTracking: null,
+    salaryChange: null,
+  };
+}
+
+async function getFinancialCycles(userId, {
+  asOf = new Date(),
+  creditClassifications,
+  years = HISTORY_YEARS,
+  skipCache = false,
+} = {}) {
+  const today = isoDate(asOf);
+  const boundedYears = Math.max(1, Math.min(Number(years) || HISTORY_YEARS, 5));
+  const cacheKey = `${userId}:history:${today}:${boundedYears}`;
+  if (!skipCache && creditClassifications === undefined) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
   }
-  if (!signatures.length) {
-    return { status: 'salary_not_linked', cycles: [], signatures, loans: engine.deriveLoans(bankTxns), recurring: [] };
-  }
 
-  // A user can have more than one salary identity over time — a job change leaves the old
-  // employer's payments in history, and those months still deserve correct windows.
-  const anchorSignatures = signatures.filter((signature) => signature.cycleAnchor !== false);
-  const effectiveAnchors = anchorSignatures.length ? anchorSignatures : signatures;
-  const salaryEvents = effectiveAnchors
-    .flatMap((sig) => engine.findSalaryEvents(bankTxns, sig).map((e) => ({ ...e, signature: sig })))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  const { bankTxns, cards, signatures, storedClassifications } = await loadCycleInputs(userId, {
+    asOf,
+    months: (boundedYears * 12) + 2,
+    creditClassifications,
+  });
+  if (!bankTxns.length) return emptyCycleResult('no_bank_data', signatures);
 
-  if (!salaryEvents.length) {
-    return { status: 'salary_never_seen', cycles: [], signatures, loans: engine.deriveLoans(bankTxns), recurring: [] };
-  }
+  const prepared = engine.prepareCycleData({
+    bankTxns,
+    cards,
+    asOf,
+    creditClassifications: storedClassifications,
+  });
+  if (!signatures.length) return emptyCycleResult('salary_not_linked', signatures, prepared.loans);
 
-  const windows = engine.buildWindows(salaryEvents, { asOf });
+  const { anchors, events, windows } = findSalaryWindows(bankTxns, signatures, asOf);
+  if (!events.length) return emptyCycleResult('salary_never_seen', signatures, prepared.loans);
   const cycles = windows.map((window) => engine.buildCycle({
     bankTxns,
     cards,
@@ -208,34 +262,247 @@ async function getFinancialCycles(userId, { asOf = new Date(), creditClassificat
     asOf,
     salarySignature: window.salary.signature,
     creditClassifications: storedClassifications,
+    preparedData: prepared,
   }));
-
-  const loans = engine.deriveLoans(bankTxns);
-  const latest = effectiveAnchors[effectiveAnchors.length - 1];
-
-  // Bank lines that are really a card's own charges must never be offered for labelling —
-  // the engine already explains them, and asking about them is noise.
-  const cardSettlementLines = engine.reconcile(
-    bankTxns,
-    cards
-      .flatMap((c) => engine.buildCardView(c.txns, { bankTxns, asOf }).events)
-      .filter((e) => !e.future),
-  ).matched.map((m) => m.bankTxn);
-
-  return {
+  const latest = anchors[anchors.length - 1];
+  const result = {
     status: 'ok',
     cycles,
-    current: cycles.find((c) => c.window.running) || cycles[cycles.length - 1] || null,
+    current: cycles.find((cycle) => cycle.window.running) || cycles[cycles.length - 1] || null,
     signatures,
-    loans,
-    totalOutstanding: loans.reduce((sum, l) => sum + l.outstanding, 0),
-    recurring: engine.deriveRecurringCharges(bankTxns, {
-      knownLoanIds: loans.map((l) => l.identifier),
-      excludeTxns: cardSettlementLines,
-    }),
+    loans: prepared.loans,
+    totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
+    recurring: prepared.recurring,
     salaryTracking: engine.trackSalary(bankTxns, latest, { asOf }),
-    salaryChange: engine.detectSalaryChange(bankTxns, latest, { asOf, cards }),
+    salaryChange: engine.detectSalaryChange(bankTxns, latest, {
+      asOf,
+      cards: [],
+      excludeTxns: prepared.reversals.map((reversal) => reversal.creditTxn),
+    }),
   };
+
+  await persistClosedCycleAggregates(userId, cycles);
+  return (!skipCache && creditClassifications === undefined)
+    ? cacheSet(cacheKey, result)
+    : result;
+}
+
+async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache = false } = {}) {
+  const today = isoDate(asOf);
+  const cacheKey = `${userId}:current:${today}`;
+  if (!skipCache) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+  }
+
+  const { bankTxns, cards, signatures, storedClassifications } = await loadCycleInputs(userId, {
+    asOf,
+    months: CONTEXT_MONTHS,
+  });
+  if (!bankTxns.length) return emptyCycleResult('no_bank_data', signatures);
+
+  const prepared = engine.prepareCycleData({
+    bankTxns,
+    cards,
+    asOf,
+    creditClassifications: storedClassifications,
+  });
+  if (!signatures.length) return emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+
+  const { anchors, events, windows } = findSalaryWindows(bankTxns, signatures, asOf);
+  if (!events.length) return emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+  const window = windows.find((candidate) => candidate.running) || windows[windows.length - 1];
+  const current = engine.buildCycle({
+    bankTxns,
+    cards,
+    window,
+    asOf,
+    salarySignature: window.salary.signature,
+    creditClassifications: storedClassifications,
+    preparedData: prepared,
+  });
+  const result = {
+    status: 'ok',
+    cycles: [current],
+    current,
+    signatures,
+    loans: prepared.loans,
+    totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
+    recurring: prepared.recurring,
+    salaryTracking: engine.trackSalary(bankTxns, anchors[anchors.length - 1], { asOf }),
+    salaryChange: null,
+  };
+  return skipCache ? result : cacheSet(cacheKey, result);
+}
+
+function cycleCategoryTotals(cycle) {
+  const totals = new Map();
+  const add = (txn) => {
+    const amount = Number(txn && txn.amount);
+    if (!(amount < 0)) return;
+    const category = String(txn.rawCategory || 'other').trim() || 'other';
+    totals.set(category, Math.round(((totals.get(category) || 0) + Math.abs(amount)) * 100) / 100);
+  };
+  cycle.expenses.cards.events.forEach((event) => (event.txns || []).forEach(add));
+  cycle.expenses.direct.items.forEach((item) => add(item.txn));
+  return Object.fromEntries([...totals.entries()].sort((a, b) => b[1] - a[1]));
+}
+
+function aggregatePayload(cycle) {
+  return {
+    start: cycle.window.start,
+    end: cycle.window.end,
+    income: cycle.income.total,
+    expenses: cycle.expenses.total,
+    operatingNet: cycle.operatingNet,
+    financing: cycle.financing.total,
+    bankMovement: cycle.bankMovement,
+    timingAdjustment: cycle.timingAdjustment,
+    categories: cycleCategoryTotals(cycle),
+  };
+}
+
+async function persistClosedCycleAggregates(userId, cycles) {
+  const payload = cycles
+    .filter((cycle) => !cycle.window.running && !(cycle.partials || []).length)
+    .map(aggregatePayload);
+  if (!payload.length) return;
+  try {
+    await db.query(
+      `INSERT INTO financial_cycle_aggregates (
+         user_id, cycle_start, cycle_end, income, expenses, operating_net,
+         financing, bank_movement, timing_adjustment, category_totals, calculated_at
+       )
+       SELECT $1, (item->>'start')::date, (item->>'end')::date,
+              (item->>'income')::numeric, (item->>'expenses')::numeric,
+              (item->>'operatingNet')::numeric, (item->>'financing')::numeric,
+              (item->>'bankMovement')::numeric, (item->>'timingAdjustment')::numeric,
+              COALESCE(item->'categories', '{}'::jsonb), now()
+         FROM jsonb_array_elements($2::jsonb) item
+       ON CONFLICT (user_id, cycle_start) DO UPDATE SET
+         cycle_end = EXCLUDED.cycle_end,
+         income = EXCLUDED.income,
+         expenses = EXCLUDED.expenses,
+         operating_net = EXCLUDED.operating_net,
+         financing = EXCLUDED.financing,
+         bank_movement = EXCLUDED.bank_movement,
+         timing_adjustment = EXCLUDED.timing_adjustment,
+         category_totals = EXCLUDED.category_totals,
+         calculated_at = now()`,
+      [userId, JSON.stringify(payload)],
+    );
+  } catch (error) {
+    if (error.code !== '42P01') throw error;
+  }
+}
+
+function summarizeYear(year, rows, source) {
+  const categories = new Map();
+  const months = rows.map((row) => {
+    const categoryTotals = row.categories || row.category_totals || {};
+    for (const [category, amount] of Object.entries(categoryTotals)) {
+      categories.set(category, Math.round(((categories.get(category) || 0) + Number(amount || 0)) * 100) / 100);
+    }
+    return {
+      cycleStart: row.start || row.cycle_start,
+      cycleEnd: row.end || row.cycle_end,
+      income: Number(row.income) || 0,
+      expenses: Number(row.expenses) || 0,
+      operatingNet: Number(row.operatingNet ?? row.operating_net) || 0,
+      financing: Number(row.financing) || 0,
+      bankMovement: Number(row.bankMovement ?? row.bank_movement) || 0,
+      timingAdjustment: Number(row.timingAdjustment ?? row.timing_adjustment) || 0,
+    };
+  }).sort((a, b) => a.cycleStart.localeCompare(b.cycleStart));
+  const sum = (key) => Math.round(months.reduce((total, month) => total + month[key], 0) * 100) / 100;
+  const income = sum('income');
+  const operatingNet = sum('operatingNet');
+  return {
+    year,
+    source,
+    totals: {
+      income,
+      expenses: sum('expenses'),
+      operatingNet,
+      financing: sum('financing'),
+      bankMovement: sum('bankMovement'),
+      timingAdjustment: sum('timingAdjustment'),
+      savingsRate: income ? Math.round((operatingNet / income) * 10000) / 100 : 0,
+    },
+    months,
+    categories: [...categories.entries()]
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount),
+  };
+}
+
+async function loadStoredYear(userId, year) {
+  try {
+    const { rows } = await db.query(
+      `SELECT cycle_start::text, cycle_end::text, income, expenses, operating_net,
+              financing, bank_movement, timing_adjustment, category_totals
+         FROM financial_cycle_aggregates
+        WHERE user_id = $1
+          AND cycle_start >= make_date($2, 1, 1)
+          AND cycle_start < make_date($2 + 1, 1, 1)
+        ORDER BY cycle_start`,
+      [userId, year],
+    );
+    return rows;
+  } catch (error) {
+    if (error.code === '42P01') return [];
+    throw error;
+  }
+}
+
+async function getYearReview(userId, year, { asOf = new Date() } = {}) {
+  const selectedYear = Number(year);
+  const currentYear = Number(isoDate(asOf).slice(0, 4));
+  const stored = await loadStoredYear(userId, selectedYear);
+  if (stored.length && selectedYear < currentYear) {
+    return summarizeYear(selectedYear, stored, 'aggregates');
+  }
+
+  const result = await getFinancialCycles(userId, {
+    asOf,
+    years: Math.max(HISTORY_YEARS, currentYear - selectedYear + 1),
+  });
+  const live = result.cycles
+    .filter((cycle) => Number(cycle.window.start.slice(0, 4)) === selectedYear)
+    .filter((cycle) => !(cycle.partials || []).length)
+    .map(aggregatePayload);
+  if (live.length) return summarizeYear(selectedYear, live, 'live');
+  return summarizeYear(selectedYear, stored, stored.length ? 'aggregates' : 'none');
+}
+
+async function getAvailableCycleYears(userId) {
+  try {
+    const { rows } = await db.query(
+      `SELECT DISTINCT year
+         FROM (
+           SELECT EXTRACT(YEAR FROM cycle_start)::int AS year
+             FROM financial_cycle_aggregates WHERE user_id = $1
+           UNION
+           SELECT EXTRACT(YEAR FROM COALESCE(bank_processed_date, date))::int AS year
+             FROM transactions
+            WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
+         ) available
+        WHERE year IS NOT NULL
+        ORDER BY year DESC`,
+      [userId],
+    );
+    return rows.map((row) => Number(row.year));
+  } catch (error) {
+    if (error.code !== '42P01') throw error;
+    const { rows } = await db.query(
+      `SELECT DISTINCT EXTRACT(YEAR FROM COALESCE(bank_processed_date, date))::int AS year
+         FROM transactions
+        WHERE user_id = $1 AND deleted_at IS NULL AND bank_source IS NOT NULL
+        ORDER BY year DESC`,
+      [userId],
+    );
+    return rows.map((row) => Number(row.year));
+  }
 }
 
 module.exports = {
@@ -246,4 +513,9 @@ module.exports = {
   loadCreditClassifications,
   saveCreditClassification,
   getFinancialCycles,
+  getCurrentFinancialCycle,
+  getYearReview,
+  getAvailableCycleYears,
+  invalidateCycleCache,
+  summarizeYear,
 };

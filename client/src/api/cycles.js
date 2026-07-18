@@ -14,10 +14,16 @@ export const cyclesApi = {
    * Every cycle for the user, newest last, plus the standing facts the control centre needs:
    * derived loans, series awaiting a label, salary tracking and job-change suspicion.
    */
-  list: () => api.get('/cycles').then((r) => r.data),
+  list: ({ years = 2 } = {}) => api.get('/cycles', { params: { years } }).then((r) => r.data),
 
   /** Just the running cycle — the dashboard hot path. */
   current: () => api.get('/cycles/current').then((r) => r.data),
+
+  /** Years backed by either durable aggregates or currently available raw data. */
+  years: () => api.get('/cycles/years').then((r) => r.data),
+
+  /** Durable yearly review, with a live fallback for the running year. */
+  yearly: (year) => api.get(`/cycles/yearly/${year}`).then((r) => r.data),
 
   /** Persist the user's answer about one ambiguous credit. */
   classifyCredit: (transactionId, classification) =>

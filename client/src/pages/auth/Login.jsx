@@ -12,19 +12,51 @@ import {
   useAuth,
   useTranslation,
   useTheme,
-  useNotifications,
-  useAuthStore
+  useNotifications
 } from '../../stores';
 import { useAuthToasts } from '../../hooks/useAuthToasts';
 
 import LoginForm from '../../components/features/auth/LoginForm';
 import GuestSettings from '../../components/common/GuestSettings';
 
-import { api, authAPI } from '../../api';
+import { api } from '../../api';
+import apiClient from '../../api/client';
+import cyclesApi from '../../api/cycles';
+import { queryClient } from '../../config/queryClient';
 import { takePendingGoogleCredential } from '../../services/simpleGoogleAuth';
 import { Button } from '../../components/ui';
 import { cn } from '../../utils/helpers';
 import { resolveAuthReturnPath } from '../../utils/authReturnPath';
+
+function warmFinancialHome(userId) {
+  if (!userId) return;
+  // Start the route chunk and the three independent dashboard sources as soon as
+  // tokens exist. Navigation does not wait for them; React Query reuses the same
+  // user-scoped promises/cache entries when the dashboard mounts.
+  void import('../ModernDashboard.jsx');
+  void Promise.allSettled([
+    queryClient.prefetchQuery({
+      queryKey: ['dashboard', userId],
+      queryFn: async () => {
+        const result = await api.transactions.getDashboardData();
+        if (!result.success) throw new Error(result.error?.message || 'Failed to load dashboard');
+        return result.data?.data ?? result.data;
+      },
+      staleTime: 5 * 60_000,
+    }),
+    queryClient.prefetchQuery({
+      queryKey: ['cycles', userId, 'current'],
+      queryFn: () => cyclesApi.current(),
+      staleTime: 30_000,
+    }),
+    queryClient.prefetchQuery({
+      queryKey: ['bankBalances', userId],
+      queryFn: () => apiClient.get('/bank-sync/stats', { params: { periodOffset: 0 } })
+        .then((response) => response.data.sources || []),
+      staleTime: 5 * 60_000,
+    }),
+  ]);
+}
 
 const Login = () => {
   const { login, isAuthenticated, googleLogin } = useAuth();
@@ -103,6 +135,7 @@ const Login = () => {
 
       if (result.success) {
         authToasts.loginSuccess(result.user);
+        warmFinancialHome(result.user?.id);
         // Let the isAuthenticated effect handle navigation so the button spinner
         // stays visible until the component actually unmounts.
         navigatingRef.current = true;
@@ -197,21 +230,18 @@ const Login = () => {
     try {
       if (!credential) throw new Error('No Google credential provided');
 
-      const result = await authAPI.processGoogleCredential(credential);
+      const result = await googleLogin(credential);
 
       if (result.success) {
         succeeded = true;
         authToasts.googleLoginSuccess(result.user);
 
-        // Update auth store — the isAuthenticated effect will navigate.
-        // We do NOT clear isGoogleLoading so the overlay stays visible right
-        // up until the component unmounts (avoids a flash of the login form).
-        const store = useAuthStore.getState();
-        store.actions.setUser(result.user);
-        // setUser() above already armed the proactive refresh (sessionStarted)
+        // The shared auth action has already stored the session and cleared any
+        // previous user's caches. Start the financial-home requests immediately.
+        warmFinancialHome(result.user?.id);
 
         // Belt-and-suspenders: also navigate here in case the effect fired
-        // before setUser updated the store.
+        // before the shared store update reached this component.
         navigatingRef.current = true;
         const from = resolveAuthReturnPath(location.state?.from);
         navigate(from, { replace: true });
@@ -258,7 +288,7 @@ const Login = () => {
       // Only clear the overlay on failure — on success the component unmounts
       if (!succeeded) setIsGoogleLoading(false);
     }
-  }, [authToasts, t, location, navigate]);
+  }, [googleLogin, authToasts, t, location, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">

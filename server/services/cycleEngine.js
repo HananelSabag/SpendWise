@@ -750,6 +750,98 @@ function deriveRecurringCharges(bankTxns, { knownLoanIds = [], excludeTxns = [] 
   return recurring.sort((a, b) => b.typicalAmount - a.typicalAmount);
 }
 
+/** Precompute full-collection facts once, then reuse them for every salary window. */
+function prepareCycleData({
+  bankTxns = [],
+  cards = [],
+  asOf = new Date(),
+  creditClassifications = [],
+} = {}) {
+  const cardViews = cards
+    .filter((card) => (card.txns || []).length)
+    .map((card) => ({ ...card, view: buildCardView(card.txns, { bankTxns, asOf }) }));
+  const allEvents = cardViews.flatMap((card) => card.view.events.map((event) => ({
+    ...event,
+    source: card.source,
+    accountNumber: card.accountNumber,
+  })));
+  const settledEvents = allEvents.filter((event) => !event.future);
+  const { matched, unmatchedEvents } = reconcile(bankTxns, settledEvents);
+  const suppressed = new Set(matched.map((match) => match.bankTxn));
+  const reconciledEvents = new Set(matched.map((match) => match.event));
+  const reversalPool = bankTxns.filter((txn) => !suppressed.has(txn) && Number(txn.amount) > 0);
+  const reversals = findSettlementReversals(reversalPool, settledEvents);
+  const direct = bankTxns.filter((txn) => !suppressed.has(txn) && !isPending(txn));
+  const loans = deriveLoans(bankTxns);
+  const provenFinancing = new Set(loans.flatMap((loan) => bankTxns.filter(
+    (txn) => String(txn.identifier) === loan.identifier && Number(txn.amount) > 0,
+  )));
+  const classOf = (txn) => {
+    const hit = creditClassifications.find((classification) => (
+      (classification.transactionId !== undefined
+        && Number(classification.transactionId) === Number(txn.id))
+      || (classification.identifier !== undefined
+        && String(classification.identifier) === String(txn.identifier))
+      || (classification.txn && classification.txn === txn)
+    ));
+    return hit ? hit.class : null;
+  };
+  const suggestedFinancing = new Map(reversals.map((reversal) => [reversal.creditTxn, reversal]));
+  const financingTxns = new Set();
+  const review = [];
+
+  for (const txn of bankTxns) {
+    if (Number(txn.amount) <= 0 || isPending(txn) || suppressed.has(txn)) continue;
+    const confirmed = classOf(txn);
+    if (confirmed) {
+      if (confirmed === 'financing') financingTxns.add(txn);
+      continue;
+    }
+    if (provenFinancing.has(txn)) {
+      financingTxns.add(txn);
+      continue;
+    }
+    const hint = suggestedFinancing.get(txn);
+    if (!hint) continue;
+    financingTxns.add(txn);
+    review.push({
+      txn,
+      amount: round2(txn.amount),
+      suggestion: 'financing',
+      reason: 'matches_recent_bill',
+      matchedBill: {
+        chargeDate: hint.event.chargeDate,
+        total: hint.event.total,
+        source: hint.event.source,
+        accountNumber: hint.event.accountNumber,
+      },
+      daysApart: hint.daysApart,
+      confirmed: false,
+      matchedEvent: hint.event,
+    });
+  }
+
+  return {
+    cardViews,
+    allEvents,
+    settledEvents,
+    matched,
+    unmatchedEvents,
+    suppressed,
+    reconciledEvents,
+    reversals,
+    direct,
+    loans,
+    suggestedFinancing,
+    financingTxns,
+    review,
+    recurring: deriveRecurringCharges(bankTxns, {
+      knownLoanIds: loans.map((loan) => loan.identifier),
+      excludeTxns: suppressed,
+    }),
+  };
+}
+
 /**
  * Build one financial cycle — the only number the user actually feels.
  *
@@ -781,30 +873,36 @@ function buildCycle({
   salarySignature = null,
   fixedCharges = [],
   creditClassifications = [],
+  preparedData = null,
 } = {}) {
-  const cardViews = cards
-    .filter((c) => (c.txns || []).length)
-    .map((c) => ({ ...c, view: buildCardView(c.txns, { bankTxns, asOf }) }));
-
-  const allEvents = cardViews.flatMap((cv) => cv.view.events.map((e) => ({
-    ...e, source: cv.source, accountNumber: cv.accountNumber,
-  })));
-  const settledEvents = allEvents.filter((e) => !e.future);
+  const prepared = preparedData || prepareCycleData({
+    bankTxns,
+    cards,
+    asOf,
+    creditClassifications,
+  });
+  const {
+    cardViews,
+    allEvents,
+    settledEvents,
+    unmatchedEvents,
+    suppressed,
+    reconciledEvents,
+    reversals,
+    direct,
+    loans,
+    suggestedFinancing,
+    financingTxns,
+    review,
+  } = prepared;
 
   // Card money already accounted for → suppress the bank's copy of it.
-  const { matched, unmatchedEvents } = reconcile(bankTxns, settledEvents);
-  const suppressed = new Set(matched.map((m) => m.bankTxn));
-  const reconciledEvents = new Set(matched.map((m) => m.event));
 
   // A spread bill is NOT cancelled out of existence. The bill genuinely came due (real
   // spending, now owed), and the credit is genuinely borrowed money. Netting the pair away
   // would hide a ₪12,805 bill from the user entirely; showing both tells the true story —
   // "your bill came due, you borrowed to cover it, your account didn't move, you owe more".
   // Only credits that are not already a card's own money are eligible to be a reversal.
-  const reversalPool = bankTxns.filter((t) => !suppressed.has(t) && Number(t.amount) > 0);
-  const reversals = findSettlementReversals(reversalPool, settledEvents);
-
-  const direct = bankTxns.filter((t) => !suppressed.has(t) && !isPending(t));
   const hitDate = (t) => ilDate(t.processedDate || t.date);
   const within = (t) => inWindow(hitDate(t), window);
   const cardEventWithin = (event) => inCardAttributionWindow(event, window);
@@ -830,46 +928,6 @@ function buildCycle({
    * Default for a suggestion is the suggestion itself (usually right, and flagged), so the
    * headline is sane while it awaits one tap.
    */
-  const loans = deriveLoans(bankTxns);
-  const provenFinancing = new Set(loans.flatMap((l) => bankTxns.filter(
-    (t) => String(t.identifier) === l.identifier && Number(t.amount) > 0,
-  )));
-  const classOf = (txn) => {
-    const hit = creditClassifications.find((c) => (
-      (c.transactionId !== undefined && Number(c.transactionId) === Number(txn.id))
-      || (c.identifier !== undefined && String(c.identifier) === String(txn.identifier))
-      || (c.txn && c.txn === txn)
-    ));
-    return hit ? hit.class : null;
-  };
-  const suggestedFinancing = new Map(reversals.map((r) => [r.creditTxn, r]));
-
-  const financingTxns = new Set();
-  const review = [];
-  for (const txn of bankTxns) {
-    if (Number(txn.amount) <= 0 || isPending(txn) || suppressed.has(txn)) continue;
-    const confirmed = classOf(txn);
-    if (confirmed) {
-      if (confirmed === 'financing') financingTxns.add(txn);
-      continue;
-    }
-    if (provenFinancing.has(txn)) { financingTxns.add(txn); continue; }
-    const hint = suggestedFinancing.get(txn);
-    if (hint) {
-      financingTxns.add(txn);
-      review.push({
-        txn,
-        amount: round2(txn.amount),
-        suggestion: 'financing',
-        reason: 'matches_recent_bill',
-        matchedBill: { chargeDate: hint.event.chargeDate, total: hint.event.total, source: hint.event.source, accountNumber: hint.event.accountNumber },
-        daysApart: hint.daysApart,
-        confirmed: false,
-        matchedEvent: hint.event,
-      });
-    }
-  }
-
   const settledCardCharges = settledEvents.filter(
     (e) => reconciledEvents.has(e) && !e.partial && cardEventWithin(e),
   );
@@ -964,10 +1022,7 @@ function buildCycle({
         window,
         asOf,
         loans,
-        recurring: deriveRecurringCharges(bankTxns, {
-          knownLoanIds: loans.map((l) => l.identifier),
-          excludeTxns: suppressed,
-        }),
+        recurring: prepared.recurring,
         futureCardEvents: allEvents.filter((e) => e.future),
         salaryTracking,
       });
@@ -1022,6 +1077,7 @@ module.exports = {
   buildIdentifierFamilies,
   deriveLoans,
   deriveRecurringCharges,
+  prepareCycleData,
   nextOccurrence,
   projectUpcoming,
   estimateNextCardBills,

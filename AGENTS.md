@@ -102,6 +102,13 @@ Notation: `table(rows@2026-07-16): key columns [notes]`. FKs mostly → `users.i
 - `RENDER_FREE_TIER_NOTES.md`, `RENDER_REGION_MIGRATION.md` — hosting ops. `CODE_AUDIT_FINDINGS.md` / `DEAD_CODE_TO_DELETE.md` — mostly STALE (already fixed), don't act blindly.
 - Claude's private cross-session memory: `C:\Users\hanan\.claude\projects\C--CodingProjects\memory\project_spendwise.md` (chronological session log) — richer history; this AGENTS.md is the distilled current state.
 
+## 9b. 2026-07-18 cycle performance + retention update
+- `cycleService` now bounds raw loading to two years plus context, prepares card/reconciliation/loan facts once per request, builds only one window for `/cycles/current`, and keeps exact results in a 15-second server cache.
+- The live dashboard shell now loads only the recent rows it renders. Balance and current-cycle data keep dedicated user-scoped React Query entries and are prefetched together immediately after login.
+- Migration 28 adds `financial_cycle_aggregates`, cycle query indexes, and a disabled-by-default retention gate. It is additive and must be applied before aggregate persistence is available.
+- `/cycles/yearly/:year` powers the yearly review. Closed complete cycles are stored durably; current-year data can fall back to live raw calculations.
+- Old unused calendar/runway dashboard components, hooks, routes, and services were removed. Do not recreate them; the salary-cycle engine is the financial source of truth.
+
 ## 10. ACTIVE WORK / KNOWN OPEN  (as of 2026-07-16; verify against git/ROADMAP before assuming)
 - Financial-model phases in progress: salary-identity + income classification (loan/securities exclusion), card reconciliation accuracy, projection/runway for the running cycle, previous-cycle row (blocked on longer backfill + income classification).
 - UI polish queued: per-tab content polish (profile + bank-sync bodies), dashboard mobile pass, onboarding visual redesign (only overflow bug fixed), real bank/card logos (trademark caveat).

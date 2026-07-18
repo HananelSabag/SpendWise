@@ -36,37 +36,6 @@ router.get('/dashboard',
   transactionController.getDashboardData
 );
 
-router.get('/calendar-month-summary',
-  getSummaryLimiter,
-  routeLogger('CALENDAR_MONTH_SUMMARY'),
-  transactionController.getCalendarMonthSummary
-);
-
-router.get('/calendar-month-details',
-  getSummaryLimiter,
-  routeLogger('CALENDAR_MONTH_DETAILS'),
-  transactionController.getCalendarMonthDetails
-);
-
-router.get('/monthly-accounting',
-  getSummaryLimiter,
-  routeLogger('MONTHLY_ACCOUNTING'),
-  transactionController.getMonthlyAccounting
-);
-
-// Card-billing financial cycle + transparent checking-balance outlook.
-router.get('/cycle',
-  getSummaryLimiter,
-  routeLogger('CYCLE_RUNWAY'),
-  transactionController.getCycleRunway
-);
-
-router.put('/cycle/projection',
-  createTransactionLimiter,
-  routeLogger('CYCLE_PROJECTION'),
-  transactionController.updateCycleProjection
-);
-
 router.get('/salary-candidates',
   getSummaryLimiter,
   transactionController.getSalaryCandidates
