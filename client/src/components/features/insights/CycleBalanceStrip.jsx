@@ -58,11 +58,14 @@ export default function CycleBalanceStrip({
   const accountLabel = (a, i) =>
     `${institutionLabel(a.source, language)}${a.accountNumber ? ` · ${a.accountNumber}` : ''}` || `#${i}`;
   const forecast = cycle?.nextCardForecast;
+  const reset = cycle?.forwardReset;
   const projectedBalance = hasRealBalance
     ? projectBalanceAfterNextBills(totalRealBalance, cycle, useCardEstimate)
     : null;
-  const cardAmount = useCardEstimate ? forecast?.estimatedTotal : forecast?.knownTotal;
-  const lastBillDate = forecast?.bills?.reduce(
+  const cardAmount = useCardEstimate
+    ? (reset?.estimatedCardOut ?? forecast?.estimatedTotal)
+    : (reset?.knownCardOut ?? forecast?.knownTotal);
+  const lastBillDate = reset?.completionDate || forecast?.bills?.reduce(
     (latest, bill) => !latest || bill.chargeDate > latest ? bill.chargeDate : latest,
     null,
   );
@@ -97,8 +100,8 @@ export default function CycleBalanceStrip({
           <div className="rounded-xl bg-indigo-50/70 px-3 py-2.5 dark:bg-indigo-950/25">
             <div className="flex items-start justify-between gap-2">
               <p className="flex min-w-0 items-center gap-1 text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
-                {t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}
-                <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'After next salary and card bills' })}>
+                {t('cycle.balanceAfterNextBills', { fallback: 'Expected balance after the next reset' })}
+                <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'Expected balance after the next reset' })}>
                   {useCardEstimate
                     ? t('cycle.balanceForecastHint', { fallback: "This uses a historical card estimate. Turn it off to count only purchases already accumulated." })
                     : t('cycle.balanceKnownHint', { fallback: 'This counts only card purchases already accumulated. The final bill can still grow.' })}
@@ -131,8 +134,8 @@ export default function CycleBalanceStrip({
                 : t('cycle.knownOnly', { fallback: 'Only what has actually accumulated' })}
             </p>
             <p className="mt-1 flex flex-wrap gap-x-2 text-[10px] font-medium tabular-nums text-gray-500 dark:text-gray-400">
-              <span>{t('cycle.untilSalaryShort', { fallback: 'until salary' })} {signed(cycle?.projection?.upcomingTotal || 0, formatCurrency)}</span>
-              <span>{t('cycle.salaryShort', { fallback: 'salary' })} {signed(forecast.salaryAmount, formatCurrency)}</span>
+              {useCardEstimate && reset?.estimatedFixedOut > 0 && <span>{t('cycle.untilSalaryShort', { fallback: 'fixed' })} −{formatCurrency(reset.estimatedFixedOut)}</span>}
+              <span>{t('cycle.salaryShort', { fallback: 'expected in' })} {signed(reset?.expectedIncoming || forecast?.salaryAmount || 0, formatCurrency)}</span>
               <span>{t('cycle.cardsShort', { fallback: 'cards' })} −{formatCurrency(cardAmount)}</span>
             </p>
           </div>

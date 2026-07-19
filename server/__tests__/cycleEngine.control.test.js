@@ -63,7 +63,7 @@ describe('financial-cycle Control decisions', () => {
     });
   });
 
-  test('a linked secondary salary is labelled salary without becoming the cycle anchor', () => {
+  test('a linked secondary salary joins the opening reset instead of becoming current income', () => {
     const primary = txn(10, 17000, '2026-07-01', 'state salary');
     const secondary = txn(11, 15000, '2026-07-05', 'mobileye salary');
     const transfer = txn(12, 189, '2026-07-05', 'incoming transfer');
@@ -84,7 +84,7 @@ describe('financial-cycle Control decisions', () => {
       salarySignatures: signatures,
     });
 
-    expect(cycle.income.salary.total).toBe(15000);
+    expect(cycle.income.salary.total).toBe(0);
     expect(cycle.income.other.total).toBe(189);
     expect(cycle.decisions.find((item) => item.transactionId === 10)).toMatchObject({
       classification: 'salary',
@@ -93,8 +93,39 @@ describe('financial-cycle Control decisions', () => {
     });
     expect(cycle.decisions.find((item) => item.transactionId === 11)).toMatchObject({
       classification: 'salary',
+      included: false,
+      reason: 'opening_salary_previous_cycle',
+    });
+  });
+
+  test('a closed joint cycle carries the next secondary salary across the primary boundary', () => {
+    const opening = txn(20, 17000, '2026-06-01', 'state salary');
+    const closing = txn(21, 17700, '2026-07-01', 'state salary');
+    const partner = txn(22, 15300, '2026-07-05', 'mobileye salary');
+    const signatures = [
+      { id: 1, normalizedDescription: 'state salary', cycleAnchor: true },
+      { id: 2, normalizedDescription: 'mobileye salary', cycleAnchor: false },
+    ];
+    const cycle = engine.buildCycle({
+      bankTxns: [opening, closing, partner],
+      cards: [],
+      window: {
+        start: '2026-06-01',
+        end: '2026-07-01',
+        running: false,
+        salary: { txn: opening, date: opening.date, amount: opening.amount },
+        closingSalary: { txn: closing, date: closing.date, amount: closing.amount },
+      },
+      salarySignature: signatures[0],
+      salarySignatures: signatures,
+    });
+
+    expect(cycle.income.salary.total).toBe(33000);
+    expect(cycle.decisions.find((item) => item.transactionId === 22)).toMatchObject({
+      classification: 'salary',
       included: true,
       reason: 'linked_secondary_salary',
+      bankEffect: 0,
     });
   });
 

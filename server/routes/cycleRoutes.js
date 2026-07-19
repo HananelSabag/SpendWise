@@ -25,6 +25,7 @@ const {
   saveCreditClassification,
   saveTransactionOverride,
   deleteTransactionOverride,
+  saveCycleSettings,
 } = require('../services/cycleService');
 
 /**
@@ -114,10 +115,12 @@ function slimCycle(cycle, { includeControl = false } = {}) {
       end: cycle.window.end,
       running: Boolean(cycle.window.running),
       projectedEnd: Boolean(cycle.window.projectedEnd),
+      mode: cycle.window.mode || 'automatic',
+      anchorDay: cycle.window.anchorDay || null,
       salary: {
         date: cycle.window.salary.date,
         amount: cycle.window.salary.amount,
-        description: cycle.window.salary.txn.description,
+        description: cycle.window.salary.txn?.description || null,
       },
     },
     income: {
@@ -144,6 +147,8 @@ function slimCycle(cycle, { includeControl = false } = {}) {
     bankMovement: cycle.bankMovement,
     timingAdjustment: cycle.timingAdjustment,
     projection: cycle.projection,
+    forwardReset: cycle.forwardReset,
+    closedInsights: cycle.closedInsights,
     nextCardForecast: forecast,
     needsReview: cycle.needsReview.map((r) => ({
       transactionId: r.txn.id,
@@ -164,6 +169,17 @@ function slimCycle(cycle, { includeControl = false } = {}) {
   };
 }
 
+function slimFundingForecast(forecast) {
+  if (!forecast) return null;
+  return {
+    ...forecast,
+    streams: (forecast.streams || []).map(({ accountNumber, ...stream }) => ({
+      ...stream,
+      accountLast4: accountNumber ? String(accountNumber).slice(-4) : null,
+    })),
+  };
+}
+
 router.get('/', auth, async (req, res, next) => {
   try {
     const years = Math.max(1, Math.min(Number(req.query.years) || 2, 5));
@@ -181,11 +197,35 @@ router.get('/', auth, async (req, res, next) => {
           ? { suspected: result.salaryChange.suspected, reason: result.salaryChange.reason, candidates: result.salaryChange.candidates.map((c) => ({ date: c.date, amount: c.amount, description: c.txn.description })) }
           : null,
         signatures: result.signatures,
+        fundingForecast: slimFundingForecast(result.fundingForecast),
+        settings: result.settings,
       },
     });
   } catch (error) {
     logger.error('GET /cycles failed', { userId: req.user && req.user.id, error: error.message });
     next(error);
+  }
+});
+
+/** Select automatic household-income detection or a fixed monthly reset day. */
+router.put('/settings', auth, async (req, res, next) => {
+  const engineMode = req.body?.engineMode;
+  const manualAnchorDay = Number(req.body?.manualAnchorDay);
+  if (!['automatic', 'manual'].includes(engineMode)) {
+    return res.status(400).json({ success: false, error: 'engineMode must be automatic or manual' });
+  }
+  if (engineMode === 'manual' && (!Number.isInteger(manualAnchorDay) || manualAnchorDay < 1 || manualAnchorDay > 31)) {
+    return res.status(400).json({ success: false, error: 'manualAnchorDay must be an integer from 1 to 31' });
+  }
+  try {
+    const settings = await saveCycleSettings(req.user.id, { engineMode, manualAnchorDay });
+    return res.json({ success: true, data: settings });
+  } catch (error) {
+    logger.error('PUT /cycles/settings failed', {
+      userId: req.user && req.user.id,
+      error: error.message,
+    });
+    return next(error);
   }
 });
 
@@ -319,6 +359,8 @@ router.get('/current', auth, async (req, res, next) => {
         status: result.status,
         cycle: result.current ? slimCycle(result.current) : null,
         salaryTracking: result.salaryTracking,
+        fundingForecast: slimFundingForecast(result.fundingForecast),
+        settings: result.settings,
         totalOutstanding: result.totalOutstanding || 0,
       },
     });

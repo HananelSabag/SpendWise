@@ -13,7 +13,7 @@ const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 15_000;
 const MAX_CACHE_ENTRIES = 200;
-const CALCULATION_VERSION = 3;
+const CALCULATION_VERSION = 4;
 const resultCache = new Map();
 
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type, description, notes,
@@ -185,6 +185,51 @@ async function loadTransactionOverrides(userId) {
   }
 }
 
+async function loadCycleSettings(userId) {
+  try {
+    const { rows } = await db.query(
+      `SELECT engine_mode, manual_anchor_day, updated_at
+         FROM financial_cycle_settings
+        WHERE user_id = $1`,
+      [userId],
+    );
+    const row = rows[0];
+    return {
+      engineMode: row?.engine_mode || 'automatic',
+      manualAnchorDay: row?.manual_anchor_day == null ? null : Number(row.manual_anchor_day),
+      updatedAt: row?.updated_at || null,
+    };
+  } catch (error) {
+    if (error.code === '42P01') return { engineMode: 'automatic', manualAnchorDay: null, updatedAt: null };
+    throw error;
+  }
+}
+
+async function saveCycleSettings(userId, { engineMode, manualAnchorDay = null }) {
+  const anchorDay = engineMode === 'manual' ? Number(manualAnchorDay) : null;
+  const { rows } = await db.query(
+    `WITH saved AS (
+       INSERT INTO financial_cycle_settings (user_id, engine_mode, manual_anchor_day)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id) DO UPDATE SET
+         engine_mode = EXCLUDED.engine_mode,
+         manual_anchor_day = EXCLUDED.manual_anchor_day,
+         updated_at = NOW()
+       RETURNING engine_mode, manual_anchor_day, updated_at
+     ), cleared AS (
+       DELETE FROM financial_cycle_aggregates WHERE user_id = $1
+     )
+     SELECT * FROM saved`,
+    [userId, engineMode, anchorDay],
+  );
+  invalidateCycleCache(userId);
+  return {
+    engineMode: rows[0].engine_mode,
+    manualAnchorDay: rows[0].manual_anchor_day == null ? null : Number(rows[0].manual_anchor_day),
+    updatedAt: rows[0].updated_at,
+  };
+}
+
 async function loadSalaryClassifications(userId) {
   const { rows } = await db.query(
     `SELECT transaction_id, classification
@@ -280,22 +325,40 @@ function findSalaryWindows(bankTxns, signatures, asOf, salaryClassifications = [
     Number(item.transactionId), item.classification,
   ]));
   const anchors = effectiveSalaryAnchors(signatures);
-  const events = anchors
-    .flatMap((signature) => engine.findSalaryEvents(bankTxns, signature)
+  // A household has one reporting boundary. Additional linked salaries remain income streams;
+  // treating every salary as an anchor creates four-day "months" in joint accounts.
+  const primary = anchors[0] || null;
+  const events = primary
+    ? engine.findSalaryEvents(bankTxns, primary)
       .filter((event) => {
         const reviewed = classifications.get(Number(event.txn.id));
         return !reviewed || reviewed === 'salary';
       })
-      .map((event) => ({ ...event, signature })))
-    .sort((a, b) => a.date.localeCompare(b.date));
-  return { anchors, events, windows: engine.buildWindows(events, { asOf }) };
+      .map((event) => ({ ...event, signature: primary }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+  return { anchors, primary, events, windows: engine.buildWindows(events, { asOf }) };
+}
+
+function resolveCycleWindows({ bankTxns, signatures, settings, asOf, months, salaryClassifications }) {
+  if (settings.engineMode === 'manual') {
+    return {
+      anchors: effectiveSalaryAnchors(signatures),
+      primary: effectiveSalaryAnchors(signatures)[0] || signatures[0] || null,
+      events: [],
+      windows: engine.buildFixedDayWindows(settings.manualAnchorDay, { asOf, months }),
+    };
+  }
+  return findSalaryWindows(bankTxns, signatures, asOf, salaryClassifications);
 }
 
 async function loadCycleInputs(userId, { asOf, months, creditClassifications }) {
   const today = isoDate(asOf);
   const startDate = engine.addMonths(today, -months);
   const endDate = engine.addMonths(today, 2);
-  const [data, signatures, storedClassifications, salaryClassifications, transactionOverrides] = await Promise.all([
+  const [
+    data, signatures, storedClassifications, salaryClassifications, transactionOverrides, settings,
+  ] = await Promise.all([
     loadUserData(userId, { startDate, endDate }),
     loadSalarySignatures(userId),
     creditClassifications === undefined
@@ -303,6 +366,7 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
       : Promise.resolve(creditClassifications),
     loadSalaryClassifications(userId),
     loadTransactionOverrides(userId),
+    loadCycleSettings(userId),
   ]);
   return {
     ...data,
@@ -310,10 +374,11 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
     storedClassifications,
     salaryClassifications,
     transactionOverrides,
+    settings,
   };
 }
 
-function emptyCycleResult(status, signatures, loans = []) {
+function emptyCycleResult(status, signatures, loans = [], settings = { engineMode: 'automatic', manualAnchorDay: null }) {
   return {
     status,
     cycles: [],
@@ -324,6 +389,8 @@ function emptyCycleResult(status, signatures, loans = []) {
     recurring: [],
     salaryTracking: null,
     salaryChange: null,
+    fundingForecast: { streams: [], expectedTotal: 0, start: null, end: null },
+    settings,
   };
 }
 
@@ -435,13 +502,13 @@ async function getFinancialCycles(userId, {
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
-    transactionOverrides,
+    transactionOverrides, settings,
   } = await loadCycleInputs(userId, {
     asOf,
     months: (boundedYears * 12) + 2,
     creditClassifications,
   });
-  if (!bankTxns.length) return emptyCycleResult('no_bank_data', signatures);
+  if (!bankTxns.length) return emptyCycleResult('no_bank_data', signatures, [], settings);
 
   const prepared = engine.prepareCycleData({
     bankTxns,
@@ -450,39 +517,46 @@ async function getFinancialCycles(userId, {
     creditClassifications: storedClassifications,
     transactionOverrides,
   });
-  if (!signatures.length) {
-    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+  if (!signatures.length && settings.engineMode !== 'manual') {
+    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans, settings);
     await syncCycleNotifications(userId, empty);
     return empty;
   }
 
-  const { events, windows } = findSalaryWindows(
-    bankTxns, signatures, asOf, salaryClassifications,
-  );
-  if (!events.length) {
-    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+  const { events, windows, primary } = resolveCycleWindows({
+    bankTxns,
+    signatures,
+    settings,
+    asOf,
+    months: (boundedYears * 12) + 2,
+    salaryClassifications,
+  });
+  if (!windows.length) {
+    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans, settings);
     await syncCycleNotifications(userId, empty);
     return empty;
   }
-  const cycles = windows.map((window) => engine.buildCycle({
-    bankTxns,
-    cards,
-    window,
-    asOf,
-    salarySignature: window.salary.signature,
-    salarySignatures: signatures,
-    creditClassifications: storedClassifications,
-    salaryClassifications,
-    transactionOverrides,
-    preparedData: prepared,
-  }));
   const salaryTrackingTxns = bankTxns.filter((txn) => {
     const reviewed = salaryClassifications.find(
       (item) => Number(item.transactionId) === Number(txn.id),
     );
     return !reviewed || reviewed.classification === 'salary';
   });
-  const latest = events[events.length - 1].signature;
+  const fundingForecast = engine.buildFundingForecast(salaryTrackingTxns, signatures, { asOf });
+  const cycles = windows.map((window) => engine.buildCycle({
+    bankTxns,
+    cards,
+    window,
+    asOf,
+    salarySignature: window.salary.signature || primary,
+    salarySignatures: signatures,
+    fundingForecast,
+    creditClassifications: storedClassifications,
+    salaryClassifications,
+    transactionOverrides,
+    preparedData: prepared,
+  }));
+  const latest = events[events.length - 1]?.signature || primary;
   const result = {
     status: 'ok',
     cycles,
@@ -491,12 +565,14 @@ async function getFinancialCycles(userId, {
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: prepared.recurring,
-    salaryTracking: engine.trackSalary(salaryTrackingTxns, latest, { asOf }),
-    salaryChange: engine.detectSalaryChange(salaryTrackingTxns, latest, {
+    salaryTracking: latest ? engine.trackSalary(salaryTrackingTxns, latest, { asOf }) : null,
+    fundingForecast,
+    settings,
+    salaryChange: latest ? engine.detectSalaryChange(salaryTrackingTxns, latest, {
       asOf,
       cards: [],
       excludeTxns: prepared.reversals.map((reversal) => reversal.creditTxn),
-    }),
+    }) : null,
   };
 
   await Promise.all([
@@ -518,12 +594,12 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
-    transactionOverrides,
+    transactionOverrides, settings,
   } = await loadCycleInputs(userId, {
     asOf,
     months: CONTEXT_MONTHS,
   });
-  if (!bankTxns.length) return emptyCycleResult('no_bank_data', signatures);
+  if (!bankTxns.length) return emptyCycleResult('no_bank_data', signatures, [], settings);
 
   const prepared = engine.prepareCycleData({
     bankTxns,
@@ -532,38 +608,45 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     creditClassifications: storedClassifications,
     transactionOverrides,
   });
-  if (!signatures.length) {
-    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+  if (!signatures.length && settings.engineMode !== 'manual') {
+    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans, settings);
     await syncCycleNotifications(userId, empty);
     return empty;
   }
 
-  const { events, windows } = findSalaryWindows(
-    bankTxns, signatures, asOf, salaryClassifications,
-  );
-  if (!events.length) {
-    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+  const { windows, primary } = resolveCycleWindows({
+    bankTxns,
+    signatures,
+    settings,
+    asOf,
+    months: CONTEXT_MONTHS,
+    salaryClassifications,
+  });
+  if (!windows.length) {
+    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans, settings);
     await syncCycleNotifications(userId, empty);
     return empty;
   }
   const window = windows.find((candidate) => candidate.running) || windows[windows.length - 1];
-  const current = engine.buildCycle({
-    bankTxns,
-    cards,
-    window,
-    asOf,
-    salarySignature: window.salary.signature,
-    salarySignatures: signatures,
-    creditClassifications: storedClassifications,
-    salaryClassifications,
-    transactionOverrides,
-    preparedData: prepared,
-  });
   const salaryTrackingTxns = bankTxns.filter((txn) => {
     const reviewed = salaryClassifications.find(
       (item) => Number(item.transactionId) === Number(txn.id),
     );
     return !reviewed || reviewed.classification === 'salary';
+  });
+  const fundingForecast = engine.buildFundingForecast(salaryTrackingTxns, signatures, { asOf });
+  const current = engine.buildCycle({
+    bankTxns,
+    cards,
+    window,
+    asOf,
+    salarySignature: window.salary.signature || primary,
+    salarySignatures: signatures,
+    fundingForecast,
+    creditClassifications: storedClassifications,
+    salaryClassifications,
+    transactionOverrides,
+    preparedData: prepared,
   });
   const result = {
     status: 'ok',
@@ -573,7 +656,9 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: prepared.recurring,
-    salaryTracking: engine.trackSalary(salaryTrackingTxns, window.salary.signature, { asOf }),
+    salaryTracking: primary ? engine.trackSalary(salaryTrackingTxns, primary, { asOf }) : null,
+    fundingForecast,
+    settings,
     salaryChange: null,
   };
   await syncCycleNotifications(userId, result);
@@ -767,9 +852,11 @@ module.exports = {
   loadSalarySignatures,
   loadCreditClassifications,
   loadTransactionOverrides,
+  loadCycleSettings,
   saveCreditClassification,
   saveTransactionOverride,
   deleteTransactionOverride,
+  saveCycleSettings,
   getFinancialCycles,
   getCurrentFinancialCycle,
   getYearReview,

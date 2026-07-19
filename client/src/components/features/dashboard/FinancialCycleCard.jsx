@@ -14,6 +14,7 @@ import { AlertTriangle, ArrowRight, CalendarRange, Coins, Landmark, TrendingDown
 import { cn } from '../../../utils/helpers';
 import { InfoHint } from '../../ui';
 import CycleBreakdown from './CycleBreakdown';
+import ForwardResetSummary from '../insights/ForwardResetSummary';
 
 /**
  * The window end is exclusive, and the running cycle has not reached its end yet — so show
@@ -100,6 +101,7 @@ export default function FinancialCycleCard({
   formatCurrency,
   t,
   onOpenCycle,
+  onOpenPrevious,
   onLinkSalary,
   needsSalaryLink = false,
   language = 'en',
@@ -177,6 +179,17 @@ export default function FinancialCycleCard({
         </div>
       )}
 
+      {window.running && (
+        <ForwardResetSummary
+          forwardReset={cycle.forwardReset}
+          formatCurrency={formatCurrency}
+          t={t}
+          language={language}
+          compact
+        />
+      )}
+
+      {!window.running && <>
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
         <Line label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
         <Line label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
@@ -251,14 +264,19 @@ export default function FinancialCycleCard({
           </div>
         </div>
       )}
+      </>}
 
       <div className="mt-3 flex items-center justify-between gap-2">
-        {totalOutstanding > 0 ? (
+        {window.running && onOpenPrevious ? (
+          <button type="button" onClick={onOpenPrevious} className="text-[11px] font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400">
+            {t('cycle.previousClosed', { fallback: 'Previous closed cycle' })}
+          </button>
+        ) : totalOutstanding > 0 ? (
           <span className="text-[11px] text-gray-400 dark:text-gray-500">
             {t('cycle.outstanding', { fallback: 'Open debt' })}: <span className="font-bold text-gray-600 dark:text-gray-300">{formatCurrency(totalOutstanding)}</span>
           </span>
         ) : <span />}
-        <button type="button" onClick={onOpenCycle} className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
+        <button type="button" onClick={() => onOpenCycle?.()} className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
           {t('cycle.openDetails', { fallback: 'Full breakdown' })}<ArrowRight className="h-3 w-3 rtl:rotate-180" />
         </button>
       </div>

@@ -24,6 +24,8 @@ const EMPTY = {
   salaryTracking: null,
   salaryChange: null,
   signatures: [],
+  settings: { engineMode: 'automatic', manualAnchorDay: null },
+  fundingForecast: { streams: [], expectedTotal: 0, start: null, end: null },
 };
 
 export function useCycles() {
@@ -32,7 +34,7 @@ export function useCycles() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'list', 3],
+    queryKey: ['cycles', user?.id, 'list', 4],
     queryFn: () => cyclesApi.list({ years: 2 }),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
@@ -65,6 +67,16 @@ export function useCycles() {
     },
   });
 
+  const settingsMutation = useMutation({
+    mutationFn: (settings) => cyclesApi.updateSettings(settings),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
+      ]);
+    },
+  });
+
   const data = query.data?.data || EMPTY;
 
   return useMemo(() => ({
@@ -87,11 +99,14 @@ export function useCycles() {
     updatingTransactionId: transactionClassificationMutation.variables?.transactionId
       || resetClassificationMutation.variables?.transactionId
       || null,
+    updateCycleSettings: settingsMutation.mutate,
+    isUpdatingSettings: settingsMutation.isPending,
   }), [data, query.isLoading, query.isError, query.error, query.refetch,
     transactionClassificationMutation.mutate, transactionClassificationMutation.isPending,
     transactionClassificationMutation.variables?.transactionId,
     resetClassificationMutation.mutate, resetClassificationMutation.isPending,
-    resetClassificationMutation.variables?.transactionId]);
+    resetClassificationMutation.variables?.transactionId,
+    settingsMutation.mutate, settingsMutation.isPending]);
 }
 
 export function useCurrentCycle() {
@@ -99,7 +114,7 @@ export function useCurrentCycle() {
   const user = useAuthUser();
 
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'current'],
+    queryKey: ['cycles', user?.id, 'current', 4],
     queryFn: () => cyclesApi.current(),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
@@ -113,6 +128,8 @@ export function useCurrentCycle() {
     status: data.status,
     cycle: data.cycle || null,
     salaryTracking: data.salaryTracking || null,
+    fundingForecast: data.fundingForecast || { streams: [], expectedTotal: 0, start: null, end: null },
+    settings: data.settings || { engineMode: 'automatic', manualAnchorDay: null },
     totalOutstanding: data.totalOutstanding || 0,
     needsSalaryLink: data.status === 'salary_not_linked' || data.status === 'salary_never_seen',
     isLoading: query.isLoading,

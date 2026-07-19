@@ -49,6 +49,13 @@ function addMonths(isoDate, months) {
   return base.toISOString().slice(0, 10);
 }
 
+/** Shift an ISO calendar date without involving the host timezone. */
+function addDays(isoDate, days) {
+  const [year, month, day] = String(isoDate).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + Number(days || 0)));
+  return date.toISOString().slice(0, 10);
+}
+
 /** A not-yet-final authorization: no money has moved, so it must stay out of settled sums. */
 function isPending(txn) {
   return Boolean(txn.status && txn.status !== 'completed') || !Number(txn.amount);
@@ -379,6 +386,7 @@ function buildWindows(salaryEvents, { asOf = new Date() } = {}) {
       closingSalary: next || null,
       projectedEnd: !next,
       running: !next && ilDate(asOf) < end,
+      mode: 'automatic',
     };
   });
 }
@@ -386,6 +394,98 @@ function buildWindows(salaryEvents, { asOf = new Date() } = {}) {
 /** Whole days between two 'YYYY-MM-DD' dates (b − a). */
 function daysBetween(a, b) {
   return Math.round((new Date(b) - new Date(a)) / 86400000);
+}
+
+/** A stable monthly boundary, clamped for February and other short months. */
+function monthlyOccurrence(year, monthIndex, dayOfMonth) {
+  const first = new Date(Date.UTC(year, monthIndex, 1));
+  const lastDay = new Date(Date.UTC(
+    first.getUTCFullYear(),
+    first.getUTCMonth() + 1,
+    0,
+  )).getUTCDate();
+  first.setUTCDate(Math.min(Math.max(1, Number(dayOfMonth) || 1), lastDay));
+  return first.toISOString().slice(0, 10);
+}
+
+/** User-selected monthly reset windows for users without a reliable salary anchor. */
+function buildFixedDayWindows(anchorDay, { asOf = new Date(), months = 24 } = {}) {
+  const today = ilDate(asOf);
+  const [year, month] = today.split('-').map(Number);
+  const starts = [];
+  for (let offset = -Math.max(1, Number(months) || 24); offset <= 1; offset += 1) {
+    starts.push(monthlyOccurrence(year, (month - 1) + offset, anchorDay));
+  }
+
+  return starts.slice(0, -1).map((start, index) => {
+    const end = starts[index + 1];
+    return {
+      index,
+      start,
+      end,
+      salary: { date: start, amount: 0, txn: null, signature: null },
+      closingSalary: null,
+      projectedEnd: false,
+      running: start <= today && today < end,
+      mode: 'manual',
+      anchorDay: Number(anchorDay),
+    };
+  }).filter((window) => window.start <= today);
+}
+
+/** Build calendar-day averages and peak days from the exact included audit decisions. */
+function summarizeClosedCycle(decisions, window, totals) {
+  const calendarDays = Math.max(1, daysBetween(window.start, window.end));
+  const byDate = new Map();
+  const rowFor = (date) => {
+    if (!byDate.has(date)) byDate.set(date, {
+      date, income: 0, expenses: 0, net: 0, transactions: 0,
+    });
+    return byDate.get(date);
+  };
+
+  for (const decision of decisions || []) {
+    if (!decision.included || !['income', 'expenses'].includes(decision.impactLine)) continue;
+    // Daily cash-cycle insight follows the day the movement actually settled. A deferred card
+    // purchase can be months old, but showing an April date inside a June cycle is nonsense;
+    // its processed date is the June statement day that affected this cycle.
+    const date = ilDate(decision.processedDate || decision.date);
+    const row = rowFor(date);
+    const impact = Number(decision.impactAmount) || 0;
+    if (decision.impactLine === 'income') row.income = round2(row.income + impact);
+    if (decision.impactLine === 'expenses') row.expenses = round2(row.expenses + impact);
+    row.transactions += 1;
+  }
+
+  const days = [...byDate.values()].map((row) => ({
+    ...row,
+    net: round2(row.income - row.expenses),
+  })).sort((a, b) => a.date.localeCompare(b.date));
+  const maxBy = (field) => days.reduce(
+    (best, row) => (!best || row[field] > best[field] ? row : best),
+    null,
+  );
+  const minBy = (field) => days.reduce(
+    (worst, row) => (!worst || row[field] < worst[field] ? row : worst),
+    null,
+  );
+  const peakIncome = maxBy('income');
+  const peakExpense = maxBy('expenses');
+  const best = maxBy('net');
+  const worst = minBy('net');
+
+  return {
+    calendarDays,
+    activeDays: days.length,
+    averageIncomePerDay: round2((Number(totals.income) || 0) / calendarDays),
+    averageExpensePerDay: round2((Number(totals.expenses) || 0) / calendarDays),
+    averageNetPerDay: round2((Number(totals.net) || 0) / calendarDays),
+    peakIncomeDay: peakIncome ? { ...peakIncome, amount: peakIncome.income } : null,
+    peakExpenseDay: peakExpense ? { ...peakExpense, amount: peakExpense.expenses } : null,
+    bestDay: best ? { ...best, amount: best.net } : null,
+    worstDay: worst ? { ...worst, amount: worst.net } : null,
+    days,
+  };
 }
 
 /**
@@ -422,6 +522,34 @@ function trackSalary(bankTxns, signature, { asOf = new Date(), toleranceDays = 3
     daysLate: status === 'late' ? drift : 0,
     daysUntil: drift < 0 ? -drift : 0,
     toleranceDays,
+  };
+}
+
+/** Every linked recurring income stream that participates in the household's next reset. */
+function buildFundingForecast(bankTxns, signatures, { asOf = new Date() } = {}) {
+  const streams = (signatures || []).map((signature) => {
+    const tracking = trackSalary(bankTxns, signature, { asOf });
+    if (!tracking.last || !tracking.expectedNext) return null;
+    const observed = tracking.events.length;
+    return {
+      signatureId: signature.id,
+      description: signature.displayDescription || signature.normalizedDescription,
+      source: signature.bankSource,
+      accountNumber: signature.accountNumber,
+      primary: signature.cycleAnchor !== false,
+      expectedDate: tracking.expectedNext,
+      expectedAmount: round2(tracking.last.amount),
+      status: tracking.status,
+      observed,
+      confidence: observed >= 3 ? 'high' : (observed >= 2 ? 'medium' : 'low'),
+    };
+  }).filter(Boolean).sort((a, b) => a.expectedDate.localeCompare(b.expectedDate));
+
+  return {
+    streams,
+    expectedTotal: sumAmounts(streams, (stream) => stream.expectedAmount),
+    start: streams[0]?.expectedDate || null,
+    end: streams[streams.length - 1]?.expectedDate || null,
   };
 }
 
@@ -889,6 +1017,7 @@ function buildCycle({
   asOf = new Date(),
   salarySignature = null,
   salarySignatures = [],
+  fundingForecast = null,
   fixedCharges = [],
   creditClassifications = [],
   salaryClassifications = [],
@@ -1020,25 +1149,53 @@ function buildCycle({
   // is the exact bug that made the 09/07 salary look like July income. A closed window receives
   // its next salary instead; a running window has no settled salary yet and shows the expected
   // payment only inside the explicitly estimated projection below.
-  const openingSalaryTxn = window.salary?.txn || bankTxns.find((txn) => (
-    salarySignature
-    && hitDate(txn) === window.start
-    && matchesSignature(txn, salarySignature)
-  ));
+  const openingSalaryTxn = window.mode === 'manual'
+    ? null
+    : (window.salary?.txn || bankTxns.find((txn) => (
+      salarySignature
+      && hitDate(txn) === window.start
+      && matchesSignature(txn, salarySignature)
+    )));
   const closingSalary = window.closingSalary?.txn && !isPending(window.closingSalary.txn)
     ? window.closingSalary.txn
     : null;
+  const isSecondarySalaryIdentity = (txn) => (
+    isSalary(txn)
+    && (!salarySignature || !matchesSignature(txn, salarySignature))
+  );
+  // In a joint account the primary salary opens the bank window, while a partner's salary can
+  // land anywhere before the next primary salary. Both close the household's prior work cycle.
+  // Carry that second salary across the boundary just like a post-boundary card close-out.
+  const openingSecondarySalary = window.mode === 'manual' ? [] : bankTxns.filter((txn) => {
+    const date = hitDate(txn);
+    return date >= window.start
+      && date < window.end
+      && isSecondarySalaryIdentity(txn)
+      && !isPending(txn);
+  });
+  const closingSecondarySalary = (window.mode === 'manual' || window.running) ? [] : bankTxns.filter((txn) => {
+    const date = hitDate(txn);
+    return date >= window.end
+      && date < addMonths(window.end, 1)
+      && isSecondarySalaryIdentity(txn)
+      && !isPending(txn);
+  });
+  const openingSecondarySet = new Set(openingSecondarySalary);
+  const closingSecondarySet = new Set(closingSecondarySalary);
   const secondarySalary = credits.filter((txn) => (
     isSalary(txn)
     && txn !== openingSalaryTxn
     && txn !== closingSalary
+    && !openingSecondarySet.has(txn)
+    && !closingSecondarySet.has(txn)
     && !financingTxns.has(txn)
     && !isOperatingExcluded(txn)
   ));
   const cardSalary = attributedCardTxns.filter((txn) => (
     Number(txn.amount) > 0 && overrideClass(txn) === 'salary'
   ));
-  const salary = [closingSalary, ...secondarySalary, ...cardSalary].filter(Boolean);
+  const salary = [closingSalary, ...closingSecondarySalary, ...secondarySalary, ...cardSalary]
+    .filter((txn) => txn && !isOperatingExcluded(txn));
   const cardIncome = attributedCardTxns.filter((txn) => (
     Number(txn.amount) > 0 && overrideClass(txn) === 'income'
   ));
@@ -1189,9 +1346,11 @@ function buildCycle({
     const linkedEvent = matchedByBankTxn.get(txn);
     const isOpeningSalary = txn === openingSalaryTxn;
     const isClosingSalary = txn === closingSalary;
+    const isOpeningSecondarySalary = openingSecondarySet.has(txn);
+    const isClosingSecondarySalary = closingSecondarySet.has(txn);
     const bankInWindow = within(txn);
     const linkedToCycle = linkedEvent && cardEventWithin(linkedEvent, window);
-    if (!bankInWindow && !isOpeningSalary && !isClosingSalary && !linkedToCycle) continue;
+    if (!bankInWindow && !isOpeningSalary && !isClosingSalary && !isClosingSecondarySalary && !linkedToCycle) continue;
 
     const base = { ...decisionBase(txn), bankEffect: bankInWindow ? round2(txn.amount) : 0 };
     if (suppressed.has(txn)) {
@@ -1227,7 +1386,7 @@ function buildCycle({
     }
 
     const explicit = overrideClass(txn);
-    if (isOpeningSalary && !isClosingSalary) {
+    if ((isOpeningSalary && !isClosingSalary) || isOpeningSecondarySalary) {
       decisions.push({
         ...base,
         classification: 'salary',
@@ -1236,7 +1395,7 @@ function buildCycle({
         impactAmount: 0,
         reason: 'opening_salary_previous_cycle',
       });
-    } else if (isClosingSalary || isSalary(txn)) {
+    } else if (isClosingSalary || isClosingSecondarySalary || isSalary(txn)) {
       decisions.push({
         ...base,
         classification: 'salary',
@@ -1284,6 +1443,96 @@ function buildCycle({
       || Number(a.transactionId) - Number(b.transactionId)
   ));
 
+  const projection = (() => {
+    if (!window.running) return null;
+    const upcoming = projectUpcoming({
+      window,
+      asOf,
+      loans,
+      recurring: prepared.recurring,
+      futureCardEvents: allEvents.filter((event) => event.future),
+      salaryTracking,
+    });
+    return {
+      upcoming: upcoming.items,
+      upcomingTotal: upcoming.beforeSalaryTotal,
+      estimatedSalary: upcoming.salaryTotal,
+      projectedOperatingNet: round2(operatingNet + upcoming.total),
+      estimate: true,
+    };
+  })();
+  const forwardReset = (() => {
+    if (!window.running) return null;
+    const fundingStreams = fundingForecast?.streams || [];
+    const expectedIncoming = round2(fundingForecast?.expectedTotal || projection?.estimatedSalary || 0);
+    const knownCardOut = round2(nextCardForecast?.knownTotal || 0);
+    const estimatedCardOut = round2(nextCardForecast?.estimatedTotal || knownCardOut);
+    const baseCompletionDate = (nextCardForecast?.bills || []).reduce(
+      (latest, bill) => (!latest || bill.chargeDate > latest ? bill.chargeDate : latest),
+      fundingForecast?.end || window.end,
+    );
+    // A joint account can receive the primary salary before a second salary or the card bills.
+    // Forecast fixed debits through the *last* reset stage, not merely through the first salary.
+    const forwardWindow = {
+      start: ilDate(asOf),
+      end: addDays(baseCompletionDate, 1),
+      running: true,
+    };
+    const forwardFixed = projectUpcoming({
+      window: forwardWindow,
+      asOf,
+      loans,
+      recurring: prepared.recurring,
+      futureCardEvents: [],
+      salaryTracking: null,
+    });
+    const fixedItems = forwardFixed.items.filter((item) => item.kind !== 'salary' && item.kind !== 'card');
+    const estimatedFixedOut = round2(Math.abs(sumAmounts(fixedItems)));
+    const stages = [
+      ...fundingStreams.map((stream) => ({
+        kind: 'income',
+        date: stream.expectedDate,
+        amount: stream.expectedAmount,
+        label: stream.description,
+        status: stream.status,
+        certainty: stream.confidence,
+        primary: stream.primary,
+      })),
+      ...(nextCardForecast?.bills || []).map((bill) => ({
+        kind: 'card',
+        date: bill.chargeDate,
+        amount: -bill.knownAmount,
+        estimatedAmount: -bill.estimatedAmount,
+        label: `${bill.source} ••••${String(bill.accountNumber || '').slice(-4)}`,
+        status: 'expected',
+        certainty: bill.certainty,
+      })),
+      ...fixedItems.map((item) => ({ ...item, status: 'expected' })),
+    ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const completionDate = stages.reduce(
+      (latest, stage) => (!latest || stage.date > latest ? stage.date : latest),
+      fundingForecast?.end || window.end,
+    );
+    return {
+      mode: window.mode || 'automatic',
+      anchorDay: window.anchorDay || null,
+      status: stages.some((stage) => stage.status === 'late') ? 'attention' : 'open',
+      completionDate,
+      expectedIncoming,
+      knownCardOut,
+      estimatedCardOut,
+      estimatedFixedOut,
+      knownNetChange: round2(-knownCardOut),
+      estimatedNetChange: round2(expectedIncoming - estimatedCardOut - estimatedFixedOut),
+      stages,
+    };
+  })();
+  const closedInsights = window.running ? null : summarizeClosedCycle(decisions, window, {
+    income: incomeTotal,
+    expenses: expensesTotal,
+    net: operatingNet,
+  });
+
   return {
     window,
     income: {
@@ -1323,25 +1572,9 @@ function buildCycle({
      * For a running cycle: what is still expected before the next salary, and where the cycle
      * is heading. Labelled an estimate (שערוך) — never mixed into the settled numbers.
      */
-    projection: (() => {
-      if (!window.running) return null;
-      const upcoming = projectUpcoming({
-        window,
-        asOf,
-        loans,
-        recurring: prepared.recurring,
-        futureCardEvents: allEvents.filter((e) => e.future),
-        salaryTracking,
-      });
-      return {
-        upcoming: upcoming.items,
-        // Kept salary-exclusive for the existing "until salary" cash-forecast formula.
-        upcomingTotal: upcoming.beforeSalaryTotal,
-        estimatedSalary: upcoming.salaryTotal,
-        projectedOperatingNet: round2(operatingNet + upcoming.total),
-        estimate: true,
-      };
-    })(),
+    projection,
+    forwardReset,
+    closedInsights,
     // Forward-looking cash point: today's balance can be projected through the next salary
     // and the first card statements after it without counting a bill that already left.
     nextCardForecast,
@@ -1381,8 +1614,11 @@ module.exports = {
   daysBetween,
   findSalaryEvents,
   trackSalary,
+  buildFundingForecast,
   detectSalaryChange,
   buildWindows,
+  buildFixedDayWindows,
+  summarizeClosedCycle,
   findSettlementReversals,
   buildIdentifierFamilies,
   deriveLoans,

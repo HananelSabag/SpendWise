@@ -63,8 +63,14 @@ export function computeBankBalance(sources) {
  * left the account is deliberately not subtracted a second time.
  */
 export function projectBalanceAfterNextBills(currentBalance, cycle, useHistoricalEstimate = true) {
-  const forecast = cycle?.nextCardForecast;
+  const reset = cycle?.forwardReset;
   const current = Number(currentBalance);
+  if (cycle?.window?.running && reset) {
+    const change = Number(useHistoricalEstimate ? reset.estimatedNetChange : reset.knownNetChange);
+    return [current, change].every(Number.isFinite) ? current + change : null;
+  }
+
+  const forecast = cycle?.nextCardForecast;
   const untilSalary = Number(cycle?.projection?.upcomingTotal || 0);
   const salary = Number(forecast?.salaryAmount);
   const cards = Number(useHistoricalEstimate ? forecast?.estimatedTotal : forecast?.knownTotal);

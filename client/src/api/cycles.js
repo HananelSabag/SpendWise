@@ -32,6 +32,9 @@ export const cyclesApi = {
   /** Remove the override and let the engine decide again. */
   resetTransactionClassification: (transactionId) =>
     api.delete(`/cycles/transactions/${transactionId}/classification`).then((r) => r.data),
+
+  /** Choose automatic reset detection or a fixed monthly anchor day. */
+  updateSettings: (settings) => api.put('/cycles/settings', settings).then((r) => r.data),
 };
 
 export default cyclesApi;

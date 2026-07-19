@@ -4,6 +4,7 @@ import {
   Briefcase,
   CalendarCheck,
   CheckCircle2,
+  Clock3,
   RotateCcw,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -52,10 +53,14 @@ export default function CycleControlTab({
   isUpdatingDecision = false,
   updatingTransactionId = null,
   onSalarySelected,
+  settings = { engineMode: 'automatic', manualAnchorDay: null },
+  fundingForecast = { streams: [] },
+  onSettingsChange,
+  isUpdatingSettings = false,
   language = 'en',
 }) {
   const [filter, setFilter] = useState('all');
-  const decisions = cycle?.decisions || [];
+  const decisions = useMemo(() => cycle?.decisions || [], [cycle?.decisions]);
   const filtered = useMemo(
     () => decisions.filter((decision) => decisionMatchesFilter(decision, filter)),
     [decisions, filter],
@@ -71,6 +76,75 @@ export default function CycleControlTab({
 
   return (
     <div className="space-y-4">
+      <section className="rounded-2xl border border-indigo-200 bg-white p-4 dark:border-indigo-900/60 dark:bg-gray-900">
+        <div className="flex items-start gap-3">
+          <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-black text-gray-950 dark:text-white">
+              {t('cycle.control.engineTitle', { fallback: 'How should the cycle reset?' })}
+            </h2>
+            <p className="mt-0.5 text-[11px] text-gray-500">
+              {t('cycle.control.engineHint', { fallback: 'Automatic follows your linked income streams. Manual uses the monthly day you choose.' })}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {['automatic', 'manual'].map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              disabled={isUpdatingSettings}
+              onClick={() => onSettingsChange?.({
+                engineMode: mode,
+                manualAnchorDay: mode === 'manual' ? (settings.manualAnchorDay || 10) : null,
+              })}
+              className={cn(
+                'rounded-xl border px-3 py-2 text-start text-xs font-bold transition disabled:opacity-50',
+                settings.engineMode === mode
+                  ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300'
+                  : 'border-gray-200 text-gray-600 hover:border-indigo-300 dark:border-gray-700 dark:text-gray-300',
+              )}
+            >
+              {t(`cycle.control.engine.${mode}`, { fallback: mode === 'automatic' ? 'Automatic' : 'Manual anchor' })}
+            </button>
+          ))}
+        </div>
+
+        {settings.engineMode === 'manual' && (
+          <label className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+            <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">
+              {t('cycle.control.anchorDay', { fallback: 'Reset day each month' })}
+            </span>
+            <select
+              aria-label={t('cycle.control.anchorDay', { fallback: 'Reset day each month' })}
+              value={settings.manualAnchorDay || 10}
+              disabled={isUpdatingSettings}
+              onChange={(event) => onSettingsChange?.({ engineMode: 'manual', manualAnchorDay: Number(event.target.value) })}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs font-black dark:border-gray-700 dark:bg-gray-900"
+            >
+              {Array.from({ length: 31 }, (_, index) => index + 1).map((day) => <option key={day} value={day}>{day}</option>)}
+            </select>
+          </label>
+        )}
+
+        {settings.engineMode === 'automatic' && fundingForecast.streams?.length > 0 && (
+          <div className="mt-3 space-y-1.5 border-t border-gray-100 pt-3 dark:border-gray-800">
+            <p className="text-[10px] font-black uppercase tracking-wide text-gray-400">
+              {t('cycle.control.detectedStages', { fallback: 'Detected reset stages' })}
+            </p>
+            {fundingForecast.streams.map((stream) => (
+              <div key={`${stream.signatureId}-${stream.expectedDate}`} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2 dark:bg-gray-800/60">
+                <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-700 dark:text-gray-200">{stream.description}</span>
+                {!stream.primary && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[8px] font-black text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">{t('cycle.forward.additional', { fallback: 'Additional' })}</span>}
+                <span className="shrink-0 text-[10px] font-semibold text-gray-500">{formatCycleDay(stream.expectedDate, language)}</span>
+                <span className="shrink-0 text-[11px] font-black tabular-nums text-emerald-600">+{formatCurrency(stream.expectedAmount)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
           ['automatic', automaticCount],
@@ -118,9 +192,11 @@ export default function CycleControlTab({
             )}
             {cycle?.window?.end && (
               <p className="mt-2 rounded-lg bg-gray-50 px-2.5 py-1.5 text-[10px] font-semibold text-gray-500 dark:bg-gray-800/60 dark:text-gray-300">
-                {t('cycle.control.resetRule', {
+                {t(settings.engineMode === 'manual' ? 'cycle.control.resetRuleManual' : 'cycle.control.resetRule', {
                   date: formatCycleDay(cycle.window.end, language),
-                  fallback: `This cycle closes when the next salary arrives around ${formatCycleDay(cycle.window.end, language)}.`,
+                  fallback: settings.engineMode === 'manual'
+                    ? `The next manual window starts around ${formatCycleDay(cycle.window.end, language)}.`
+                    : `The primary salary anchors the next window around ${formatCycleDay(cycle.window.end, language)}; every household stage remains visible.`,
                 })}
               </p>
             )}

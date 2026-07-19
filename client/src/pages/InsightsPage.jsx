@@ -45,6 +45,10 @@ function savedCardEstimatePreference() {
   }
 }
 
+function initiallyShowPreviousCycle() {
+  try { return new URLSearchParams(window.location.search).get('cycle') === 'previous'; } catch (_) { return false; }
+}
+
 /** Readable window: the end is exclusive, and a running cycle has not reached it yet. */
 function formatWindow(window, language) {
   if (!window?.start || !window?.end) return '';
@@ -66,16 +70,21 @@ export default function InsightsPage() {
   const { formatCurrency } = useCurrency();
   const [tab, setTab] = useState(initialCycleTab);
   const [cycleIndex, setCycleIndex] = useState(null);
+  const [showPreviousInitially] = useState(initiallyShowPreviousCycle);
   const [useCardEstimate, setUseCardEstimate] = useState(savedCardEstimatePreference);
   const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,
     needsSalaryLink, hasNoBankData, isLoading, refetch, classifyTransaction,
-    resetTransactionClassification, isUpdatingDecision, updatingTransactionId } = useCycles();
+    resetTransactionClassification, isUpdatingDecision, updatingTransactionId,
+    settings, fundingForecast, updateCycleSettings, isUpdatingSettings } = useCycles();
 
   const cycle = useMemo(() => {
     if (!cycles?.length) return null;
-    if (cycleIndex == null) return cycles.find((c) => c.window.running) || cycles[cycles.length - 1];
+    if (cycleIndex == null) {
+      if (showPreviousInitially) return [...cycles].reverse().find((item) => !item.window.running) || cycles[cycles.length - 1];
+      return cycles.find((c) => c.window.running) || cycles[cycles.length - 1];
+    }
     return cycles[cycleIndex] || null;
-  }, [cycles, cycleIndex]);
+  }, [cycles, cycleIndex, showPreviousInitially]);
 
   const changeDecision = useCallback((item, classification) => {
     classifyTransaction({
@@ -191,6 +200,14 @@ export default function InsightsPage() {
             ) : (
               <div className="mx-auto mt-4 max-w-2xl text-start">
                 <SalaryCandidatePrompt formatCurrency={formatCurrency} onSelected={refetch} />
+                <button
+                  type="button"
+                  disabled={isUpdatingSettings}
+                  onClick={() => updateCycleSettings({ engineMode: 'manual', manualAnchorDay: 10 })}
+                  className="mt-3 w-full rounded-xl border border-indigo-200 px-4 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-50 disabled:opacity-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/20"
+                >
+                  {t('cycle.control.startManual', { fallback: 'Use a manual monthly reset instead' })}
+                </button>
               </div>
             )}
           </div>
@@ -209,7 +226,7 @@ export default function InsightsPage() {
             />
 
             {tab === 'overview' && (
-              <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
+              <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} />
             )}
             {/* Cards and loans together: both answer "where does my money go and what do I owe". */}
             {tab === 'cards' && (
@@ -240,6 +257,10 @@ export default function InsightsPage() {
                 updatingTransactionId={updatingTransactionId}
                 signatures={signatures}
                 onSalarySelected={refetch}
+                settings={settings}
+                fundingForecast={fundingForecast}
+                onSettingsChange={updateCycleSettings}
+                isUpdatingSettings={isUpdatingSettings}
                 language={currentLanguage}
               />
             )}

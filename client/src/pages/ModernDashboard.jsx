@@ -123,6 +123,7 @@ export default function ModernDashboard() {
             t={t}
             language={currentLanguage}
             onOpenCycle={(tab) => navigate(tab ? `/financial-cycle?tab=${tab}` : '/financial-cycle')}
+            onOpenPrevious={() => navigate('/financial-cycle?cycle=previous')}
             onLinkSalary={() => navigate('/financial-cycle')}
           />
 

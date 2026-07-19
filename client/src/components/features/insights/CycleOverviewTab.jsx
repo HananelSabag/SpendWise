@@ -13,6 +13,8 @@ import { cn } from '../../../utils/helpers';
 import { formatCycleDay } from '../../../utils/cycleDate';
 import { InfoHint } from '../../ui';
 import CycleBreakdown from '../dashboard/CycleBreakdown';
+import ForwardResetSummary from './ForwardResetSummary';
+import ClosedCycleInsights from './ClosedCycleInsights';
 
 function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrency, big = false }) {
   const tones = {
@@ -34,13 +36,42 @@ function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrenc
   );
 }
 
-export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency, t, language }) {
+export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency, t, language, useCardEstimate = true }) {
   if (!cycle) return null;
   const { income, expenses, operatingNet, financing, bankMovement, projection } = cycle;
   const deficit = operatingNet < 0;
 
+  if (cycle.window?.running) {
+    return (
+      <div className="space-y-3">
+        {salaryTracking?.status === 'late' && (
+          <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+              {t('cycle.salaryLate', { fallback: 'Your salary has not come in yet — keep an eye on it.' })}
+            </p>
+          </div>
+        )}
+        <ForwardResetSummary
+          forwardReset={cycle.forwardReset}
+          useEstimate={useCardEstimate}
+          formatCurrency={formatCurrency}
+          t={t}
+          language={language}
+        />
+        <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
+            {t('cycle.forward.alreadySettled', { fallback: 'Already settled — available for transparency only' })}
+          </p>
+          <CycleBreakdown cycle={cycle} formatCurrency={formatCurrency} t={t} language={language} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
+      <ClosedCycleInsights insights={cycle.closedInsights} formatCurrency={formatCurrency} t={t} language={language} />
       {salaryTracking?.status === 'late' && (
         <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />

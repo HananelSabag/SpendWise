@@ -99,7 +99,7 @@ describe('CycleControlTab', () => {
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'refund' } });
     expect(onDecisionChange).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }), 'refund');
-    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Automatic' }).at(-1));
     expect(onDecisionReset).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }));
   });
 });

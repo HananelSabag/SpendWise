@@ -290,6 +290,26 @@ The engine MUST reproduce these. Source: agent `scraped-data/raw-*.json`.
 Principle: the engine auto-detects everything it can; where confidence is low it **asks the user to
 link**, and everywhere the user can **see the provenance and take control**. Never a black box.
 
+### Running cycle contract: forward reset, not a historical report
+- The running headline answers one question: **what still has to enter or leave from now until the
+  household reset is complete?** A checking movement that already posted is not counted again.
+- Every linked household salary is its own incoming stage. The primary salary defines the automatic
+  window; additional salaries do not split a joint account into artificial short cycles.
+- Each monthly card is an outgoing stage on its next statement date. “Known” uses purchases already
+  accumulated; “estimated” uses the larger of known spend and recent complete-statement history.
+- The reset completes at the last relevant salary/card/fixed stage, so fixed debits between a first
+  salary and a later household salary or card bill remain visible.
+- The real checking balance is a separate present-time fact and never resets. With estimates off,
+  only accumulated obligations affect the known forward change.
+- Control offers automatic household detection or a persisted fixed monthly anchor day (1–31,
+  clamped to month end). The latter works even without a linked salary.
+
+### Closed cycle contract
+- A closed cycle shows reconciled realized income, spending, financing and bank movement.
+- Daily insights divide realized totals by **calendar days in the window**, not transaction-active
+  days: earned/day, spent/day and net/day. Peak days come from the same included decisions, so
+  refunds and suppressed bank copies follow the exact accounting rules.
+
 ### Dashboard (primary = the financial cycle, salary-to-salary)
 - **Hero**: real bank balance(s) (unchanged) — the truth.
 - **Financial-cycle card** (replaces the calendar card as primary): the ONE window. Headline
