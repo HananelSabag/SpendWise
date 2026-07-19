@@ -30,7 +30,7 @@ export default function ForwardResetSummary({
   const stages = compact ? forwardReset.stages?.slice(0, 4) : forwardReset.stages;
 
   return (
-    <section className={cn('rounded-2xl border border-indigo-200 bg-gradient-to-br from-white to-indigo-50/70 dark:border-indigo-900/60 dark:from-gray-900 dark:to-indigo-950/20', compact ? 'p-3' : 'p-4')}>
+    <section className={cn('rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900', compact ? 'p-3' : 'p-4')}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-1.5 text-xs font-black text-gray-950 dark:text-white">
@@ -49,15 +49,15 @@ export default function ForwardResetSummary({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="rounded-xl bg-white/80 p-2 dark:bg-gray-900/70">
+        <div className="rounded-xl bg-gray-50 p-2 dark:bg-gray-800/50">
           <p className="text-[9px] font-bold text-gray-400">{t('cycle.forward.incoming', { fallback: 'Expected in' })}</p>
           <p className="mt-0.5 text-xs font-black leading-tight tabular-nums sm:text-sm text-emerald-600 dark:text-emerald-400">{signed(incoming, formatCurrency)}</p>
         </div>
-        <div className="rounded-xl bg-white/80 p-2 dark:bg-gray-900/70">
+        <div className="rounded-xl bg-gray-50 p-2 dark:bg-gray-800/50">
           <p className="text-[9px] font-bold text-gray-400">{t('cycle.forward.cardsOut', { fallback: 'Cards to leave' })}</p>
           <p className="mt-0.5 text-xs font-black leading-tight tabular-nums sm:text-sm text-rose-600 dark:text-rose-400">{signed(-cardOut, formatCurrency)}</p>
         </div>
-        <div className="rounded-xl bg-white/80 p-2 dark:bg-gray-900/70">
+        <div className="rounded-xl bg-gray-50 p-2 dark:bg-gray-800/50">
           <p className="text-[9px] font-bold text-gray-400">{t('cycle.forward.net', { fallback: 'Reset effect' })}</p>
           <p className={cn('mt-0.5 text-xs font-black leading-tight tabular-nums sm:text-sm', netChange < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
             {signed(netChange, formatCurrency)}

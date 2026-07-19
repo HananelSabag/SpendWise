@@ -99,11 +99,8 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
 
       {/* The number to feel, alone and dominant. */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
-        <p className="flex items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
           {t('cycle.operatingNet', { fallback: 'Net — how you are living' })}
-          <InfoHint title={t('cycle.operatingNet', { fallback: 'Net' })}>
-            {t('cycle.netHint', { fallback: 'Income minus spending. Borrowed money is not income, so it is kept out of this number — it appears on its own line.' })}
-          </InfoHint>
         </p>
         <p className={cn('mt-1 text-3xl font-black tabular-nums', deficit ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
           {signedCurrency(operatingNet, formatCurrency)}
@@ -116,14 +113,10 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Figure label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency}
-          hintTitle={t('cycle.income', { fallback: 'Income' })}
-          hint={t('cycle.incomeHint', { fallback: 'Money that is yours — borrowing is not counted here' })} />
+        <Figure label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
         <Figure label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
         {financing.total > 0 && (
-          <Figure label={t('cycle.financing', { fallback: 'Borrowed this cycle' })} value={financing.total} tone="violet" formatCurrency={formatCurrency}
-            hintTitle={t('cycle.financing', { fallback: 'Borrowed' })}
-            hint={t('cycle.financingHint', { fallback: 'It covered the gap — and you pay it back' })} />
+          <Figure label={t('cycle.financing', { fallback: 'Borrowed this cycle' })} value={financing.total} tone="violet" formatCurrency={formatCurrency} />
         )}
         <Figure label={t('cycle.bankMovement', { fallback: 'Change in your balance' })} value={bankMovement}
           tone={bankMovement < 0 ? 'negative' : 'positive'} formatCurrency={formatCurrency}
@@ -136,9 +129,6 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
           <p className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
             {projection.projectedOperatingNet < operatingNet ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
             {t('cycle.stillExpected', { fallback: 'Still expected before your next salary' })}
-            <InfoHint title={t('cycle.projectedEnd', { fallback: 'Estimate' })}>
-              {t('cycle.projectionHint', { fallback: 'An estimate from charges we have already seen repeat. It is never mixed into the settled numbers above.' })}
-            </InfoHint>
           </p>
           <ul className="mt-2 space-y-1">
             {projection.upcoming.map((item) => (

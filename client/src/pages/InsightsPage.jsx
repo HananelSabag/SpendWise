@@ -26,7 +26,7 @@ import CycleControlTab from '../components/features/insights/CycleControlTab';
 import CycleBalanceStrip from '../components/features/insights/CycleBalanceStrip';
 import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandidatePrompt';
 
-const TABS = ['overview', 'cards', 'control'];
+const TABS = ['overview', 'control'];
 const CARD_ESTIMATE_KEY = 'spendwise-use-card-estimate';
 
 function initialCycleTab() {
@@ -214,8 +214,8 @@ export default function InsightsPage() {
           </div>
         ) : (
           <>
-            {/* Three tabs by purpose: what the cycle did (overview), where money goes and what
-                you owe (cards + loans), and the one place for decisions (control). */}
+            {/* Two tabs by purpose: the whole money story in one scroll (overview + cards + loans),
+                and the one place for decisions (control). */}
             <LiquidTabs
               className="sticky top-2 z-20 mb-4 shadow-sm backdrop-blur sm:static sm:shadow-none"
               fill
@@ -226,19 +226,11 @@ export default function InsightsPage() {
               onChange={setTab}
             />
 
+            {/* The money: what the cycle did, then where it went and what you owe — one story. */}
             {tab === 'overview' && (
-              <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} />
-            )}
-            {/* Cards and loans together: both answer "where does my money go and what do I owe". */}
-            {tab === 'cards' && (
               <div className="space-y-4">
-                <CycleCardsTab
-                  cycle={cycle}
-                  formatCurrency={formatCurrency}
-                  t={t}
-                  language={currentLanguage}
-                  useCardEstimate={useCardEstimate}
-                />
+                <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} />
+                <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} />
                 <CycleDebtsTab loans={loans} totalOutstanding={totalOutstanding} recurring={recurring} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
               </div>
             )}
