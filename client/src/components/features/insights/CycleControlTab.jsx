@@ -4,6 +4,7 @@ import {
   Briefcase,
   CalendarCheck,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   RotateCcw,
   SlidersHorizontal,
@@ -23,6 +24,7 @@ const STATUS_TONE = {
 };
 
 const FILTERS = ['all', 'attention', 'salary', 'income', 'charges', 'excluded'];
+const DECISIONS_PAGE_SIZE = 12;
 
 function decisionMatchesFilter(decision, filter) {
   if (filter === 'all') return true;
@@ -60,6 +62,7 @@ export default function CycleControlTab({
   language = 'en',
 }) {
   const [filter, setFilter] = useState('all');
+  const [visibleDecisionCount, setVisibleDecisionCount] = useState(DECISIONS_PAGE_SIZE);
   const decisions = useMemo(() => cycle?.decisions || [], [cycle?.decisions]);
   const filtered = useMemo(
     () => decisions.filter((decision) => decisionMatchesFilter(decision, filter)),
@@ -73,21 +76,44 @@ export default function CycleControlTab({
   const includedCount = decisions.filter((decision) => decision.included).length;
   const excludedCount = decisions.length - includedCount;
   const status = salaryTracking?.status || 'unknown';
+  const visibleDecisions = filtered.slice(0, visibleDecisionCount);
+  const hiddenDecisionCount = filtered.length - visibleDecisions.length;
+  const setupNeedsAttention = status === 'late' || !salaryTracking?.last || salaryChange?.suspected;
+
+  const changeFilter = (nextFilter) => {
+    setFilter(nextFilter);
+    setVisibleDecisionCount(DECISIONS_PAGE_SIZE);
+  };
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl border border-indigo-200 bg-white p-4 dark:border-indigo-900/60 dark:bg-gray-900">
-        <div className="flex items-start gap-3">
-          <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+      <details
+        open={setupNeedsAttention || undefined}
+        className="group rounded-2xl border border-indigo-200 bg-white dark:border-indigo-900/60 dark:bg-gray-900"
+      >
+        <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
+          <Clock3 className="h-4 w-4 shrink-0 text-indigo-500" />
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-black text-gray-950 dark:text-white">
-              {t('cycle.control.engineTitle', { fallback: 'How should the cycle reset?' })}
+              {t('cycle.control.setupTitle', { fallback: 'Cycle setup' })}
             </h2>
-            <p className="mt-0.5 text-[11px] text-gray-500">
-              {t('cycle.control.engineHint', { fallback: 'Automatic follows your linked income streams. Manual uses the monthly day you choose.' })}
+            <p className="mt-0.5 truncate text-[11px] text-gray-500">
+              {t(`cycle.control.engine.${settings.engineMode}`, { fallback: settings.engineMode })}
+              {cycle?.window?.end ? ` · ${formatCycleDay(cycle.window.end, language)}` : ''}
             </p>
           </div>
-        </div>
+          {setupNeedsAttention && (
+            <span className="rounded-full bg-amber-100 px-2 py-1 text-[9px] font-black text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+              {t('cycle.control.checkSetup', { fallback: 'Check setup' })}
+            </span>
+          )}
+          <ChevronDown className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+        </summary>
+
+        <div className="border-t border-gray-100 px-4 pb-4 pt-3 dark:border-gray-800">
+          <p className="text-[11px] text-gray-500">
+            {t('cycle.control.engineHint', { fallback: 'Automatic follows your linked income streams. Manual uses the monthly day you choose.' })}
+          </p>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           {['automatic', 'manual'].map((mode) => (
@@ -134,30 +160,31 @@ export default function CycleControlTab({
               {t('cycle.control.detectedStages', { fallback: 'Detected reset stages' })}
             </p>
             {fundingForecast.streams.map((stream) => (
-              <div key={`${stream.signatureId}-${stream.expectedDate}`} className="flex items-center gap-2 rounded-lg bg-gray-50 px-2.5 py-2 dark:bg-gray-800/60">
-                <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-gray-700 dark:text-gray-200">{stream.description}</span>
-                {!stream.primary && <span className="rounded bg-violet-100 px-1.5 py-0.5 text-[8px] font-black text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">{t('cycle.forward.additional', { fallback: 'Additional' })}</span>}
-                <span className="shrink-0 text-[10px] font-semibold text-gray-500">{formatCycleDay(stream.expectedDate, language)}</span>
+              <div key={`${stream.signatureId}-${stream.expectedDate}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1 rounded-lg bg-gray-50 px-2.5 py-2 dark:bg-gray-800/60 sm:flex sm:items-center">
+                <span className="truncate text-[11px] font-bold text-gray-700 dark:text-gray-200 sm:min-w-0 sm:flex-1">{stream.description}</span>
                 <span className="shrink-0 text-[11px] font-black tabular-nums text-emerald-600">+{formatCurrency(stream.expectedAmount)}</span>
+                <span className="text-[10px] font-semibold text-gray-500">{formatCycleDay(stream.expectedDate, language)}</span>
+                {!stream.primary && <span className="justify-self-end rounded bg-violet-100 px-1.5 py-0.5 text-[8px] font-black text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">{t('cycle.forward.additional', { fallback: 'Additional' })}</span>}
               </div>
             ))}
           </div>
         )}
-      </section>
+        </div>
+      </details>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-4 divide-x divide-x-reverse rounded-2xl border border-gray-200 bg-white px-1 py-3 dark:divide-gray-800 dark:border-gray-800 dark:bg-gray-900">
         {[
           ['automatic', automaticCount],
           ['included', includedCount],
           ['excluded', excludedCount],
           ['attention', attentionIds.size],
         ].map(([key, value]) => (
-          <div key={key} className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+          <div key={key} className="min-w-0 px-1.5 text-center sm:px-3">
+            <p className="truncate text-[8px] font-bold uppercase tracking-wide text-gray-400 sm:text-[10px]">
               {t(`cycle.control.summary.${key}`, { fallback: key })}
             </p>
             <p className={cn(
-              'mt-1 text-xl font-black tabular-nums',
+              'mt-1 text-lg font-black tabular-nums sm:text-xl',
               key === 'attention' && value > 0 ? 'text-amber-600' : 'text-gray-950 dark:text-white',
             )}>
               {value}
@@ -245,14 +272,14 @@ export default function CycleControlTab({
           )}
         </div>
 
-        <div className="mb-3 flex flex-wrap gap-1 pb-1">
+        <div className="-mx-3 mb-3 flex snap-x gap-1 overflow-x-auto px-3 pb-1 no-scrollbar">
           {FILTERS.map((id) => (
             <button
               key={id}
               type="button"
-              onClick={() => setFilter(id)}
+              onClick={() => changeFilter(id)}
               className={cn(
-                'shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition',
+                'shrink-0 snap-start rounded-full px-3 py-1.5 text-[11px] font-bold transition',
                 filter === id
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300',
@@ -264,23 +291,24 @@ export default function CycleControlTab({
         </div>
 
         <div className="space-y-2">
-          {filtered.map((decision) => {
+          {visibleDecisions.map((decision) => {
             const updating = isUpdatingDecision
               && Number(updatingTransactionId) === Number(decision.transactionId);
             const impact = Number(decision.impactAmount) || 0;
             const editableClassifications = availableClassifications(decision);
             const selectedClassification = decision.override || decision.classification;
             return (
-              <article
+              <details
                 key={`${decision.source}-${decision.transactionId}-${decision.classification}`}
+                open={decision.needsAction || undefined}
                 className={cn(
-                  'rounded-xl border p-3',
+                  'group/decision rounded-xl border',
                   decision.needsAction
                     ? 'border-amber-300 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20'
                     : 'border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900',
                 )}
               >
-                <div className="flex items-start gap-3">
+                <summary className="flex cursor-pointer list-none items-start gap-2 p-3 [&::-webkit-details-marker]:hidden">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-1.5">
                       <p className="max-w-full truncate text-xs font-bold text-gray-900 dark:text-white">{decision.description || '—'}</p>
@@ -299,48 +327,53 @@ export default function CycleControlTab({
                       {formatCycleDay(decision.processedDate || decision.date, language)} · {String(decision.source || '').toUpperCase()}
                       {decision.accountNumber ? ` ••••${String(decision.accountNumber).slice(-4)}` : ''}
                     </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px]">
+                      <span className="rounded bg-white px-1.5 py-0.5 font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        {t(`cycle.control.class.${decision.classification}`, { fallback: decision.classification })}
+                      </span>
+                      <span className={cn(
+                        'rounded px-1.5 py-0.5 font-bold',
+                        decision.included
+                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                          : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                      )}>
+                        {decision.included
+                          ? t('cycle.control.counted', { fallback: 'Counted' })
+                          : t('cycle.control.notCounted', { fallback: 'Not counted' })}
+                      </span>
+                    </div>
                   </div>
-                  <p className={cn(
-                    'shrink-0 text-sm font-black tabular-nums',
-                    Number(decision.amount) >= 0 ? 'text-emerald-600' : 'text-gray-950 dark:text-white',
-                  )}>
-                    {Number(decision.amount) >= 0 ? '+' : '−'}{formatCurrency(Math.abs(Number(decision.amount) || 0))}
-                  </p>
-                </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <p className={cn(
+                      'text-sm font-black tabular-nums',
+                      Number(decision.amount) >= 0 ? 'text-emerald-600' : 'text-gray-950 dark:text-white',
+                    )}>
+                      {Number(decision.amount) >= 0 ? '+' : '−'}{formatCurrency(Math.abs(Number(decision.amount) || 0))}
+                    </p>
+                    <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-open/decision:rotate-180" />
+                  </div>
+                </summary>
 
-                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px]">
-                  <span className="rounded-md bg-white px-2 py-1 font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    {t(`cycle.control.class.${decision.classification}`, { fallback: decision.classification })}
-                  </span>
-                  <span className={cn(
-                    'rounded-md px-2 py-1 font-bold',
-                    decision.included
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
-                      : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                  )}>
-                    {decision.included
-                      ? t('cycle.control.counted', { fallback: 'Counted' })
-                      : t('cycle.control.notCounted', { fallback: 'Not counted' })}
-                  </span>
-                  {impact !== 0 && (
+                {impact !== 0 && (
+                  <div className="mx-3 flex flex-wrap items-center gap-1.5 border-t border-gray-200/70 pt-2 text-[10px] dark:border-gray-800">
                     <span className="rounded-md bg-white px-2 py-1 font-bold tabular-nums text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                       {impact > 0 ? '+' : '−'}{formatCurrency(Math.abs(impact))} · {t(`cycle.control.line.${decision.impactLine}`, { fallback: decision.impactLine })}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                <p className="mt-2 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+                <p className="mx-3 mt-2 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
                   {t(`cycle.control.reason.${decision.reason}`, { fallback: decision.reason })}
                 </p>
                 {decision.linkedTo && (
-                  <p className="mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">
+                  <p className="mx-3 mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">
                     {t('cycle.control.linkedTo', { fallback: 'Linked to' })} {String(decision.linkedTo.source || '').toUpperCase()}
                     {decision.linkedTo.accountNumber ? ` ••••${String(decision.linkedTo.accountNumber).slice(-4)}` : ''} · {formatCycleDay(decision.linkedTo.date, language)}
                   </p>
                 )}
 
                 {decision.editable && (
-                  <div className="mt-3 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-800">
+                  <div className="mx-3 mb-3 mt-3 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-800">
                     <label className="min-w-0 flex-1">
                       <span className="sr-only">{t('cycle.control.changeClass', { fallback: 'Change classification' })}</span>
                       <select
@@ -374,7 +407,8 @@ export default function CycleControlTab({
                     )}
                   </div>
                 )}
-              </article>
+                {!decision.editable && <div className="h-3" />}
+              </details>
             );
           })}
 
@@ -382,6 +416,19 @@ export default function CycleControlTab({
             <p className="py-8 text-center text-xs text-gray-400">
               {t('cycle.control.noDecisions', { fallback: 'No transactions in this filter' })}
             </p>
+          )}
+
+          {hiddenDecisionCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setVisibleDecisionCount((count) => count + DECISIONS_PAGE_SIZE)}
+              className="w-full rounded-xl border border-dashed border-indigo-200 px-3 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950/20"
+            >
+              {t('cycle.control.showMore', {
+                count: Math.min(hiddenDecisionCount, DECISIONS_PAGE_SIZE),
+                fallback: `Show ${Math.min(hiddenDecisionCount, DECISIONS_PAGE_SIZE)} more`,
+              })}
+            </button>
           )}
         </div>
       </section>

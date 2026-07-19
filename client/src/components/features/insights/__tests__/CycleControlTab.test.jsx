@@ -97,9 +97,35 @@ describe('CycleControlTab', () => {
       />,
     );
 
+    fireEvent.click(screen.getByText('Big Apple'));
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'refund' } });
     expect(onDecisionChange).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }), 'refund');
     fireEvent.click(screen.getAllByRole('button', { name: 'Automatic' }).at(-1));
     expect(onDecisionReset).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }));
+  });
+
+  it('keeps long mobile decision lists compact until the user asks for more', () => {
+    const longCycle = {
+      decisions: Array.from({ length: 13 }, (_, index) => ({
+        ...cycle.decisions[0],
+        transactionId: 8000 + index,
+        description: `Decision ${index + 1}`,
+      })),
+    };
+
+    render(
+      <CycleControlTab
+        cycle={longCycle}
+        signatures={[{ id: 1 }]}
+        formatCurrency={formatCurrency}
+        t={t}
+        language="en"
+      />,
+    );
+
+    expect(screen.getByText('Decision 12')).toBeInTheDocument();
+    expect(screen.queryByText('Decision 13')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
+    expect(screen.getByText('Decision 13')).toBeInTheDocument();
   });
 });

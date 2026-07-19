@@ -216,7 +216,7 @@ export default function InsightsPage() {
             {/* Three tabs by purpose: what the cycle did (overview), where money goes and what
                 you owe (cards + loans), and the one place for decisions (control). */}
             <LiquidTabs
-              className="mb-4"
+              className="sticky top-2 z-20 mb-4 shadow-sm backdrop-blur sm:static sm:shadow-none"
               fill
               size="sm"
               mobileCompact

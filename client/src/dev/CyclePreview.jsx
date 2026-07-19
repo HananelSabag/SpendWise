@@ -21,6 +21,7 @@
 
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import '../index.css';
 import enDash from '../translations/en/dashboard';
@@ -28,11 +29,17 @@ import heDash from '../translations/he/dashboard';
 import FinancialCycleCard from '../components/features/dashboard/FinancialCycleCard';
 import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
 import CycleCardsTab from '../components/features/insights/CycleCardsTab';
+import CycleControlTab from '../components/features/insights/CycleControlTab';
 // Captured verbatim from GET /api/v1/cycles/current against the real database, so what
 // renders here is the actual end of the chain rather than numbers typed by hand.
 import liveCycle from './liveCycle.json';
 
 const formatCurrency = (value) => `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const previewQueryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+});
+previewQueryClient.setQueryData(['merchantWatches'], { rules: [], matches: [] });
 
 /** Resolve a dotted key against the real translation tree and interpolate {{count}} etc. */
 function makeT(dict) {
@@ -103,6 +110,33 @@ const PARTIAL = {
   partials: [{ chargeDate: '2026-05-10', total: -9468.19, count: 60, class: 'statement', source: 'max', accountNumber: '2254', partial: true, future: false, txns: [] }],
 };
 
+const CONTROL_CYCLE = {
+  ...CYCLE,
+  decisions: Array.from({ length: 19 }, (_, index) => {
+    const positive = index % 5 === 0;
+    const salary = index === 0;
+    const excluded = index % 7 === 0 && !salary;
+    return {
+      transactionId: 1000 + index,
+      date: `2026-07-${String((index % 18) + 1).padStart(2, '0')}`,
+      processedDate: `2026-07-${String((index % 18) + 1).padStart(2, '0')}`,
+      description: salary ? 'Horizon salary' : (positive ? `Refund ${index}` : `Card purchase ${index}`),
+      amount: salary ? 13327.75 : (positive ? 89.9 : -(42 + index * 11.35)),
+      source: salary ? 'leumi' : 'max',
+      accountNumber: salary ? '3478' : '2254',
+      classification: salary ? 'salary' : (positive ? 'refund' : (excluded ? 'transfer' : 'expense')),
+      included: !salary && !excluded,
+      automatic: true,
+      override: null,
+      editable: true,
+      needsAction: index === 6,
+      impactLine: excluded || salary ? 'none' : 'expenses',
+      impactAmount: excluded || salary ? 0 : (positive ? -(89.9) : 42 + index * 11.35),
+      reason: salary ? 'opening_salary_previous_cycle' : (positive ? 'auto_card_immediate' : (excluded ? 'user_override' : 'auto_card_accruing')),
+    };
+  }),
+};
+
 function Panel({ title, children, width = 'max-w-md' }) {
   return (
     <div className={`w-full ${width}`}>
@@ -141,6 +175,18 @@ function Preview() {
             <Panel title="CARDS tab — money first" width="max-w-lg">
               <CycleCardsTab cycle={CYCLE} formatCurrency={formatCurrency} t={t} language={lang} />
             </Panel>
+            <Panel title="CONTROL tab — compact mobile flow" width="max-w-lg">
+              <CycleControlTab
+                cycle={CONTROL_CYCLE}
+                salaryTracking={{ status: 'scheduled', last: CYCLE.window.salary, typicalAmount: 13327.75, expectedNext: '2026-08-09' }}
+                signatures={[{ id: 1 }]}
+                fundingForecast={{ streams: [{ signatureId: 1, expectedDate: '2026-08-09', expectedAmount: 13327.75, description: 'Horizon salary', primary: true }] }}
+                settings={{ engineMode: 'automatic', manualAnchorDay: null }}
+                formatCurrency={formatCurrency}
+                t={t}
+                language={lang}
+              />
+            </Panel>
           </div>
         </div>
       </div>
@@ -148,4 +194,8 @@ function Preview() {
   );
 }
 
-createRoot(document.getElementById('preview-root')).render(<Preview />);
+createRoot(document.getElementById('preview-root')).render(
+  <QueryClientProvider client={previewQueryClient}>
+    <Preview />
+  </QueryClientProvider>,
+);

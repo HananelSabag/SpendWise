@@ -392,6 +392,9 @@ export default {
     control: {
       title: "החלטות המנוע",
       subtitle: "כל עסקה, הכלל שסיווג אותה וההשפעה המדויקת שלה על המחזור.",
+      setupTitle: "הגדרת המחזור",
+      checkSetup: "צריך לבדוק",
+      showMore: "הצג עוד {{count}}",
       automatic: "אוטומטי",
       manual: "שינוי שלך",
       counted: "נכנס לחישוב",

@@ -403,6 +403,9 @@ export default {
     control: {
       title: "Engine decisions",
       subtitle: "Every transaction, the rule that classified it, and its exact effect on this cycle.",
+      setupTitle: "Cycle setup",
+      checkSetup: "Check setup",
+      showMore: "Show {{count}} more",
       automatic: "Automatic",
       manual: "Your override",
       counted: "Counted",
