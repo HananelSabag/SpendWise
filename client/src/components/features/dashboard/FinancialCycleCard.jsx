@@ -1,70 +1,52 @@
 /**
- * The financial cycle — salary to salary. This is the number the user actually lives by,
- * so it is the dashboard's single financial headline and matches the full cycle page.
+ * The financial cycle on the dashboard — one calm answer to "where will I land?".
  *
- * Shows the three lines that are all true at once (FINANCIAL_CYCLE_SPEC.md §3c): what you
- * earned vs spent (operatingNet), what you borrowed (financing), and what the account really
- * did (bankMovement). Counting borrowed money as income would turn a −14,129 month into a
- * comfortable +1,870 lie; hiding it would leave a −14,129 nobody can explain. So: both.
+ * The dashboard hero already shows the balance right now (ModernBalancePanel). This card answers
+ * the next question: given the salary still to arrive and the card bills still to leave, what will
+ * the connected checking account hold by the end of this cycle. That projected balance is the
+ * single number the card leads with; everything else is a quiet supporting line, and the full
+ * breakdown lives on the cycle page. The estimate is labelled and never mixed into settled figures
+ * (FINANCIAL_CYCLE_SPEC.md §6).
  */
 
 import React from 'react';
-import { AlertTriangle, ArrowRight, CalendarRange, Coins, Landmark, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
-import { InfoHint } from '../../ui';
 import { formatCycleDay } from '../../../utils/cycleDate';
 import { formatCycleWindow, signedCurrency } from '../../../utils/cycleFormat';
-import CycleBreakdown from './CycleBreakdown';
-import ForwardResetSummary from '../insights/ForwardResetSummary';
-
-function Line({ label, value, hint, formatCurrency, tone = 'neutral', bold = false }) {
-  const tones = {
-    positive: 'text-emerald-600 dark:text-emerald-400',
-    negative: 'text-rose-600 dark:text-rose-400',
-    neutral: 'text-gray-900 dark:text-white',
-    muted: 'text-gray-500 dark:text-gray-400',
-  };
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5">
-      <div className="min-w-0">
-        <p className={cn('truncate text-sm', bold ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400')}>{label}</p>
-        {/* The verdict ("you are spending more than you earn") is the whole point of the row —
-            it wraps rather than truncates, however narrow the screen gets. */}
-        {hint && <p className="text-[11px] leading-tight text-gray-400 dark:text-gray-500">{hint}</p>}
-      </div>
-      <p className={cn('shrink-0 tabular-nums', bold ? 'text-lg font-black' : 'text-sm font-semibold', tones[tone])}>
-        {signedCurrency(value, formatCurrency)}
-      </p>
-    </div>
-  );
-}
+import { useBankBalance } from '../../../hooks/useBankBalance';
+import { projectBalanceAfterNextBills } from '../../../utils/bankBalance';
 
 function CycleCardSkeleton({ label }) {
   const pulse = 'animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700/60';
   return (
-    <section
-      aria-busy="true"
-      aria-label={label}
-      className="glass-card min-h-[28rem] rounded-2xl p-4"
-    >
-      <div className={`${pulse} h-4 w-36`} />
-      <div className={`${pulse} mt-2 h-5 w-28 rounded-full`} />
-      <div className="mt-5 space-y-3">
-        {[72, 64, 84].map((width) => (
-          <div key={width} className="flex items-center justify-between gap-4 border-b border-gray-100 pb-3 last:border-0 dark:border-gray-800">
-            <div className={`${pulse} h-3`} style={{ width: `${width}px` }} />
-            <div className={`${pulse} h-4 w-24`} />
-          </div>
-        ))}
+    <section aria-busy="true" aria-label={label} className="glass-card min-h-[15rem] rounded-2xl p-5">
+      <div className={`${pulse} h-3 w-32`} />
+      <div className={`${pulse} mt-4 h-10 w-48`} />
+      <div className={`${pulse} mt-2 h-3 w-40`} />
+      <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className={`${pulse} h-14`} />
+        <div className={`${pulse} h-14`} />
       </div>
-      <div className={`${pulse} mt-4 h-16 w-full rounded-xl`} />
-      <div className="mt-4 space-y-2">
-        <div className={`${pulse} h-12 w-full rounded-xl`} />
-        <div className={`${pulse} h-12 w-full rounded-xl`} />
-      </div>
-      <div className={`${pulse} mt-4 h-24 w-full rounded-xl`} />
+      <div className={`${pulse} mt-5 h-4 w-28`} />
     </section>
+  );
+}
+
+/** One quiet supporting figure: a small label over a right-sized amount. */
+function Flow({ label, value, tone, formatCurrency }) {
+  const tones = {
+    positive: 'text-emerald-600 dark:text-emerald-400',
+    negative: 'text-gray-900 dark:text-white',
+  };
+  return (
+    <div className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-800/50">
+      <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{label}</p>
+      <p className={cn('mt-0.5 text-base font-bold tabular-nums', tones[tone])}>
+        {signedCurrency(value, formatCurrency, { signPositive: true })}
+      </p>
+    </div>
   );
 }
 
@@ -72,24 +54,25 @@ export default function FinancialCycleCard({
   cycle,
   isLoading = false,
   salaryTracking,
-  totalOutstanding = 0,
   formatCurrency,
   t,
   onOpenCycle,
-  onOpenPrevious,
   onLinkSalary,
   needsSalaryLink = false,
   language = 'en',
 }) {
+  // Shared with the dashboard hero (same query key → no extra request). Read the balance up front
+  // so the hook order is stable across the early returns below.
+  const { hasRealBalance, totalRealBalance } = useBankBalance();
+
   if (isLoading && !cycle) {
     return <CycleCardSkeleton label={t('cycle.loading', { fallback: 'Loading financial cycle' })} />;
   }
 
-  // Salary is the anchor of the whole model — without it there is no window to show, so we
-  // ask for the link instead of inventing one.
+  // Salary is the anchor of the whole model — without it there is no window to show.
   if (needsSalaryLink) {
     return (
-      <section className="glass-card rounded-2xl p-4">
+      <section className="glass-card rounded-2xl p-5">
         <div className="flex items-start gap-3">
           <span className="rounded-xl bg-indigo-50 p-2 text-indigo-500 dark:bg-indigo-950/30"><Wallet className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1">
@@ -106,37 +89,38 @@ export default function FinancialCycleCard({
 
   if (!cycle) return null;
 
-  const { window, income, expenses, operatingNet, financing, bankMovement, projection } = cycle;
-  const isDeficit = operatingNet < 0;
+  const { window, income, expenses, operatingNet } = cycle;
+  const running = window.running;
+  const reset = cycle.forwardReset;
   const salaryLate = salaryTracking?.status === 'late';
+  const isPartial = cycle.partials?.length > 0;
+
+  // Running cycle: the projected checking balance is the headline. Fall back to the expected change
+  // when the bank does not report a balance (e.g. Yahav) so the card still answers the question.
+  const projectedBalance = running && hasRealBalance
+    ? projectBalanceAfterNextBills(totalRealBalance, cycle, true)
+    : null;
+  const netChange = reset ? Number(reset.estimatedNetChange) : null;
+  const expectedIn = reset ? Number(reset.expectedIncoming) || 0 : null;
+  const stillOut = reset ? -((Number(reset.estimatedCardOut) || 0) + (Number(reset.estimatedFixedOut) || 0)) : null;
+  const endDate = reset?.completionDate;
+  const rising = (netChange ?? 0) >= 0;
+
+  const openCycle = () => onOpenCycle?.();
 
   return (
-    <section className="glass-card rounded-2xl p-4">
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-            {t('cycle.title', { fallback: 'This financial cycle' })}
-          </h3>
-          <span className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-              <CalendarRange className="h-3 w-3" />
-              {formatCycleWindow(window, language)}
-            </span>
-            {window.running && (
-              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                {t('cycle.soFar', { fallback: 'so far' })}
-              </span>
-            )}
-          </span>
-          <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
-            {t('cycle.hint', { fallback: 'From your salary to the next one' })}
-          </p>
-        </div>
+    <section className="glass-card rounded-2xl p-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+          {t('cycle.title', { fallback: 'This financial cycle' })}
+        </h3>
+        <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+          {formatCycleWindow(window, language)}
+        </span>
       </div>
 
-      {/* Salary is the anchor: if it has not landed, say so before anything else. */}
       {salaryLate && (
-        <div className="mb-3 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-200">
             {t('cycle.salaryLate', { fallback: 'Your salary has not come in yet — keep an eye on it.' })}
@@ -144,117 +128,84 @@ export default function FinancialCycleCard({
         </div>
       )}
 
-      {/* An incomplete cycle understates what moved — flag it rather than show a real-looking number. */}
-      {cycle.partials?.length > 0 && (
-        <div className="mb-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50/70 px-3 py-2 dark:border-orange-900/50 dark:bg-orange-950/20">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
-          <p className="text-[11px] font-semibold leading-tight text-orange-800 dark:text-orange-200">
-            {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
+      {running ? (
+        <>
+          {/* The one number: what the account is expected to hold by the end of this cycle. */}
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {projectedBalance !== null
+              ? t('cycle.projectedBalance', { fallback: 'Expected balance at cycle end' })
+              : t('cycle.projectedChange', { fallback: 'Expected change by cycle end' })}
+            {endDate && <span className="text-gray-400 dark:text-gray-500"> · {formatCycleDay(endDate, language)}</span>}
           </p>
-        </div>
-      )}
 
-      {window.running && (
-        <ForwardResetSummary
-          forwardReset={cycle.forwardReset}
-          formatCurrency={formatCurrency}
-          t={t}
-          language={language}
-          compact
-        />
-      )}
+          {projectedBalance !== null ? (
+            <p className={cn('mt-1 text-4xl font-black tracking-tight tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
+              ~{formatCurrency(projectedBalance)}
+            </p>
+          ) : netChange !== null ? (
+            <p className={cn('mt-1 text-4xl font-black tracking-tight tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+              {signedCurrency(netChange, formatCurrency)}
+            </p>
+          ) : (
+            <p className="mt-1 text-2xl font-bold text-gray-400 dark:text-gray-500">{t('cycle.balanceUnavailable', { fallback: 'Not available' })}</p>
+          )}
 
-      {!window.running && <>
-      <div className="divide-y divide-gray-100 dark:divide-gray-800">
-        <Line label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
-        <Line label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
-        <Line
-          label={t('cycle.operatingNet', { fallback: 'Net — how you are living' })}
-          hint={isDeficit ? t('cycle.deficitHint', { fallback: 'You are spending more than you earn' }) : t('cycle.surplusHint', { fallback: 'You earned more than you spent' })}
-          value={operatingNet}
-          tone={isDeficit ? 'negative' : 'positive'}
-          formatCurrency={formatCurrency}
-          bold
-        />
-      </div>
+          {/* Today's balance and the expected change that gets you there — one calm line. */}
+          {projectedBalance !== null && netChange !== null && (
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+              <span>{t('cycle.balanceNow', { fallback: 'now' })} <span className="font-semibold tabular-nums text-gray-700 dark:text-gray-300">{formatCurrency(totalRealBalance)}</span></span>
+              <span className={cn('inline-flex items-center gap-0.5 font-semibold tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                {rising ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                {signedCurrency(netChange, formatCurrency)}
+              </span>
+              <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:bg-gray-800 dark:text-gray-500">
+                {t('cycle.estimateTag', { fallback: 'estimate' })}
+              </span>
+            </p>
+          )}
 
-      {/* Borrowed money is never income — but hiding it leaves the account movement unexplainable. */}
-      {financing.total > 0 && (
-        <div className="mt-2 rounded-xl bg-violet-50/60 px-3 py-2 dark:bg-violet-950/20">
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-700 dark:text-violet-300">
-              <Coins className="h-3.5 w-3.5" />
-              {t('cycle.financing', { fallback: 'Borrowed this cycle' })}
-            </span>
-            <span className="tabular-nums text-sm font-bold text-violet-700 dark:text-violet-300">{formatCurrency(financing.total)}</span>
+          {isPartial && (
+            <p className="mt-2 text-[11px] font-medium text-orange-600 dark:text-orange-400">
+              {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
+            </p>
+          )}
+
+          {/* Two quiet supporting figures — the money still moving before the cycle closes. */}
+          {reset && (
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Flow label={t('cycle.expectedIn', { fallback: 'Expected in' })} value={expectedIn} tone="positive" formatCurrency={formatCurrency} />
+              <Flow label={t('cycle.stillOut', { fallback: 'Still to leave' })} value={stillOut} tone="negative" formatCurrency={formatCurrency} />
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* A closed cycle: the number to feel is how you actually lived. */}
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            {t('cycle.operatingNet', { fallback: 'Net — how you are living' })}
+          </p>
+          <p className={cn('mt-1 text-4xl font-black tracking-tight tabular-nums', operatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
+            {signedCurrency(operatingNet, formatCurrency)}
+          </p>
+          {isPartial && (
+            <p className="mt-2 text-[11px] font-medium text-orange-600 dark:text-orange-400">
+              {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
+            </p>
+          )}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Flow label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
+            <Flow label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
           </div>
-          <p className="mt-0.5 text-[10px] text-violet-600/80 dark:text-violet-400/80">
-            {t('cycle.financingHint', { fallback: 'It covered the gap — and you pay it back' })}
-          </p>
-        </div>
+        </>
       )}
 
-      <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          <Landmark className="h-3.5 w-3.5" />
-          {t('cycle.bankMovement', { fallback: 'Change in your balance' })}
-          <InfoHint title={t('cycle.bankMovement', { fallback: 'Change in your balance' })}>
-            {t('cycle.bankHint', { fallback: 'The literal change in the bank between salary dates.' })}
-          </InfoHint>
-        </span>
-        <span className={cn('tabular-nums text-sm font-bold', bankMovement < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-          {signedCurrency(bankMovement, formatCurrency)}
-        </span>
-      </div>
-
-      {/* Provenance: the headline is only worth trusting if you can open it. */}
-      <CycleBreakdown
-        cycle={cycle}
-        formatCurrency={formatCurrency}
-        t={t}
-        language={language}
-        compactRowLimit={2}
-      />
-
-      {/* An estimate, kept visually separate from the settled figures above. */}
-      {projection && projection.upcoming.length > 0 && (
-        <div className="mt-3 rounded-xl border border-dashed border-gray-200 px-3 py-2 dark:border-gray-700">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-            {projection.projectedOperatingNet < operatingNet ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
-            {t('cycle.stillExpected', { fallback: 'Still expected before your next salary' })}
-          </p>
-          <ul className="mt-1.5 space-y-1">
-            {projection.upcoming.slice(0, 3).map((item) => (
-              <li key={`${item.kind}-${item.date}-${item.label}`} className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-gray-500 dark:text-gray-400">{formatCycleDay(item.date, language)} · {item.label}</span>
-                <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{signedCurrency(item.amount, formatCurrency)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-gray-100 pt-1.5 dark:border-gray-800">
-            <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">{t('cycle.projectedEnd', { fallback: 'Estimated end of cycle' })}</span>
-            <span className={cn('tabular-nums text-sm font-black', projection.projectedOperatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-              {signedCurrency(projection.projectedOperatingNet, formatCurrency)}
-            </span>
-          </div>
-        </div>
-      )}
-      </>}
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        {window.running && onOpenPrevious ? (
-          <button type="button" onClick={onOpenPrevious} className="text-[11px] font-bold text-gray-500 hover:text-indigo-600 dark:text-gray-400">
-            {t('cycle.previousClosed', { fallback: 'Previous closed cycle' })}
-          </button>
-        ) : totalOutstanding > 0 ? (
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">
-            {t('cycle.outstanding', { fallback: 'Open debt' })}: <span className="font-bold text-gray-600 dark:text-gray-300">{formatCurrency(totalOutstanding)}</span>
-          </span>
-        ) : <span />}
-        <button type="button" onClick={() => onOpenCycle?.()} className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">
-          {t('cycle.openDetails', { fallback: 'Full breakdown' })}<ArrowRight className="h-3 w-3 rtl:rotate-180" />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={openCycle}
+        className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl bg-gray-900 py-2.5 text-xs font-bold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+      >
+        {t('cycle.openDetails', { fallback: 'Full breakdown' })}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
+      </button>
     </section>
   );
 }

@@ -1,8 +1,13 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
 import FinancialCycleCard from '../FinancialCycleCard';
+
+// The card leads with the projected checking balance, so it reads the shared bank-balance hook.
+vi.mock('../../../../hooks/useBankBalance', () => ({
+  useBankBalance: () => ({ hasRealBalance: true, totalRealBalance: 12150 }),
+}));
 
 const formatCurrency = (value) => `ILS ${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const t = (_key, options) => options?.fallback || _key;
@@ -14,7 +19,6 @@ const CYCLE = {
   operatingNet: -5469.17,
   financing: { total: 0, count: 0 },
   bankMovement: 8017.17,
-  projection: { upcoming: [], upcomingTotal: -1171.86, estimatedSalary: 13327.75 },
   partials: [],
   forwardReset: {
     mode: 'automatic',
@@ -26,17 +30,12 @@ const CYCLE = {
     estimatedFixedOut: 1171.86,
     knownNetChange: -2823.79,
     estimatedNetChange: -5286.67,
-    stages: [
-      { kind: 'loan', date: '2026-07-26', amount: -1098.85, label: 'loan' },
-      { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'insurance' },
-      { kind: 'income', date: '2026-08-09', amount: 13327.75, label: 'salary', primary: true },
-      { kind: 'card', date: '2026-08-10', amount: -2823.79, estimatedAmount: -17442.56, label: 'max 2254' },
-    ],
+    stages: [],
   },
 };
 
 const renderCard = (props = {}) => render(
-  <FinancialCycleCard cycle={CYCLE} formatCurrency={formatCurrency} t={t} totalOutstanding={36828.21} {...props} />,
+  <FinancialCycleCard cycle={CYCLE} formatCurrency={formatCurrency} t={t} {...props} />,
 );
 
 describe('FinancialCycleCard', () => {
@@ -45,26 +44,28 @@ describe('FinancialCycleCard', () => {
     expect(screen.getByLabelText('Loading financial cycle')).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('leads with only what still has to happen before the reset', () => {
+  it('leads with the projected checking balance at cycle end', () => {
     renderCard();
-    expect(screen.getByText('Until the next reset')).toBeInTheDocument();
-    expect(screen.getByText('Reset effect')).toBeInTheDocument();
-    expect(screen.queryByText('Net — how you are living')).not.toBeInTheDocument();
-    expect(screen.queryByText('Change in your balance')).not.toBeInTheDocument();
+    expect(screen.getByText('Expected balance at cycle end')).toBeInTheDocument();
+    // 12,150 now + estimatedNetChange (−5,286.67) → ~6,863.33.
+    expect(screen.getByText('~ILS 6,863.33')).toBeInTheDocument();
+    // Today's balance is shown as the level it moves from, not re-computed.
+    expect(screen.getByText(/ILS 12,150\.00/)).toBeInTheDocument();
   });
 
-  it('shows the next salary, fixed debits, and card bill as separate stages', () => {
+  it('shows the money still moving as quiet in/out figures', () => {
     renderCard();
-    expect(screen.getByText('salary')).toBeInTheDocument();
-    expect(screen.getByText('loan')).toBeInTheDocument();
-    expect(screen.getByText('insurance')).toBeInTheDocument();
-    expect(screen.getByText('max 2254')).toBeInTheDocument();
-    expect(screen.getAllByText('−ILS 17,442.56').length).toBeGreaterThan(0);
+    expect(screen.getByText('Expected in')).toBeInTheDocument();
+    expect(screen.getByText('+ILS 13,327.75')).toBeInTheDocument();
+    expect(screen.getByText('Still to leave')).toBeInTheDocument();
+    expect(screen.getByText('−ILS 18,614.42')).toBeInTheDocument();
   });
 
-  it('links directly to the previous closed cycle', () => {
-    renderCard({ onOpenPrevious: () => {} });
-    expect(screen.getByRole('button', { name: 'Previous closed cycle' })).toBeInTheDocument();
+  it('opens the full breakdown on the cycle page', () => {
+    const onOpenCycle = vi.fn();
+    renderCard({ onOpenCycle });
+    fireEvent.click(screen.getByRole('button', { name: /Full breakdown/ }));
+    expect(onOpenCycle).toHaveBeenCalled();
   });
 
   it('warns when a linked salary is late', () => {

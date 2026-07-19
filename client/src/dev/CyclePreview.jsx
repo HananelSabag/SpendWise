@@ -40,6 +40,11 @@ const previewQueryClient = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 });
 previewQueryClient.setQueryData(['merchantWatches'], { rules: [], matches: [] });
+// Seed the shared bank-balance query so the dashboard card can render its projected end-of-cycle
+// balance here (the harness has no authenticated user, so the key ends with `undefined`).
+previewQueryClient.setQueryData(['bankSyncStats', undefined], [
+  { source: 'leumi', kind: 'bank', last_sync: '2026-07-19T10:00:00Z', accounts: [{ account_number: '797-43483', balance: 12150.32, enabled: true }] },
+]);
 
 /** Resolve a dotted key against the real translation tree and interpolate {{count}} etc. */
 function makeT(dict) {
@@ -97,7 +102,7 @@ const CYCLE = {
   forwardReset: {
     mode: 'automatic', status: 'open', completionDate: '2026-08-10',
     expectedIncoming: 13327.75, knownCardOut: 2823.79, estimatedCardOut: 15470.42,
-    estimatedFixedOut: 1171.86, knownNetChange: -2823.79, estimatedNetChange: 685.47,
+    estimatedFixedOut: 1171.86, knownNetChange: -2823.79, estimatedNetChange: -3314.53,
     stages: [
       { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה' },
       { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י' },
