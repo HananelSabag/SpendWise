@@ -7,11 +7,13 @@
 const db = require('../config/db');
 const engine = require('./cycleEngine');
 const { institutionKind } = require('../config/institutions');
+const logger = require('../utils/logger');
 
 const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 15_000;
 const MAX_CACHE_ENTRIES = 200;
+const CALCULATION_VERSION = 3;
 const resultCache = new Map();
 
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type, description, notes,
@@ -161,6 +163,28 @@ async function loadCreditClassifications(userId) {
   }));
 }
 
+async function loadTransactionOverrides(userId) {
+  try {
+    const { rows } = await db.query(
+      `SELECT transaction_id, classification, reason, updated_at
+         FROM cycle_transaction_overrides
+        WHERE user_id = $1
+        ORDER BY transaction_id`,
+      [userId],
+    );
+    return rows.map((row) => ({
+      transactionId: row.transaction_id,
+      classification: row.classification,
+      reason: row.reason,
+      updatedAt: row.updated_at,
+    }));
+  } catch (error) {
+    // A rolling deploy can briefly run new code before migration 32 is applied.
+    if (error.code === '42P01') return [];
+    throw error;
+  }
+}
+
 async function loadSalaryClassifications(userId) {
   const { rows } = await db.query(
     `SELECT transaction_id, classification
@@ -203,6 +227,49 @@ async function saveCreditClassification(userId, transactionId, klass, reason = n
   };
 }
 
+async function saveTransactionOverride(userId, transactionId, classification, reason = null) {
+  const { rows } = await db.query(
+    `INSERT INTO cycle_transaction_overrides (
+       transaction_id, user_id, classification, reason
+     )
+     SELECT t.id, t.user_id, $3, $4
+       FROM transactions t
+      WHERE t.id = $1
+        AND t.user_id = $2
+        AND t.deleted_at IS NULL
+        AND t.bank_source IS NOT NULL
+        AND (
+          $3 IN ('transfer', 'exclude')
+          OR ($3 IN ('salary', 'income', 'financing', 'refund') AND t.type = 'income')
+          OR ($3 = 'expense' AND t.type = 'expense')
+        )
+     ON CONFLICT (transaction_id) DO UPDATE SET
+       classification = EXCLUDED.classification,
+       reason = EXCLUDED.reason,
+       updated_at = NOW()
+     RETURNING transaction_id, classification, reason, updated_at`,
+    [transactionId, userId, classification, reason],
+  );
+  if (!rows.length) return null;
+  invalidateCycleCache(userId);
+  return {
+    transactionId: rows[0].transaction_id,
+    classification: rows[0].classification,
+    reason: rows[0].reason,
+    updatedAt: rows[0].updated_at,
+  };
+}
+
+async function deleteTransactionOverride(userId, transactionId) {
+  const { rowCount } = await db.query(
+    `DELETE FROM cycle_transaction_overrides
+      WHERE transaction_id = $1 AND user_id = $2`,
+    [transactionId, userId],
+  );
+  invalidateCycleCache(userId);
+  return rowCount > 0;
+}
+
 function effectiveSalaryAnchors(signatures) {
   const anchors = signatures.filter((signature) => signature.cycleAnchor !== false);
   return anchors.length ? anchors : signatures;
@@ -228,15 +295,22 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
   const today = isoDate(asOf);
   const startDate = engine.addMonths(today, -months);
   const endDate = engine.addMonths(today, 2);
-  const [data, signatures, storedClassifications, salaryClassifications] = await Promise.all([
+  const [data, signatures, storedClassifications, salaryClassifications, transactionOverrides] = await Promise.all([
     loadUserData(userId, { startDate, endDate }),
     loadSalarySignatures(userId),
     creditClassifications === undefined
       ? loadCreditClassifications(userId)
       : Promise.resolve(creditClassifications),
     loadSalaryClassifications(userId),
+    loadTransactionOverrides(userId),
   ]);
-  return { ...data, signatures, storedClassifications, salaryClassifications };
+  return {
+    ...data,
+    signatures,
+    storedClassifications,
+    salaryClassifications,
+    transactionOverrides,
+  };
 }
 
 function emptyCycleResult(status, signatures, loans = []) {
@@ -251,6 +325,98 @@ function emptyCycleResult(status, signatures, loans = []) {
     salaryTracking: null,
     salaryChange: null,
   };
+}
+
+function cycleNotificationIssues(result) {
+  const issues = [];
+  const current = result.current;
+  if (result.status === 'salary_not_linked' || result.status === 'salary_never_seen') {
+    issues.push({ key: 'salary-setup', kind: 'salary_setup' });
+  }
+  if (current?.needsReview?.length) {
+    issues.push({ key: `credit-review:${current.window.start}`, kind: 'credit_review' });
+  }
+  if (current?.unreconciledCardEvents?.length) {
+    issues.push({ key: `card-review:${current.window.start}`, kind: 'card_review' });
+  }
+  if (result.salaryChange?.suspected) {
+    issues.push({ key: 'salary-change', kind: 'salary_change' });
+  } else if (result.salaryTracking?.status === 'late') {
+    issues.push({ key: 'salary-late', kind: 'salary_late' });
+  }
+  return issues;
+}
+
+const CYCLE_NOTIFICATION_COPY = {
+  en: {
+    salary_setup: ['Complete your financial cycle', 'Choose the salary that anchors your cycle.'],
+    credit_review: ['A transaction needs your decision', 'The cycle engine found money in that it cannot classify with certainty.'],
+    card_review: ['A card charge needs review', 'A completed card charge could not be linked to a bank movement.'],
+    salary_change: ['Did your salary change?', 'A salary is late, but a similar new credit arrived. Confirm it in Control.'],
+    salary_late: ['Salary has not been detected', 'Open Control to confirm the salary setup or choose a new salary.'],
+  },
+  he: {
+    salary_setup: ['השלמת הגדרת המחזור הפיננסי', 'צריך לבחור את המשכורת שמגדירה את תחילת המחזור.'],
+    credit_review: ['עסקה מחכה להחלטה שלך', 'המנוע מצא כסף שנכנס ולא יכול לסווג אותו בוודאות.'],
+    card_review: ['חיוב כרטיס דורש בדיקה', 'חיוב שהושלם לא קושר לתנועת בנק מתאימה.'],
+    salary_change: ['המשכורת השתנתה?', 'המשכורת הקבועה לא זוהתה, אבל נכנסה העברה דומה. צריך לאשר אותה ב-Control.'],
+    salary_late: ['המשכורת עדיין לא זוהתה', 'אפשר להיכנס ל-Control ולאשר את ההגדרה או לבחור משכורת חדשה.'],
+  },
+};
+
+async function syncCycleNotifications(userId, result) {
+  const issues = cycleNotificationIssues(result);
+  try {
+    const { rows } = await db.query(
+      'SELECT language_preference FROM users WHERE id = $1',
+      [userId],
+    );
+    const language = rows[0]?.language_preference === 'he' ? 'he' : 'en';
+    const activeKeys = issues.map((issue) => issue.key);
+
+    await db.query(
+      `UPDATE notifications
+          SET is_read = true
+        WHERE user_id = $1
+          AND type = 'cycle_action_required'
+          AND is_read = false
+          AND NOT ((data ->> 'issueKey') = ANY($2::text[]))`,
+      [userId, activeKeys],
+    );
+
+    for (const issue of issues) {
+      const [title, body] = CYCLE_NOTIFICATION_COPY[language][issue.kind];
+      await db.query(
+        `INSERT INTO notifications (user_id, type, title, body, data)
+         SELECT $1, 'cycle_action_required', $2, $3, $4::jsonb
+          WHERE NOT EXISTS (
+            SELECT 1 FROM notifications
+             WHERE user_id = $1
+               AND type = 'cycle_action_required'
+               AND is_read = false
+               AND data ->> 'issueKey' = $5
+          )
+         ON CONFLICT DO NOTHING`,
+        [
+          userId,
+          title,
+          body,
+          JSON.stringify({
+            issueKey: issue.key,
+            action: issue.kind,
+            link: '/financial-cycle?tab=control',
+          }),
+          issue.key,
+        ],
+      );
+    }
+  } catch (error) {
+    // Notification delivery must never make the financial-cycle endpoint unavailable.
+    logger.warn('Could not sync financial-cycle action notifications', {
+      userId,
+      error: error.message,
+    });
+  }
 }
 
 async function getFinancialCycles(userId, {
@@ -269,6 +435,7 @@ async function getFinancialCycles(userId, {
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
+    transactionOverrides,
   } = await loadCycleInputs(userId, {
     asOf,
     months: (boundedYears * 12) + 2,
@@ -281,21 +448,32 @@ async function getFinancialCycles(userId, {
     cards,
     asOf,
     creditClassifications: storedClassifications,
+    transactionOverrides,
   });
-  if (!signatures.length) return emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+  if (!signatures.length) {
+    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+    await syncCycleNotifications(userId, empty);
+    return empty;
+  }
 
   const { events, windows } = findSalaryWindows(
     bankTxns, signatures, asOf, salaryClassifications,
   );
-  if (!events.length) return emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+  if (!events.length) {
+    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+    await syncCycleNotifications(userId, empty);
+    return empty;
+  }
   const cycles = windows.map((window) => engine.buildCycle({
     bankTxns,
     cards,
     window,
     asOf,
     salarySignature: window.salary.signature,
+    salarySignatures: signatures,
     creditClassifications: storedClassifications,
     salaryClassifications,
+    transactionOverrides,
     preparedData: prepared,
   }));
   const salaryTrackingTxns = bankTxns.filter((txn) => {
@@ -321,7 +499,10 @@ async function getFinancialCycles(userId, {
     }),
   };
 
-  await persistClosedCycleAggregates(userId, cycles);
+  await Promise.all([
+    persistClosedCycleAggregates(userId, cycles),
+    syncCycleNotifications(userId, result),
+  ]);
   return (!skipCache && creditClassifications === undefined)
     ? cacheSet(cacheKey, result)
     : result;
@@ -337,6 +518,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
+    transactionOverrides,
   } = await loadCycleInputs(userId, {
     asOf,
     months: CONTEXT_MONTHS,
@@ -348,13 +530,22 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     cards,
     asOf,
     creditClassifications: storedClassifications,
+    transactionOverrides,
   });
-  if (!signatures.length) return emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+  if (!signatures.length) {
+    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans);
+    await syncCycleNotifications(userId, empty);
+    return empty;
+  }
 
   const { events, windows } = findSalaryWindows(
     bankTxns, signatures, asOf, salaryClassifications,
   );
-  if (!events.length) return emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+  if (!events.length) {
+    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans);
+    await syncCycleNotifications(userId, empty);
+    return empty;
+  }
   const window = windows.find((candidate) => candidate.running) || windows[windows.length - 1];
   const current = engine.buildCycle({
     bankTxns,
@@ -362,8 +553,10 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     window,
     asOf,
     salarySignature: window.salary.signature,
+    salarySignatures: signatures,
     creditClassifications: storedClassifications,
     salaryClassifications,
+    transactionOverrides,
     preparedData: prepared,
   });
   const salaryTrackingTxns = bankTxns.filter((txn) => {
@@ -383,6 +576,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     salaryTracking: engine.trackSalary(salaryTrackingTxns, window.salary.signature, { asOf }),
     salaryChange: null,
   };
+  await syncCycleNotifications(userId, result);
   return skipCache ? result : cacheSet(cacheKey, result);
 }
 
@@ -390,11 +584,18 @@ function cycleCategoryTotals(cycle) {
   const totals = new Map();
   const add = (txn) => {
     const amount = Number(txn && txn.amount);
-    if (!(amount < 0)) return;
+    if (!Number.isFinite(amount) || amount === 0) return;
     const category = String(txn.rawCategory || 'other').trim() || 'other';
-    totals.set(category, Math.round(((totals.get(category) || 0) + Math.abs(amount)) * 100) / 100);
+    // Purchases are negative movements (positive category spend); refunds are positive
+    // movements and reduce the same category instead of disappearing from yearly trends.
+    totals.set(category, Math.round(((totals.get(category) || 0) - amount) * 100) / 100);
   };
-  cycle.expenses.cards.events.forEach((event) => (event.txns || []).forEach(add));
+  cycle.expenses.cards.events.forEach((event) => {
+    const excluded = new Set((event.excludedTransactionIds || []).map(Number));
+    (event.txns || []).forEach((txn) => {
+      if (!excluded.has(Number(txn.id))) add(txn);
+    });
+  });
   cycle.expenses.direct.items.forEach((item) => add(item.txn));
   return Object.fromEntries([...totals.entries()].sort((a, b) => b[1] - a[1]));
 }
@@ -429,7 +630,7 @@ async function persistClosedCycleAggregates(userId, cycles) {
               (item->>'income')::numeric, (item->>'expenses')::numeric,
               (item->>'operatingNet')::numeric, (item->>'financing')::numeric,
               (item->>'bankMovement')::numeric, (item->>'timingAdjustment')::numeric,
-              COALESCE(item->'categories', '{}'::jsonb), 2, now()
+              COALESCE(item->'categories', '{}'::jsonb), $3, now()
          FROM jsonb_array_elements($2::jsonb) item
        ON CONFLICT (user_id, cycle_start) DO UPDATE SET
          cycle_end = EXCLUDED.cycle_end,
@@ -442,7 +643,7 @@ async function persistClosedCycleAggregates(userId, cycles) {
          category_totals = EXCLUDED.category_totals,
          calculation_version = EXCLUDED.calculation_version,
          calculated_at = now()`,
-      [userId, JSON.stringify(payload)],
+      [userId, JSON.stringify(payload), CALCULATION_VERSION],
     );
   } catch (error) {
     if (error.code !== '42P01') throw error;
@@ -496,11 +697,11 @@ async function loadStoredYear(userId, year) {
               financing, bank_movement, timing_adjustment, category_totals
          FROM financial_cycle_aggregates
         WHERE user_id = $1
-          AND calculation_version = 2
+          AND calculation_version = $3
           AND cycle_start >= make_date($2, 1, 1)
           AND cycle_start < make_date($2 + 1, 1, 1)
         ORDER BY cycle_start`,
-      [userId, year],
+      [userId, year, CALCULATION_VERSION],
     );
     return rows;
   } catch (error) {
@@ -565,7 +766,10 @@ module.exports = {
   loadUserData,
   loadSalarySignatures,
   loadCreditClassifications,
+  loadTransactionOverrides,
   saveCreditClassification,
+  saveTransactionOverride,
+  deleteTransactionOverride,
   getFinancialCycles,
   getCurrentFinancialCycle,
   getYearReview,

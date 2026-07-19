@@ -23,6 +23,8 @@ const {
   getYearReview,
   getAvailableCycleYears,
   saveCreditClassification,
+  saveTransactionOverride,
+  deleteTransactionOverride,
 } = require('../services/cycleService');
 
 /**
@@ -48,10 +50,12 @@ function slimTxn(txn) {
 }
 
 function slimEvent(event) {
+  const excluded = new Set((event.excludedTransactionIds || []).map(Number));
+  const includedTxns = (event.txns || []).filter((txn) => !excluded.has(Number(txn.id)));
   return {
     chargeDate: event.chargeDate,
     total: event.total,
-    count: event.count,
+    count: includedTxns.length,
     class: event.class,
     source: event.source,
     accountNumber: event.accountNumber,
@@ -61,13 +65,36 @@ function slimEvent(event) {
     // charges it next month, so the UI labels it "bills on <date>" rather than a past debit.
     accruing: Boolean(event.accruing),
     // The provenance of this exact charge, newest purchase first.
-    txns: (event.txns || [])
+    txns: includedTxns
       .map(slimTxn)
       .sort((a, b) => String(b.date).localeCompare(String(a.date))),
   };
 }
 
-function slimCycle(cycle) {
+function slimDecision(decision) {
+  return {
+    transactionId: decision.transactionId,
+    date: decision.date,
+    processedDate: decision.processedDate,
+    description: decision.description,
+    amount: decision.amount,
+    source: decision.source,
+    accountNumber: decision.accountNumber,
+    classification: decision.classification,
+    included: decision.included,
+    automatic: decision.automatic,
+    override: decision.override,
+    editable: decision.editable,
+    needsAction: decision.needsAction,
+    impactLine: decision.impactLine,
+    impactAmount: decision.impactAmount,
+    bankEffect: decision.bankEffect,
+    reason: decision.reason,
+    linkedTo: decision.linkedTo,
+  };
+}
+
+function slimCycle(cycle, { includeControl = false } = {}) {
   const forecast = cycle.nextCardForecast
     ? {
         ...cycle.nextCardForecast,
@@ -109,6 +136,7 @@ function slimCycle(cycle) {
       directItems: cycle.expenses.direct.items.map((item) => ({
         ...slimTxn(item.txn),
         fixedCharge: item.fixedCharge ? item.fixedCharge.label : null,
+        refund: Boolean(item.refund),
       })),
     },
     operatingNet: cycle.operatingNet,
@@ -132,6 +160,7 @@ function slimCycle(cycle) {
     partials: cycle.partials.map(slimEvent),
     unreconciledCardEvents: cycle.unreconciledCardEvents.map(slimEvent),
     cards: cycle.cards,
+    ...(includeControl ? { decisions: (cycle.decisions || []).map(slimDecision) } : {}),
   };
 }
 
@@ -143,7 +172,7 @@ router.get('/', auth, async (req, res, next) => {
       success: true,
       data: {
         status: result.status,
-        cycles: result.cycles.map(slimCycle),
+        cycles: result.cycles.map((cycle) => slimCycle(cycle, { includeControl: true })),
         loans: result.loans,
         totalOutstanding: result.totalOutstanding || 0,
         recurring: result.recurring,
@@ -157,6 +186,62 @@ router.get('/', auth, async (req, res, next) => {
   } catch (error) {
     logger.error('GET /cycles failed', { userId: req.user && req.user.id, error: error.message });
     next(error);
+  }
+});
+
+const TRANSACTION_CLASSIFICATIONS = new Set([
+  'salary', 'income', 'financing', 'refund', 'expense', 'transfer', 'exclude',
+]);
+
+/** Override one engine decision without mutating the immutable bank transaction. */
+router.put('/transactions/:transactionId/classification', auth, async (req, res, next) => {
+  const transactionId = Number.parseInt(req.params.transactionId, 10);
+  const classification = req.body && req.body.classification;
+  const reason = req.body && req.body.reason;
+  if (!Number.isInteger(transactionId) || transactionId <= 0) {
+    return res.status(400).json({ success: false, error: 'Invalid transaction id' });
+  }
+  if (!TRANSACTION_CLASSIFICATIONS.has(classification)) {
+    return res.status(400).json({ success: false, error: 'Invalid cycle classification' });
+  }
+  if (reason !== undefined && reason !== null && (typeof reason !== 'string' || reason.length > 160)) {
+    return res.status(400).json({ success: false, error: 'reason must be a string of at most 160 characters' });
+  }
+  try {
+    const saved = await saveTransactionOverride(
+      req.user.id,
+      transactionId,
+      classification,
+      reason || 'user_control',
+    );
+    if (!saved) return res.status(404).json({ success: false, error: 'Transaction not found' });
+    return res.json({ success: true, data: saved });
+  } catch (error) {
+    logger.error('PUT /cycles/transactions/:transactionId/classification failed', {
+      userId: req.user && req.user.id,
+      transactionId,
+      error: error.message,
+    });
+    return next(error);
+  }
+});
+
+/** Return a decision to automatic engine control. */
+router.delete('/transactions/:transactionId/classification', auth, async (req, res, next) => {
+  const transactionId = Number.parseInt(req.params.transactionId, 10);
+  if (!Number.isInteger(transactionId) || transactionId <= 0) {
+    return res.status(400).json({ success: false, error: 'Invalid transaction id' });
+  }
+  try {
+    await deleteTransactionOverride(req.user.id, transactionId);
+    return res.json({ success: true });
+  } catch (error) {
+    logger.error('DELETE /cycles/transactions/:transactionId/classification failed', {
+      userId: req.user && req.user.id,
+      transactionId,
+      error: error.message,
+    });
+    return next(error);
   }
 });
 

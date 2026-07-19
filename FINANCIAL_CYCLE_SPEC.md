@@ -93,6 +93,11 @@ bankMovement = operatingNet + financing + timingAdjustment   ← real account de
 ```
 - **Money in is income** — Bit/Paybox/all digital wallets are ordinary transactions (in = income,
   out = expense). No special logic; the user remembers a given Bit was a refund.
+- **A card refund is negative spending, not a new income stream.** Its signed positive card
+  movement reduces `expenses` in the cycle that owns the refund. The matching bank row is the
+  same money and is suppressed from operating totals, while remaining visible in Control as the
+  linked bank copy. Never apply `abs()` to the net card movement: a refund-only cycle must show
+  negative spending / a positive operating effect, not turn the refund into an expense.
 - **Borrowed money is never income.** Counting it turns a −14,129 month into a comfortable +1,870
   lie; hiding it leaves a −14,129 the user cannot explain. Proven on real data: June income 10,330 /
   expenses 24,459 ⇒ operating **−14,129**, financing **+16,000** (a loan) ⇒ the account actually rose
@@ -305,6 +310,13 @@ Three tracked streams, each built on the same "pick a txn from the filtered list
    cycle ("loan ₪1,046 on the 11th, before your next salary").
 
 ### User controls (the "control over what he needs")
+- The **Control** tab is the transaction-level audit log for the selected cycle: automatic/manual
+  classification, the exact rule/reason, whether it was counted, the line and amount it changed,
+  linked card/bank evidence, and the literal bank effect. Opening salaries, pending rows, partial
+  history and suppressed bank copies remain visible even when they are deliberately not counted.
+- User corrections live in `cycle_transaction_overrides`; raw bank/card transactions stay
+  immutable. Allowed corrections are salary, income, financing, refund, expense, own transfer and
+  exclude. Removing an override returns the row to the engine's automatic decision.
 - Link/relink **salary**; edit its expected day.
 - Per card: **confirm/edit statement day**, link a charge txn, toggle include/exclude.
 - **Mark a txn as a fixed charge** (loan/standing order) → recurring projection; and mark loan

@@ -1,7 +1,7 @@
 /**
  * The financial cycle: one salary to the next.
  *
- * Four tabs rather than one long scroll — there are too many numbers, cards and accounts here
+ * Three tabs rather than one long scroll — there are too many numbers, cards and accounts here
  * for a single column to stay readable. The page states figures and short labels only; every
  * explanation hides behind an InfoHint until it is asked for.
  *
@@ -21,7 +21,7 @@ import { LiquidTabs, PageSkeleton } from '../components/ui';
 import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
 import CycleCardsTab from '../components/features/insights/CycleCardsTab';
 import CycleDebtsTab from '../components/features/insights/CycleDebtsTab';
-import CycleTrackingTab from '../components/features/insights/CycleTrackingTab';
+import CycleControlTab from '../components/features/insights/CycleControlTab';
 import CycleBalanceStrip from '../components/features/insights/CycleBalanceStrip';
 import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandidatePrompt';
 
@@ -68,8 +68,8 @@ export default function InsightsPage() {
   const [cycleIndex, setCycleIndex] = useState(null);
   const [useCardEstimate, setUseCardEstimate] = useState(savedCardEstimatePreference);
   const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,
-    needsSalaryLink, hasNoBankData, isLoading, refetch, classifyCredit,
-    isClassifying, classifyingTransactionId } = useCycles();
+    needsSalaryLink, hasNoBankData, isLoading, refetch, classifyTransaction,
+    resetTransactionClassification, isUpdatingDecision, updatingTransactionId } = useCycles();
 
   const cycle = useMemo(() => {
     if (!cycles?.length) return null;
@@ -77,13 +77,17 @@ export default function InsightsPage() {
     return cycles[cycleIndex] || null;
   }, [cycles, cycleIndex]);
 
-  const classify = useCallback((item, klass) => {
-    classifyCredit({
+  const changeDecision = useCallback((item, classification) => {
+    classifyTransaction({
       transactionId: item.transactionId,
-      class: klass,
-      reason: item.reason,
+      classification,
+      reason: `control_override:${item.reason}`,
     });
-  }, [classifyCredit]);
+  }, [classifyTransaction]);
+
+  const resetDecision = useCallback((item) => {
+    resetTransactionClassification({ transactionId: item.transactionId });
+  }, [resetTransactionClassification]);
 
   const changeCardEstimate = useCallback((enabled) => {
     setUseCardEstimate(enabled);
@@ -223,19 +227,21 @@ export default function InsightsPage() {
             {/* Control — the only tab that asks something of you: salary, job change, the credit
                 questions, and merchant watch, each its own clear section. */}
             {tab === 'control' && (
-              <CycleTrackingTab
+              <CycleControlTab
+                cycle={cycle}
                 salaryTracking={salaryTracking}
                 salaryChange={salaryChange}
                 needsReview={cycle.needsReview}
                 formatCurrency={formatCurrency}
                 t={t}
-                onClassify={classify}
-                isClassifying={isClassifying}
-                classifyingTransactionId={classifyingTransactionId}
-                 signatures={signatures}
-                 onSalarySelected={refetch}
-                 language={currentLanguage}
-               />
+                onDecisionChange={changeDecision}
+                onDecisionReset={resetDecision}
+                isUpdatingDecision={isUpdatingDecision}
+                updatingTransactionId={updatingTransactionId}
+                signatures={signatures}
+                onSalarySelected={refetch}
+                language={currentLanguage}
+              />
             )}
           </>
         )}

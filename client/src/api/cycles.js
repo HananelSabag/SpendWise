@@ -25,9 +25,13 @@ export const cyclesApi = {
   /** Durable yearly review, with a live fallback for the running year. */
   yearly: (year) => api.get(`/cycles/yearly/${year}`).then((r) => r.data),
 
-  /** Persist the user's answer about one ambiguous credit. */
-  classifyCredit: (transactionId, classification) =>
-    api.put(`/cycles/credits/${transactionId}/classification`, classification).then((r) => r.data),
+  /** Override one automatic cycle decision without changing the bank transaction itself. */
+  classifyTransaction: (transactionId, classification) =>
+    api.put(`/cycles/transactions/${transactionId}/classification`, classification).then((r) => r.data),
+
+  /** Remove the override and let the engine decide again. */
+  resetTransactionClassification: (transactionId) =>
+    api.delete(`/cycles/transactions/${transactionId}/classification`).then((r) => r.data),
 };
 
 export default cyclesApi;

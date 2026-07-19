@@ -4,7 +4,10 @@ const db = require('../config/db');
 const engine = require('../services/cycleEngine');
 const {
   loadCreditClassifications,
+  loadTransactionOverrides,
   saveCreditClassification,
+  saveTransactionOverride,
+  deleteTransactionOverride,
 } = require('../services/cycleService');
 
 describe('credit classifications', () => {
@@ -44,6 +47,41 @@ describe('credit classifications', () => {
   test('returns null when the transaction is not an owned eligible credit', async () => {
     db.query.mockResolvedValueOnce({ rows: [] });
     await expect(saveCreditClassification(7, 99, 'financing')).resolves.toBeNull();
+  });
+
+  test('loads and saves auditable cycle overrides without mutating the transaction', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          transaction_id: 42,
+          classification: 'refund',
+          reason: 'user_control',
+          updated_at: '2026-07-19T08:00:00.000Z',
+        }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{
+          transaction_id: 42,
+          classification: 'refund',
+          reason: 'user_control',
+          updated_at: '2026-07-19T08:00:00.000Z',
+        }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 });
+
+    await expect(loadTransactionOverrides(7)).resolves.toEqual([{
+      transactionId: 42,
+      classification: 'refund',
+      reason: 'user_control',
+      updatedAt: '2026-07-19T08:00:00.000Z',
+    }]);
+    await expect(saveTransactionOverride(7, 42, 'refund', 'user_control')).resolves.toMatchObject({
+      transactionId: 42,
+      classification: 'refund',
+    });
+    await expect(deleteTransactionOverride(7, 42)).resolves.toBe(true);
+    expect(db.query.mock.calls[1][0]).toContain('cycle_transaction_overrides');
+    expect(db.query.mock.calls[1][0]).not.toContain('UPDATE transactions');
   });
 
   test('the engine applies the answer to the exact transaction, not every reused identifier', () => {

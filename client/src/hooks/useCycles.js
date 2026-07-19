@@ -32,7 +32,7 @@ export function useCycles() {
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'list', 2],
+    queryKey: ['cycles', user?.id, 'list', 3],
     queryFn: () => cyclesApi.list({ years: 2 }),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
@@ -42,10 +42,27 @@ export function useCycles() {
     refetchOnMount: true,
   });
 
-  const classificationMutation = useMutation({
-    mutationFn: ({ transactionId, class: klass, reason }) =>
-      cyclesApi.classifyCredit(transactionId, { class: klass, reason }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
+  const transactionClassificationMutation = useMutation({
+    mutationFn: ({ transactionId, classification, reason }) => cyclesApi.classifyTransaction(
+      transactionId,
+      { classification, reason },
+    ),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
+      ]);
+    },
+  });
+
+  const resetClassificationMutation = useMutation({
+    mutationFn: ({ transactionId }) => cyclesApi.resetTransactionClassification(transactionId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
+        queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
+      ]);
+    },
   });
 
   const data = query.data?.data || EMPTY;
@@ -64,12 +81,17 @@ export function useCycles() {
     isError: query.isError,
     error: query.error,
     refetch: query.refetch,
-    classifyCredit: classificationMutation.mutate,
-    isClassifying: classificationMutation.isPending,
-    classifyingTransactionId: classificationMutation.variables?.transactionId || null,
+    classifyTransaction: transactionClassificationMutation.mutate,
+    resetTransactionClassification: resetClassificationMutation.mutate,
+    isUpdatingDecision: transactionClassificationMutation.isPending || resetClassificationMutation.isPending,
+    updatingTransactionId: transactionClassificationMutation.variables?.transactionId
+      || resetClassificationMutation.variables?.transactionId
+      || null,
   }), [data, query.isLoading, query.isError, query.error, query.refetch,
-    classificationMutation.mutate, classificationMutation.isPending,
-    classificationMutation.variables?.transactionId]);
+    transactionClassificationMutation.mutate, transactionClassificationMutation.isPending,
+    transactionClassificationMutation.variables?.transactionId,
+    resetClassificationMutation.mutate, resetClassificationMutation.isPending,
+    resetClassificationMutation.variables?.transactionId]);
 }
 
 export function useCurrentCycle() {

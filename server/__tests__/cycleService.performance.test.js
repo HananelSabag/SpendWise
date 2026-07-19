@@ -30,6 +30,7 @@ describe('financial-cycle orchestration guardrails', () => {
   it('keeps exact results briefly on the server and persists closed complete cycles', () => {
     expect(service).toContain('CACHE_TTL_MS = 15_000');
     expect(service).toContain('financial_cycle_aggregates');
+    expect(service).toContain('CALCULATION_VERSION = 3');
     expect(service).toContain('!cycle.window.running && !(cycle.partials || []).length');
   });
 });

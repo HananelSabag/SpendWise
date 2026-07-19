@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, CheckCheck } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/helpers';
 import { useNotifications } from '../../hooks/useNotifications';
 import BottomSheet from '../common/BottomSheet';
@@ -15,6 +16,7 @@ import BottomSheet from '../common/BottomSheet';
  */
 const NotificationBell = () => {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const { notifications, markAllRead, markRead } = useNotifications();
 
   // Everything shopping-related is handled inside the shopping mini-app.
@@ -25,6 +27,15 @@ const NotificationBell = () => {
     setOpen(false);
     if (unread > 0) markAllRead();
   }, [unread, markAllRead]);
+
+  const handleNotification = useCallback((notification) => {
+    if (!notification.is_read) markRead(notification.id);
+    const link = notification.data?.link;
+    if (typeof link === 'string' && link.startsWith('/')) {
+      setOpen(false);
+      navigate(link);
+    }
+  }, [markRead, navigate]);
 
   return (
     <>
@@ -63,11 +74,12 @@ const NotificationBell = () => {
           {items.length > 0 && (
             <div className="flex flex-col gap-1.5">
               {items.map((n) => (
-                <div
+                <button
+                  type="button"
                   key={n.id}
-                  onClick={() => !n.is_read && markRead(n.id)}
+                  onClick={() => handleNotification(n)}
                   className={cn(
-                    'flex items-start gap-3 px-3 py-3 rounded-2xl cursor-pointer transition-colors',
+                    'flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-start transition-colors',
                     n.is_read
                       ? 'bg-gray-50 dark:bg-gray-800/40'
                       : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm'
@@ -83,7 +95,7 @@ const NotificationBell = () => {
                   {!n.is_read && (
                     <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
                   )}
-                </div>
+                </button>
               ))}
             </div>
           )}

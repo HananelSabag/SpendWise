@@ -373,6 +373,66 @@ export default {
     answeredOnce: "Answer once — we remember it from now on",
     savingAnswer: "Saving your answer...",
     nothingToReview: "Nothing needs your attention",
+    control: {
+      title: "Engine decisions",
+      subtitle: "Every transaction, the rule that classified it, and its exact effect on this cycle.",
+      automatic: "Automatic",
+      manual: "Your override",
+      counted: "Counted",
+      notCounted: "Not counted",
+      linkedTo: "Linked to",
+      changeClass: "Change classification",
+      reset: "Back to automatic",
+      resetRule: "This cycle closes when the next salary arrives around {{date}}.",
+      noDecisions: "No transactions in this filter",
+      summary: {
+        automatic: "Automatic",
+        included: "Counted",
+        excluded: "Set aside",
+        attention: "Need action"
+      },
+      filter: {
+        all: "All",
+        attention: "Needs action",
+        salary: "Salary",
+        income: "Money in",
+        charges: "Charges",
+        excluded: "Not counted"
+      },
+      class: {
+        salary: "Salary",
+        income: "Income",
+        financing: "Financing / loan",
+        refund: "Refund",
+        expense: "Expense",
+        transfer: "Own transfer",
+        exclude: "Exclude",
+        card_settlement: "Bank copy of card charge",
+        pending: "Pending"
+      },
+      line: {
+        income: "income",
+        expenses: "expenses",
+        financing: "financing",
+        none: "no operating effect"
+      },
+      reason: {
+        auto_card_statement: "Included in the card statement assigned to this salary cycle.",
+        auto_card_immediate: "This card movement reached the bank directly on its processed date.",
+        auto_card_accruing: "The purchase belongs to this cycle; the card statement is still building.",
+        partial_history: "Set aside because the synced history does not contain the full statement.",
+        bank_match_missing: "Not counted until a matching bank movement confirms this completed card charge.",
+        bank_copy_suppressed: "Linked to the itemized card charge and suppressed here to prevent double counting.",
+        opening_salary_previous_cycle: "This salary opened the bank window but economically closes the previous work cycle.",
+        closing_salary: "This salary closes the selected cycle and is counted once here.",
+        linked_secondary_salary: "Matched another salary identity linked by the user, without changing the main cycle anchor.",
+        money_in: "A settled bank credit inside the cycle; money in is income unless it is financing or overridden.",
+        detected_financing: "Detected as borrowing from linked repayment evidence or a confirmed answer.",
+        direct_expense: "A settled debit that moved directly through the bank inside this cycle.",
+        pending: "Still pending, so it is visible but excluded from settled totals.",
+        user_override: "Using the classification you selected in Control."
+      }
+    },
     // Balance — the level in the account, shown next to the cycle's flow.
     balance: "Account balance",
     balanceHint: "What is in your checking account right now, across your connected banks. It is today's balance — it does not change with the cycle you are viewing.",

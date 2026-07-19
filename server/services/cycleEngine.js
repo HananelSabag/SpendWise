@@ -768,6 +768,7 @@ function prepareCycleData({
   cards = [],
   asOf = new Date(),
   creditClassifications = [],
+  transactionOverrides = [],
 } = {}) {
   const cardViews = cards
     .filter((card) => (card.txns || []).length)
@@ -789,6 +790,10 @@ function prepareCycleData({
     (txn) => String(txn.identifier) === loan.identifier && Number(txn.amount) > 0,
   )));
   const classOf = (txn) => {
+    const override = transactionOverrides.find((item) => (
+      Number(item.transactionId) === Number(txn.id)
+    ));
+    if (override) return override.classification;
     const hit = creditClassifications.find((classification) => (
       (classification.transactionId !== undefined
         && Number(classification.transactionId) === Number(txn.id))
@@ -883,9 +888,11 @@ function buildCycle({
   window,
   asOf = new Date(),
   salarySignature = null,
+  salarySignatures = [],
   fixedCharges = [],
   creditClassifications = [],
   salaryClassifications = [],
+  transactionOverrides = [],
   preparedData = null,
 } = {}) {
   const prepared = preparedData || prepareCycleData({
@@ -893,11 +900,13 @@ function buildCycle({
     cards,
     asOf,
     creditClassifications,
+    transactionOverrides,
   });
   const {
     cardViews,
     allEvents,
     settledEvents,
+    matched,
     unmatchedEvents,
     suppressed,
     reconciledEvents,
@@ -920,19 +929,37 @@ function buildCycle({
   const within = (t) => inWindow(hitDate(t), window);
   const cardEventWithin = (event) => inCardAttributionWindow(event, window);
 
-  const salaryTarget = salarySignature && normalizeDescription(salarySignature.normalizedDescription);
   const salaryClassificationById = new Map(salaryClassifications.map((item) => [
     Number(item.transactionId), item.classification,
   ]));
-  const salaryAccount = salarySignature?.accountNumber == null
-    ? null
-    : String(salarySignature.accountNumber);
-  const isSalary = (t) => Boolean(salaryTarget)
-    && (!salaryClassificationById.has(Number(t.id))
-      || salaryClassificationById.get(Number(t.id)) === 'salary')
-    && (!salarySignature.bankSource || t.source === salarySignature.bankSource)
-    && (salaryAccount === null || String(t.accountNumber) === salaryAccount)
-    && normalizeDescription(t.description).includes(salaryTarget);
+  const overrideById = new Map(transactionOverrides.map((item) => [
+    Number(item.transactionId), item,
+  ]));
+  const overrideFor = (txn) => overrideById.get(Number(txn.id)) || null;
+  const overrideClass = (txn) => overrideFor(txn)?.classification || null;
+  const salaryIdentities = [...salarySignatures];
+  if (salarySignature && !salaryIdentities.some((item) => item.id === salarySignature.id)) {
+    salaryIdentities.push(salarySignature);
+  }
+  const matchesSignature = (txn, signature) => {
+    const target = normalizeDescription(signature.normalizedDescription);
+    if (!target) return false;
+    const account = signature.accountNumber == null ? null : String(signature.accountNumber);
+    return (!signature.bankSource || txn.source === signature.bankSource)
+      && (account === null || String(txn.accountNumber) === account)
+      && normalizeDescription(txn.description).includes(target);
+  };
+  const matchesSalaryIdentity = (txn) => salaryIdentities.some((signature) => (
+    matchesSignature(txn, signature)
+  ));
+  const isSalary = (txn) => {
+    const explicit = overrideClass(txn);
+    if (explicit) return explicit === 'salary';
+    const reviewed = salaryClassificationById.get(Number(txn.id));
+    if (reviewed) return reviewed === 'salary';
+    return matchesSalaryIdentity(txn);
+  };
+  const isOperatingExcluded = (txn) => ['transfer', 'exclude'].includes(overrideClass(txn));
   const fixedFor = (t) => fixedCharges.find(
     (f) => normalizeDescription(t.description).includes(normalizeDescription(f.normalizedDescription)),
   );
@@ -967,7 +994,23 @@ function buildCycle({
           && ilDate(e.chargeDate) >= window.end && cardEventWithin(e))
         .map((e) => ({ ...e, accruing: true }))
     : [];
-  const cardCharges = [...settledCardCharges, ...accruingCardCharges];
+  const rawCardCharges = [...settledCardCharges, ...accruingCardCharges];
+  const attributedCardTxns = rawCardCharges.flatMap((event) => event.txns || []);
+  const cardOperatingTxn = (txn) => ![
+    'salary', 'income', 'financing', 'transfer', 'exclude',
+  ].includes(overrideClass(txn));
+  const cardCharges = rawCardCharges.map((event) => {
+    const includedTxns = (event.txns || []).filter(cardOperatingTxn);
+    return {
+      ...event,
+      originalTotal: event.total,
+      total: sumAmounts(includedTxns),
+      txns: event.txns || [],
+      excludedTransactionIds: (event.txns || [])
+        .filter((txn) => !cardOperatingTxn(txn))
+        .map((txn) => txn.id),
+    };
+  });
   const credits = direct.filter((t) => Number(t.amount) > 0 && within(t));
   const debits = direct.filter((t) => Number(t.amount) < 0 && within(t));
 
@@ -977,23 +1020,65 @@ function buildCycle({
   // is the exact bug that made the 09/07 salary look like July income. A closed window receives
   // its next salary instead; a running window has no settled salary yet and shows the expected
   // payment only inside the explicitly estimated projection below.
-  const salary = window.closingSalary?.txn && !isPending(window.closingSalary.txn)
-    ? [window.closingSalary.txn]
-    : [];
-  const otherIncome = credits.filter((t) => !isSalary(t) && !financingTxns.has(t));
+  const openingSalaryTxn = window.salary?.txn || bankTxns.find((txn) => (
+    salarySignature
+    && hitDate(txn) === window.start
+    && matchesSignature(txn, salarySignature)
+  ));
+  const closingSalary = window.closingSalary?.txn && !isPending(window.closingSalary.txn)
+    ? window.closingSalary.txn
+    : null;
+  const secondarySalary = credits.filter((txn) => (
+    isSalary(txn)
+    && txn !== openingSalaryTxn
+    && txn !== closingSalary
+    && !financingTxns.has(txn)
+    && !isOperatingExcluded(txn)
+  ));
+  const cardSalary = attributedCardTxns.filter((txn) => (
+    Number(txn.amount) > 0 && overrideClass(txn) === 'salary'
+  ));
+  const salary = [closingSalary, ...secondarySalary, ...cardSalary].filter(Boolean);
+  const cardIncome = attributedCardTxns.filter((txn) => (
+    Number(txn.amount) > 0 && overrideClass(txn) === 'income'
+  ));
+  const otherIncome = [
+    ...credits.filter((t) => !isSalary(t)
+      && !financingTxns.has(t)
+      && !isOperatingExcluded(t)
+      && overrideClass(t) !== 'refund'),
+    ...cardIncome,
+  ];
   const financingIn = bankTxns.filter((t) => {
     if (!financingTxns.has(t)) return false;
     const linkedBill = suggestedFinancing.get(t)?.event;
     return linkedBill ? cardEventWithin(linkedBill) : within(t);
   });
-  const taggedDebits = debits.map((t) => ({ txn: t, amount: round2(t.amount), fixedCharge: fixedFor(t) || null }));
+  const cardFinancing = attributedCardTxns.filter((txn) => (
+    Number(txn.amount) > 0 && overrideClass(txn) === 'financing'
+  ));
+  const financingItems = [...financingIn, ...cardFinancing];
+  const directRefunds = credits.filter((txn) => overrideClass(txn) === 'refund');
+  const taggedDebits = debits
+    .filter((txn) => !isOperatingExcluded(txn))
+    .map((t) => ({ txn: t, amount: round2(t.amount), fixedCharge: fixedFor(t) || null }));
+  const taggedRefunds = directRefunds.map((txn) => ({
+    txn,
+    amount: round2(txn.amount),
+    fixedCharge: null,
+    refund: true,
+  }));
+  const directExpenseItems = [...taggedDebits, ...taggedRefunds];
 
   const incomeTotal = round2(sumAmounts(salary) + sumAmounts(otherIncome));
-  const cardTotal = Math.abs(sumAmounts(cardCharges, (e) => e.total));
-  const directTotal = Math.abs(sumAmounts(debits));
+  // Expenses are signed: a +₪18 debit-card refund contributes -₪18 to spending. `Math.abs`
+  // happened to net a refund while purchases were larger, but turned a refund-only cycle into
+  // a positive expense. Negating the signed movement is correct in every case.
+  const cardTotal = round2(-sumAmounts(cardCharges, (e) => e.total));
+  const directTotal = round2(-sumAmounts(directExpenseItems, (item) => item.txn.amount));
   const expensesTotal = round2(cardTotal + directTotal);
   const operatingNet = round2(incomeTotal - expensesTotal);
-  const financingTotal = sumAmounts(financingIn);
+  const financingTotal = sumAmounts(financingItems);
   // Literal account movement by bank-hit date. Close-out attribution can move a statement
   // (and its linked spread credit) to the previous spending cycle, but never rewrites the bank.
   const bankMovement = sumAmounts(bankTxns.filter((txn) => !isPending(txn) && within(txn)));
@@ -1007,6 +1092,198 @@ function buildCycle({
       }
     : null;
 
+  const eventKey = (event) => [
+    event.source,
+    event.accountNumber,
+    event.chargeDate,
+    event.class,
+    ...(event.txns || []).map((txn) => txn.id).sort((a, b) => Number(a) - Number(b)),
+  ].join('|');
+  const includedCardEvents = new Map(cardCharges.map((event) => [eventKey(event), event]));
+  const reviewIds = new Set(review.map((item) => Number(item.txn.id)));
+  const matchedByBankTxn = new Map(matched.map((item) => [item.bankTxn, item.event]));
+  const decisions = [];
+  const decisionBase = (txn) => ({
+    transactionId: txn.id,
+    date: ilDate(txn.date),
+    processedDate: ilDate(txn.processedDate || txn.date),
+    description: txn.description || '',
+    amount: round2(txn.amount),
+    source: txn.source,
+    accountNumber: txn.accountNumber,
+    automatic: !overrideFor(txn),
+    override: overrideClass(txn),
+    editable: true,
+    needsAction: reviewIds.has(Number(txn.id)),
+    bankEffect: 0,
+  });
+
+  for (const event of allEvents.filter((candidate) => cardEventWithin(candidate, window))) {
+    const adjusted = includedCardEvents.get(eventKey(event));
+    const eventReason = event.partial
+      ? 'partial_history'
+      : (!adjusted ? 'bank_match_missing'
+        : (adjusted.accruing ? 'auto_card_accruing'
+          : (event.class === 'statement' ? 'auto_card_statement' : 'auto_card_immediate')));
+    for (const txn of event.txns || []) {
+      const explicit = overrideClass(txn);
+      const base = decisionBase(txn);
+      let classification = Number(txn.amount) > 0 ? 'refund' : 'expense';
+      let impactLine = 'expenses';
+      let impactAmount = round2(-txn.amount);
+      let included = Boolean(adjusted) && cardOperatingTxn(txn);
+      let reason = explicit ? 'user_override' : eventReason;
+
+      if (explicit === 'salary' || explicit === 'income') {
+        classification = explicit;
+        impactLine = 'income';
+        impactAmount = round2(txn.amount);
+        included = Boolean(adjusted);
+      } else if (explicit === 'financing') {
+        classification = 'financing';
+        impactLine = 'financing';
+        impactAmount = round2(txn.amount);
+        included = Boolean(adjusted);
+      } else if (explicit === 'transfer' || explicit === 'exclude') {
+        classification = explicit;
+        impactLine = 'none';
+        impactAmount = 0;
+        included = false;
+      }
+
+      decisions.push({
+        ...base,
+        classification,
+        included,
+        impactLine,
+        impactAmount,
+        reason,
+        needsAction: base.needsAction || (!adjusted && !event.partial && !event.future),
+        linkedTo: {
+          kind: event.class,
+          source: event.source,
+          accountNumber: event.accountNumber,
+          date: event.chargeDate,
+          amount: round2(event.originalTotal ?? event.total),
+        },
+      });
+    }
+  }
+
+  for (const card of cardViews) {
+    for (const txn of card.view.pending || []) {
+      if (!within(txn)) continue;
+      decisions.push({
+        ...decisionBase(txn),
+        classification: 'pending',
+        included: false,
+        editable: false,
+        impactLine: 'none',
+        impactAmount: 0,
+        reason: 'pending',
+      });
+    }
+  }
+
+  for (const txn of bankTxns) {
+    const linkedEvent = matchedByBankTxn.get(txn);
+    const isOpeningSalary = txn === openingSalaryTxn;
+    const isClosingSalary = txn === closingSalary;
+    const bankInWindow = within(txn);
+    const linkedToCycle = linkedEvent && cardEventWithin(linkedEvent, window);
+    if (!bankInWindow && !isOpeningSalary && !isClosingSalary && !linkedToCycle) continue;
+
+    const base = { ...decisionBase(txn), bankEffect: bankInWindow ? round2(txn.amount) : 0 };
+    if (suppressed.has(txn)) {
+      decisions.push({
+        ...base,
+        classification: 'card_settlement',
+        included: false,
+        editable: false,
+        impactLine: 'none',
+        impactAmount: 0,
+        reason: 'bank_copy_suppressed',
+        linkedTo: linkedEvent ? {
+          kind: linkedEvent.class,
+          source: linkedEvent.source,
+          accountNumber: linkedEvent.accountNumber,
+          date: linkedEvent.chargeDate,
+          amount: round2(linkedEvent.total),
+        } : null,
+      });
+      continue;
+    }
+    if (isPending(txn)) {
+      decisions.push({
+        ...base,
+        classification: 'pending',
+        included: false,
+        editable: false,
+        impactLine: 'none',
+        impactAmount: 0,
+        reason: 'pending',
+      });
+      continue;
+    }
+
+    const explicit = overrideClass(txn);
+    if (isOpeningSalary && !isClosingSalary) {
+      decisions.push({
+        ...base,
+        classification: 'salary',
+        included: false,
+        impactLine: 'none',
+        impactAmount: 0,
+        reason: 'opening_salary_previous_cycle',
+      });
+    } else if (isClosingSalary || isSalary(txn)) {
+      decisions.push({
+        ...base,
+        classification: 'salary',
+        included: !isOperatingExcluded(txn),
+        impactLine: isOperatingExcluded(txn) ? 'none' : 'income',
+        impactAmount: isOperatingExcluded(txn) ? 0 : round2(txn.amount),
+        reason: explicit ? 'user_override' : (isClosingSalary ? 'closing_salary' : 'linked_secondary_salary'),
+      });
+    } else if (financingTxns.has(txn)) {
+      const included = financingItems.includes(txn);
+      decisions.push({
+        ...base,
+        classification: 'financing',
+        included,
+        impactLine: included ? 'financing' : 'none',
+        impactAmount: included ? round2(txn.amount) : 0,
+        reason: explicit ? 'user_override' : 'detected_financing',
+      });
+    } else if (Number(txn.amount) > 0) {
+      const excluded = isOperatingExcluded(txn);
+      const refund = explicit === 'refund';
+      decisions.push({
+        ...base,
+        classification: excluded ? explicit : (refund ? 'refund' : 'income'),
+        included: !excluded,
+        impactLine: excluded ? 'none' : (refund ? 'expenses' : 'income'),
+        impactAmount: excluded ? 0 : round2(refund ? -txn.amount : txn.amount),
+        reason: explicit ? 'user_override' : 'money_in',
+      });
+    } else {
+      const excluded = isOperatingExcluded(txn);
+      decisions.push({
+        ...base,
+        classification: excluded ? explicit : 'expense',
+        included: !excluded,
+        impactLine: excluded ? 'none' : 'expenses',
+        impactAmount: excluded ? 0 : round2(Math.abs(txn.amount)),
+        reason: explicit ? 'user_override' : 'direct_expense',
+      });
+    }
+  }
+
+  decisions.sort((a, b) => (
+    String(a.processedDate).localeCompare(String(b.processedDate))
+      || Number(a.transactionId) - Number(b.transactionId)
+  ));
+
   return {
     window,
     income: {
@@ -1016,7 +1293,7 @@ function buildCycle({
     },
     expenses: {
       cards: { total: cardTotal, events: cardCharges },
-      direct: { total: directTotal, items: taggedDebits },
+      direct: { total: directTotal, items: directExpenseItems },
       total: expensesTotal,
     },
     /**
@@ -1028,7 +1305,7 @@ function buildCycle({
      * bankMovement keeps its real hit date. `timingAdjustment` is that bridge, not another fee.
      */
     operatingNet,
-    financing: { total: financingTotal, items: financingIn, loans },
+    financing: { total: financingTotal, items: financingItems, loans },
     bankMovement,
     timingAdjustment,
     net: operatingNet,
@@ -1084,6 +1361,7 @@ function buildCycle({
       settlement: cv.view.settlement,
       statementDay: cv.view.statementDay,
     })),
+    decisions,
   };
 }
 
