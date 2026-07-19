@@ -3,11 +3,9 @@ import { ArrowDown, ArrowUp, CalendarClock, CreditCard, Landmark } from 'lucide-
 
 import { cn } from '../../../utils/helpers';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { signedCurrency } from '../../../utils/cycleFormat';
 
-const signed = (value, formatCurrency) => {
-  const numeric = Number(value) || 0;
-  return `${numeric > 0 ? '+' : numeric < 0 ? '−' : ''}${formatCurrency(Math.abs(numeric))}`;
-};
+const signed = (value, formatCurrency) => signedCurrency(value, formatCurrency, { signPositive: true });
 
 function StageIcon({ kind }) {
   if (kind === 'income') return <ArrowDown className="h-3.5 w-3.5 text-emerald-500" />;
@@ -53,15 +51,15 @@ export default function ForwardResetSummary({
       <div className="mt-3 grid grid-cols-3 gap-2">
         <div className="rounded-xl bg-white/80 p-2 dark:bg-gray-900/70">
           <p className="text-[9px] font-bold text-gray-400">{t('cycle.forward.incoming', { fallback: 'Expected in' })}</p>
-          <p className="mt-0.5 truncate text-sm font-black tabular-nums text-emerald-600 dark:text-emerald-400">{signed(incoming, formatCurrency)}</p>
+          <p className="mt-0.5 text-xs font-black leading-tight tabular-nums sm:text-sm text-emerald-600 dark:text-emerald-400">{signed(incoming, formatCurrency)}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-2 dark:bg-gray-900/70">
           <p className="text-[9px] font-bold text-gray-400">{t('cycle.forward.cardsOut', { fallback: 'Cards to leave' })}</p>
-          <p className="mt-0.5 truncate text-sm font-black tabular-nums text-rose-600 dark:text-rose-400">{signed(-cardOut, formatCurrency)}</p>
+          <p className="mt-0.5 text-xs font-black leading-tight tabular-nums sm:text-sm text-rose-600 dark:text-rose-400">{signed(-cardOut, formatCurrency)}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-2 dark:bg-gray-900/70">
           <p className="text-[9px] font-bold text-gray-400">{t('cycle.forward.net', { fallback: 'Reset effect' })}</p>
-          <p className={cn('mt-0.5 truncate text-sm font-black tabular-nums', netChange < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
+          <p className={cn('mt-0.5 text-xs font-black leading-tight tabular-nums sm:text-sm', netChange < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
             {signed(netChange, formatCurrency)}
           </p>
         </div>

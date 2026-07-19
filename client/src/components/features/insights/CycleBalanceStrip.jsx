@@ -18,9 +18,10 @@ import { InfoHint } from '../../ui';
 import { useBankBalance } from '../../../hooks/useBankBalance';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { signedCurrency } from '../../../utils/cycleFormat';
 import { projectBalanceAfterNextBills } from '../../../utils/bankBalance';
 
-const signed = (value, formatCurrency) => `${Number(value) < 0 ? '−' : '+'}${formatCurrency(Math.abs(Number(value) || 0))}`;
+const signed = (value, formatCurrency) => signedCurrency(value, formatCurrency, { signPositive: true });
 
 export default function CycleBalanceStrip({
   cycle,
@@ -62,9 +63,11 @@ export default function CycleBalanceStrip({
   const projectedBalance = hasRealBalance
     ? projectBalanceAfterNextBills(totalRealBalance, cycle, useCardEstimate)
     : null;
-  const cardAmount = useCardEstimate
-    ? (reset?.estimatedCardOut ?? forecast?.estimatedTotal)
-    : (reset?.knownCardOut ?? forecast?.knownTotal);
+  const cardAmount = Number(
+    useCardEstimate
+      ? (reset?.estimatedCardOut ?? forecast?.estimatedTotal)
+      : (reset?.knownCardOut ?? forecast?.knownTotal),
+  ) || 0;
   const lastBillDate = reset?.completionDate || forecast?.bills?.reduce(
     (latest, bill) => !latest || bill.chargeDate > latest ? bill.chargeDate : latest,
     null,
@@ -119,7 +122,7 @@ export default function CycleBalanceStrip({
                   role="switch"
                   aria-checked={useCardEstimate}
                   onClick={() => onCardEstimateChange(!useCardEstimate)}
-                  className="inline-flex shrink-0 items-center gap-1.5 pb-0.5 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
+                  className="-my-2 -me-1 inline-flex shrink-0 items-center gap-1.5 py-2 pe-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
                 >
                   {t('cycle.useEstimate', { fallback: 'Use estimate' })}
                   <span className={cn('relative h-4 w-7 rounded-full transition', useCardEstimate ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600')}>

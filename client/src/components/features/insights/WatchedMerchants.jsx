@@ -69,7 +69,7 @@ export default function WatchedMerchants({ formatCurrency }) {
                 type="button"
                 onClick={() => remove.mutate(rule.id)}
                 disabled={remove.isPending}
-                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white hover:text-red-500 disabled:opacity-40 dark:hover:bg-gray-800"
+                className="rounded-lg p-2 text-gray-400 transition hover:bg-white hover:text-red-500 disabled:opacity-40 dark:hover:bg-gray-800"
                 aria-label={t('merchantWatch.remove')}
               >
                 <Trash2 className="h-3.5 w-3.5" />

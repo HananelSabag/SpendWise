@@ -11,11 +11,12 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3, CalendarRange, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BarChart3, CalendarRange, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { useCurrency, useTranslation } from '../stores';
 import { useCycles } from '../hooks/useCycles';
+import { formatCycleWindow } from '../utils/cycleFormat';
 import BrandMark from '../components/common/BrandMark';
 import { LiquidTabs, PageSkeleton } from '../components/ui';
 import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
@@ -49,42 +50,29 @@ function initiallyShowPreviousCycle() {
   try { return new URLSearchParams(window.location.search).get('cycle') === 'previous'; } catch (_) { return false; }
 }
 
-/** Readable window: the end is exclusive, and a running cycle has not reached it yet. */
-function formatWindow(window, language) {
-  if (!window?.start || !window?.end) return '';
-  const start = new Date(`${window.start}T12:00:00`);
-  const end = new Date(`${window.end}T12:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
-  if (!window.running) end.setDate(end.getDate() - 1);
-  const fmt = new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: start.getFullYear() === end.getFullYear() ? undefined : 'numeric',
-  });
-  return `${fmt.format(start)} – ${fmt.format(end)}`;
-}
-
 export default function InsightsPage() {
   const navigate = useNavigate();
   const { t, currentLanguage } = useTranslation('dashboard');
   const { formatCurrency } = useCurrency();
   const [tab, setTab] = useState(initialCycleTab);
-  const [cycleIndex, setCycleIndex] = useState(null);
+  // Selection is keyed by the cycle's own start date, not a positional index: a background refetch
+  // can reorder or shrink the cycles array, and an index would then point at a different cycle.
+  const [selectedCycleStart, setSelectedCycleStart] = useState(null);
   const [showPreviousInitially] = useState(initiallyShowPreviousCycle);
   const [useCardEstimate, setUseCardEstimate] = useState(savedCardEstimatePreference);
   const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,
-    needsSalaryLink, hasNoBankData, isLoading, refetch, classifyTransaction,
+    needsSalaryLink, hasNoBankData, isLoading, isError, refetch, classifyTransaction,
     resetTransactionClassification, isUpdatingDecision, updatingTransactionId,
     settings, fundingForecast, updateCycleSettings, isUpdatingSettings } = useCycles();
 
   const cycle = useMemo(() => {
     if (!cycles?.length) return null;
-    if (cycleIndex == null) {
-      if (showPreviousInitially) return [...cycles].reverse().find((item) => !item.window.running) || cycles[cycles.length - 1];
-      return cycles.find((c) => c.window.running) || cycles[cycles.length - 1];
+    if (selectedCycleStart) {
+      return cycles.find((c) => c.window.start === selectedCycleStart) || null;
     }
-    return cycles[cycleIndex] || null;
-  }, [cycles, cycleIndex, showPreviousInitially]);
+    if (showPreviousInitially) return [...cycles].reverse().find((item) => !item.window.running) || cycles[cycles.length - 1];
+    return cycles.find((c) => c.window.running) || cycles[cycles.length - 1];
+  }, [cycles, selectedCycleStart, showPreviousInitially]);
 
   const changeDecision = useCallback((item, classification) => {
     classifyTransaction({
@@ -137,30 +125,30 @@ export default function InsightsPage() {
 
           {/* The window replaces a subtitle: it is the one fact the whole page depends on. */}
           {cycle && (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
                 <CalendarRange className="h-3 w-3" />
-                {formatWindow(cycle.window, currentLanguage)}
+                {formatCycleWindow(cycle.window, currentLanguage)}
               </span>
               {cycle.window.running && (
-                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                   {t('cycle.soFar', { fallback: 'so far' })}
                 </span>
               )}
               {cycle.partials?.length > 0 && (
-                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
                   {t('cycle.partialBadge', { fallback: 'Partial' })}
                 </span>
               )}
               {cycles.length > 1 && (
                 <select
-                  value={cycleIndex ?? cycles.findIndex((c) => c === cycle)}
-                  onChange={(e) => setCycleIndex(Number(e.target.value))}
-                  className="ms-auto rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                  value={cycle.window.start}
+                  onChange={(e) => setSelectedCycleStart(e.target.value)}
+                  className="ms-auto max-w-[52%] shrink-0 truncate rounded-lg border border-gray-200 bg-white px-2 py-1 text-[11px] font-semibold text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
                   aria-label={t('cycle.pickCycle', { fallback: 'Choose cycle' })}
                 >
-                  {cycles.map((c, i) => (
-                    <option key={c.window.start} value={i}>{formatWindow(c.window, currentLanguage)}</option>
+                  {cycles.map((c) => (
+                    <option key={c.window.start} value={c.window.start}>{formatCycleWindow(c.window, currentLanguage)}</option>
                   ))}
                 </select>
               )}
@@ -181,7 +169,20 @@ export default function InsightsPage() {
           className="mb-4"
         />
 
-        {empty ? (
+        {isError && !cycle ? (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-900 dark:bg-red-950/20">
+            <AlertTriangle className="mx-auto h-8 w-8 text-red-400" />
+            <p className="mt-3 text-sm font-bold text-red-700 dark:text-red-300">
+              {t('cycle.loadError', { fallback: 'We could not load your financial cycle' })}
+            </p>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-red-600/80 dark:text-red-300/70">
+              {t('cycle.loadErrorHint', { fallback: 'This is usually temporary. Check your connection and try again.' })}
+            </p>
+            <button type="button" onClick={refetch} className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700">
+              <RefreshCw className="h-4 w-4" />{t('reloadPage', { fallback: 'Try again' })}
+            </button>
+          </div>
+        ) : empty ? (
           <div className="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-800 dark:bg-gray-900">
             <p className="text-sm font-bold text-gray-900 dark:text-white">
               {hasNoBankData

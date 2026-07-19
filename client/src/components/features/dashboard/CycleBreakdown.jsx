@@ -21,19 +21,15 @@ import {
 
 import { cn } from '../../../utils/helpers';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { cardShortName, last4 } from '../../../utils/cycleFormat';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
 import BottomSheet from '../../common/BottomSheet';
 import Modal from '../../ui/Modal';
 
-const SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex', leumi: 'Leumi' };
-const sourceName = (source) => SOURCE_NAME[source] || String(source || '').toUpperCase();
-
-const last4 = (value) => String(value || '').slice(-4);
-
 function bankAccountLabel(source, accountNumber, language, fallback) {
   if (!source) return fallback;
-  const bank = institutionLabel(source, language) || sourceName(source);
+  const bank = institutionLabel(source, language) || cardShortName(source);
   return accountNumber ? `${bank} ••••${last4(accountNumber)}` : bank;
 }
 
@@ -165,7 +161,7 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
   const rows = [
     // One row per real bank debit the card produced.
     ...(expenses.events || []).map((event, index) => {
-      const label = `${sourceName(event.source)} ••••${String(event.accountNumber || '').slice(-4)}`;
+      const label = `${cardShortName(event.source)} ••••${last4(event.accountNumber)}`;
       const when = `${event.accruing ? `${t('cycle.billsOn', { fallback: 'bills' })} ` : ''}${formatCycleDay(event.chargeDate, language)}`;
       const meta = `${classLabel(event)} · ${when} · ${countLabel(event.count)}`;
       return {

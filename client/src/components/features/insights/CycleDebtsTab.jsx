@@ -11,6 +11,7 @@ import React from 'react';
 import { Coins, Landmark } from 'lucide-react';
 
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { signedCurrency } from '../../../utils/cycleFormat';
 import { InfoHint } from '../../ui';
 
 function Bar({ repaid, principal }) {
@@ -84,7 +85,7 @@ export default function CycleDebtsTab({ loans = [], totalOutstanding = 0, recurr
                     {t('cycle.payDay', { fallback: 'day' })} {series.paymentDay} · {series.occurrences}×
                   </p>
                 </div>
-                <p className="shrink-0 text-xs font-black tabular-nums text-gray-900 dark:text-white">{formatCurrency(-series.typicalAmount)}</p>
+                <p className="shrink-0 text-xs font-black tabular-nums text-gray-900 dark:text-white">{signedCurrency(-series.typicalAmount, formatCurrency)}</p>
               </div>
             ))}
           </div>

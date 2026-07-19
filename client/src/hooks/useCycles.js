@@ -13,6 +13,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import cyclesApi from '../api/cycles';
 import { useAuthUser, useIsAuthenticated } from '../stores/authStore';
+import { useTranslation } from '../stores';
+import { useToast } from './useToast';
 import { queryConfigs } from '../config/queryClient';
 
 const EMPTY = {
@@ -32,6 +34,9 @@ export function useCycles() {
   const isAuthenticated = useIsAuthenticated();
   const user = useAuthUser();
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const { t } = useTranslation('dashboard');
+  const notifyFailure = () => toast.error(t('cycle.updateFailed', { fallback: 'Could not save your change — please try again' }));
 
   const query = useQuery({
     queryKey: ['cycles', user?.id, 'list', 4],
@@ -55,6 +60,7 @@ export function useCycles() {
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
       ]);
     },
+    onError: notifyFailure,
   });
 
   const resetClassificationMutation = useMutation({
@@ -65,6 +71,7 @@ export function useCycles() {
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
       ]);
     },
+    onError: notifyFailure,
   });
 
   const settingsMutation = useMutation({
@@ -75,6 +82,7 @@ export function useCycles() {
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
       ]);
     },
+    onError: notifyFailure,
   });
 
   const data = query.data?.data || EMPTY;
@@ -96,9 +104,13 @@ export function useCycles() {
     classifyTransaction: transactionClassificationMutation.mutate,
     resetTransactionClassification: resetClassificationMutation.mutate,
     isUpdatingDecision: transactionClassificationMutation.isPending || resetClassificationMutation.isPending,
-    updatingTransactionId: transactionClassificationMutation.variables?.transactionId
-      || resetClassificationMutation.variables?.transactionId
-      || null,
+    // Follow whichever mutation is actually in flight. mutation.variables is retained after a
+    // mutation settles, so a plain `a || b` would report the last classify's row during a reset.
+    updatingTransactionId: (transactionClassificationMutation.isPending
+      ? transactionClassificationMutation.variables?.transactionId
+      : resetClassificationMutation.isPending
+        ? resetClassificationMutation.variables?.transactionId
+        : null) || null,
     updateCycleSettings: settingsMutation.mutate,
     isUpdatingSettings: settingsMutation.isPending,
   }), [data, query.isLoading, query.isError, query.error, query.refetch,

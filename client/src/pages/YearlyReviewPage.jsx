@@ -6,6 +6,7 @@ import { useCurrency, useTranslation } from '../stores';
 import { useCycleYears, useYearlyReview } from '../hooks/useCycles';
 import { PageSkeleton } from '../components/ui';
 import { cn } from '../utils/helpers';
+import { signedCurrency } from '../utils/cycleFormat';
 
 function monthLabel(iso, language) {
   const date = new Date(`${iso}T12:00:00`);
@@ -27,7 +28,7 @@ function TotalCard({ icon: Icon, label, value, formatCurrency, tone = 'neutral',
         <Icon className="h-4 w-4" />{label}
       </div>
       <p className={cn('mt-2 text-xl font-black tabular-nums', tones[tone])}>
-        {suffix ? `${value}${suffix}` : formatCurrency(value)}
+        {suffix ? `${value}${suffix}` : signedCurrency(value, formatCurrency)}
       </p>
     </div>
   );
@@ -94,6 +95,7 @@ export default function YearlyReviewPage() {
               <TotalCard icon={PiggyBank} label={t('cycle.savingsRate', { fallback: 'Savings rate' })} value={totals.savingsRate} suffix="%" formatCurrency={formatCurrency} tone={totals.savingsRate < 0 ? 'negative' : 'positive'} />
             </section>
 
+            <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
             <section className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
               <h2 className="text-sm font-black text-gray-950 dark:text-white">{t('cycle.monthByMonth', { fallback: 'Month by month' })}</h2>
               <div className="mt-4 space-y-3">
@@ -105,7 +107,7 @@ export default function YearlyReviewPage() {
                     </div>
                     <div className="text-end">
                       <p className="text-xs font-bold tabular-nums text-gray-800 dark:text-gray-200">{formatCurrency(month.expenses)}</p>
-                      <p className={cn('text-[10px] font-semibold tabular-nums', month.operatingNet < 0 ? 'text-rose-500' : 'text-emerald-500')}>{formatCurrency(month.operatingNet)}</p>
+                      <p className={cn('text-[10px] font-semibold tabular-nums', month.operatingNet < 0 ? 'text-rose-500' : 'text-emerald-500')}>{signedCurrency(month.operatingNet, formatCurrency)}</p>
                     </div>
                   </div>
                 ))}
@@ -128,6 +130,7 @@ export default function YearlyReviewPage() {
                 ))}
               </div>
             </section>
+            </div>
           </>
         )}
       </main>

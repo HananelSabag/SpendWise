@@ -92,6 +92,27 @@ const CYCLE = {
   },
   needsReview: [], reversals: [], partials: [],
   unreconciledCardEvents: [],
+  // The running cycle is a forward reset: what still has to enter/leave before the household
+  // reset completes. Captured shape from GET /api/v1/cycles/current (migration 33+).
+  forwardReset: {
+    mode: 'automatic', status: 'open', completionDate: '2026-08-10',
+    expectedIncoming: 13327.75, knownCardOut: 2823.79, estimatedCardOut: 15470.42,
+    estimatedFixedOut: 1171.86, knownNetChange: -2823.79, estimatedNetChange: 685.47,
+    stages: [
+      { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה' },
+      { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י' },
+      { kind: 'income', date: '2026-08-09', amount: 13327.75, label: 'הורייזן טכנו', primary: true },
+      { kind: 'card', date: '2026-08-10', amount: -2823.79, estimatedAmount: -15470.42, label: 'MAX ••••2254' },
+      { kind: 'card', date: '2026-08-10', amount: -1200.00, estimatedAmount: -2665.20, label: 'CAL ••••9962', primary: false },
+    ],
+  },
+  nextCardForecast: {
+    salaryAmount: 13327.75, knownTotal: 2823.79, estimatedTotal: 15470.42,
+    bills: [
+      { source: 'max', accountNumber: '2254', chargeDate: '2026-08-10', knownAmount: 1823.79, estimatedAmount: 12805.22, historyCount: 3 },
+      { source: 'visa_cal', accountNumber: '9962', chargeDate: '2026-08-10', knownAmount: 1000.00, estimatedAmount: 2665.20, historyCount: 3 },
+    ],
+  },
   cards: [
     { source: 'max', accountNumber: '2254', settlement: { mode: 'aggregated' }, statementDay: { certain: true, day: 10 } },
     { source: 'visa_cal', accountNumber: '9962', settlement: { mode: 'aggregated' }, statementDay: { certain: true, day: 10 } },

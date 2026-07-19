@@ -13,35 +13,10 @@ import { AlertTriangle, ArrowRight, CalendarRange, Coins, Landmark, TrendingDown
 
 import { cn } from '../../../utils/helpers';
 import { InfoHint } from '../../ui';
+import { formatCycleDay } from '../../../utils/cycleDate';
+import { formatCycleWindow, signedCurrency } from '../../../utils/cycleFormat';
 import CycleBreakdown from './CycleBreakdown';
 import ForwardResetSummary from '../insights/ForwardResetSummary';
-
-/**
- * The window end is exclusive, and the running cycle has not reached its end yet — so show
- * "9 Jul – today" while it runs and the real last day once it closes. Raw ISO dates are not
- * something anyone wants to read on a dashboard.
- */
-function formatWindow(window, language) {
-  if (!window?.start || !window?.end) return '';
-  const start = new Date(`${window.start}T12:00:00`);
-  const end = new Date(`${window.end}T12:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
-  if (!window.running) end.setDate(end.getDate() - 1);
-
-  const formatter = new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: start.getFullYear() === end.getFullYear() ? undefined : 'numeric',
-  });
-  return `${formatter.format(start)} – ${formatter.format(end)}`;
-}
-
-/** Short, readable date for a projected item ("26 Jul"), not an ISO stamp. */
-function formatDay(iso, language) {
-  const date = new Date(`${iso}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return iso;
-  return new Intl.DateTimeFormat(language === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short' }).format(date);
-}
 
 function Line({ label, value, hint, formatCurrency, tone = 'neutral', bold = false }) {
   const tones = {
@@ -59,7 +34,7 @@ function Line({ label, value, hint, formatCurrency, tone = 'neutral', bold = fal
         {hint && <p className="text-[11px] leading-tight text-gray-400 dark:text-gray-500">{hint}</p>}
       </div>
       <p className={cn('shrink-0 tabular-nums', bold ? 'text-lg font-black' : 'text-sm font-semibold', tones[tone])}>
-        {formatCurrency(value)}
+        {signedCurrency(value, formatCurrency)}
       </p>
     </div>
   );
@@ -121,7 +96,7 @@ export default function FinancialCycleCard({
             <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('cycle.linkSalaryTitle', { fallback: 'Link your salary to see your cycle' })}</h3>
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('cycle.linkSalaryHint', { fallback: 'Your financial cycle runs from one salary to the next. Point us at your salary once and we take it from there.' })}</p>
             <button type="button" onClick={onLinkSalary} className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700">
-              {t('cycle.linkSalaryCta', { fallback: 'Link salary' })}<ArrowRight className="h-3.5 w-3.5" />
+              {t('cycle.linkSalaryCta', { fallback: 'Link salary' })}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
             </button>
           </div>
         </div>
@@ -145,7 +120,7 @@ export default function FinancialCycleCard({
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
               <CalendarRange className="h-3 w-3" />
-              {formatWindow(window, language)}
+              {formatCycleWindow(window, language)}
             </span>
             {window.running && (
               <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
@@ -228,7 +203,7 @@ export default function FinancialCycleCard({
           </InfoHint>
         </span>
         <span className={cn('tabular-nums text-sm font-bold', bankMovement < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-          {formatCurrency(bankMovement)}
+          {signedCurrency(bankMovement, formatCurrency)}
         </span>
       </div>
 
@@ -251,15 +226,15 @@ export default function FinancialCycleCard({
           <ul className="mt-1.5 space-y-1">
             {projection.upcoming.slice(0, 3).map((item) => (
               <li key={`${item.kind}-${item.date}-${item.label}`} className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-gray-500 dark:text-gray-400">{formatDay(item.date, language)} · {item.label}</span>
-                <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(item.amount)}</span>
+                <span className="truncate text-gray-500 dark:text-gray-400">{formatCycleDay(item.date, language)} · {item.label}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{signedCurrency(item.amount, formatCurrency)}</span>
               </li>
             ))}
           </ul>
           <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-gray-100 pt-1.5 dark:border-gray-800">
             <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">{t('cycle.projectedEnd', { fallback: 'Estimated end of cycle' })}</span>
             <span className={cn('tabular-nums text-sm font-black', projection.projectedOperatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-              {formatCurrency(projection.projectedOperatingNet)}
+              {signedCurrency(projection.projectedOperatingNet, formatCurrency)}
             </span>
           </div>
         </div>

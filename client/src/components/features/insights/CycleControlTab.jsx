@@ -42,6 +42,133 @@ function availableClassifications(decision) {
     : ['expense', 'transfer', 'exclude'];
 }
 
+/**
+ * One transaction's decision. Its disclosure state is local and seeded once from `needsAction`:
+ * because the parent refetches after an override (which flips `needsAction` to false), a
+ * reactively-controlled `open` would collapse the row the instant the user acted on it. Keyed by
+ * `transactionId` so it is not remounted when its classification changes.
+ */
+function DecisionRow({ decision, updating, onDecisionChange, onDecisionReset, formatCurrency, t, language }) {
+  const [open, setOpen] = useState(Boolean(decision.needsAction));
+  const impact = Number(decision.impactAmount) || 0;
+  const editableClassifications = availableClassifications(decision);
+  const selectedClassification = decision.override || decision.classification;
+
+  return (
+    <details
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className={cn(
+        'group/decision rounded-xl border',
+        decision.needsAction
+          ? 'border-amber-300 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20'
+          : 'border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900',
+      )}
+    >
+      <summary className="flex cursor-pointer list-none items-start gap-2 p-3 [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <p className="max-w-full truncate text-xs font-bold text-gray-900 dark:text-white">{decision.description || '—'}</p>
+            <span className={cn(
+              'rounded-full px-2 py-0.5 text-[9px] font-black',
+              decision.automatic
+                ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300'
+                : 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300',
+            )}>
+              {decision.automatic
+                ? t('cycle.control.automatic', { fallback: 'Automatic' })
+                : t('cycle.control.manual', { fallback: 'Your override' })}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[10px] text-gray-400">
+            {formatCycleDay(decision.processedDate || decision.date, language)} · {String(decision.source || '').toUpperCase()}
+            {decision.accountNumber ? ` ••••${String(decision.accountNumber).slice(-4)}` : ''}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px]">
+            <span className="rounded bg-white px-1.5 py-0.5 font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+              {t(`cycle.control.class.${decision.classification}`, { fallback: decision.classification })}
+            </span>
+            <span className={cn(
+              'rounded px-1.5 py-0.5 font-bold',
+              decision.included
+                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
+                : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+            )}>
+              {decision.included
+                ? t('cycle.control.counted', { fallback: 'Counted' })
+                : t('cycle.control.notCounted', { fallback: 'Not counted' })}
+            </span>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <p className={cn(
+            'text-sm font-black tabular-nums',
+            Number(decision.amount) >= 0 ? 'text-emerald-600' : 'text-gray-950 dark:text-white',
+          )}>
+            {Number(decision.amount) >= 0 ? '+' : '−'}{formatCurrency(Math.abs(Number(decision.amount) || 0))}
+          </p>
+          <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-open/decision:rotate-180" />
+        </div>
+      </summary>
+
+      {impact !== 0 && (
+        <div className="mx-3 flex flex-wrap items-center gap-1.5 border-t border-gray-200/70 pt-2 text-[10px] dark:border-gray-800">
+          <span className="rounded-md bg-white px-2 py-1 font-bold tabular-nums text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            {impact > 0 ? '+' : '−'}{formatCurrency(Math.abs(impact))} · {t(`cycle.control.line.${decision.impactLine}`, { fallback: decision.impactLine })}
+          </span>
+        </div>
+      )}
+
+      <p className="mx-3 mt-2 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+        {t(`cycle.control.reason.${decision.reason}`, { fallback: decision.reason })}
+      </p>
+      {decision.linkedTo && (
+        <p className="mx-3 mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">
+          {t('cycle.control.linkedTo', { fallback: 'Linked to' })} {String(decision.linkedTo.source || '').toUpperCase()}
+          {decision.linkedTo.accountNumber ? ` ••••${String(decision.linkedTo.accountNumber).slice(-4)}` : ''} · {formatCycleDay(decision.linkedTo.date, language)}
+        </p>
+      )}
+
+      {decision.editable && (
+        <div className="mx-3 mb-3 mt-3 flex items-center gap-2.5 border-t border-gray-200/70 pt-2 dark:border-gray-800">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">{t('cycle.control.changeClass', { fallback: 'Change classification' })}</span>
+            <select
+              value={selectedClassification}
+              disabled={updating}
+              onChange={(event) => onDecisionChange?.(decision, event.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-2 py-2 text-[11px] font-semibold text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+            >
+              {!editableClassifications.includes(selectedClassification) && (
+                <option value={selectedClassification} disabled>
+                  {t(`cycle.control.class.${selectedClassification}`, { fallback: selectedClassification })}
+                </option>
+              )}
+              {editableClassifications.map((classification) => (
+                <option key={classification} value={classification}>
+                  {t(`cycle.control.class.${classification}`, { fallback: classification })}
+                </option>
+              ))}
+            </select>
+          </label>
+          {decision.override && (
+            <button
+              type="button"
+              disabled={updating}
+              onClick={() => onDecisionReset?.(decision)}
+              className="inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {t('cycle.control.reset', { fallback: 'Automatic' })}
+            </button>
+          )}
+        </div>
+      )}
+      {!decision.editable && <div className="h-3" />}
+    </details>
+  );
+}
+
 export default function CycleControlTab({
   cycle,
   salaryTracking,
@@ -68,17 +195,25 @@ export default function CycleControlTab({
     () => decisions.filter((decision) => decisionMatchesFilter(decision, filter)),
     [decisions, filter],
   );
-  const attentionIds = new Set([
+  const attentionIds = useMemo(() => new Set([
     ...decisions.filter((decision) => decision.needsAction).map((decision) => decision.transactionId),
     ...needsReview.map((item) => item.transactionId),
-  ]);
-  const automaticCount = decisions.filter((decision) => decision.automatic).length;
-  const includedCount = decisions.filter((decision) => decision.included).length;
-  const excludedCount = decisions.length - includedCount;
+  ]), [decisions, needsReview]);
+  const { automaticCount, includedCount, excludedCount } = useMemo(() => {
+    const included = decisions.filter((decision) => decision.included).length;
+    return {
+      automaticCount: decisions.filter((decision) => decision.automatic).length,
+      includedCount: included,
+      excludedCount: decisions.length - included,
+    };
+  }, [decisions]);
   const status = salaryTracking?.status || 'unknown';
   const visibleDecisions = filtered.slice(0, visibleDecisionCount);
   const hiddenDecisionCount = filtered.length - visibleDecisions.length;
   const setupNeedsAttention = status === 'late' || !salaryTracking?.last || salaryChange?.suspected;
+  // Seed the disclosure once, then let the user control it — a settings change refetches and could
+  // otherwise snap this panel shut mid-interaction.
+  const [setupOpen, setSetupOpen] = useState(setupNeedsAttention);
 
   const changeFilter = (nextFilter) => {
     setFilter(nextFilter);
@@ -88,7 +223,8 @@ export default function CycleControlTab({
   return (
     <div className="space-y-4">
       <details
-        open={setupNeedsAttention || undefined}
+        open={setupOpen}
+        onToggle={(event) => setSetupOpen(event.currentTarget.open)}
         className="group rounded-2xl border border-indigo-200 bg-white dark:border-indigo-900/60 dark:bg-gray-900"
       >
         <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
@@ -180,7 +316,7 @@ export default function CycleControlTab({
           ['attention', attentionIds.size],
         ].map(([key, value]) => (
           <div key={key} className="min-w-0 px-1.5 text-center sm:px-3">
-            <p className="truncate text-[8px] font-bold uppercase tracking-wide text-gray-400 sm:text-[10px]">
+            <p className="text-[9px] font-bold uppercase leading-tight tracking-wide text-gray-400 sm:text-[10px]">
               {t(`cycle.control.summary.${key}`, { fallback: key })}
             </p>
             <p className={cn(
@@ -279,7 +415,7 @@ export default function CycleControlTab({
               type="button"
               onClick={() => changeFilter(id)}
               className={cn(
-                'shrink-0 snap-start rounded-full px-3 py-1.5 text-[11px] font-bold transition',
+                'shrink-0 snap-start rounded-full px-3 py-2 text-[11px] font-bold transition',
                 filter === id
                   ? 'bg-indigo-600 text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300',
@@ -291,126 +427,18 @@ export default function CycleControlTab({
         </div>
 
         <div className="space-y-2">
-          {visibleDecisions.map((decision) => {
-            const updating = isUpdatingDecision
-              && Number(updatingTransactionId) === Number(decision.transactionId);
-            const impact = Number(decision.impactAmount) || 0;
-            const editableClassifications = availableClassifications(decision);
-            const selectedClassification = decision.override || decision.classification;
-            return (
-              <details
-                key={`${decision.source}-${decision.transactionId}-${decision.classification}`}
-                open={decision.needsAction || undefined}
-                className={cn(
-                  'group/decision rounded-xl border',
-                  decision.needsAction
-                    ? 'border-amber-300 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20'
-                    : 'border-gray-100 bg-gray-50/60 dark:border-gray-800 dark:bg-gray-900',
-                )}
-              >
-                <summary className="flex cursor-pointer list-none items-start gap-2 p-3 [&::-webkit-details-marker]:hidden">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="max-w-full truncate text-xs font-bold text-gray-900 dark:text-white">{decision.description || '—'}</p>
-                      <span className={cn(
-                        'rounded-full px-2 py-0.5 text-[9px] font-black',
-                        decision.automatic
-                          ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300'
-                          : 'bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300',
-                      )}>
-                        {decision.automatic
-                          ? t('cycle.control.automatic', { fallback: 'Automatic' })
-                          : t('cycle.control.manual', { fallback: 'Your override' })}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-gray-400">
-                      {formatCycleDay(decision.processedDate || decision.date, language)} · {String(decision.source || '').toUpperCase()}
-                      {decision.accountNumber ? ` ••••${String(decision.accountNumber).slice(-4)}` : ''}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px]">
-                      <span className="rounded bg-white px-1.5 py-0.5 font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                        {t(`cycle.control.class.${decision.classification}`, { fallback: decision.classification })}
-                      </span>
-                      <span className={cn(
-                        'rounded px-1.5 py-0.5 font-bold',
-                        decision.included
-                          ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300'
-                          : 'bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                      )}>
-                        {decision.included
-                          ? t('cycle.control.counted', { fallback: 'Counted' })
-                          : t('cycle.control.notCounted', { fallback: 'Not counted' })}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <p className={cn(
-                      'text-sm font-black tabular-nums',
-                      Number(decision.amount) >= 0 ? 'text-emerald-600' : 'text-gray-950 dark:text-white',
-                    )}>
-                      {Number(decision.amount) >= 0 ? '+' : '−'}{formatCurrency(Math.abs(Number(decision.amount) || 0))}
-                    </p>
-                    <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-open/decision:rotate-180" />
-                  </div>
-                </summary>
-
-                {impact !== 0 && (
-                  <div className="mx-3 flex flex-wrap items-center gap-1.5 border-t border-gray-200/70 pt-2 text-[10px] dark:border-gray-800">
-                    <span className="rounded-md bg-white px-2 py-1 font-bold tabular-nums text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                      {impact > 0 ? '+' : '−'}{formatCurrency(Math.abs(impact))} · {t(`cycle.control.line.${decision.impactLine}`, { fallback: decision.impactLine })}
-                    </span>
-                  </div>
-                )}
-
-                <p className="mx-3 mt-2 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
-                  {t(`cycle.control.reason.${decision.reason}`, { fallback: decision.reason })}
-                </p>
-                {decision.linkedTo && (
-                  <p className="mx-3 mt-1 text-[10px] text-indigo-600 dark:text-indigo-300">
-                    {t('cycle.control.linkedTo', { fallback: 'Linked to' })} {String(decision.linkedTo.source || '').toUpperCase()}
-                    {decision.linkedTo.accountNumber ? ` ••••${String(decision.linkedTo.accountNumber).slice(-4)}` : ''} · {formatCycleDay(decision.linkedTo.date, language)}
-                  </p>
-                )}
-
-                {decision.editable && (
-                  <div className="mx-3 mb-3 mt-3 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-800">
-                    <label className="min-w-0 flex-1">
-                      <span className="sr-only">{t('cycle.control.changeClass', { fallback: 'Change classification' })}</span>
-                      <select
-                        value={selectedClassification}
-                        disabled={updating}
-                        onChange={(event) => onDecisionChange?.(decision, event.target.value)}
-                        className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] font-semibold text-gray-700 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                      >
-                        {!editableClassifications.includes(selectedClassification) && (
-                          <option value={selectedClassification} disabled>
-                            {t(`cycle.control.class.${selectedClassification}`, { fallback: selectedClassification })}
-                          </option>
-                        )}
-                        {editableClassifications.map((classification) => (
-                          <option key={classification} value={classification}>
-                            {t(`cycle.control.class.${classification}`, { fallback: classification })}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {decision.override && (
-                      <button
-                        type="button"
-                        disabled={updating}
-                        onClick={() => onDecisionReset?.(decision)}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 dark:text-indigo-300 dark:hover:bg-indigo-950/30"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        {t('cycle.control.reset', { fallback: 'Automatic' })}
-                      </button>
-                    )}
-                  </div>
-                )}
-                {!decision.editable && <div className="h-3" />}
-              </details>
-            );
-          })}
+          {visibleDecisions.map((decision) => (
+            <DecisionRow
+              key={decision.transactionId}
+              decision={decision}
+              updating={isUpdatingDecision && Number(updatingTransactionId) === Number(decision.transactionId)}
+              onDecisionChange={onDecisionChange}
+              onDecisionReset={onDecisionReset}
+              formatCurrency={formatCurrency}
+              t={t}
+              language={language}
+            />
+          ))}
 
           {!filtered.length && (
             <p className="py-8 text-center text-xs text-gray-400">

@@ -11,6 +11,7 @@ import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { signedCurrency } from '../../../utils/cycleFormat';
 import { InfoHint } from '../../ui';
 import CycleBreakdown from '../dashboard/CycleBreakdown';
 import ForwardResetSummary from './ForwardResetSummary';
@@ -30,7 +31,7 @@ function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrenc
         {hint && <InfoHint title={hintTitle}>{hint}</InfoHint>}
       </p>
       <p className={cn('mt-1 tabular-nums', big ? 'text-2xl font-black' : 'text-lg font-bold', tones[tone])}>
-        {formatCurrency(value)}
+        {signedCurrency(value, formatCurrency)}
       </p>
     </div>
   );
@@ -105,7 +106,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
           </InfoHint>
         </p>
         <p className={cn('mt-1 text-3xl font-black tabular-nums', deficit ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-          {formatCurrency(operatingNet)}
+          {signedCurrency(operatingNet, formatCurrency)}
         </p>
         <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
           {deficit
@@ -114,7 +115,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Figure label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency}
           hintTitle={t('cycle.income', { fallback: 'Income' })}
           hint={t('cycle.incomeHint', { fallback: 'Money that is yours — borrowing is not counted here' })} />
@@ -143,14 +144,14 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
             {projection.upcoming.map((item) => (
               <li key={`${item.kind}-${item.date}-${item.label}`} className="flex items-center justify-between gap-2 text-[11px]">
                 <span className="truncate text-gray-500 dark:text-gray-400">{formatCycleDay(item.date, language)} · {item.label}</span>
-                <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(item.amount)}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{signedCurrency(item.amount, formatCurrency)}</span>
               </li>
             ))}
           </ul>
           <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
             <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">{t('cycle.projectedEnd', { fallback: 'Estimated end of cycle' })}</span>
             <span className={cn('tabular-nums text-base font-black', projection.projectedOperatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-              {formatCurrency(projection.projectedOperatingNet)}
+              {signedCurrency(projection.projectedOperatingNet, formatCurrency)}
             </span>
           </div>
         </div>

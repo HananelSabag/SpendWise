@@ -3,12 +3,13 @@ import { ArrowDown, ArrowUp, Flame, Gauge, Trophy } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { signedCurrency } from '../../../utils/cycleFormat';
 
 function DailyFigure({ label, value, tone, formatCurrency }) {
   return (
     <div className="rounded-xl bg-gray-50 p-3 dark:bg-gray-800/60">
       <p className="text-[9px] font-bold text-gray-400">{label}</p>
-      <p className={cn('mt-1 text-lg font-black tabular-nums', tone)}>{formatCurrency(value)}</p>
+      <p className={cn('mt-1 text-lg font-black tabular-nums', tone)}>{signedCurrency(value, formatCurrency)}</p>
     </div>
   );
 }

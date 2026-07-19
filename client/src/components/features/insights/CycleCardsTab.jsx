@@ -15,18 +15,11 @@ import { AlertTriangle, ChevronRight, Clock3, CreditCard } from 'lucide-react';
 import { InfoHint } from '../../ui';
 import { useIsMobile } from '../../../hooks/useIsMobile';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { cardShortName, last4, signedCurrency } from '../../../utils/cycleFormat';
 import BottomSheet from '../../common/BottomSheet';
 import Modal from '../../ui/Modal';
 
-const SOURCE_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex' };
-const cardName = (s) => SOURCE_NAME[s] || String(s || '').toUpperCase();
-const last4 = (n) => String(n || '').slice(-4);
-
-const signed = (value, formatCurrency) => {
-  const amount = Number(value) || 0;
-  if (amount === 0) return formatCurrency(0);
-  return `${amount < 0 ? '−' : '+'}${formatCurrency(Math.abs(amount))}`;
-};
+const signed = (value, formatCurrency) => signedCurrency(value, formatCurrency, { signPositive: true });
 
 /** The purchases behind one tapped split, newest first. */
 function ChargeList({ group, formatCurrency, t, language }) {
@@ -134,6 +127,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
         </div>
       )}
 
+      <div className="grid gap-3 lg:grid-cols-2">
       {cards.map((card) => {
         const passthrough = card.settlement?.mode === 'passthrough';
         const day = card.statementDay?.certain ? card.statementDay.day : null;
@@ -141,7 +135,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
         const nextBill = cycle?.nextCardForecast?.bills?.find(
           (bill) => bill.source === card.source && bill.accountNumber === card.accountNumber,
         );
-        const title = `${cardName(card.source)} ••••${last4(card.accountNumber)}`;
+        const title = `${cardShortName(card.source)} ••••${last4(card.accountNumber)}`;
         // A statement whose purchases were made this cycle but which the bank charges next month
         // is counted now as a bill in progress — labelled "building", dated by when it bills.
         const statementLabel = split.statement.accruing
@@ -220,6 +214,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
           </div>
         );
       })}
+      </div>
 
       {!cards.length && <p className="py-8 text-center text-sm text-gray-500">{t('cycle.noCards', { fallback: 'No cards connected' })}</p>}
 
