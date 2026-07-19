@@ -42,6 +42,9 @@ describe('credit classifications', () => {
     expect(db.query.mock.calls[0][1]).toEqual([42, 7, 'income', 'matches_recent_bill']);
     expect(db.query.mock.calls[0][0]).toContain("t.type = 'income'");
     expect(db.query.mock.calls[0][0]).toContain("COALESCE(t.bank_status, 'completed') = 'completed'");
+    expect(db.query.mock.calls[0][0]).toContain(
+      'WHERE credit_classifications.user_id = EXCLUDED.user_id',
+    );
   });
 
   test('returns null when the transaction is not an owned eligible credit', async () => {
@@ -67,7 +70,9 @@ describe('credit classifications', () => {
           updated_at: '2026-07-19T08:00:00.000Z',
         }],
       })
-      .mockResolvedValueOnce({ rowCount: 1 });
+      .mockResolvedValueOnce({ rowCount: 0 })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 0 });
 
     await expect(loadTransactionOverrides(7)).resolves.toEqual([{
       transactionId: 42,
@@ -82,6 +87,17 @@ describe('credit classifications', () => {
     await expect(deleteTransactionOverride(7, 42)).resolves.toBe(true);
     expect(db.query.mock.calls[1][0]).toContain('cycle_transaction_overrides');
     expect(db.query.mock.calls[1][0]).not.toContain('UPDATE transactions');
+    expect(db.query.mock.calls[1][0]).toContain(
+      'WHERE cycle_transaction_overrides.user_id = EXCLUDED.user_id',
+    );
+    expect(db.query.mock.calls[2]).toEqual([
+      'DELETE FROM financial_cycle_aggregates WHERE user_id = $1',
+      [7],
+    ]);
+    expect(db.query.mock.calls[4]).toEqual([
+      'DELETE FROM financial_cycle_aggregates WHERE user_id = $1',
+      [7],
+    ]);
   });
 
   test('the engine applies the answer to the exact transaction, not every reused identifier', () => {

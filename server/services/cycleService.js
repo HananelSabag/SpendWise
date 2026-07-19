@@ -15,6 +15,7 @@ const CACHE_TTL_MS = 15_000;
 const MAX_CACHE_ENTRIES = 200;
 const CALCULATION_VERSION = 4;
 const resultCache = new Map();
+const cacheInvalidationEpochs = new Map();
 
 const SELECT_COLUMNS = `id, bank_source, bank_account_number, amount, type, description, notes,
   date::text AS date, transaction_datetime, bank_processed_date::text AS bank_processed_date,
@@ -50,10 +51,40 @@ function cacheSet(key, value) {
   return value;
 }
 
+function cacheInvalidationEpoch(userId) {
+  return cacheInvalidationEpochs.get(String(userId)) || 0;
+}
+
 function invalidateCycleCache(userId) {
+  // A read that started before a mutation must not repopulate the cache after
+  // that mutation has cleared it. Epochs are user-scoped: one household's sync
+  // must never suppress another household's valid cache fill or notifications.
+  const userKey = String(userId);
+  cacheInvalidationEpochs.set(userKey, cacheInvalidationEpoch(userId) + 1);
   const prefix = `${userId}:`;
   for (const key of resultCache.keys()) {
     if (key.startsWith(prefix)) resultCache.delete(key);
+  }
+}
+
+async function invalidateCycleDerivedData(userId) {
+  // Mutations are committed before this runs. Advance the epoch first so a
+  // read that began against the old snapshot cannot restore an aggregate
+  // after it has been deleted.
+  invalidateCycleCache(userId);
+  try {
+    await db.query('DELETE FROM financial_cycle_aggregates WHERE user_id = $1', [userId]);
+  } catch (error) {
+    // Keep rolling deployments compatible while the aggregate table is being created.
+    if (error.code !== '42P01') {
+      // The source mutation has already committed, so surfacing a false failure to the
+      // client would invite a retry. Live calculations remain authoritative and the
+      // warning makes a persistent-cache permission/outage issue operationally visible.
+      logger.warn('Could not invalidate persisted financial-cycle aggregates', {
+        userId,
+        error: error.message,
+      });
+    }
   }
 }
 
@@ -222,7 +253,7 @@ async function saveCycleSettings(userId, { engineMode, manualAnchorDay = null })
      SELECT * FROM saved`,
     [userId, engineMode, anchorDay],
   );
-  invalidateCycleCache(userId);
+  await invalidateCycleDerivedData(userId);
   return {
     engineMode: rows[0].engine_mode,
     manualAnchorDay: rows[0].manual_anchor_day == null ? null : Number(rows[0].manual_anchor_day),
@@ -259,11 +290,12 @@ async function saveCreditClassification(userId, transactionId, klass, reason = n
        class = EXCLUDED.class,
        reason = EXCLUDED.reason,
        updated_at = NOW()
+     WHERE credit_classifications.user_id = EXCLUDED.user_id
      RETURNING transaction_id, class, reason, updated_at`,
     [transactionId, userId, klass, reason],
   );
   if (!rows.length) return null;
-  invalidateCycleCache(userId);
+  await invalidateCycleDerivedData(userId);
   return {
     transactionId: rows[0].transaction_id,
     class: rows[0].class,
@@ -292,11 +324,12 @@ async function saveTransactionOverride(userId, transactionId, classification, re
        classification = EXCLUDED.classification,
        reason = EXCLUDED.reason,
        updated_at = NOW()
+     WHERE cycle_transaction_overrides.user_id = EXCLUDED.user_id
      RETURNING transaction_id, classification, reason, updated_at`,
     [transactionId, userId, classification, reason],
   );
   if (!rows.length) return null;
-  invalidateCycleCache(userId);
+  await invalidateCycleDerivedData(userId);
   return {
     transactionId: rows[0].transaction_id,
     classification: rows[0].classification,
@@ -311,7 +344,7 @@ async function deleteTransactionOverride(userId, transactionId) {
       WHERE transaction_id = $1 AND user_id = $2`,
     [transactionId, userId],
   );
-  invalidateCycleCache(userId);
+  await invalidateCycleDerivedData(userId);
   return rowCount > 0;
 }
 
@@ -499,6 +532,7 @@ async function getFinancialCycles(userId, {
     const cached = cacheGet(cacheKey);
     if (cached) return cached;
   }
+  const requestEpoch = cacheInvalidationEpoch(userId);
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
@@ -519,7 +553,9 @@ async function getFinancialCycles(userId, {
   });
   if (!signatures.length && settings.engineMode !== 'manual') {
     const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans, settings);
-    await syncCycleNotifications(userId, empty);
+    if (requestEpoch === cacheInvalidationEpoch(userId)) {
+      await syncCycleNotifications(userId, empty);
+    }
     return empty;
   }
 
@@ -533,7 +569,9 @@ async function getFinancialCycles(userId, {
   });
   if (!windows.length) {
     const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans, settings);
-    await syncCycleNotifications(userId, empty);
+    if (requestEpoch === cacheInvalidationEpoch(userId)) {
+      await syncCycleNotifications(userId, empty);
+    }
     return empty;
   }
   const salaryTrackingTxns = bankTxns.filter((txn) => {
@@ -576,10 +614,16 @@ async function getFinancialCycles(userId, {
   };
 
   await Promise.all([
-    persistClosedCycleAggregates(userId, cycles),
-    syncCycleNotifications(userId, result),
+    requestEpoch === cacheInvalidationEpoch(userId)
+      ? persistClosedCycleAggregates(userId, cycles)
+      : Promise.resolve(),
+    requestEpoch === cacheInvalidationEpoch(userId)
+      ? syncCycleNotifications(userId, result)
+      : Promise.resolve(),
   ]);
-  return (!skipCache && creditClassifications === undefined)
+  return (!skipCache
+    && creditClassifications === undefined
+    && requestEpoch === cacheInvalidationEpoch(userId))
     ? cacheSet(cacheKey, result)
     : result;
 }
@@ -591,6 +635,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     const cached = cacheGet(cacheKey);
     if (cached) return cached;
   }
+  const requestEpoch = cacheInvalidationEpoch(userId);
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
@@ -610,7 +655,9 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
   });
   if (!signatures.length && settings.engineMode !== 'manual') {
     const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans, settings);
-    await syncCycleNotifications(userId, empty);
+    if (requestEpoch === cacheInvalidationEpoch(userId)) {
+      await syncCycleNotifications(userId, empty);
+    }
     return empty;
   }
 
@@ -624,7 +671,9 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
   });
   if (!windows.length) {
     const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans, settings);
-    await syncCycleNotifications(userId, empty);
+    if (requestEpoch === cacheInvalidationEpoch(userId)) {
+      await syncCycleNotifications(userId, empty);
+    }
     return empty;
   }
   const window = windows.find((candidate) => candidate.running) || windows[windows.length - 1];
@@ -661,8 +710,12 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     settings,
     salaryChange: null,
   };
-  await syncCycleNotifications(userId, result);
-  return skipCache ? result : cacheSet(cacheKey, result);
+  if (requestEpoch === cacheInvalidationEpoch(userId)) {
+    await syncCycleNotifications(userId, result);
+  }
+  return !skipCache && requestEpoch === cacheInvalidationEpoch(userId)
+    ? cacheSet(cacheKey, result)
+    : result;
 }
 
 function cycleCategoryTotals(cycle) {
@@ -798,11 +851,6 @@ async function loadStoredYear(userId, year) {
 async function getYearReview(userId, year, { asOf = new Date() } = {}) {
   const selectedYear = Number(year);
   const currentYear = Number(isoDate(asOf).slice(0, 4));
-  const stored = await loadStoredYear(userId, selectedYear);
-  if (stored.length && selectedYear < currentYear) {
-    return summarizeYear(selectedYear, stored, 'aggregates');
-  }
-
   const result = await getFinancialCycles(userId, {
     asOf,
     years: Math.max(HISTORY_YEARS, currentYear - selectedYear + 1),
@@ -812,6 +860,9 @@ async function getYearReview(userId, year, { asOf = new Date() } = {}) {
     .filter((cycle) => !(cycle.partials || []).length)
     .map(aggregatePayload);
   if (live.length) return summarizeYear(selectedYear, live, 'live');
+  // Aggregates are a retention fallback, never a substitute for source rows that
+  // can be recalculated with the user's latest classifications and settings.
+  const stored = await loadStoredYear(userId, selectedYear);
   return summarizeYear(selectedYear, stored, stored.length ? 'aggregates' : 'none');
 }
 
@@ -862,5 +913,6 @@ module.exports = {
   getYearReview,
   getAvailableCycleYears,
   invalidateCycleCache,
+  invalidateCycleDerivedData,
   summarizeYear,
 };

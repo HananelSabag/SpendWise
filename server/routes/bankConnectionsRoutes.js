@@ -21,7 +21,7 @@ const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
 const { INSTITUTIONS, VALID_SOURCES, institutionKind } = require('../config/institutions');
-const { invalidateCycleCache } = require('../services/cycleService');
+const { invalidateCycleDerivedData } = require('../services/cycleService');
 const { invalidateDashboardCache } = require('../services/dashboardService');
 
 const MAX_CIPHERTEXT_LEN = 4096;      // sealed box of a creds JSON is well under this
@@ -298,7 +298,7 @@ router.delete('/:id', async (req, res) => {
 
     await client.query('COMMIT');
     if (purge) {
-      invalidateCycleCache(req.user.id);
+      await invalidateCycleDerivedData(req.user.id);
       invalidateDashboardCache(req.user.id);
     }
     logger.info('bank-connections: deleted', {
@@ -339,7 +339,7 @@ router.patch('/:id/accounts/:accountNumber', async (req, res) => {
       [req.user.id, conn.rows[0].bank_source, accountNumber, enabled],
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Account not found' });
-    invalidateCycleCache(req.user.id);
+    await invalidateCycleDerivedData(req.user.id);
     invalidateDashboardCache(req.user.id);
     res.json({ ok: true, account: result.rows[0] });
   } catch (err) {

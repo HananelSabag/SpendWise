@@ -26,7 +26,7 @@ const { buildAgentClaimScope } = require('../services/agentClaimScope');
 const { normalizeAgentFailure } = require('../services/bankAgentFailureService');
 const { ingestAccounts } = require('../services/bankSyncService');
 const { enqueueDueJobs } = require('../services/syncSchedulingService');
-const { invalidateCycleCache } = require('../services/cycleService');
+const { invalidateCycleDerivedData } = require('../services/cycleService');
 const { invalidateDashboardCache } = require('../services/dashboardService');
 
 const AUTO_PAUSE_AFTER_FAILURES = 3;
@@ -219,7 +219,7 @@ router.post('/jobs/:id/result', async (req, res) => {
       await client.query('COMMIT');
       // The cache must be cleared after commit; doing it inside ingestAccounts
       // leaves a window where an old snapshot can be cached again for 15 seconds.
-      invalidateCycleCache(job.user_id);
+      await invalidateCycleDerivedData(job.user_id);
       invalidateDashboardCache(job.user_id);
       logger.info('bank-agent: job done', { jobId, inserted, skipped });
       return res.json({ ok: true, inserted, skipped });

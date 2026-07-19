@@ -109,4 +109,57 @@ describe('cycle reconciliation invariant', () => {
     expect(cycle.unreconciledCardEvents).toHaveLength(1);
     expect(cycle.unreconciledCardEvents[0].total).toBe(-24.31);
   });
+
+  test('a pending bank settlement cannot promote a card event into realized spending', () => {
+    const pendingSettlement = {
+      ...bank(10, -24.31, '2026-07-12', 'card settlement'),
+      status: 'pending',
+    };
+    const event = {
+      source: 'isracard',
+      accountNumber: '9999',
+      chargeDate: '2026-07-12',
+      total: -24.31,
+      class: 'statement',
+      txns: [],
+    };
+
+    const result = engine.reconcile([pendingSettlement], [event]);
+
+    expect(result.matched).toHaveLength(0);
+    expect(result.unmatchedEvents).toEqual([event]);
+    expect(result.unmatchedBank).toEqual([pendingSettlement]);
+  });
+
+  test('a missing salary keeps the last cycle running and includes settled movement after payday', () => {
+    const salary = bank(20, 1000, '2026-06-01', 'acme payroll');
+    const latePeriodExpense = bank(21, -125, '2026-07-06', 'rent');
+    const [window] = engine.buildWindows([{
+      date: salary.processedDate,
+      amount: salary.amount,
+      txn: salary,
+    }], { asOf: new Date('2026-07-10T12:00:00+03:00') });
+
+    expect(window).toMatchObject({
+      start: '2026-06-01',
+      end: '2026-07-01',
+      effectiveEnd: '2026-07-11',
+      projectedEnd: true,
+      running: true,
+    });
+
+    const cycle = engine.buildCycle({
+      bankTxns: [salary, latePeriodExpense],
+      window,
+      asOf: new Date('2026-07-10T12:00:00+03:00'),
+      salarySignature: {
+        normalizedDescription: 'acme payroll', bankSource: 'yahav', accountNumber: '123',
+      },
+    });
+
+    expect(cycle.expenses.direct.total).toBe(125);
+    expect(cycle.bankMovement).toBe(875);
+    expect(cycle.window.running).toBe(true);
+    expect(cycle.closedInsights).toBeNull();
+  });
 });

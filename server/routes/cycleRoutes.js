@@ -33,6 +33,10 @@ const {
  * The rows are sent with the cycle rather than fetched per tap — a statement is ~80 rows of
  * three short fields, so the whole breakdown costs a few KB and expands instantly.
  */
+function accountLast4(accountNumber) {
+  return accountNumber == null ? null : String(accountNumber).slice(-4);
+}
+
 function slimTxn(txn) {
   return {
     id: txn.id,
@@ -40,10 +44,10 @@ function slimTxn(txn) {
     processedDate: txn.processedDate,
     description: txn.description,
     amount: txn.amount,
-    // Needed by the provenance UI to group direct bank money per real account. These are
-    // display-safe fields already exposed elsewhere in authenticated bank-sync responses.
+    // The UI only groups/displays by masked suffix. Never ship a full account number in this
+    // high-volume response, even though the endpoint is authenticated.
     source: txn.source,
-    accountNumber: txn.accountNumber,
+    accountNumber: accountLast4(txn.accountNumber),
     pending: Boolean(txn.status && txn.status !== 'completed'),
     currency: txn.originalCurrency && txn.originalCurrency !== 'ILS' ? txn.originalCurrency : null,
     installments: txn.installments || null,
@@ -59,7 +63,7 @@ function slimEvent(event) {
     count: includedTxns.length,
     class: event.class,
     source: event.source,
-    accountNumber: event.accountNumber,
+    accountNumber: accountLast4(event.accountNumber),
     partial: Boolean(event.partial),
     future: Boolean(event.future),
     // A statement still building this cycle — its purchases are counted now, but the bank
@@ -80,7 +84,7 @@ function slimDecision(decision) {
     description: decision.description,
     amount: decision.amount,
     source: decision.source,
-    accountNumber: decision.accountNumber,
+    accountNumber: accountLast4(decision.accountNumber),
     classification: decision.classification,
     included: decision.included,
     automatic: decision.automatic,
@@ -91,7 +95,41 @@ function slimDecision(decision) {
     impactAmount: decision.impactAmount,
     bankEffect: decision.bankEffect,
     reason: decision.reason,
-    linkedTo: decision.linkedTo,
+    linkedTo: decision.linkedTo ? {
+      ...decision.linkedTo,
+      accountNumber: accountLast4(decision.linkedTo.accountNumber),
+    } : null,
+  };
+}
+
+function slimLoan(loan) {
+  return {
+    ...loan,
+    payments: (loan.payments || []).map((payment) => ({
+      date: payment.date,
+      amount: payment.amount,
+    })),
+  };
+}
+
+function slimSalaryTracking(tracking) {
+  if (!tracking) return null;
+  const slimEvent = (event) => event ? {
+    date: event.date,
+    amount: event.amount,
+    txn: event.txn ? slimTxn(event.txn) : null,
+  } : null;
+  return {
+    ...tracking,
+    last: slimEvent(tracking.last),
+    events: (tracking.events || []).map(slimEvent),
+  };
+}
+
+function slimSignature(signature) {
+  return {
+    ...signature,
+    accountNumber: accountLast4(signature.accountNumber),
   };
 }
 
@@ -101,6 +139,7 @@ function slimCycle(cycle, { includeControl = false } = {}) {
         ...cycle.nextCardForecast,
         bills: (cycle.nextCardForecast.bills || []).map((bill) => ({
           ...bill,
+          accountNumber: accountLast4(bill.accountNumber),
           knownTxns: (bill.knownTxns || [])
             .map(slimTxn)
             .sort((a, b) => String(b.date).localeCompare(String(a.date))),
@@ -113,6 +152,7 @@ function slimCycle(cycle, { includeControl = false } = {}) {
       index: cycle.window.index,
       start: cycle.window.start,
       end: cycle.window.end,
+      effectiveEnd: cycle.window.effectiveEnd || cycle.window.end,
       running: Boolean(cycle.window.running),
       projectedEnd: Boolean(cycle.window.projectedEnd),
       mode: cycle.window.mode || 'automatic',
@@ -158,13 +198,19 @@ function slimCycle(cycle, { includeControl = false } = {}) {
       identifier: r.txn.identifier,
       suggestion: r.suggestion,
       reason: r.reason,
-      matchedBill: r.matchedBill,
+      matchedBill: r.matchedBill ? {
+        ...r.matchedBill,
+        accountNumber: accountLast4(r.matchedBill.accountNumber),
+      } : null,
       daysApart: r.daysApart,
     })),
     reversals: cycle.reversals.map((r) => ({ amount: r.amount, chargeDate: r.event.chargeDate, description: r.creditTxn.description, daysApart: r.daysApart })),
     partials: cycle.partials.map(slimEvent),
     unreconciledCardEvents: cycle.unreconciledCardEvents.map(slimEvent),
-    cards: cycle.cards,
+    cards: cycle.cards.map((card) => ({
+      ...card,
+      accountNumber: accountLast4(card.accountNumber),
+    })),
     ...(includeControl ? { decisions: (cycle.decisions || []).map(slimDecision) } : {}),
   };
 }
@@ -189,14 +235,14 @@ router.get('/', auth, async (req, res, next) => {
       data: {
         status: result.status,
         cycles: result.cycles.map((cycle) => slimCycle(cycle, { includeControl: true })),
-        loans: result.loans,
+        loans: result.loans.map(slimLoan),
         totalOutstanding: result.totalOutstanding || 0,
         recurring: result.recurring,
-        salaryTracking: result.salaryTracking,
+        salaryTracking: slimSalaryTracking(result.salaryTracking),
         salaryChange: result.salaryChange
           ? { suspected: result.salaryChange.suspected, reason: result.salaryChange.reason, candidates: result.salaryChange.candidates.map((c) => ({ date: c.date, amount: c.amount, description: c.txn.description })) }
           : null,
-        signatures: result.signatures,
+        signatures: result.signatures.map(slimSignature),
         fundingForecast: slimFundingForecast(result.fundingForecast),
         settings: result.settings,
       },
@@ -233,9 +279,17 @@ const TRANSACTION_CLASSIFICATIONS = new Set([
   'salary', 'income', 'financing', 'refund', 'expense', 'transfer', 'exclude',
 ]);
 
+function parseTransactionId(value) {
+  if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) return null;
+  const transactionId = Number(value);
+  return Number.isInteger(transactionId) && transactionId <= 2147483647
+    ? transactionId
+    : null;
+}
+
 /** Override one engine decision without mutating the immutable bank transaction. */
 router.put('/transactions/:transactionId/classification', auth, async (req, res, next) => {
-  const transactionId = Number.parseInt(req.params.transactionId, 10);
+  const transactionId = parseTransactionId(req.params.transactionId);
   const classification = req.body && req.body.classification;
   const reason = req.body && req.body.reason;
   if (!Number.isInteger(transactionId) || transactionId <= 0) {
@@ -268,7 +322,7 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
 
 /** Return a decision to automatic engine control. */
 router.delete('/transactions/:transactionId/classification', auth, async (req, res, next) => {
-  const transactionId = Number.parseInt(req.params.transactionId, 10);
+  const transactionId = parseTransactionId(req.params.transactionId);
   if (!Number.isInteger(transactionId) || transactionId <= 0) {
     return res.status(400).json({ success: false, error: 'Invalid transaction id' });
   }
@@ -287,7 +341,7 @@ router.delete('/transactions/:transactionId/classification', auth, async (req, r
 
 /** Remember the user's answer for one ambiguous credit. */
 router.put('/credits/:transactionId/classification', auth, async (req, res, next) => {
-  const transactionId = Number.parseInt(req.params.transactionId, 10);
+  const transactionId = parseTransactionId(req.params.transactionId);
   const klass = req.body && req.body.class;
   const reason = req.body && req.body.reason;
 
@@ -358,7 +412,7 @@ router.get('/current', auth, async (req, res, next) => {
       data: {
         status: result.status,
         cycle: result.current ? slimCycle(result.current) : null,
-        salaryTracking: result.salaryTracking,
+        salaryTracking: slimSalaryTracking(result.salaryTracking),
         fundingForecast: slimFundingForecast(result.fundingForecast),
         settings: result.settings,
         totalOutstanding: result.totalOutstanding || 0,

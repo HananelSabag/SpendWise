@@ -28,7 +28,7 @@ const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
-const { invalidateCycleCache } = require('../services/cycleService');
+const { invalidateCycleDerivedData } = require('../services/cycleService');
 const { invalidateDashboardCache } = require('../services/dashboardService');
 const { auth } = require('../middleware/auth');
 const { ingestAccounts, MAX_TXNS } = require('../services/bankSyncService');
@@ -137,7 +137,7 @@ router.post('/', bankSyncLimiter, bankSyncAuth, async (req, res) => {
     await client.query('COMMIT');
     // Invalidate only after the transaction is visible. Invalidating inside
     // ingestAccounts allowed a concurrent read to repopulate stale data before COMMIT.
-    invalidateCycleCache(userId);
+    await invalidateCycleDerivedData(userId);
     invalidateDashboardCache(userId);
     logger.info('bank-sync: completed', { userId, source, inserted, skipped });
     res.json({ ok: true, inserted, skipped });

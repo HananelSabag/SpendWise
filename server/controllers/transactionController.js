@@ -11,7 +11,7 @@ const logger = require('../utils/logger');
 const db = require('../config/db');
 const { INSTITUTIONS } = require('../config/institutions');
 const { buildDashboardData, invalidateDashboardCache } = require('../services/dashboardService');
-const { invalidateCycleCache } = require('../services/cycleService');
+const { invalidateCycleDerivedData } = require('../services/cycleService');
 const { buildSalaryReview, saveSalaryReview } = require('../services/salaryReviewService');
 const { createWatch, removeWatch, getWatched } = require('../services/merchantWatchService');
 const { classifyTransaction } = require('../services/financialClassificationService');
@@ -21,9 +21,9 @@ const CREDIT_CARD_SOURCES = Object.entries(INSTITUTIONS)
   .filter(([, meta]) => meta.kind === 'credit_card')
   .map(([source]) => source);
 
-function invalidateHomeCaches(userId) {
+async function invalidateHomeCaches(userId) {
   invalidateDashboardCache(userId);
-  invalidateCycleCache(userId);
+  await invalidateCycleDerivedData(userId);
 }
 
 const transactionController = {
@@ -152,8 +152,17 @@ const transactionController = {
                     updated_at=NOW()
       RETURNING id, bank_source, bank_account_number, display_description, month_offset, cycle_anchor
     `, [req.user.id, row.bank_source, row.bank_account_number, row.normalized_description, row.description, row.id, cycleAnchor]);
-    invalidateCycleCache(req.user.id);
-    res.status(201).json({ success: true, data: saved.rows[0] });
+    await invalidateCycleDerivedData(req.user.id);
+    const signature = saved.rows[0];
+    res.status(201).json({
+      success: true,
+      data: {
+        ...signature,
+        bank_account_number: signature.bank_account_number == null
+          ? null
+          : String(signature.bank_account_number).slice(-4),
+      },
+    });
   }),
 
   getSalaryReview: asyncHandler(async (req, res) => {
@@ -163,7 +172,7 @@ const transactionController = {
 
   updateSalaryReview: asyncHandler(async (req, res) => {
     const data = await saveSalaryReview(req.user.id, req.body?.decisions);
-    invalidateCycleCache(req.user.id);
+    await invalidateCycleDerivedData(req.user.id);
     res.json({ success: true, data });
   }),
 
@@ -347,7 +356,7 @@ const transactionController = {
       };
 
       const transaction = await Transaction.create(transactionData, userId);
-      invalidateHomeCaches(userId);
+      await invalidateHomeCaches(userId);
 
       res.status(201).json({
         success: true,
@@ -401,7 +410,7 @@ const transactionController = {
       }
 
       const transaction = await Transaction.update(id, updateData, userId);
-      invalidateHomeCaches(userId);
+      await invalidateHomeCaches(userId);
 
       res.json({
         success: true,
@@ -444,7 +453,7 @@ const transactionController = {
           error: 'Transaction not found'
         });
       }
-      invalidateHomeCaches(userId);
+      await invalidateHomeCaches(userId);
 
       res.json({
         success: true,
@@ -517,7 +526,7 @@ const transactionController = {
           }
         });
       }
-      invalidateHomeCaches(userId);
+      await invalidateHomeCaches(userId);
 
       // Response format that matches client expectations
       res.json({

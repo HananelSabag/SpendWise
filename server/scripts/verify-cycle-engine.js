@@ -306,6 +306,85 @@ function main() {
   const oldLoan = recurring.find((r) => r.identifier === '2529001');
   console.log(`${check('old loan surfaced for labelling', Boolean(oldLoan), 'the ~1,100/月 series with no captured disbursement must be offered to the user')}  2529001 surfaced = ${Boolean(oldLoan)}`);
 
+  // ---- Joint-account fixture (Yehuda): two salaries, two bank accounts, multiple cards ------
+  const jointBankAccounts = loadRaw('raw-yahav-user-34.json', 'yahav') || [];
+  const jointBankTxns = jointBankAccounts.flatMap((account) => account.txns);
+  const jointCards = [
+    ...(loadRaw('raw-max-user-34.json', 'max') || []),
+    ...(loadRaw('raw-isracard-user-34.json', 'isracard') || []),
+  ];
+  if (jointBankTxns.length) {
+    console.log('\n=== JOINT ACCOUNT (USER 34) — TWO-SALARY GENERALIZATION ===');
+    const salaryFamilies = [...jointBankTxns
+      .filter((txn) => txn.amount >= 10000 && String(txn.description).includes('משכורת'))
+      .reduce((families, txn) => {
+        const description = String(txn.description).trim();
+        if (!families.has(description)) families.set(description, []);
+        families.get(description).push(txn);
+        return families;
+      }, new Map())]
+      .filter(([, txns]) => txns.length >= 2)
+      .sort(([, left], [, right]) => {
+        const averageDay = (txns) => txns.reduce(
+          (total, txn) => total + Number(engine.ilDate(txn.processedDate || txn.date).slice(8, 10)),
+          0,
+        ) / txns.length;
+        return averageDay(left) - averageDay(right);
+      });
+    const jointSignatures = salaryFamilies.map(([description], index) => ({
+      id: index + 1,
+      normalizedDescription: description,
+      displayDescription: description,
+      monthOffset: -1,
+      cycleAnchor: index === 0,
+    }));
+    const primarySignature = jointSignatures[0];
+    const jointSalaryEvents = primarySignature
+      ? engine.findSalaryEvents(jointBankTxns, primarySignature)
+      : [];
+    const jointWindows = engine.buildWindows(jointSalaryEvents, { asOf });
+    const jointFundingForecast = engine.buildFundingForecast(
+      jointBankTxns,
+      jointSignatures,
+      { asOf },
+    );
+    const jointPrepared = engine.prepareCycleData({
+      bankTxns: jointBankTxns,
+      cards: jointCards,
+      asOf,
+    });
+    const jointCurrentWindow = jointWindows.find((window) => window.running);
+    const jointCurrent = jointCurrentWindow && engine.buildCycle({
+      bankTxns: jointBankTxns,
+      cards: jointCards,
+      window: jointCurrentWindow,
+      asOf,
+      salarySignature: primarySignature,
+      salarySignatures: jointSignatures,
+      fundingForecast: jointFundingForecast,
+      preparedData: jointPrepared,
+    });
+
+    console.log(`${check('joint account discovers two recurring salaries', jointSignatures.length === 2, `expected 2 salary families, got ${jointSignatures.length}`)}  recurring salary streams = ${jointSignatures.length}`);
+    console.log(`${check('joint account keeps one running household cycle', Boolean(jointCurrent), 'no running cycle was built')}  running cycle = ${jointCurrent ? `${jointCurrent.window.start} → ${jointCurrent.window.end}` : 'none'}`);
+    if (jointCurrent) {
+      const openingSalaryDecisions = jointCurrent.decisions.filter((decision) => (
+        decision.classification === 'salary' && decision.included === false
+      ));
+      console.log(`${check('both already-paid salaries stay out of running income', jointCurrent.income.salary.total === 0 && openingSalaryDecisions.length >= 2, `salary total ${nis(jointCurrent.income.salary.total)}, excluded salary decisions ${openingSalaryDecisions.length}`)}  settled running salary = ${nis(jointCurrent.income.salary.total)}`);
+      const forecastSalaryStages = jointCurrent.forwardReset?.stages.filter((stage) => stage.kind === 'income') || [];
+      console.log(`${check('both household salaries remain in the forward estimate', forecastSalaryStages.length === 2 && jointCurrent.forwardReset.expectedIncoming > 0, `expected 2 future salary stages, got ${forecastSalaryStages.length}`)}  future salary stages = ${forecastSalaryStages.length}`);
+      const accountingWindow = jointCurrent.window.effectiveEnd
+        ? { ...jointCurrent.window, end: jointCurrent.window.effectiveEnd }
+        : jointCurrent.window;
+      const realMovement = jointBankTxns
+        .filter((txn) => engine.inWindow(txn.processedDate || txn.date, accountingWindow))
+        .filter((txn) => !engine.isPending(txn))
+        .reduce((total, txn) => total + txn.amount, 0);
+      console.log(`${check('joint-account bank movement reconciles', Math.abs(jointCurrent.bankMovement - realMovement) <= 0.02, `model ${nis(jointCurrent.bankMovement)} vs real ${nis(realMovement)}`)}  model ${nis(jointCurrent.bankMovement)} == real ${nis(realMovement)}`);
+    }
+  }
+
   console.log('\n' + '='.repeat(60));
   if (failures.length) {
     console.log(`FAILED (${failures.length}):`);
