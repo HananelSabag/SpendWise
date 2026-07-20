@@ -170,7 +170,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
 
             <div className="mt-3 flex items-end justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-800/45">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t('cycle.cardSpend', { fallback: 'Charged this cycle' })}</p>
-              <p className="shrink-0 text-2xl font-black tabular-nums text-gray-900 dark:text-white">{signed(split.total, formatCurrency)}</p>
+              <p className="shrink-0 text-xl font-black tabular-nums text-gray-900 dark:text-white">{signed(split.total, formatCurrency)}</p>
             </div>
 
             {split.statement.has || split.immediate.has ? (

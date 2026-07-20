@@ -379,6 +379,7 @@ export default {
     previousClosed: "Previous closed cycle",
     forward: {
       title: "Left in this cycle",
+      timeline: "What's still to happen",
       subtitle: "Only money that still has to enter or leave from now.",
       estimated: "Estimated",
       known: "Known only",
@@ -389,7 +390,7 @@ export default {
       additional: "Additional",
       moreStages: "+{{count}} more stages",
       completes: "Cycle ends around {{date}}",
-      alreadySettled: "Already settled — available for transparency only",
+      alreadySettled: "Booked so far this cycle",
       stage: { income: "Income", card: "Card bill", recurring: "Recurring charge" }
     },
     closed: {

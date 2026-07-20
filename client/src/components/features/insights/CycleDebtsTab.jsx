@@ -41,7 +41,7 @@ export default function CycleDebtsTab({ loans = [], totalOutstanding = 0, recurr
             {t('cycle.debtHint', { fallback: 'Principal drawn minus what you have repaid, read straight from the bank. Nothing here was typed in by hand.' })}
           </InfoHint>
         </p>
-        <p className="mt-1 text-3xl font-black tabular-nums text-gray-900 dark:text-white">{formatCurrency(totalOutstanding)}</p>
+        <p className="mt-1 text-2xl font-black tabular-nums text-gray-900 dark:text-white">{formatCurrency(totalOutstanding)}</p>
         <p className="mt-0.5 text-[11px] text-gray-400">{count(known.length, { key: 'cycle.loan', fb: 'loan' }, { key: 'cycle.loans', fb: 'loans' })}</p>
       </div>
 

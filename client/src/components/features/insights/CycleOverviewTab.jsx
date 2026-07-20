@@ -1,23 +1,50 @@
 /**
- * The cycle at a glance: what you earned, what you spent, what you borrowed, and what the
- * account actually did — then the rows that built each of those.
+ * The cycle at a glance: for a running cycle, what is still to come and what has booked so far;
+ * for a closed one, the net you actually lived on, the figures behind it, and the breakdown.
  *
- * Deliberately word-light. Every figure gets a label of one or two words; the reasoning behind
- * it lives in an InfoHint, so the screen reads as numbers rather than paragraphs.
+ * Word-light: every figure gets a one- or two-word label, and the one genuinely non-obvious number
+ * (bank movement) keeps a tap-to-explain hint. Everything else is just the numbers.
  */
 
 import React from 'react';
-import { AlertTriangle, TrendingDown, TrendingUp } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
-import { formatCycleDay } from '../../../utils/cycleDate';
 import { signedCurrency } from '../../../utils/cycleFormat';
 import { InfoHint } from '../../ui';
 import CycleBreakdown from '../dashboard/CycleBreakdown';
 import ForwardResetSummary from './ForwardResetSummary';
 import ClosedCycleInsights from './ClosedCycleInsights';
 
-function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrency, big = false }) {
+function SalaryLate({ t }) {
+  return (
+    <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
+      <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+      <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+        {t('cycle.salaryLate', { fallback: 'Your salary has not come in yet — keep an eye on it.' })}
+      </p>
+    </div>
+  );
+}
+
+/** An incomplete cycle understates what moved — say so, never let it read as a real number. */
+function PartialWarning({ t }) {
+  return (
+    <div className="flex items-start gap-2 rounded-2xl border border-orange-200 bg-orange-50/70 px-3 py-2 dark:border-orange-900/50 dark:bg-orange-950/20">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
+      <div>
+        <p className="text-xs font-bold text-orange-900 dark:text-orange-200">
+          {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
+        </p>
+        <p className="mt-0.5 text-[11px] leading-tight text-orange-800/80 dark:text-orange-200/70">
+          {t('cycle.partialHint', { fallback: 'An older card statement from before your synced history is missing, so these figures understate what really moved.' })}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrency }) {
   const tones = {
     positive: 'text-emerald-600 dark:text-emerald-400',
     negative: 'text-rose-600 dark:text-rose-400',
@@ -30,7 +57,7 @@ function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrenc
         {label}
         {hint && <InfoHint title={hintTitle}>{hint}</InfoHint>}
       </p>
-      <p className={cn('mt-1 tabular-nums', big ? 'text-2xl font-black' : 'text-lg font-bold', tones[tone])}>
+      <p className={cn('mt-1 text-lg font-bold tabular-nums', tones[tone])}>
         {signedCurrency(value, formatCurrency)}
       </p>
     </div>
@@ -39,30 +66,20 @@ function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrenc
 
 export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency, t, language, useCardEstimate = true }) {
   if (!cycle) return null;
-  const { income, expenses, operatingNet, financing, bankMovement, projection } = cycle;
+  const { income, expenses, operatingNet, financing, bankMovement } = cycle;
   const deficit = operatingNet < 0;
+  const salaryLate = salaryTracking?.status === 'late';
+  const isPartial = cycle.partials?.length > 0;
 
   if (cycle.window?.running) {
     return (
       <div className="space-y-3">
-        {salaryTracking?.status === 'late' && (
-          <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-            <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-              {t('cycle.salaryLate', { fallback: 'Your salary has not come in yet — keep an eye on it.' })}
-            </p>
-          </div>
-        )}
-        <ForwardResetSummary
-          forwardReset={cycle.forwardReset}
-          useEstimate={useCardEstimate}
-          formatCurrency={formatCurrency}
-          t={t}
-          language={language}
-        />
+        {salaryLate && <SalaryLate t={t} />}
+        {isPartial && <PartialWarning t={t} />}
+        <ForwardResetSummary forwardReset={cycle.forwardReset} useEstimate={useCardEstimate} formatCurrency={formatCurrency} t={t} language={language} />
         <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-            {t('cycle.forward.alreadySettled', { fallback: 'Already settled — available for transparency only' })}
+            {t('cycle.forward.alreadySettled', { fallback: 'Booked so far this cycle' })}
           </p>
           <CycleBreakdown cycle={cycle} formatCurrency={formatCurrency} t={t} language={language} />
         </div>
@@ -72,32 +89,10 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
 
   return (
     <div className="space-y-3">
-      <ClosedCycleInsights insights={cycle.closedInsights} formatCurrency={formatCurrency} t={t} language={language} />
-      {salaryTracking?.status === 'late' && (
-        <div className="flex items-center gap-2 rounded-2xl bg-amber-50 px-3 py-2 dark:bg-amber-900/20">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-            {t('cycle.salaryLate', { fallback: 'Your salary has not come in yet — keep an eye on it.' })}
-          </p>
-        </div>
-      )}
+      {salaryLate && <SalaryLate t={t} />}
+      {isPartial && <PartialWarning t={t} />}
 
-      {/* An incomplete cycle understates what moved — say so, never let it read as a real number. */}
-      {cycle.partials?.length > 0 && (
-        <div className="flex items-start gap-2 rounded-2xl border border-orange-200 bg-orange-50/70 px-3 py-2 dark:border-orange-900/50 dark:bg-orange-950/20">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />
-          <div>
-            <p className="text-xs font-bold text-orange-900 dark:text-orange-200">
-              {t('cycle.partialTitle', { fallback: 'This cycle is incomplete' })}
-            </p>
-            <p className="mt-0.5 text-[11px] leading-tight text-orange-800/80 dark:text-orange-200/70">
-              {t('cycle.partialHint', { fallback: 'An older card statement from before your synced history is missing, so these figures understate what really moved.' })}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* The number to feel, alone and dominant. */}
+      {/* The number to feel — first and dominant. */}
       <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
           {t('cycle.operatingNet', { fallback: 'Net — how you are living' })}
@@ -124,28 +119,8 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
           hint={t('cycle.bankHint', { fallback: 'The literal change in the bank between salary dates.' })} />
       </div>
 
-      {projection && projection.upcoming.length > 0 && (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
-          <p className="flex items-center gap-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-            {projection.projectedOperatingNet < operatingNet ? <TrendingDown className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}
-            {t('cycle.stillExpected', { fallback: 'Still expected before your next salary' })}
-          </p>
-          <ul className="mt-2 space-y-1">
-            {projection.upcoming.map((item) => (
-              <li key={`${item.kind}-${item.date}-${item.label}`} className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-gray-500 dark:text-gray-400">{formatCycleDay(item.date, language)} · {item.label}</span>
-                <span className="shrink-0 tabular-nums font-semibold text-gray-700 dark:text-gray-300">{signedCurrency(item.amount, formatCurrency)}</span>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-800">
-            <span className="text-[11px] font-bold text-gray-600 dark:text-gray-300">{t('cycle.projectedEnd', { fallback: 'Estimated end of cycle' })}</span>
-            <span className={cn('tabular-nums text-base font-black', projection.projectedOperatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
-              {signedCurrency(projection.projectedOperatingNet, formatCurrency)}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Daily averages are a footnote to the net, not a headline — kept compact and below it. */}
+      <ClosedCycleInsights insights={cycle.closedInsights} formatCurrency={formatCurrency} t={t} language={language} />
 
       <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
         <CycleBreakdown cycle={cycle} formatCurrency={formatCurrency} t={t} language={language} />

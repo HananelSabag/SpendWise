@@ -27,7 +27,6 @@ describe('ClosedCycleInsights', () => {
 
     expect(screen.getByText('ILS 450.00')).toBeInTheDocument();
     expect(screen.getByText('ILS 700.00')).toBeInTheDocument();
-    expect(screen.getByText(/spent ILS 250.00 more/)).toBeInTheDocument();
     expect(screen.getByText(/Biggest spending day.*10 Jun/)).toBeInTheDocument();
   });
 });

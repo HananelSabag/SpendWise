@@ -113,7 +113,7 @@ export default function CycleBalanceStrip({
               {lastBillDate && <span className="shrink-0 text-[10px] font-medium text-indigo-500 dark:text-indigo-400">{formatCycleDay(lastBillDate, language)}</span>}
             </div>
             <div className="mt-1 flex items-end justify-between gap-3">
-              <p className={cn('min-w-0 text-2xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
+              <p className={cn('min-w-0 text-3xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
                 ~{formatCurrency(projectedBalance)}
               </p>
               {onCardEstimateChange && (

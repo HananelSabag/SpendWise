@@ -15,7 +15,6 @@ import {
   ChevronRight,
   ChevronUp,
   Clock3,
-  CreditCard,
   Receipt,
 } from 'lucide-react';
 
@@ -144,39 +143,14 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
   if (!cycle) return null;
   const { expenses, income } = cycle;
 
-  const classLabel = (event) => {
-    if (event.class !== 'statement') return t('cycle.classImmediate', { fallback: 'Charged directly' });
-    // A statement still building this cycle: its purchases count now, but the bank charges it
-    // next month — so it reads as a bill in progress, not one that already left the account.
-    return event.accruing
-      ? t('cycle.classAccruing', { fallback: 'Bill building' })
-      : t('cycle.classStatement', { fallback: 'Monthly bill' });
-  };
-
   /** "1 transactions" reads like a bug to a user; both languages need the singular. */
   const countLabel = (n) => `${n} ${n === 1
     ? t('cycle.txn', { fallback: 'transaction' })
     : t('cycle.txns', { fallback: 'transactions' })}`;
 
+  // Cards are itemised by CycleCardsTab; this block is only the money that moved through the
+  // bank directly (loans, standing orders, cash) plus income — so nothing is listed twice.
   const rows = [
-    // One row per real bank debit the card produced.
-    ...(expenses.events || []).map((event, index) => {
-      const label = `${cardShortName(event.source)} ••••${last4(event.accountNumber)}`;
-      const when = `${event.accruing ? `${t('cycle.billsOn', { fallback: 'bills' })} ` : ''}${formatCycleDay(event.chargeDate, language)}`;
-      const meta = `${classLabel(event)} · ${when} · ${countLabel(event.count)}`;
-      return {
-        // Immediate debits can share a card and charge date, so the old three-part key was
-        // not unique (the live MAX 8345 data has exactly this case).
-        key: `${event.source}-${event.accountNumber}-${event.chargeDate}-${event.class}-${event.total}-${event.txns?.[0]?.id || index}`,
-        compactGroup: `${event.source}-${event.accountNumber}`,
-        icon: CreditCard,
-        label,
-        meta,
-        amount: event.total,
-        tone: 'card',
-        onClick: () => setGroup({ title: label, meta, txns: event.txns || [] }),
-      };
-    }),
     ...groupByBankAccount(expenses.directItems).map((account) => {
       const fallback = t('cycle.bankOut', { fallback: 'Out of the account' });
       const label = bankAccountLabel(account.source, account.accountNumber, language, fallback);
@@ -213,24 +187,7 @@ export default function CycleBreakdown({ cycle, formatCurrency, t, language = 'e
     }),
   ].filter(Boolean);
 
-  // The compact state should scan like the old card: one meaningful row per card/account,
-  // not three variants of the same card. Pick the largest real debit as that account's
-  // representative, then put bank rows next and reveal secondary charge events on expansion.
-  const representativeByAccount = new Map();
-  rows.forEach((row) => {
-    if (!row.compactGroup) return;
-    const current = representativeByAccount.get(row.compactGroup);
-    if (!current || Math.abs(Number(row.amount) || 0) > Math.abs(Number(current.amount) || 0)) {
-      representativeByAccount.set(row.compactGroup, row);
-    }
-  });
-  const representativeRows = [...representativeByAccount.values()];
-  const representativeSet = new Set(representativeRows);
-  const prioritizedRows = [
-    ...representativeRows,
-    ...rows.filter((row) => !row.compactGroup),
-    ...rows.filter((row) => row.compactGroup && !representativeSet.has(row)),
-  ];
+  const prioritizedRows = rows;
   const compactRowCount = Math.min(prioritizedRows.length, compactRowLimit);
   const hiddenRowCount = Math.max(prioritizedRows.length - compactRowCount, 0);
   const visibleRows = isExpanded ? prioritizedRows : prioritizedRows.slice(0, compactRowCount);

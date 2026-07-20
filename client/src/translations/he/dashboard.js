@@ -368,6 +368,7 @@ export default {
     previousClosed: "המחזור הסגור הקודם",
     forward: {
       title: "מה שנשאר במחזור",
+      timeline: "מה עוד צפוי לקרות",
       subtitle: "רק כסף שעוד צריך להיכנס או לצאת מעכשיו.",
       estimated: "כולל הערכה",
       known: "רק מה שידוע",
@@ -378,7 +379,7 @@ export default {
       additional: "נוסף",
       moreStages: "עוד {{count}} שלבים",
       completes: "המחזור נסגר בסביבות {{date}}",
-      alreadySettled: "כבר קרה — מוצג לשקיפות בלבד",
+      alreadySettled: "מה שנרשם עד עכשיו במחזור",
       stage: { income: "משכורת", card: "חיוב אשראי", recurring: "חיוב קבוע" }
     },
     closed: {
