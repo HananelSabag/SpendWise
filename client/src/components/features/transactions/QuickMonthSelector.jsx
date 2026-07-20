@@ -24,7 +24,7 @@ const QuickMonthSelector = ({ availableMonths, selectedMonth, onMonthChange }) =
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border-2 transition-all font-medium text-xs sm:text-sm whitespace-nowrap",
+          "flex min-h-[44px] items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl border-2 transition-all font-medium text-xs sm:text-sm whitespace-nowrap",
           selectedMonth !== 'all'
             ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 shadow-md"
             : "bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-md"
@@ -60,7 +60,7 @@ const QuickMonthSelector = ({ availableMonths, selectedMonth, onMonthChange }) =
                   setIsExpanded(false);
                 }}
                 className={cn(
-                  "w-full px-4 py-2.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium",
+                  "w-full px-4 py-2.5 text-start text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors font-medium",
                   selectedMonth === 'all' && "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300"
                 )}
               >
@@ -75,7 +75,7 @@ const QuickMonthSelector = ({ availableMonths, selectedMonth, onMonthChange }) =
                     setIsExpanded(false);
                   }}
                   className={cn(
-                    "w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
+                    "w-full min-h-[44px] px-4 py-2.5 text-start text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors",
                     selectedMonth === month.key && "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-semibold"
                   )}
                 >

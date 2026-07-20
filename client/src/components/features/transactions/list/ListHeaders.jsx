@@ -32,7 +32,7 @@ export const MonthHeader = ({ title, totalIncome, totalExpenses }) => {
         </span>
         <span className={cn('font-semibold',
           net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400')}>
-          {net >= 0 ? '+' : ''}{formatCurrency(net)}
+          {net < 0 ? '−' : '+'}{formatCurrency(Math.abs(net))}
         </span>
       </div>
     </div>
@@ -49,7 +49,7 @@ export const DayHeader = ({ title, totalIncome, totalExpenses }) => {
       <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">{title}</span>
       <span className={cn('text-[11px] font-semibold tabular-nums',
         net >= 0 ? 'text-emerald-600/80 dark:text-emerald-400/80' : 'text-red-500/80 dark:text-red-400/80')}>
-        {net >= 0 ? '+' : ''}{formatCurrency(net)}
+        {net < 0 ? '−' : '+'}{formatCurrency(Math.abs(net))}
       </span>
     </div>
   );

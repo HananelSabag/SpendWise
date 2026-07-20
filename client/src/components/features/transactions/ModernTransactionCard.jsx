@@ -56,8 +56,8 @@ const ModernTransactionCard = ({
     const yesterday = new Date(Date.now() - 86_400_000);
     if (date.toDateString() === today.toDateString())     return t('date.today', 'Today');
     if (date.toDateString() === yesterday.toDateString()) return t('date.yesterday', 'Yesterday');
-    return date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-  }, [date, t]);
+    return date.toLocaleDateString(currentLanguage === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' });
+  }, [date, t, currentLanguage]);
 
   // The icon speaks to the SOURCE KIND (bank vs credit-card vs manual), not a
   // spending category — categories no longer exist in this model.
@@ -123,8 +123,13 @@ const ModernTransactionCard = ({
           <p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate leading-snug">
             {transaction?.description || t('transactions.noDescription', { fallback: 'No description' })}
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5 flex items-center gap-1">
-            <span className="truncate">{sourceLabel}</span>
+          {/* The date is kept outside the truncating region so it is never the thing that gets
+              clipped; the bank's raw category is secondary and hides on narrow screens. */}
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+            <span className="min-w-0 flex-1 truncate">
+              {sourceLabel}
+              {rawCategory && <span className="hidden sm:inline"> · {rawCategory}</span>}
+            </span>
             <span className={cn(
               'shrink-0 text-[10px] px-1 py-px rounded',
               kind === 'credit_card'
@@ -141,13 +146,7 @@ const ModernTransactionCard = ({
                 {t('transactions.watchBadge', { fallback: 'Watched' })}
               </span>
             )}
-            {rawCategory && (
-              <>
-                <span>·</span>
-                <span className="truncate">{rawCategory}</span>
-              </>
-            )}
-            <span>·</span>
+            <span className="shrink-0">·</span>
             <span className="shrink-0">{dateLabel}</span>
           </p>
         </div>
