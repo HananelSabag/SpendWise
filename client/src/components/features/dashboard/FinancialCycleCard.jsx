@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { AlertTriangle, ArrowRight, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Wallet } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { formatCycleDay } from '../../../utils/cycleDate';
@@ -60,6 +60,7 @@ export default function FinancialCycleCard({
   onLinkSalary,
   needsSalaryLink = false,
   language = 'en',
+  useEstimates = true,
 }) {
   // Shared with the dashboard hero (same query key → no extra request). Read the balance up front
   // so the hook order is stable across the early returns below.
@@ -98,13 +99,16 @@ export default function FinancialCycleCard({
   // Running cycle: the projected checking balance is the headline. Fall back to the expected change
   // when the bank does not report a balance (e.g. Yahav) so the card still answers the question.
   const projectedBalance = running && hasRealBalance
-    ? projectBalanceAfterNextBills(totalRealBalance, cycle, true)
+    ? projectBalanceAfterNextBills(totalRealBalance, cycle, useEstimates)
     : null;
-  const netChange = reset && Number.isFinite(Number(reset.estimatedNetChange)) ? Number(reset.estimatedNetChange) : null;
-  const expectedIn = reset ? Number(reset.expectedIncoming) || 0 : null;
-  const stillOut = reset ? -((Number(reset.estimatedCardOut) || 0) + (Number(reset.estimatedFixedOut) || 0)) : null;
+  const netChangeValue = useEstimates ? reset?.estimatedNetChange : reset?.knownNetChange;
+  const netChange = Number.isFinite(Number(netChangeValue)) ? Number(netChangeValue) : null;
+  const expectedIn = reset ? Number(reset.expectedIncoming) || 0 : 0;
+  const fixedOut = Number(reset?.fixedOut ?? reset?.estimatedFixedOut) || 0;
+  const futureExpenses = reset
+    ? (Number(useEstimates ? reset.estimatedCardOut : reset.knownCardOut) || 0) + fixedOut
+    : 0;
   const endDate = reset?.completionDate;
-  const rising = (netChange ?? 0) >= 0;
 
   const openCycle = () => onOpenCycle?.();
 
@@ -133,7 +137,9 @@ export default function FinancialCycleCard({
           {/* The one number: what the account is expected to hold by the end of this cycle. */}
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
             {projectedBalance !== null
-              ? t('cycle.projectedBalance', { fallback: 'Expected balance at cycle end' })
+              ? t(useEstimates ? 'cycle.projectedBalance' : 'cycle.knownBalance', {
+                  fallback: useEstimates ? 'Estimated bank balance at cycle end' : 'Balance after known upcoming expenses',
+                })
               : t('cycle.projectedChange', { fallback: 'Expected change by cycle end' })}
             {endDate && <span className="text-gray-400 dark:text-gray-500"> · {formatCycleDay(endDate, language)}</span>}
           </p>
@@ -143,7 +149,7 @@ export default function FinancialCycleCard({
               ~{formatCurrency(projectedBalance)}
             </p>
           ) : netChange !== null ? (
-            <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+            <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', netChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
               {signedCurrency(netChange, formatCurrency)}
             </p>
           ) : (
@@ -152,12 +158,8 @@ export default function FinancialCycleCard({
 
           {/* The expected change that gets there — the account's current balance is the hero above,
               so it is not repeated here. */}
-          {projectedBalance !== null && netChange !== null && (
+          {projectedBalance !== null && useEstimates && (
             <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-              <span className={cn('inline-flex items-center gap-0.5 font-semibold tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                {rising ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {signedCurrency(netChange, formatCurrency)}
-              </span>
               <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:bg-gray-800 dark:text-gray-500">
                 {t('cycle.estimateTag', { fallback: 'estimate' })}
               </span>
@@ -174,11 +176,16 @@ export default function FinancialCycleCard({
           )}
 
           {/* Two quiet supporting figures — the money still moving before the cycle closes. */}
-          {reset && (
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Flow label={t('cycle.expectedIn', { fallback: 'Expected in' })} value={expectedIn} tone="positive" formatCurrency={formatCurrency} />
-              <Flow label={t('cycle.stillOut', { fallback: 'Still to leave' })} value={stillOut} tone="negative" formatCurrency={formatCurrency} />
-            </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Flow label={t('cycle.receivedSoFar', { fallback: 'Received so far' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
+            <Flow label={t('cycle.spentSoFar', { fallback: 'Spent so far' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
+            <Flow label={t('cycle.futureIncome', { fallback: 'Future income' })} value={expectedIn} tone="positive" formatCurrency={formatCurrency} />
+            <Flow label={t('cycle.futureExpenses', { fallback: 'Future expenses' })} value={-futureExpenses} tone="negative" formatCurrency={formatCurrency} />
+          </div>
+          {!useEstimates && expectedIn > 0 && (
+            <p className="mt-2 text-[10px] text-gray-400">
+              {t('cycle.estimateDisabledHint', { fallback: 'Estimated income and possible card growth are shown but not included in the balance.' })}
+            </p>
           )}
         </>
       ) : (
@@ -196,8 +203,8 @@ export default function FinancialCycleCard({
             </p>
           )}
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <Flow label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
-            <Flow label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
+            <Flow label={t('cycle.receivedSoFar', { fallback: 'Received' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
+            <Flow label={t('cycle.spentSoFar', { fallback: 'Spent' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
           </div>
         </>
       )}

@@ -216,11 +216,12 @@ salary ⇒ estimated end-of-cycle (labelled שערוך, never mixed into settled
   provider's purchases already assigned to that statement are a hard floor; until the statement is
   final, estimate it as `max(known amount, average of up to 3 recent complete statements)`. Debit /
   passthrough cards have no monthly statement and are excluded. Formula: today's real checking
-  balance + still-upcoming movements before salary + expected salary − estimated next card bills.
-  A statement that already left the bank is therefore never subtracted twice. The UI must keep
-  **known accumulated spend** visually separate from the historical estimate and let the user turn
-  the estimate off; in that mode the cash point subtracts `knownTotal` only. The preference is
-  remembered locally and never changes settled/accounting data.
+  balance + future income − future card bills − known fixed debits. A statement that already left
+  the bank is therefore never subtracted twice. Loans, standing orders and other confirmed fixed
+  debits are obligations, not estimates, and remain in both modes. Turning estimates off removes
+  only uncertain future income and possible statement growth; known accumulated card spend and
+  fixed debits remain. The preference is persisted with cycle settings so Dashboard and detail use
+  the same number; it never changes settled/accounting data.
 - **A series can hold more than one rhythm**: insurance `42209` bills on **both the 1st and the 10th**
   under one identifier. Project each recurring day-of-month separately — "last date + 1 month" jumps
   to 10/08 (outside the window) and silently loses the 01/08 hit.
@@ -300,7 +301,7 @@ link**, and everywhere the user can **see the provenance and take control**. Nev
 - The reset completes at the last relevant salary/card/fixed stage, so fixed debits between a first
   salary and a later household salary or card bill remain visible.
 - The real checking balance is a separate present-time fact and never resets. With estimates off,
-  only accumulated obligations affect the known forward change.
+  accumulated card purchases plus confirmed fixed obligations affect the known forward change.
 - Control offers automatic household detection or a persisted fixed monthly anchor day (1–31,
   clamped to month end). The latter works even without a linked salary.
 
@@ -312,11 +313,10 @@ link**, and everywhere the user can **see the provenance and take control**. Nev
 
 ### Dashboard (primary = the financial cycle, salary-to-salary)
 - **Hero**: real bank balance(s) (unchanged) — the truth.
-- **Financial-cycle card** (replaces the calendar card as primary): the ONE window. Headline
-  **in vs out vs net** for `[salary → next salary)`, "so far" + **projection/שערוך** for the running
-  cycle. Reuse the nice `insights/CardBillingCycles` presentation here: expandable per-card sections
-  with headers "מחזור חיוב · 10 · ₪12,805 · 81 עסקאות", an **immediate-charge (חיוב מיידי)** section,
-  and provenance — tap a header → see exactly which txns rolled into it (like the calendar view does).
+- **Financial-cycle card** (replaces the calendar card as primary): one compact summary showing
+  received so far, spent so far, future income, future expenses and projected checking balance.
+  Detailed card/bank provenance stays behind the full-breakdown action instead of expanding the
+  dashboard card.
 - Demote the **calendar** view to Insights (retro/archive), not primary.
 
 ### Financial-cycle detail page = the control/tracking center
@@ -335,8 +335,11 @@ Three tracked streams, each built on the same "pick a txn from the filtered list
   linked card/bank evidence, and the literal bank effect. Opening salaries, pending rows, partial
   history and suppressed bank copies remain visible even when they are deliberately not counted.
 - User corrections live in `cycle_transaction_overrides`; raw bank/card transactions stay
-  immutable. Allowed corrections are salary, income, financing, refund, expense, own transfer and
-  exclude. Removing an override returns the row to the engine's automatic decision.
+  immutable. Detailed recurring meanings are persisted separately from their base accounting
+  class (salary/other recurring income; loan repayment, standing order, utilities, municipal tax,
+  insurance, recurring bill or other fixed monthly expense). Matching uses source + account + the
+  stable provider identifier when available, with normalized description only as a fallback, so
+  later occurrences inherit the rule. Removing the anchor override returns the series to automatic.
 - Link/relink **salary**; edit its expected day.
 - Per card: **confirm/edit statement day**, link a charge txn, toggle include/exclude.
 - **Mark a txn as a fixed charge** (loan/standing order) → recurring projection; and mark loan

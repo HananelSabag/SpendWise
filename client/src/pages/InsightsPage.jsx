@@ -27,7 +27,6 @@ import CycleBalanceStrip from '../components/features/insights/CycleBalanceStrip
 import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandidatePrompt';
 
 const TABS = ['overview', 'control'];
-const CARD_ESTIMATE_KEY = 'spendwise-use-card-estimate';
 
 function initialCycleTab() {
   try {
@@ -38,16 +37,20 @@ function initialCycleTab() {
   }
 }
 
-function savedCardEstimatePreference() {
-  try {
-    return localStorage.getItem(CARD_ESTIMATE_KEY) !== 'false';
-  } catch (_) {
-    return true;
-  }
-}
-
 function initiallyShowPreviousCycle() {
   try { return new URLSearchParams(window.location.search).get('cycle') === 'previous'; } catch (_) { return false; }
+}
+
+export function resolveSelectedCycle(cycles, selectedCycleStart, showPreviousInitially = false) {
+  if (!cycles?.length) return null;
+  if (selectedCycleStart) {
+    const selected = cycles.find((item) => item.window.start === selectedCycleStart);
+    if (selected) return selected;
+  }
+  if (showPreviousInitially) {
+    return [...cycles].reverse().find((item) => !item.window.running) || cycles[cycles.length - 1];
+  }
+  return cycles.find((item) => item.window.running) || cycles[cycles.length - 1];
 }
 
 export default function InsightsPage() {
@@ -59,37 +62,38 @@ export default function InsightsPage() {
   // can reorder or shrink the cycles array, and an index would then point at a different cycle.
   const [selectedCycleStart, setSelectedCycleStart] = useState(null);
   const [showPreviousInitially] = useState(initiallyShowPreviousCycle);
-  const [useCardEstimate, setUseCardEstimate] = useState(savedCardEstimatePreference);
   const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,
     needsSalaryLink, hasNoBankData, isLoading, isError, refetch, classifyTransaction,
     resetTransactionClassification, isUpdatingDecision, updatingTransactionId,
     settings, fundingForecast, updateCycleSettings, isUpdatingSettings } = useCycles();
 
   const cycle = useMemo(() => {
-    if (!cycles?.length) return null;
-    if (selectedCycleStart) {
-      return cycles.find((c) => c.window.start === selectedCycleStart) || null;
-    }
-    if (showPreviousInitially) return [...cycles].reverse().find((item) => !item.window.running) || cycles[cycles.length - 1];
-    return cycles.find((c) => c.window.running) || cycles[cycles.length - 1];
+    // Changing automatic/manual mode rebuilds every window.  The old start key is then stale;
+    // falling back to the new running window keeps the page alive and the selector usable.
+    return resolveSelectedCycle(cycles, selectedCycleStart, showPreviousInitially);
   }, [cycles, selectedCycleStart, showPreviousInitially]);
+
+  const useCardEstimate = settings?.useEstimates !== false;
 
   const changeDecision = useCallback((item, classification) => {
     classifyTransaction({
-      transactionId: item.transactionId,
+      transactionId: item.overrideTransactionId || item.transactionId,
       classification,
       reason: `control_override:${item.reason}`,
     });
   }, [classifyTransaction]);
 
   const resetDecision = useCallback((item) => {
-    resetTransactionClassification({ transactionId: item.transactionId });
+    resetTransactionClassification({ transactionId: item.overrideTransactionId || item.transactionId });
   }, [resetTransactionClassification]);
 
   const changeCardEstimate = useCallback((enabled) => {
-    setUseCardEstimate(enabled);
-    try { localStorage.setItem(CARD_ESTIMATE_KEY, String(enabled)); } catch (_) { /* optional preference */ }
-  }, []);
+    updateCycleSettings({
+      engineMode: settings?.engineMode || 'automatic',
+      manualAnchorDay: settings?.engineMode === 'manual' ? (settings.manualAnchorDay || 10) : null,
+      useEstimates: enabled,
+    });
+  }, [settings?.engineMode, settings?.manualAnchorDay, updateCycleSettings]);
 
   if (isLoading && !cycles?.length) {
     return <PageSkeleton page="financial-cycle" />;

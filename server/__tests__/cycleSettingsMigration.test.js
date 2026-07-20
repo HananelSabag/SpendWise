@@ -15,3 +15,18 @@ describe('financial cycle settings migration', () => {
     expect(sql).not.toMatch(/DELETE FROM transactions/i);
   });
 });
+
+describe('financial cycle recurring override migration', () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, '..', 'DB Migrations', '34_cycle_recurring_overrides_and_estimates.sql'),
+    'utf8',
+  );
+
+  test('adds only durable user rules and the shared estimate preference', () => {
+    expect(sql).toMatch(/ADD COLUMN IF NOT EXISTS recurrence_kind/i);
+    expect(sql).toMatch(/ADD COLUMN IF NOT EXISTS recurrence_enabled/i);
+    expect(sql).toMatch(/ADD COLUMN IF NOT EXISTS use_estimates/i);
+    expect(sql).toMatch(/calculation_version SET DEFAULT 5/i);
+    expect(sql).not.toMatch(/DELETE FROM transactions/i);
+  });
+});

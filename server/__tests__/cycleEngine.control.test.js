@@ -219,4 +219,77 @@ describe('financial-cycle Control decisions', () => {
       reason: 'user_override',
     });
   });
+
+  test('a confirmed fixed debit is projected once and remains known when estimates are off', () => {
+    const salary = txn(50, 1000, '2026-07-01', 'salary');
+    const oldDebit = txn(51, -500, '2026-06-20', 'electric company', { identifier: 'utility-7' });
+    const recurringOverride = {
+      transactionId: 51,
+      classification: 'expense',
+      recurrenceKind: 'electricity',
+      recurrenceEnabled: true,
+      source: 'bank',
+      accountNumber: '1234',
+      identifier: 'utility-7',
+      description: 'electric company',
+      date: '2026-06-20',
+      amount: -500,
+    };
+    const cycle = engine.buildCycle({
+      bankTxns: [oldDebit, salary],
+      cards: [],
+      window: {
+        start: '2026-07-01',
+        end: '2026-08-01',
+        running: true,
+        salary: { txn: salary, date: salary.date, amount: salary.amount },
+      },
+      salarySignature: { normalizedDescription: 'salary' },
+      salarySignatures: [{ normalizedDescription: 'salary' }],
+      transactionOverrides: [recurringOverride],
+      asOf: new Date('2026-07-15T12:00:00+03:00'),
+    });
+
+    expect(cycle.forwardReset.fixedOut).toBe(500);
+    expect(cycle.forwardReset.knownNetChange).toBe(-500);
+    expect(cycle.forwardReset.stages).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'recurring', date: '2026-07-20', amount: -500, certainty: 'known' }),
+    ]));
+  });
+
+  test('a recurring override follows the stable provider identity into a later cycle', () => {
+    const salary = txn(60, 1000, '2026-07-01', 'salary');
+    const laterDebit = txn(61, -500, '2026-07-20', 'electric company updated text', { identifier: 'utility-7' });
+    const cycle = engine.buildCycle({
+      bankTxns: [salary, laterDebit],
+      cards: [],
+      window: {
+        start: '2026-07-01',
+        end: '2026-08-01',
+        running: true,
+        salary: { txn: salary, date: salary.date, amount: salary.amount },
+      },
+      salarySignature: { normalizedDescription: 'salary' },
+      salarySignatures: [{ normalizedDescription: 'salary' }],
+      transactionOverrides: [{
+        transactionId: 51,
+        classification: 'expense',
+        recurrenceKind: 'electricity',
+        recurrenceEnabled: true,
+        source: 'bank',
+        accountNumber: '1234',
+        identifier: 'utility-7',
+        description: 'electric company',
+        date: '2026-06-20',
+        amount: -500,
+      }],
+    });
+
+    expect(cycle.decisions.find((item) => item.transactionId === 61)).toMatchObject({
+      classification: 'expense',
+      recurrenceKind: 'electricity',
+      automatic: false,
+      reason: 'user_override',
+    });
+  });
 });

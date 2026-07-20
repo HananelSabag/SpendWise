@@ -27,8 +27,8 @@ const CYCLE = {
     expectedIncoming: 13327.75,
     knownCardOut: 2823.79,
     estimatedCardOut: 17442.56,
-    estimatedFixedOut: 1171.86,
-    knownNetChange: -2823.79,
+    fixedOut: 1171.86,
+    knownNetChange: -3995.65,
     estimatedNetChange: -5286.67,
     stages: [],
   },
@@ -46,18 +46,19 @@ describe('FinancialCycleCard', () => {
 
   it('leads with the projected checking balance at cycle end', () => {
     renderCard();
-    expect(screen.getByText('Expected balance at cycle end')).toBeInTheDocument();
+    expect(screen.getByText(/Estimated bank balance at cycle end/)).toBeInTheDocument();
     // 12,150 now + estimatedNetChange (−5,286.67) → ~6,863.33.
     expect(screen.getByText('~ILS 6,863.33')).toBeInTheDocument();
-    // The expected change is shown; today's balance is the hero above, not repeated here.
-    expect(screen.getByText('−ILS 5,286.67')).toBeInTheDocument();
+    expect(screen.getByText('estimate')).toBeInTheDocument();
   });
 
-  it('shows the money still moving as quiet in/out figures', () => {
+  it('shows completed and future money with plain labels', () => {
     renderCard();
-    expect(screen.getByText('Expected in')).toBeInTheDocument();
+    expect(screen.getByText('Received so far')).toBeInTheDocument();
+    expect(screen.getByText('Spent so far')).toBeInTheDocument();
+    expect(screen.getByText('Future income')).toBeInTheDocument();
     expect(screen.getByText('+ILS 13,327.75')).toBeInTheDocument();
-    expect(screen.getByText('Still to leave')).toBeInTheDocument();
+    expect(screen.getByText('Future expenses')).toBeInTheDocument();
     expect(screen.getByText('−ILS 18,614.42')).toBeInTheDocument();
   });
 

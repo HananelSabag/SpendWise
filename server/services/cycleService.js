@@ -13,7 +13,7 @@ const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 15_000;
 const MAX_CACHE_ENTRIES = 200;
-const CALCULATION_VERSION = 4;
+const CALCULATION_VERSION = 5;
 const resultCache = new Map();
 const cacheInvalidationEpochs = new Map();
 
@@ -197,20 +197,55 @@ async function loadCreditClassifications(userId) {
 async function loadTransactionOverrides(userId) {
   try {
     const { rows } = await db.query(
-      `SELECT transaction_id, classification, reason, updated_at
-         FROM cycle_transaction_overrides
-        WHERE user_id = $1
-        ORDER BY transaction_id`,
+      `SELECT o.transaction_id, o.classification, o.reason, o.updated_at,
+              o.recurrence_kind, o.recurrence_enabled,
+              t.bank_source, t.bank_account_number, t.bank_sync_id, t.description,
+              t.date::text AS date, t.bank_processed_date::text AS bank_processed_date,
+              CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END AS signed_amount
+         FROM cycle_transaction_overrides o
+         JOIN transactions t ON t.id = o.transaction_id AND t.user_id = o.user_id
+        WHERE o.user_id = $1
+        ORDER BY o.transaction_id`,
       [userId],
     );
     return rows.map((row) => ({
       transactionId: row.transaction_id,
       classification: row.classification,
       reason: row.reason,
+      ...(row.recurrence_kind !== undefined ? {
+        recurrenceKind: row.recurrence_kind,
+        recurrenceEnabled: row.recurrence_enabled === true,
+      } : {}),
+      ...(row.bank_source !== undefined ? {
+        source: row.bank_source,
+        accountNumber: row.bank_account_number == null ? null : String(row.bank_account_number),
+        identifier: extractIdentifier(row.bank_sync_id),
+        description: row.description || '',
+        date: row.bank_processed_date || row.date,
+        amount: Number(row.signed_amount),
+      } : {}),
       updatedAt: row.updated_at,
     }));
   } catch (error) {
-    // A rolling deploy can briefly run new code before migration 32 is applied.
+    // A rolling deploy can briefly run new code before migrations 32/34 are applied.  The old
+    // classification still works; only recurrence projection waits for the additive migration.
+    if (error.code === '42703') {
+      const { rows } = await db.query(
+        `SELECT transaction_id, classification, reason, updated_at
+           FROM cycle_transaction_overrides
+          WHERE user_id = $1
+          ORDER BY transaction_id`,
+        [userId],
+      );
+      return rows.map((row) => ({
+        transactionId: row.transaction_id,
+        classification: row.classification,
+        reason: row.reason,
+        recurrenceKind: null,
+        recurrenceEnabled: false,
+        updatedAt: row.updated_at,
+      }));
+    }
     if (error.code === '42P01') return [];
     throw error;
   }
@@ -219,7 +254,7 @@ async function loadTransactionOverrides(userId) {
 async function loadCycleSettings(userId) {
   try {
     const { rows } = await db.query(
-      `SELECT engine_mode, manual_anchor_day, updated_at
+      `SELECT engine_mode, manual_anchor_day, use_estimates, updated_at
          FROM financial_cycle_settings
         WHERE user_id = $1`,
       [userId],
@@ -228,35 +263,53 @@ async function loadCycleSettings(userId) {
     return {
       engineMode: row?.engine_mode || 'automatic',
       manualAnchorDay: row?.manual_anchor_day == null ? null : Number(row.manual_anchor_day),
+      useEstimates: row?.use_estimates !== false,
       updatedAt: row?.updated_at || null,
     };
   } catch (error) {
-    if (error.code === '42P01') return { engineMode: 'automatic', manualAnchorDay: null, updatedAt: null };
+    if (error.code === '42703') {
+      const { rows } = await db.query(
+        `SELECT engine_mode, manual_anchor_day, updated_at
+           FROM financial_cycle_settings
+          WHERE user_id = $1`,
+        [userId],
+      );
+      const row = rows[0];
+      return {
+        engineMode: row?.engine_mode || 'automatic',
+        manualAnchorDay: row?.manual_anchor_day == null ? null : Number(row.manual_anchor_day),
+        useEstimates: true,
+        updatedAt: row?.updated_at || null,
+      };
+    }
+    if (error.code === '42P01') return { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true, updatedAt: null };
     throw error;
   }
 }
 
-async function saveCycleSettings(userId, { engineMode, manualAnchorDay = null }) {
+async function saveCycleSettings(userId, { engineMode, manualAnchorDay = null, useEstimates }) {
   const anchorDay = engineMode === 'manual' ? Number(manualAnchorDay) : null;
   const { rows } = await db.query(
     `WITH saved AS (
-       INSERT INTO financial_cycle_settings (user_id, engine_mode, manual_anchor_day)
-       VALUES ($1, $2, $3)
+       INSERT INTO financial_cycle_settings (user_id, engine_mode, manual_anchor_day, use_estimates)
+       VALUES ($1, $2, $3, COALESCE($4, true))
        ON CONFLICT (user_id) DO UPDATE SET
          engine_mode = EXCLUDED.engine_mode,
          manual_anchor_day = EXCLUDED.manual_anchor_day,
+         use_estimates = COALESCE($4, financial_cycle_settings.use_estimates),
          updated_at = NOW()
-       RETURNING engine_mode, manual_anchor_day, updated_at
+       RETURNING engine_mode, manual_anchor_day, use_estimates, updated_at
      ), cleared AS (
        DELETE FROM financial_cycle_aggregates WHERE user_id = $1
      )
      SELECT * FROM saved`,
-    [userId, engineMode, anchorDay],
+    [userId, engineMode, anchorDay, useEstimates == null ? null : useEstimates !== false],
   );
   await invalidateCycleDerivedData(userId);
   return {
     engineMode: rows[0].engine_mode,
     manualAnchorDay: rows[0].manual_anchor_day == null ? null : Number(rows[0].manual_anchor_day),
+    useEstimates: rows[0].use_estimates !== false,
     updatedAt: rows[0].updated_at,
   };
 }
@@ -304,12 +357,18 @@ async function saveCreditClassification(userId, transactionId, klass, reason = n
   };
 }
 
-async function saveTransactionOverride(userId, transactionId, classification, reason = null) {
+async function saveTransactionOverride(
+  userId,
+  transactionId,
+  classification,
+  reason = null,
+  { recurrenceKind = null, recurrenceEnabled = false } = {},
+) {
   const { rows } = await db.query(
     `INSERT INTO cycle_transaction_overrides (
-       transaction_id, user_id, classification, reason
+       transaction_id, user_id, classification, reason, recurrence_kind, recurrence_enabled
      )
-     SELECT t.id, t.user_id, $3, $4
+     SELECT t.id, t.user_id, $3, $4, $5, $6
        FROM transactions t
       WHERE t.id = $1
         AND t.user_id = $2
@@ -323,10 +382,12 @@ async function saveTransactionOverride(userId, transactionId, classification, re
      ON CONFLICT (transaction_id) DO UPDATE SET
        classification = EXCLUDED.classification,
        reason = EXCLUDED.reason,
+       recurrence_kind = EXCLUDED.recurrence_kind,
+       recurrence_enabled = EXCLUDED.recurrence_enabled,
        updated_at = NOW()
      WHERE cycle_transaction_overrides.user_id = EXCLUDED.user_id
-     RETURNING transaction_id, classification, reason, updated_at`,
-    [transactionId, userId, classification, reason],
+     RETURNING transaction_id, classification, reason, recurrence_kind, recurrence_enabled, updated_at`,
+    [transactionId, userId, classification, reason, recurrenceKind, recurrenceEnabled === true],
   );
   if (!rows.length) return null;
   await invalidateCycleDerivedData(userId);
@@ -334,6 +395,8 @@ async function saveTransactionOverride(userId, transactionId, classification, re
     transactionId: rows[0].transaction_id,
     classification: rows[0].classification,
     reason: rows[0].reason,
+    recurrenceKind: rows[0].recurrence_kind,
+    recurrenceEnabled: rows[0].recurrence_enabled === true,
     updatedAt: rows[0].updated_at,
   };
 }
@@ -602,7 +665,7 @@ async function getFinancialCycles(userId, {
     signatures,
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
-    recurring: prepared.recurring,
+    recurring: prepared.recurring.filter((series) => series.needsUserLabel),
     salaryTracking: latest ? engine.trackSalary(salaryTrackingTxns, latest, { asOf }) : null,
     fundingForecast,
     settings,
@@ -704,7 +767,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     signatures,
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
-    recurring: prepared.recurring,
+    recurring: prepared.recurring.filter((series) => series.needsUserLabel),
     salaryTracking: primary ? engine.trackSalary(salaryTrackingTxns, primary, { asOf }) : null,
     fundingForecast,
     settings,

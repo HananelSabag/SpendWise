@@ -68,6 +68,7 @@ export default function CycleBalanceStrip({
       ? (reset?.estimatedCardOut ?? forecast?.estimatedTotal)
       : (reset?.knownCardOut ?? forecast?.knownTotal),
   ) || 0;
+  const fixedOut = Number(reset?.fixedOut ?? reset?.estimatedFixedOut) || 0;
   const lastBillDate = reset?.completionDate || forecast?.bills?.reduce(
     (latest, bill) => !latest || bill.chargeDate > latest ? bill.chargeDate : latest,
     null,
@@ -107,7 +108,7 @@ export default function CycleBalanceStrip({
                 <InfoHint title={t('cycle.balanceAfterNextBills', { fallback: 'Expected balance after the next reset' })}>
                   {useCardEstimate
                     ? t('cycle.balanceForecastHint', { fallback: "This uses a historical card estimate. Turn it off to count only purchases already accumulated." })
-                    : t('cycle.balanceKnownHint', { fallback: 'This counts only card purchases already accumulated. The final bill can still grow.' })}
+                    : t('cycle.balanceKnownHint', { fallback: 'This counts card purchases already accumulated and all known fixed expenses. The final card bill can still grow.' })}
                 </InfoHint>
               </p>
               {lastBillDate && <span className="shrink-0 text-[10px] font-medium text-indigo-500 dark:text-indigo-400">{formatCycleDay(lastBillDate, language)}</span>}
@@ -124,7 +125,7 @@ export default function CycleBalanceStrip({
                   onClick={() => onCardEstimateChange(!useCardEstimate)}
                   className="-my-2 -me-1 inline-flex shrink-0 items-center gap-1.5 py-2 pe-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
                 >
-                  {t('cycle.useEstimate', { fallback: 'Use estimate' })}
+                  {t('cycle.useEstimate', { fallback: 'Include estimates' })}
                   <span className={cn('relative h-4 w-7 rounded-full transition', useCardEstimate ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600')}>
                     <span className={cn('absolute top-0.5 h-3 w-3 rounded-full bg-white shadow transition-all', useCardEstimate ? 'end-0.5' : 'start-0.5')} />
                   </span>
@@ -134,11 +135,11 @@ export default function CycleBalanceStrip({
             <p className="text-[9px] font-bold text-indigo-500 dark:text-indigo-400">
               {useCardEstimate
                 ? t('cycle.estimateOnly', { fallback: 'Estimate only — based on recent bills' })
-                : t('cycle.knownOnly', { fallback: 'Only what has actually accumulated' })}
+                : t('cycle.knownOnly', { fallback: 'Known card charges and fixed expenses only' })}
             </p>
             <p className="mt-1 flex flex-wrap gap-x-2 text-[10px] font-medium tabular-nums text-gray-500 dark:text-gray-400">
-              {useCardEstimate && reset?.estimatedFixedOut > 0 && <span>{t('cycle.untilSalaryShort', { fallback: 'fixed' })} −{formatCurrency(reset.estimatedFixedOut)}</span>}
-              <span>{t('cycle.salaryShort', { fallback: 'expected in' })} {signed(reset?.expectedIncoming || forecast?.salaryAmount || 0, formatCurrency)}</span>
+              {fixedOut > 0 && <span>{t('cycle.untilSalaryShort', { fallback: 'fixed expenses' })} −{formatCurrency(fixedOut)}</span>}
+              <span>{t('cycle.salaryShort', { fallback: 'estimated income' })} {signed(reset?.expectedIncoming || forecast?.salaryAmount || 0, formatCurrency)}</span>
               <span>{t('cycle.cardsShort', { fallback: 'cards' })} −{formatCurrency(cardAmount)}</span>
             </p>
           </div>

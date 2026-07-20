@@ -31,8 +31,9 @@ export default function ForwardResetSummary({ forwardReset, useEstimate = true, 
       </p>
       <div className="space-y-2.5">
         {stages.map((stage, index) => {
-          // With the estimate off, only the card bills carry a known amount; the rest wait.
-          const displayedAmount = !useEstimate && stage.kind !== 'card'
+          // Fixed debits and known card purchases stay in every forecast.  Only uncertain future
+          // income and possible card-bill growth belong to the estimate preference.
+          const displayedAmount = !useEstimate && stage.kind === 'income'
             ? 0
             : (stage.kind === 'card' && useEstimate ? stage.estimatedAmount : stage.amount);
           return (
@@ -45,6 +46,11 @@ export default function ForwardResetSummary({ forwardReset, useEstimate = true, 
               {stage.primary === false && (
                 <span className="shrink-0 rounded bg-violet-100 px-1.5 py-0.5 text-[9px] font-black text-violet-700 dark:bg-violet-950/50 dark:text-violet-300">
                   {t('cycle.forward.additional', { fallback: 'Additional' })}
+                </span>
+              )}
+              {stage.certainty && (
+                <span className="shrink-0 text-[9px] font-semibold text-gray-400">
+                  {t(`cycle.forward.certainty.${stage.certainty}`, { fallback: stage.certainty === 'known' || stage.certainty === 'proven' ? 'known' : 'estimate' })}
                 </span>
               )}
               <span className={cn('shrink-0 font-black tabular-nums', Number(displayedAmount) < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>

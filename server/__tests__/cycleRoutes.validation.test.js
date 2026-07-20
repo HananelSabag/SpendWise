@@ -142,4 +142,27 @@ describe('financial-cycle route validation', () => {
     expect(data.fundingForecast.streams[0]).toMatchObject({ accountLast4: '5678' });
     expect(data.fundingForecast.streams[0]).not.toHaveProperty('accountNumber');
   });
+
+  test('maps a detailed recurring debit choice to a persisted expense rule', async () => {
+    cycleService.saveTransactionOverride.mockResolvedValue({ transactionId: 42 });
+    const res = responseDouble();
+    await routeHandler('/transactions/:transactionId/classification', 'put')(
+      {
+        params: { transactionId: '42' },
+        body: { classification: 'loan_repayment', reason: 'user_control' },
+        user: { id: 7 },
+      },
+      res,
+      jest.fn(),
+    );
+
+    expect(cycleService.saveTransactionOverride).toHaveBeenCalledWith(
+      7,
+      42,
+      'expense',
+      'user_control',
+      { recurrenceKind: 'loan_repayment', recurrenceEnabled: true },
+    );
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
 });

@@ -86,9 +86,11 @@ function slimDecision(decision) {
     source: decision.source,
     accountNumber: accountLast4(decision.accountNumber),
     classification: decision.classification,
+    recurrenceKind: decision.recurrenceKind || null,
     included: decision.included,
     automatic: decision.automatic,
     override: decision.override,
+    overrideTransactionId: decision.overrideTransactionId || null,
     editable: decision.editable,
     needsAction: decision.needsAction,
     impactLine: decision.impactLine,
@@ -257,14 +259,18 @@ router.get('/', auth, async (req, res, next) => {
 router.put('/settings', auth, async (req, res, next) => {
   const engineMode = req.body?.engineMode;
   const manualAnchorDay = Number(req.body?.manualAnchorDay);
+  const useEstimates = req.body?.useEstimates;
   if (!['automatic', 'manual'].includes(engineMode)) {
     return res.status(400).json({ success: false, error: 'engineMode must be automatic or manual' });
   }
   if (engineMode === 'manual' && (!Number.isInteger(manualAnchorDay) || manualAnchorDay < 1 || manualAnchorDay > 31)) {
     return res.status(400).json({ success: false, error: 'manualAnchorDay must be an integer from 1 to 31' });
   }
+  if (useEstimates !== undefined && typeof useEstimates !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'useEstimates must be a boolean' });
+  }
   try {
-    const settings = await saveCycleSettings(req.user.id, { engineMode, manualAnchorDay });
+    const settings = await saveCycleSettings(req.user.id, { engineMode, manualAnchorDay, useEstimates });
     return res.json({ success: true, data: settings });
   } catch (error) {
     logger.error('PUT /cycles/settings failed', {
@@ -275,8 +281,29 @@ router.put('/settings', auth, async (req, res, next) => {
   }
 });
 
-const TRANSACTION_CLASSIFICATIONS = new Set([
-  'salary', 'income', 'financing', 'refund', 'expense', 'transfer', 'exclude',
+const TRANSACTION_CLASSIFICATIONS = new Map([
+  ['salary', { base: 'salary', recurrenceKind: 'salary', recurring: true, direction: 'income' }],
+  ['income', { base: 'income', direction: 'income' }],
+  ['financing', { base: 'financing', direction: 'income' }],
+  ['expense', { base: 'expense', direction: 'expense' }],
+  ['transfer', { base: 'transfer', direction: 'either' }],
+  ['recurring_income', { base: 'income', recurrenceKind: 'recurring_income', recurring: true, direction: 'income' }],
+  ['loan_received', { base: 'financing', direction: 'income' }],
+  ['one_time_income', { base: 'income', direction: 'income' }],
+  ['refund', { base: 'refund', direction: 'income' }],
+  ['loan_repayment', { base: 'expense', recurrenceKind: 'loan_repayment', recurring: true, direction: 'expense' }],
+  ['standing_order', { base: 'expense', recurrenceKind: 'standing_order', recurring: true, direction: 'expense' }],
+  ['electricity', { base: 'expense', recurrenceKind: 'electricity', recurring: true, direction: 'expense' }],
+  ['water', { base: 'expense', recurrenceKind: 'water', recurring: true, direction: 'expense' }],
+  ['gas', { base: 'expense', recurrenceKind: 'gas', recurring: true, direction: 'expense' }],
+  ['municipal_tax', { base: 'expense', recurrenceKind: 'municipal_tax', recurring: true, direction: 'expense' }],
+  ['car_insurance', { base: 'expense', recurrenceKind: 'car_insurance', recurring: true, direction: 'expense' }],
+  ['other_insurance', { base: 'expense', recurrenceKind: 'other_insurance', recurring: true, direction: 'expense' }],
+  ['recurring_bill', { base: 'expense', recurrenceKind: 'recurring_bill', recurring: true, direction: 'expense' }],
+  ['fixed_monthly_expense', { base: 'expense', recurrenceKind: 'fixed_monthly_expense', recurring: true, direction: 'expense' }],
+  ['one_time_expense', { base: 'expense', direction: 'expense' }],
+  ['own_transfer', { base: 'transfer', direction: 'either' }],
+  ['exclude', { base: 'exclude', direction: 'either' }],
 ]);
 
 function parseTransactionId(value) {
@@ -295,7 +322,8 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
   if (!Number.isInteger(transactionId) || transactionId <= 0) {
     return res.status(400).json({ success: false, error: 'Invalid transaction id' });
   }
-  if (!TRANSACTION_CLASSIFICATIONS.has(classification)) {
+  const classificationRule = TRANSACTION_CLASSIFICATIONS.get(classification);
+  if (!classificationRule) {
     return res.status(400).json({ success: false, error: 'Invalid cycle classification' });
   }
   if (reason !== undefined && reason !== null && (typeof reason !== 'string' || reason.length > 160)) {
@@ -305,8 +333,12 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
     const saved = await saveTransactionOverride(
       req.user.id,
       transactionId,
-      classification,
+      classificationRule.base,
       reason || 'user_control',
+      {
+        recurrenceKind: classificationRule.recurrenceKind || null,
+        recurrenceEnabled: classificationRule.recurring === true,
+      },
     );
     if (!saved) return res.status(404).json({ success: false, error: 'Transaction not found' });
     return res.json({ success: true, data: saved });

@@ -102,7 +102,7 @@ const CYCLE = {
   forwardReset: {
     mode: 'automatic', status: 'open', completionDate: '2026-08-10',
     expectedIncoming: 13327.75, knownCardOut: 2823.79, estimatedCardOut: 15470.42,
-    estimatedFixedOut: 1171.86, knownNetChange: -2823.79, estimatedNetChange: -3314.53,
+    fixedOut: 1171.86, knownNetChange: -3995.65, estimatedNetChange: -3314.53,
     stages: [
       { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה' },
       { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י' },

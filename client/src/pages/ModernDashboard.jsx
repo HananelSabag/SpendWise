@@ -118,6 +118,7 @@ export default function ModernDashboard() {
             cycle={currentCycle.cycle}
             isLoading={currentCycle.isLoading}
             salaryTracking={currentCycle.salaryTracking}
+            useEstimates={currentCycle.settings?.useEstimates !== false}
             totalOutstanding={currentCycle.totalOutstanding}
             needsSalaryLink={currentCycle.needsSalaryLink}
             formatCurrency={formatCurrency}

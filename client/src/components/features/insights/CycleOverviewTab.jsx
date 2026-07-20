@@ -64,6 +64,29 @@ function Figure({ label, value, tone = 'neutral', hint, hintTitle, formatCurrenc
   );
 }
 
+function NotIncluded({ decisions = [], formatCurrency, t }) {
+  const items = decisions.filter((item) => (
+    !item.included && ['transfer', 'exclude'].includes(item.classification)
+  ));
+  if (!items.length) return null;
+  return (
+    <details className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
+      <summary className="cursor-pointer text-xs font-bold text-gray-600 dark:text-gray-300">
+        {t('cycle.notIncludedGroup', { count: items.length, fallback: `Not included in totals (${items.length})` })}
+      </summary>
+      <div className="mt-2 space-y-1">
+        {items.map((item) => (
+          <div key={item.transactionId} className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2 text-[11px] dark:bg-gray-800/60">
+            <span className="min-w-0 flex-1 truncate font-semibold text-gray-700 dark:text-gray-200">{item.description || '—'}</span>
+            <span className="shrink-0 text-gray-400">{t(`cycle.control.class.${item.classification}`, { fallback: item.classification })}</span>
+            <span className="shrink-0 font-black tabular-nums text-gray-700 dark:text-gray-200">{signedCurrency(item.amount, formatCurrency)}</span>
+          </div>
+        ))}
+      </div>
+    </details>
+  );
+}
+
 export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency, t, language, useCardEstimate = true }) {
   if (!cycle) return null;
   const { income, expenses, operatingNet, financing, bankMovement } = cycle;
@@ -72,17 +95,28 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
   const isPartial = cycle.partials?.length > 0;
 
   if (cycle.window?.running) {
+    const reset = cycle.forwardReset || {};
+    const fixedOut = Number(reset.fixedOut ?? reset.estimatedFixedOut) || 0;
+    const futureExpenses = (Number(useCardEstimate ? reset.estimatedCardOut : reset.knownCardOut) || 0) + fixedOut;
     return (
       <div className="space-y-3">
         {salaryLate && <SalaryLate t={t} />}
         {isPartial && <PartialWarning t={t} />}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <Figure label={t('cycle.receivedSoFar', { fallback: 'Received so far' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
+          <Figure label={t('cycle.cardSpentSoFar', { fallback: 'Credit-card spending' })} value={-expenses.cards} tone="negative" formatCurrency={formatCurrency} />
+          <Figure label={t('cycle.directSpentSoFar', { fallback: 'Direct bank expenses' })} value={-expenses.direct} tone="negative" formatCurrency={formatCurrency} />
+          <Figure label={t('cycle.futureIncome', { fallback: 'Future income' })} value={reset.expectedIncoming || 0} tone="positive" formatCurrency={formatCurrency} />
+          <Figure label={t('cycle.futureExpenses', { fallback: 'Future expenses' })} value={-futureExpenses} tone="negative" formatCurrency={formatCurrency} />
+        </div>
         <ForwardResetSummary forwardReset={cycle.forwardReset} useEstimate={useCardEstimate} formatCurrency={formatCurrency} t={t} language={language} />
         <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-            {t('cycle.forward.alreadySettled', { fallback: 'Booked so far this cycle' })}
+            {t('cycle.forward.alreadySettled', { fallback: 'Completed income and direct bank expenses' })}
           </p>
           <CycleBreakdown cycle={cycle} formatCurrency={formatCurrency} t={t} language={language} />
         </div>
+        <NotIncluded decisions={cycle.decisions} formatCurrency={formatCurrency} t={t} />
       </div>
     );
   }
@@ -125,6 +159,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
       <div className="rounded-2xl border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
         <CycleBreakdown cycle={cycle} formatCurrency={formatCurrency} t={t} language={language} />
       </div>
+      <NotIncluded decisions={cycle.decisions} formatCurrency={formatCurrency} t={t} />
     </div>
   );
 }

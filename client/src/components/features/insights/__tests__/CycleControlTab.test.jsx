@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import CycleControlTab from '../CycleControlTab';
@@ -105,6 +105,29 @@ describe('CycleControlTab', () => {
     fireEvent.click(screen.getByText('Big Apple'));
     fireEvent.click(screen.getByRole('button', { name: /Back to automatic/ }));
     expect(onDecisionReset).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }));
+  });
+
+  it('offers recurring outgoing categories on a debit, not incoming-only choices', () => {
+    const debitCycle = {
+      decisions: [{
+        ...cycle.decisions[0],
+        transactionId: 7900,
+        description: 'Utility debit',
+        amount: -320,
+        classification: 'expense',
+        impactLine: 'expenses',
+        impactAmount: 320,
+      }],
+    };
+    render(
+      <CycleControlTab cycle={debitCycle} signatures={[{ id: 1 }]} formatCurrency={formatCurrency} t={t} language="en" />,
+    );
+
+    fireEvent.click(screen.getByText('Utility debit'));
+    const sheet = within(screen.getByRole('region', { name: 'Utility debit' }));
+    expect(sheet.getByRole('button', { name: 'loan_repayment' })).toBeInTheDocument();
+    expect(sheet.getByRole('button', { name: 'standing_order' })).toBeInTheDocument();
+    expect(sheet.queryByRole('button', { name: /^salary$/i })).not.toBeInTheDocument();
   });
 
   it('keeps long mobile decision lists compact until the user asks for more', () => {

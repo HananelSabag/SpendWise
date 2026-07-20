@@ -709,10 +709,21 @@ function projectUpcoming({
       dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
     }
     for (const [day, count] of dayCounts) {
-      if (count < 2) continue;
+      if (count < 2 && !series.manuallyConfirmed) continue;
       const date = nextOccurrence(day, today);
       if (date && inWindow(date, window)) {
-        items.push({ kind: 'recurring', date, amount: -Math.abs(series.typicalAmount), label: series.description, identifier: series.identifier, certainty: 'estimated' });
+        const amount = series.manuallyConfirmed && Number.isFinite(Number(series.signedAmount))
+          ? Number(series.signedAmount)
+          : -Math.abs(series.typicalAmount);
+        items.push({
+          kind: amount > 0 ? 'income' : (series.channel === 'credit_card' ? 'card_recurring' : 'recurring'),
+          date,
+          amount: round2(amount),
+          label: series.description,
+          identifier: series.identifier,
+          recurrenceKind: series.recurrenceKind || null,
+          certainty: amount > 0 ? 'estimated' : (series.manuallyConfirmed ? 'known' : 'estimated'),
+        });
       }
     }
   }
@@ -906,6 +917,67 @@ function deriveRecurringCharges(bankTxns, { knownLoanIds = [], excludeTxns = [] 
   return recurring.sort((a, b) => b.typicalAmount - a.typicalAmount);
 }
 
+/** Stable provider identity first; normalized text is only the fallback for providers without one. */
+function recurringIdentity(item) {
+  if (!item) return null;
+  const source = String(item.source || 'unknown');
+  const account = item.accountNumber == null ? 'default' : String(item.accountNumber);
+  if (item.identifier != null && String(item.identifier).trim()) {
+    return `${source}|${account}|id:${String(item.identifier)}`;
+  }
+  const description = normalizeDescription(item.description);
+  return description ? `${source}|${account}|description:${description}` : null;
+}
+
+function recurringOverrideFor(txn, transactionOverrides = []) {
+  const exact = transactionOverrides.find((item) => Number(item.transactionId) === Number(txn.id));
+  if (exact) return exact;
+  const identity = recurringIdentity(txn);
+  if (!identity) return null;
+  return transactionOverrides.find((item) => (
+    item.recurrenceEnabled === true && recurringIdentity(item) === identity
+  )) || null;
+}
+
+/** A user's recurring answer is valid from the first observed occurrence, not only after two. */
+function deriveManualRecurring(txns, transactionOverrides = [], { excludeTxns = [], cardSources = [] } = {}) {
+  const skip = excludeTxns instanceof Set ? excludeTxns : new Set(excludeTxns);
+  const creditSources = new Set(cardSources.map(String));
+  const rules = new Map();
+  for (const override of transactionOverrides) {
+    if (!override.recurrenceEnabled || !override.recurrenceKind) continue;
+    const identity = recurringIdentity(override);
+    if (!identity || rules.has(identity)) continue;
+    const matches = txns.filter((txn) => !skip.has(txn) && recurringIdentity(txn) === identity)
+      .sort((a, b) => ilDate(a.processedDate || a.date).localeCompare(ilDate(b.processedDate || b.date)));
+    const last = matches[matches.length - 1] || override;
+    const signedAmount = Number(last.amount);
+    if (!Number.isFinite(signedAmount) || signedAmount === 0) continue;
+    const dates = matches.length
+      ? matches.map((txn) => ilDate(txn.processedDate || txn.date))
+      : [ilDate(override.date)];
+    rules.set(identity, {
+      identifier: override.identifier || identity,
+      identity,
+      source: override.source,
+      accountNumber: override.accountNumber,
+      description: override.description || last.description || '',
+      occurrences: Math.max(1, matches.length),
+      dates,
+      typicalAmount: round2(Math.abs(signedAmount)),
+      signedAmount: round2(signedAmount),
+      lastAmount: round2(Math.abs(signedAmount)),
+      lastDate: dates[dates.length - 1],
+      paymentDay: ilDayOfMonth(last.processedDate || last.date || override.date),
+      recurrenceKind: override.recurrenceKind,
+      channel: creditSources.has(String(override.source)) ? 'credit_card' : 'bank',
+      manuallyConfirmed: true,
+      needsUserLabel: false,
+    });
+  }
+  return [...rules.values()];
+}
+
 /** Precompute full-collection facts once, then reuse them for every salary window. */
 function prepareCycleData({
   bankTxns = [],
@@ -934,9 +1006,7 @@ function prepareCycleData({
     (txn) => String(txn.identifier) === loan.identifier && Number(txn.amount) > 0,
   )));
   const classOf = (txn) => {
-    const override = transactionOverrides.find((item) => (
-      Number(item.transactionId) === Number(txn.id)
-    ));
+    const override = recurringOverrideFor(txn, transactionOverrides);
     if (override) return override.classification;
     const hit = creditClassifications.find((classification) => (
       (classification.transactionId !== undefined
@@ -982,6 +1052,27 @@ function prepareCycleData({
     });
   }
 
+  const manualRecurring = deriveManualRecurring([
+    ...bankTxns,
+    ...cards.flatMap((card) => card.txns || []),
+  ], transactionOverrides, {
+    excludeTxns: suppressed,
+    cardSources: cards.map((card) => card.source),
+  }).filter((series) => !(
+    series.recurrenceKind === 'loan_repayment'
+      && loans.some((loan) => String(loan.identifier) === String(series.identifier))
+  ));
+  const manualIdentities = new Set(manualRecurring.map((series) => series.identity));
+  const automaticRecurring = deriveRecurringCharges(bankTxns, {
+    knownLoanIds: loans.map((loan) => loan.identifier),
+    excludeTxns: suppressed,
+  }).filter((series) => !manualIdentities.has(recurringIdentity({
+    source: bankTxns.find((txn) => String(txn.identifier) === String(series.identifier))?.source,
+    accountNumber: bankTxns.find((txn) => String(txn.identifier) === String(series.identifier))?.accountNumber,
+    identifier: series.identifier,
+    description: series.description,
+  })));
+
   return {
     cardViews,
     allEvents,
@@ -996,10 +1087,8 @@ function prepareCycleData({
     suggestedFinancing,
     financingTxns,
     review,
-    recurring: deriveRecurringCharges(bankTxns, {
-      knownLoanIds: loans.map((loan) => loan.identifier),
-      excludeTxns: suppressed,
-    }),
+    recurring: [...manualRecurring, ...automaticRecurring]
+      .sort((a, b) => b.typicalAmount - a.typicalAmount),
   };
 }
 
@@ -1083,7 +1172,8 @@ function buildCycle({
   const overrideById = new Map(transactionOverrides.map((item) => [
     Number(item.transactionId), item,
   ]));
-  const overrideFor = (txn) => overrideById.get(Number(txn.id)) || null;
+  const overrideFor = (txn) => overrideById.get(Number(txn.id))
+    || recurringOverrideFor(txn, transactionOverrides);
   const overrideClass = (txn) => overrideFor(txn)?.classification || null;
   const salaryIdentities = [...salarySignatures];
   if (salarySignature && !salaryIdentities.some((item) => item.id === salarySignature.id)) {
@@ -1303,6 +1393,8 @@ function buildCycle({
     accountNumber: txn.accountNumber,
     automatic: !overrideFor(txn),
     override: overrideClass(txn),
+    overrideTransactionId: overrideFor(txn)?.transactionId || null,
+    recurrenceKind: overrideFor(txn)?.recurrenceKind || null,
     editable: true,
     needsAction: reviewIds.has(Number(txn.id)),
     bankEffect: 0,
@@ -1476,13 +1568,23 @@ function buildCycle({
       || Number(a.transactionId) - Number(b.transactionId)
   ));
 
+  // A manually tagged salary that already has a linked salary identity is the same stream, not
+  // another expected deposit.  Other manual recurring income remains a separate future item.
+  const projectedRecurring = prepared.recurring.filter((series) => !(
+      series.recurrenceKind === 'salary'
+        && salaryIdentities.some((signature) => (
+          (!signature.bankSource || signature.bankSource === series.source)
+          && (signature.accountNumber == null || String(signature.accountNumber) === String(series.accountNumber))
+          && normalizeDescription(series.description).includes(normalizeDescription(signature.normalizedDescription))
+        ))
+  ));
   const projection = (() => {
     if (!window.running) return null;
     const upcoming = projectUpcoming({
       window: accountingWindow,
       asOf,
       loans,
-      recurring: prepared.recurring,
+      recurring: projectedRecurring,
       futureCardEvents: allEvents.filter((event) => event.future),
       salaryTracking,
     });
@@ -1511,7 +1613,7 @@ function buildCycle({
       ? sumAmounts(fundingStreams, (stream) => stream.expectedAmount)
       : (projection?.estimatedSalary || 0));
     const knownCardOut = round2(nextCardForecast?.knownTotal || 0);
-    const estimatedCardOut = round2(nextCardForecast?.estimatedTotal || knownCardOut);
+    const historicalCardOut = round2(nextCardForecast?.estimatedTotal || knownCardOut);
     const baseCompletionDate = (nextCardForecast?.bills || []).reduce(
       (latest, bill) => (!latest || bill.chargeDate > latest ? bill.chargeDate : latest),
       remainingFundingEnd || window.end,
@@ -1527,12 +1629,25 @@ function buildCycle({
       window: forwardWindow,
       asOf,
       loans,
-      recurring: prepared.recurring,
+      recurring: projectedRecurring,
       futureCardEvents: [],
       salaryTracking: null,
     });
-    const fixedItems = forwardFixed.items.filter((item) => item.kind !== 'salary' && item.kind !== 'card');
-    const estimatedFixedOut = round2(Math.abs(sumAmounts(fixedItems)));
+    const cardRecurringItems = forwardFixed.items.filter((item) => item.kind === 'card_recurring');
+    const expectedRecurringCardOut = round2(Math.abs(sumAmounts(cardRecurringItems)));
+    // A confirmed repeating card purchase raises the floor of the next bill; using max preserves
+    // the historical statement estimate without counting the same monthly purchase twice.
+    const estimatedCardOut = round2(Math.max(
+      historicalCardOut,
+      knownCardOut + expectedRecurringCardOut,
+    ));
+    const fixedItems = forwardFixed.items.filter((item) => (
+      Number(item.amount) < 0 && item.kind !== 'card_recurring'
+    ));
+    const recurringIncomeItems = forwardFixed.items.filter((item) => Number(item.amount) > 0);
+    const fixedOut = round2(Math.abs(sumAmounts(fixedItems)));
+    const recurringIncome = round2(sumAmounts(recurringIncomeItems));
+    const allExpectedIncoming = round2(expectedIncoming + recurringIncome);
     const stages = [
       ...fundingStreams.map((stream) => ({
         kind: 'income',
@@ -1553,6 +1668,7 @@ function buildCycle({
         certainty: bill.certainty,
       })),
       ...fixedItems.map((item) => ({ ...item, status: 'expected' })),
+      ...recurringIncomeItems.map((item) => ({ ...item, status: 'expected' })),
     ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const completionDate = stages.reduce(
       (latest, stage) => (!latest || stage.date > latest ? stage.date : latest),
@@ -1563,12 +1679,14 @@ function buildCycle({
       anchorDay: window.anchorDay || null,
       status: stages.some((stage) => stage.status === 'late') ? 'attention' : 'open',
       completionDate,
-      expectedIncoming,
+      expectedIncoming: allExpectedIncoming,
       knownCardOut,
       estimatedCardOut,
-      estimatedFixedOut,
-      knownNetChange: round2(-knownCardOut),
-      estimatedNetChange: round2(expectedIncoming - estimatedCardOut - estimatedFixedOut),
+      fixedOut,
+      // Fixed obligations and purchases already accumulated on cards are known future outflow.
+      // The estimate switch only adds uncertain income and possible statement growth.
+      knownNetChange: round2(-knownCardOut - fixedOut),
+      estimatedNetChange: round2(allExpectedIncoming - estimatedCardOut - fixedOut),
       stages,
     };
   })();

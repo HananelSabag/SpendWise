@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Briefcase,
@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
-  Clock3,
   RotateCcw,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -43,8 +42,25 @@ function decisionMatchesFilter(decision, filter) {
 
 function availableClassifications(decision) {
   return Number(decision.amount) >= 0
-    ? ['salary', 'income', 'financing', 'refund', 'transfer', 'exclude']
-    : ['expense', 'transfer', 'exclude'];
+    ? ['salary', 'recurring_income', 'loan_received', 'refund', 'own_transfer', 'one_time_income', 'exclude']
+    : [
+        'loan_repayment', 'standing_order', 'electricity', 'water', 'gas',
+        'municipal_tax', 'car_insurance', 'other_insurance', 'recurring_bill',
+        'fixed_monthly_expense', 'own_transfer', 'one_time_expense', 'exclude',
+      ];
+}
+
+function selectedClassification(decision) {
+  if (decision.recurrenceKind) return decision.recurrenceKind;
+  const semantic = {
+    income: 'one_time_income',
+    financing: 'loan_received',
+    expense: 'one_time_expense',
+    transfer: 'own_transfer',
+  };
+  return semantic[decision.override || decision.classification]
+    || decision.override
+    || decision.classification;
 }
 
 /**
@@ -74,7 +90,7 @@ function DecisionRow({ decision, onOpen, formatCurrency, t, language }) {
             {decision.accountNumber ? ` ••••${String(decision.accountNumber).slice(-4)}` : ''}
           </span>
           <span className="rounded bg-white px-1.5 py-0.5 font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-            {t(`cycle.control.class.${decision.classification}`, { fallback: decision.classification })}
+            {t(`cycle.control.class.${selectedClassification(decision)}`, { fallback: selectedClassification(decision) })}
           </span>
           {!decision.included && (
             <span className="rounded bg-gray-200 px-1.5 py-0.5 font-bold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -104,7 +120,7 @@ function DecisionSheet({ decision, onChange, onReset, t, formatCurrency, languag
   if (!decision) return null;
   const positive = Number(decision.amount) >= 0;
   const impact = Number(decision.impactAmount) || 0;
-  const selected = decision.override || decision.classification;
+  const selected = selectedClassification(decision);
   const options = availableClassifications(decision);
   // Only state the impact line when it isn't obvious from the amount's sign. A debit on the
   // expenses line and a credit on the income line just repeat the headline; a refund on the
@@ -219,10 +235,9 @@ export default function CycleControlTab({
     ...decisions.filter((decision) => decision.needsAction).map((decision) => decision.transactionId),
     ...needsReview.map((item) => item.transactionId),
   ]), [decisions, needsReview]);
-  const { automaticCount, includedCount, excludedCount } = useMemo(() => {
+  const { includedCount, excludedCount } = useMemo(() => {
     const included = decisions.filter((decision) => decision.included).length;
     return {
-      automaticCount: decisions.filter((decision) => decision.automatic).length,
       includedCount: included,
       excludedCount: decisions.length - included,
     };
@@ -231,9 +246,15 @@ export default function CycleControlTab({
   const visibleDecisions = filtered.slice(0, visibleDecisionCount);
   const hiddenDecisionCount = filtered.length - visibleDecisions.length;
   const setupNeedsAttention = status === 'late' || !salaryTracking?.last || salaryChange?.suspected;
+  const setupSeeded = useRef(false);
+  const seedSetupDisclosure = useCallback((node) => {
+    if (node && !setupSeeded.current) {
+      node.open = Boolean(setupNeedsAttention);
+      setupSeeded.current = true;
+    }
+  }, [setupNeedsAttention]);
   // Seed the disclosure once, then let the user control it — a settings change refetches and could
   // otherwise snap this panel shut mid-interaction.
-  const [setupOpen, setSetupOpen] = useState(setupNeedsAttention);
 
   const changeFilter = (nextFilter) => {
     setFilter(nextFilter);
@@ -243,12 +264,11 @@ export default function CycleControlTab({
   return (
     <div className="space-y-4">
       <details
-        open={setupOpen}
-        onToggle={(event) => setSetupOpen(event.currentTarget.open)}
+        ref={seedSetupDisclosure}
         className="group rounded-2xl border border-indigo-200 bg-white dark:border-indigo-900/60 dark:bg-gray-900"
       >
         <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
-          <Clock3 className="h-4 w-4 shrink-0 text-indigo-500" />
+          <CalendarCheck className="h-4 w-4 shrink-0 text-indigo-500" />
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-black text-gray-950 dark:text-white">
               {t('cycle.control.setupTitle', { fallback: 'Cycle setup' })}
@@ -330,10 +350,10 @@ export default function CycleControlTab({
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[
-          ['automatic', automaticCount],
-          ['included', includedCount],
-          ['excluded', excludedCount],
-          ['attention', attentionIds.size],
+          ['total', decisions.length],
+          ['counted', includedCount],
+          ['notCounted', excludedCount],
+          ['needsReview', attentionIds.size],
         ].map(([key, value]) => (
           <div key={key} className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-center dark:border-gray-800 dark:bg-gray-900">
             <p className="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-400 sm:text-[11px]">
@@ -341,7 +361,7 @@ export default function CycleControlTab({
             </p>
             <p className={cn(
               'mt-0.5 text-xl font-black tabular-nums',
-              key === 'attention' && value > 0 ? 'text-amber-600' : 'text-gray-950 dark:text-white',
+              key === 'needsReview' && value > 0 ? 'text-amber-600' : 'text-gray-950 dark:text-white',
             )}>
               {value}
             </p>
@@ -413,10 +433,10 @@ export default function CycleControlTab({
           <SlidersHorizontal className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-black text-gray-950 dark:text-white">
-              {t('cycle.control.title', { fallback: 'Engine decisions' })}
+              {t('cycle.control.title', { fallback: 'Review transactions' })}
             </h2>
             <p className="mt-0.5 text-[11px] text-gray-500">
-              {t('cycle.control.subtitle', { fallback: 'Every transaction, its rule, and its exact effect on this cycle.' })}
+              {t('cycle.control.subtitle', { fallback: 'See what was counted, change a category, or exclude a transfer.' })}
             </p>
           </div>
           {attentionIds.size > 0 ? (

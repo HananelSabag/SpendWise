@@ -26,7 +26,7 @@ const EMPTY = {
   salaryTracking: null,
   salaryChange: null,
   signatures: [],
-  settings: { engineMode: 'automatic', manualAnchorDay: null },
+  settings: { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true },
   fundingForecast: { streams: [], expectedTotal: 0, start: null, end: null },
 };
 
@@ -39,7 +39,7 @@ export function useCycles() {
   const notifyFailure = () => toast.error(t('cycle.updateFailed', { fallback: 'Could not save your change — please try again' }));
 
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'list', 4],
+    queryKey: ['cycles', user?.id, 'list', 5],
     queryFn: () => cyclesApi.list({ years: 2 }),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
@@ -126,7 +126,7 @@ export function useCurrentCycle() {
   const user = useAuthUser();
 
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'current', 4],
+    queryKey: ['cycles', user?.id, 'current', 5],
     queryFn: () => cyclesApi.current(),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
@@ -141,7 +141,7 @@ export function useCurrentCycle() {
     cycle: data.cycle || null,
     salaryTracking: data.salaryTracking || null,
     fundingForecast: data.fundingForecast || { streams: [], expectedTotal: 0, start: null, end: null },
-    settings: data.settings || { engineMode: 'automatic', manualAnchorDay: null },
+    settings: data.settings || { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true },
     totalOutstanding: data.totalOutstanding || 0,
     needsSalaryLink: data.status === 'salary_not_linked' || data.status === 'salary_never_seen',
     isLoading: query.isLoading,
