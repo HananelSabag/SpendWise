@@ -7,12 +7,14 @@ import React, { useMemo } from 'react';
 import { Receipt } from 'lucide-react';
 
 import { useTranslation } from '../../../../stores';
+import { transactionTotalsContribution } from '../../../../utils/transactionCashFlow';
 import ModernTransactionCard from '../ModernTransactionCard';
 import { MonthHeader, DayHeader } from './ListHeaders';
 
 const TransactionList = ({
   transactions, loading, onEdit, onDelete, onDuplicate, onOpenDetail,
   selectedIds, onSelect, multiSelectMode,
+  includeCreditCardTotals = false,
 }) => {
   const { t, isRTL } = useTranslation('transactions');
 
@@ -45,9 +47,13 @@ const TransactionList = ({
       }
       if (!m.days[dk]) m.days[dk] = { title: dt, date: d, transactions: [], totalIncome: 0, totalExpenses: 0 };
       m.days[dk].transactions.push(tx);
-      const amt = Math.abs(tx.amount);
-      if (tx.type === 'income') { m.days[dk].totalIncome += amt; m.totalIncome += amt; }
-      else { m.days[dk].totalExpenses += amt; m.totalExpenses += amt; }
+      const { income, expenses } = transactionTotalsContribution(tx, {
+        includeCreditCardActivity: includeCreditCardTotals,
+      });
+      m.days[dk].totalIncome += income;
+      m.days[dk].totalExpenses += expenses;
+      m.totalIncome += income;
+      m.totalExpenses += expenses;
     });
 
     return Object.entries(monthMap)
@@ -58,7 +64,7 @@ const TransactionList = ({
           .sort(([, a], [, b]) => b.date - a.date)
           .map(([dk, day]) => ({ ...day, key: dk })),
       }));
-  }, [transactions, t, isRTL]);
+  }, [transactions, t, isRTL, includeCreditCardTotals]);
 
   if (loading && !transactions?.length) {
     return (

@@ -187,11 +187,26 @@ class Transaction {
   static async getFilteredSummary(userId, options = {}) {
     try {
       const { conditions, values } = this.buildFilters(userId, options);
+      const creditCardSources = Array.isArray(options.creditCardSources)
+        ? options.creditCardSources
+        : [];
+      const selectedSourceIsCard = creditCardSources.includes(options.bankSource);
+      let totalsScope = 'TRUE';
+
+      // The unscoped Transactions headline is account cash flow: bank rows and
+      // manual entries. Credit-company rows are itemized purchases and would add
+      // the same card spending a second time on top of the bank settlement. When
+      // the user explicitly filters to one card company, show that card's own
+      // activity instead of an unhelpful zero summary.
+      if (creditCardSources.length && !selectedSourceIsCard) {
+        totalsScope = `(t.bank_source IS NULL OR NOT (t.bank_source = ANY($${values.length + 1}::text[])))`;
+        values.push(creditCardSources);
+      }
       const result = await db.query(
         `SELECT
            COUNT(*)::int AS count,
-           COALESCE(SUM(amount) FILTER (WHERE type = 'income'), 0) AS total_income,
-           COALESCE(SUM(amount) FILTER (WHERE type = 'expense'), 0) AS total_expenses
+           COALESCE(SUM(amount) FILTER (WHERE type = 'income' AND ${totalsScope}), 0) AS total_income,
+           COALESCE(SUM(amount) FILTER (WHERE type = 'expense' AND ${totalsScope}), 0) AS total_expenses
          FROM transactions t
          WHERE ${conditions.join(' AND ')}`,
         values,
