@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth, useTranslation, useTranslationStore } from '../../../stores';
 import { cn } from '../../../utils/helpers';
@@ -24,7 +23,6 @@ const Row = ({ label, value, onChange, options }) => (
 export const PreferencesTab = ({ user, authToasts }) => {
   const { updateProfile } = useAuth();
   const { t }             = useTranslation('profile');
-  const navigate          = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   const resolveDefaultHome = (u) => {
@@ -86,16 +84,8 @@ export const PreferencesTab = ({ user, authToasts }) => {
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
       setOriginal(prefs);
       authToasts.preferencesUpdated?.();
-
-      // Navigate immediately when the home mode changed so the user sees
-      // the updated experience without having to manually go to "/".
-      if (prefs.default_home !== original.default_home) {
-        if (prefs.default_home === 'shopping') {
-          navigate('/shopping', { replace: true });
-        } else {
-          navigate('/', { replace: true });
-        }
-      }
+      // The new default-home preference applies on the next visit — saving a setting should not
+      // yank the user off the profile page they are on.
     } catch {
       authToasts.profileUpdateFailed?.();
     } finally {
@@ -128,12 +118,12 @@ export const PreferencesTab = ({ user, authToasts }) => {
         {/* Default home picker */}
         <div className="py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('preferences.defaultHome') || 'פתח באפליקציה'}
+            {t('preferences.defaultHome') || 'Open the app on'}
           </p>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { id: 'dashboard', emoji: '📊', label: t('preferences.homeOptions.dashboard') || 'SpendWise' },
-              { id: 'shopping',  emoji: '🛒', label: t('preferences.homeOptions.shopping')  || 'קניות'    },
+              { id: 'dashboard', emoji: '📊', label: t('preferences.homeOptions.dashboard') || 'Dashboard' },
+              { id: 'shopping',  emoji: '🛒', label: t('preferences.homeOptions.shopping')  || 'Shopping' },
             ].map(opt => {
               const active = prefs.default_home === opt.id || (opt.id === 'dashboard' && !['shopping'].includes(prefs.default_home));
               return (

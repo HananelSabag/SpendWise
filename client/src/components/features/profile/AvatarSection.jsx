@@ -129,7 +129,7 @@ export const AvatarSection = ({ user, authToasts }) => {
         </div>
 
         {/* User info */}
-        <div className="text-center sm:text-left">
+        <div className="text-center sm:text-start">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white">
             {user?.name || user?.email?.split('@')[0]}
           </h2>
@@ -158,7 +158,7 @@ export const AvatarSection = ({ user, authToasts }) => {
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">{t('personal.changePhoto') || 'Change Photo'}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t('personal.newPhotoDesc') || 'This will be your new profile picture'}</p>
               </div>
-              <button onClick={handleCancelPreview} aria-label="Close" className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer ml-3">
+              <button onClick={handleCancelPreview} aria-label="Close" className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer ms-3">
                 <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </button>
             </div>

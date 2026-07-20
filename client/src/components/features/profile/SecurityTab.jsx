@@ -52,7 +52,7 @@ export const SecurityTab = ({ authToasts }) => {
       type="button"
       onClick={toggle}
       aria-label={label}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-150 cursor-pointer"
+      className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-150 cursor-pointer"
     >
       {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </button>
@@ -83,7 +83,7 @@ export const SecurityTab = ({ authToasts }) => {
                 placeholder={t('security.currentPasswordPlaceholder') || 'Current password'}
                 value={form.currentPassword}
                 onChange={e => setForm(p => ({ ...p, currentPassword: e.target.value }))}
-                className="pr-10"
+                className="pe-10"
               />
               {eyeBtn(showCurrent, () => setShowCurrent(s => !s), showCurrent ? 'Hide current password' : 'Show current password')}
             </div>
@@ -94,7 +94,7 @@ export const SecurityTab = ({ authToasts }) => {
               placeholder={t('security.newPasswordPlaceholder') || 'New password (min. 8 chars, letter + number)'}
               value={form.newPassword}
               onChange={e => setForm(p => ({ ...p, newPassword: e.target.value }))}
-              className="pr-10"
+              className="pe-10"
             />
             {eyeBtn(showNew, () => setShowNew(s => !s), showNew ? 'Hide new password' : 'Show new password')}
           </div>

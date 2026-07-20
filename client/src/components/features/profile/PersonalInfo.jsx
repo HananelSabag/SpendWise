@@ -43,10 +43,10 @@ const FieldRow = ({
           className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide cursor-default"
         >
           {label}
-          {required && <span className="text-red-500 ml-0.5">*</span>}
+          {required && <span className="text-red-500 ms-0.5">*</span>}
         </label>
         {readOnly && (
-          <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">
+          <span className="ms-auto text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-md">
             Read only
           </span>
         )}
@@ -76,7 +76,7 @@ const FieldRow = ({
         )
       ) : (
         <p className={cn(
-          'text-sm font-medium pl-0.5',
+          'text-sm font-medium ps-0.5',
           value
             ? 'text-gray-900 dark:text-white'
             : 'text-gray-400 dark:text-gray-500 italic'
@@ -86,7 +86,7 @@ const FieldRow = ({
       )}
 
       {isEditing && maxLength && (value?.length ?? 0) > 0 && (
-        <p className="text-right text-xs text-gray-400 mt-1">
+        <p className="text-end text-xs text-gray-400 mt-1">
           {value?.length ?? 0}/{maxLength}
         </p>
       )}
@@ -189,8 +189,8 @@ const PersonalInfo = ({ user = {}, onUpdate, isUpdating = false, className = '' 
           <div className="flex items-center gap-2">
             <Badge variant={user.email_verified ? 'success' : 'secondary'} size="sm">
               {user.email_verified
-                ? <><CheckCircle className="w-3 h-3 mr-1" />{t('personal.verified', { fallback: 'Verified' })}</>
-                : <><AlertCircle className="w-3 h-3 mr-1" />{t('personal.unverified', { fallback: 'Unverified' })}</>}
+                ? <><CheckCircle className="w-3 h-3 me-1" />{t('personal.verified', { fallback: 'Verified' })}</>
+                : <><AlertCircle className="w-3 h-3 me-1" />{t('personal.unverified', { fallback: 'Unverified' })}</>}
             </Badge>
 
             {isEditing ? (

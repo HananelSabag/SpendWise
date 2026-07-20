@@ -20,7 +20,7 @@ export const ExportTab = ({ t }) => {
           key={label}
           onClick={action}
           disabled={isExporting}
-          className="w-full flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-800 transition-all duration-150 text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+          className="w-full flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md hover:border-indigo-100 dark:hover:border-indigo-800 transition-all duration-150 text-start cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
         >
           <div className={cn('w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-105', color.split(' ').slice(1).join(' '))}>
             <Icon className={cn('w-5 h-5', color.split(' ')[0])} />
