@@ -49,8 +49,8 @@ describe('FinancialCycleCard', () => {
     expect(screen.getByText('Expected balance at cycle end')).toBeInTheDocument();
     // 12,150 now + estimatedNetChange (−5,286.67) → ~6,863.33.
     expect(screen.getByText('~ILS 6,863.33')).toBeInTheDocument();
-    // Today's balance is shown as the level it moves from, not re-computed.
-    expect(screen.getByText(/ILS 12,150\.00/)).toBeInTheDocument();
+    // The expected change is shown; today's balance is the hero above, not repeated here.
+    expect(screen.getByText('−ILS 5,286.67')).toBeInTheDocument();
   });
 
   it('shows the money still moving as quiet in/out figures', () => {

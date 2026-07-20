@@ -8,7 +8,7 @@ import { RefreshCw } from "lucide-react";
 import { Avatar } from "../../ui";
 import { cn } from "../../../utils/helpers";
 
-const GreetingHeader = ({ greeting, user, navigate, compact = false, onRefresh, t }) => {
+const GreetingHeader = ({ greeting, user, navigate, compact = false, onRefresh, t, language = 'en' }) => {
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
     if (!onRefresh || refreshing) return;
@@ -32,7 +32,7 @@ const GreetingHeader = ({ greeting, user, navigate, compact = false, onRefresh, 
           {greeting}
         </h1>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-          {new Date().toLocaleDateString(undefined, {
+          {new Date().toLocaleDateString(language === "he" ? "he-IL" : "en-GB", {
             weekday: "long",
             month: "long",
             day: "numeric",

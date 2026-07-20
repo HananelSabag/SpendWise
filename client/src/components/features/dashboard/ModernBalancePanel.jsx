@@ -21,6 +21,7 @@ import { Building2, RefreshCw, Plus, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCurrency, useTranslation } from '../../../stores';
 import { cn } from '../../../utils/helpers';
+import { signedCurrency } from '../../../utils/cycleFormat';
 import { institutionLabel } from '../bankSync/bankSyncMeta';
 import { useBankBalance } from '../../../hooks/useBankBalance';
 
@@ -171,6 +172,9 @@ const ModernBalancePanel = ({ className = '' }) => {
 
   const timeLabel = relativeTime(lastSync, t);
   const unavailableLabel = t('unavailable');
+  // The balance is only as trustworthy as its timestamp — a day-old figure must not look as
+  // authoritative as a live one, so its freshness label escalates from a whisper to amber.
+  const isStale = lastSync && (Date.now() - new Date(lastSync).getTime()) > 86_400_000;
 
   // ── Synced — balance hero ────────────────────────────────────────────────────
   return (
@@ -185,7 +189,9 @@ const ModernBalancePanel = ({ className = '' }) => {
           </div>
           <div className="flex items-center gap-2">
             {timeLabel && (
-              <span className="text-[11px] opacity-60">{t('updatedAt', { time: timeLabel })}</span>
+              <span className={cn('text-[11px]', isStale ? 'font-semibold text-amber-200' : 'opacity-60')}>
+                {t('updatedAt', { time: timeLabel })}
+              </span>
             )}
           </div>
         </div>
@@ -227,9 +233,9 @@ const ModernBalancePanel = ({ className = '' }) => {
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="text-2xl font-bold tracking-tight tabular-nums sm:text-3xl"
+                  className={cn('text-3xl font-black tracking-tight tabular-nums sm:text-4xl', totalRealBalance < 0 && 'text-rose-200')}
                 >
-                  <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
+                  <AnimatedNumber value={totalRealBalance} format={v => signedCurrency(v, formatCurrency)} />
                 </motion.span>
               ) : (
                 <span className="text-lg font-bold opacity-50">{unavailableLabel}</span>
@@ -252,9 +258,9 @@ const ModernBalancePanel = ({ className = '' }) => {
                   initial={{ opacity: 0, y: 4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="text-4xl font-bold tracking-tight"
+                  className={cn('text-4xl font-black tracking-tight', totalRealBalance < 0 && 'text-rose-200')}
                 >
-                  <AnimatedNumber value={totalRealBalance} format={v => formatCurrency(v)} />
+                  <AnimatedNumber value={totalRealBalance} format={v => signedCurrency(v, formatCurrency)} />
                 </motion.div>
                 <p className="mt-1 text-[11px] opacity-60 truncate">{bankAccounts[0]?.label}</p>
               </>

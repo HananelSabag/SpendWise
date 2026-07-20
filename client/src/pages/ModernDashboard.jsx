@@ -102,6 +102,7 @@ export default function ModernDashboard() {
                 navigate={navigate}
                 compact={isMobile}
                 t={t}
+                language={currentLanguage}
               />
             </div>
           </div>

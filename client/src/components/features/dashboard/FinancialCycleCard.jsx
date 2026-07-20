@@ -63,7 +63,7 @@ export default function FinancialCycleCard({
 }) {
   // Shared with the dashboard hero (same query key → no extra request). Read the balance up front
   // so the hook order is stable across the early returns below.
-  const { hasRealBalance, totalRealBalance } = useBankBalance();
+  const { hasRealBalance, totalRealBalance, someBalancesUnavailable } = useBankBalance();
 
   if (isLoading && !cycle) {
     return <CycleCardSkeleton label={t('cycle.loading', { fallback: 'Loading financial cycle' })} />;
@@ -100,7 +100,7 @@ export default function FinancialCycleCard({
   const projectedBalance = running && hasRealBalance
     ? projectBalanceAfterNextBills(totalRealBalance, cycle, true)
     : null;
-  const netChange = reset ? Number(reset.estimatedNetChange) : null;
+  const netChange = reset && Number.isFinite(Number(reset.estimatedNetChange)) ? Number(reset.estimatedNetChange) : null;
   const expectedIn = reset ? Number(reset.expectedIncoming) || 0 : null;
   const stillOut = reset ? -((Number(reset.estimatedCardOut) || 0) + (Number(reset.estimatedFixedOut) || 0)) : null;
   const endDate = reset?.completionDate;
@@ -139,21 +139,21 @@ export default function FinancialCycleCard({
           </p>
 
           {projectedBalance !== null ? (
-            <p className={cn('mt-1 text-4xl font-black tracking-tight tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
+            <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
               ~{formatCurrency(projectedBalance)}
             </p>
           ) : netChange !== null ? (
-            <p className={cn('mt-1 text-4xl font-black tracking-tight tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+            <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
               {signedCurrency(netChange, formatCurrency)}
             </p>
           ) : (
             <p className="mt-1 text-2xl font-bold text-gray-400 dark:text-gray-500">{t('cycle.balanceUnavailable', { fallback: 'Not available' })}</p>
           )}
 
-          {/* Today's balance and the expected change that gets you there — one calm line. */}
+          {/* The expected change that gets there — the account's current balance is the hero above,
+              so it is not repeated here. */}
           {projectedBalance !== null && netChange !== null && (
             <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-              <span>{t('cycle.balanceNow', { fallback: 'now' })} <span className="font-semibold tabular-nums text-gray-700 dark:text-gray-300">{formatCurrency(totalRealBalance)}</span></span>
               <span className={cn('inline-flex items-center gap-0.5 font-semibold tabular-nums', rising ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
                 {rising ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                 {signedCurrency(netChange, formatCurrency)}
@@ -161,6 +161,9 @@ export default function FinancialCycleCard({
               <span className="rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-gray-400 dark:bg-gray-800 dark:text-gray-500">
                 {t('cycle.estimateTag', { fallback: 'estimate' })}
               </span>
+              {someBalancesUnavailable && (
+                <span className="text-[10px] text-gray-400">{t('cycle.balanceExcludesUnavailable', { fallback: "Some accounts don't report a balance." })}</span>
+              )}
             </p>
           )}
 
@@ -184,7 +187,7 @@ export default function FinancialCycleCard({
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
             {t('cycle.operatingNet', { fallback: 'Net — how you are living' })}
           </p>
-          <p className={cn('mt-1 text-4xl font-black tracking-tight tabular-nums', operatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
+          <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', operatingNet < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
             {signedCurrency(operatingNet, formatCurrency)}
           </p>
           {isPartial && (
