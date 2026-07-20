@@ -6,8 +6,13 @@ import CycleControlTab from '../CycleControlTab';
 
 vi.mock('../../dashboard/SalaryCandidatePrompt', () => ({ default: () => null }));
 vi.mock('../WatchedMerchants', () => ({ default: () => null }));
-vi.mock('../../../ui', () => ({
-  InfoHint: ({ children }) => <span>{children}</span>,
+vi.mock('../../../ui', () => ({ InfoHint: ({ children }) => <span>{children}</span> }));
+vi.mock('../../../../hooks/useIsMobile', () => ({ useIsMobile: () => false }));
+vi.mock('../../../ui/Modal', () => ({
+  default: ({ isOpen, title, children }) => (isOpen ? <section aria-label={title}>{children}</section> : null),
+}));
+vi.mock('../../common/BottomSheet', () => ({
+  default: ({ isOpen, title, children }) => (isOpen ? <section aria-label={title}>{children}</section> : null),
 }));
 
 const t = (_key, options) => options?.fallback || _key;
@@ -55,52 +60,50 @@ const cycle = {
   ],
 };
 
+const overriddenCycle = {
+  decisions: [{
+    ...cycle.decisions[0],
+    automatic: false,
+    override: 'income',
+    classification: 'income',
+    reason: 'user_override',
+  }],
+};
+
 describe('CycleControlTab', () => {
-  it('shows the refund effect and the linked bank copy without contradictory totals', () => {
+  it('opens a decision to show the refund effect and the linked bank copy', () => {
     render(
-      <CycleControlTab
-        cycle={cycle}
-        signatures={[{ id: 1 }, { id: 2 }]}
-        formatCurrency={formatCurrency}
-        t={t}
-        language="en"
-      />,
+      <CycleControlTab cycle={cycle} signatures={[{ id: 1 }, { id: 2 }]} formatCurrency={formatCurrency} t={t} language="en" />,
     );
 
-    expect(screen.getByText('Big Apple')).toBeInTheDocument();
+    // The list is just tappable rows; the reasoning and effect live in the sheet.
+    fireEvent.click(screen.getByText('Big Apple'));
     expect(screen.getByText('−₪18.00 · expenses')).toBeInTheDocument();
-    expect(screen.getByText('Debit card')).toBeInTheDocument();
+
+    // Opening the suppressed bank copy shows what it is linked to.
+    fireEvent.click(screen.getByText('Debit card'));
     expect(screen.getByText(/Linked to MAX/)).toBeInTheDocument();
   });
 
-  it('lets the user override and reset a classification', () => {
+  it('lets the user pick a new classification from the sheet', () => {
     const onDecisionChange = vi.fn();
-    const onDecisionReset = vi.fn();
-    const overridden = {
-      decisions: [{
-        ...cycle.decisions[0],
-        automatic: false,
-        override: 'income',
-        classification: 'income',
-        reason: 'user_override',
-      }],
-    };
     render(
-      <CycleControlTab
-        cycle={overridden}
-        signatures={[{ id: 1 }, { id: 2 }]}
-        formatCurrency={formatCurrency}
-        t={t}
-        onDecisionChange={onDecisionChange}
-        onDecisionReset={onDecisionReset}
-        language="en"
-      />,
+      <CycleControlTab cycle={overriddenCycle} signatures={[{ id: 1 }]} formatCurrency={formatCurrency} t={t} onDecisionChange={onDecisionChange} language="en" />,
     );
 
     fireEvent.click(screen.getByText('Big Apple'));
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'refund' } });
+    fireEvent.click(screen.getByRole('button', { name: /^refund$/i }));
     expect(onDecisionChange).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }), 'refund');
-    fireEvent.click(screen.getAllByRole('button', { name: 'Automatic' }).at(-1));
+  });
+
+  it('resets an override back to automatic', () => {
+    const onDecisionReset = vi.fn();
+    render(
+      <CycleControlTab cycle={overriddenCycle} signatures={[{ id: 1 }]} formatCurrency={formatCurrency} t={t} onDecisionReset={onDecisionReset} language="en" />,
+    );
+
+    fireEvent.click(screen.getByText('Big Apple'));
+    fireEvent.click(screen.getByRole('button', { name: /Back to automatic/ }));
     expect(onDecisionReset).toHaveBeenCalledWith(expect.objectContaining({ transactionId: 7795 }));
   });
 
@@ -114,13 +117,7 @@ describe('CycleControlTab', () => {
     };
 
     render(
-      <CycleControlTab
-        cycle={longCycle}
-        signatures={[{ id: 1 }]}
-        formatCurrency={formatCurrency}
-        t={t}
-        language="en"
-      />,
+      <CycleControlTab cycle={longCycle} signatures={[{ id: 1 }]} formatCurrency={formatCurrency} t={t} language="en" />,
     );
 
     expect(screen.getByText('Decision 12')).toBeInTheDocument();
