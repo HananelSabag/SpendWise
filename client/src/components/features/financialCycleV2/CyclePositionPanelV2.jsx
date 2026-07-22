@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowDown, ArrowUp, CheckCircle2, Sparkles, Wallet } from 'lucide-react';
+import { ArrowDown, CheckCircle2, Landmark, Sparkles, Wallet } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { useBankBalance } from '../../../hooks/useBankBalance';
@@ -36,15 +36,22 @@ export default function CyclePositionPanelV2({
   const { hasRealBalance, totalRealBalance, someBalancesUnavailable } = useBankBalance();
   const reset = cycle?.forwardReset || {};
   const now = hasRealBalance ? Number(totalRealBalance) : null;
-  const knownChange = Number(reset.expectedNetChange ?? reset.knownNetChange);
-  const estimatedChange = Number(reset.estimatedNetChange ?? knownChange);
+  const knownChange = Number(reset.knownNetChange);
+  const estimatedChange = -(
+    (Number(reset.estimatedCardOut) || Number(reset.knownCardOut) || 0)
+    + (Number(reset.estimatedFixedOut) || Number(reset.knownFixedOut) || Number(reset.fixedOut) || 0)
+  );
   const afterKnown = Number.isFinite(now) && Number.isFinite(knownChange) ? now + knownChange : null;
   const forecast = Number.isFinite(now) && Number.isFinite(estimatedChange) ? now + estimatedChange : null;
   const useEstimates = settings?.useEstimates !== false;
-  const expectedIncome = Number(reset.expectedIncoming) || 0;
   const knownCardOut = Number(reset.knownCardOut) || 0;
   const estimatedCardOut = Number(reset.estimatedCardOut) || knownCardOut;
-  const fixedOut = Number(reset.fixedOut ?? reset.estimatedFixedOut) || 0;
+  const fixedOut = Number(reset.knownFixedOut ?? reset.fixedOut) || 0;
+  const estimatedFixedOut = Number(reset.estimatedFixedOut) || fixedOut;
+  const alreadyDirect = Number(cycle?.expenses?.direct) || 0;
+  const settledCard = Math.abs((cycle?.expenses?.events || [])
+    .filter((event) => !event.future && !event.accruing)
+    .reduce((sum, event) => sum + Number(event.total || 0), 0));
 
   return (
     <section aria-labelledby="cycle-position-heading">
@@ -75,10 +82,10 @@ export default function CyclePositionPanelV2({
       </div>
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-3 py-2.5 text-emerald-800 dark:bg-emerald-950/25 dark:text-emerald-300"><span className="flex items-center gap-1.5 text-xs font-bold"><ArrowUp className="h-3.5 w-3.5" />{t('cycleV2.incoming')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(expectedIncome, formatCurrency, { signPositive: true })}</strong></div>
+        <div className="flex items-center justify-between rounded-2xl bg-emerald-50 px-3 py-2.5 text-emerald-800 dark:bg-emerald-950/25 dark:text-emerald-300"><span className="flex items-center gap-1.5 text-xs font-bold"><CheckCircle2 className="h-3.5 w-3.5" />{t('cycleV2.alreadyDeducted')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(-(settledCard + alreadyDirect), formatCurrency)}</strong></div>
         <div className="flex items-center justify-between rounded-2xl bg-slate-100 px-3 py-2.5 text-slate-800 dark:bg-slate-800 dark:text-slate-100"><span className="flex items-center gap-1.5 text-xs font-bold"><ArrowDown className="h-3.5 w-3.5" />{t('cycleV2.cardsKnown')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(-knownCardOut, formatCurrency)}</strong></div>
-        <div className="flex items-center justify-between rounded-2xl bg-slate-100 px-3 py-2.5 text-slate-800 dark:bg-slate-800 dark:text-slate-100"><span className="text-xs font-bold">{t('cycleV2.fixedOut')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(-fixedOut, formatCurrency)}</strong></div>
-        <div className="flex items-center justify-between rounded-2xl bg-amber-50 px-3 py-2.5 text-amber-900 dark:bg-amber-950/25 dark:text-amber-200"><span className="text-xs font-bold">{t('cycleV2.cardEstimate')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(-estimatedCardOut, formatCurrency)}</strong></div>
+        <div className="flex items-center justify-between rounded-2xl bg-slate-100 px-3 py-2.5 text-slate-800 dark:bg-slate-800 dark:text-slate-100"><span className="flex items-center gap-1.5 text-xs font-bold"><Landmark className="h-3.5 w-3.5" />{t('cycleV2.fixedOut')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(-fixedOut, formatCurrency)}</strong></div>
+        <div className="flex items-center justify-between rounded-2xl bg-amber-50 px-3 py-2.5 text-amber-900 dark:bg-amber-950/25 dark:text-amber-200"><span className="text-xs font-bold">{t('cycleV2.estimateExtra')}</span><strong className="whitespace-nowrap text-sm tabular-nums">{signedCurrency(-Math.max(0, (estimatedCardOut + estimatedFixedOut) - (knownCardOut + fixedOut)), formatCurrency)}</strong></div>
       </div>
     </section>
   );

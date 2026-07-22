@@ -233,7 +233,7 @@ function buildCardView(txns, {
  * charges, so callers suppress them from cash-flow totals — that is what kills the
  * double-count while keeping the per-card breakdown.
  */
-function reconcile(bankTxns, chargeEvents) {
+function reconcile(bankTxns, chargeEvents, { cardSettings = [] } = {}) {
   const candidates = bankTxns.map((txn, index) => ({
     index,
     txn,
@@ -245,12 +245,31 @@ function reconcile(bankTxns, chargeEvents) {
   const unmatchedEvents = [];
 
   for (const event of chargeEvents) {
-    const hit = candidates.find(
+    const learned = cardSettings.find((setting) => (
+      String(setting.source) === String(event.source)
+      && String(setting.accountNumber) === String(event.accountNumber)
+      && setting.linkedTransactionId
+    ));
+    const belongsToLearnedBankLine = (txn) => {
+      if (!learned) return false;
+      if (learned.linkedBankSource && String(txn.source) !== String(learned.linkedBankSource)) return false;
+      if (learned.linkedBankAccountNumber
+          && String(txn.accountNumber) !== String(learned.linkedBankAccountNumber)) return false;
+      if (learned.linkedIdentifier) return String(txn.identifier) === String(learned.linkedIdentifier);
+      return learned.linkedDescription
+        && String(txn.description || '').trim() === String(learned.linkedDescription).trim();
+    };
+    const isAmountDateMatch = (candidate) => (
       // A pending bank row is not evidence that a card event settled. Matching against it would
       // promote the card event into realized spending before the bank confirmed any movement.
-      (c) => !isPending(c.txn) && !used.has(c.index) && c.date === event.chargeDate
-        && Math.abs(c.amount - event.total) <= AMOUNT_EPSILON,
+      !isPending(candidate.txn) && !used.has(candidate.index) && candidate.date === event.chargeDate
+        && Math.abs(candidate.amount - event.total) <= AMOUNT_EPSILON
     );
+    // A user-linked bank charge is the strongest signal when two equal debits land together.
+    // Amount and date remain mandatory, so a stale rule can never force a wrong reconciliation.
+    const hit = candidates.find((candidate) => (
+      isAmountDateMatch(candidate) && belongsToLearnedBankLine(candidate.txn)
+    )) || candidates.find(isAmountDateMatch);
     if (hit) {
       used.add(hit.index);
       matched.push({ event, bankTxn: hit.txn });
@@ -1079,6 +1098,7 @@ function prepareCycleData({
   const { matched, unmatchedEvents: allUnmatchedEvents } = reconcile(
     bankTxns,
     cardEvents.filter((event) => !event.future),
+    { cardSettings },
   );
   const unmatchedEvents = allUnmatchedEvents.filter((event) => event.included !== false);
   const suppressed = new Set(matched.map((match) => match.bankTxn));
@@ -1332,6 +1352,7 @@ function buildCycle({
         .map((e) => ({ ...e, accruing: true }))
     : [];
   const rawCardCharges = [...settledCardCharges, ...accruingCardCharges];
+  const matchedBankTxnByEvent = new Map(matched.map((item) => [item.event, item.bankTxn]));
   const attributedCardTxns = rawCardCharges.flatMap((event) => event.txns || []);
   const cardOperatingTxn = (txn) => ![
     'salary', 'income', 'financing', 'transfer', 'exclude',
@@ -1340,6 +1361,7 @@ function buildCycle({
     const includedTxns = (event.txns || []).filter(cardOperatingTxn);
     return {
       ...event,
+      bankTransaction: matchedBankTxnByEvent.get(event) || null,
       originalTotal: event.total,
       total: sumAmounts(includedTxns),
       txns: event.txns || [],
@@ -1746,8 +1768,10 @@ function buildCycle({
     const fixedItems = forwardFixed.items.filter((item) => (
       Number(item.amount) < 0 && item.kind !== 'card_recurring'
     ));
+    const knownFixedItems = fixedItems.filter((item) => ['known', 'proven'].includes(item.certainty));
     const recurringIncomeItems = forwardFixed.items.filter((item) => Number(item.amount) > 0);
-    const fixedOut = round2(Math.abs(sumAmounts(fixedItems)));
+    const fixedOut = round2(Math.abs(sumAmounts(knownFixedItems)));
+    const estimatedFixedOut = round2(Math.abs(sumAmounts(fixedItems)));
     const recurringIncome = round2(sumAmounts(recurringIncomeItems));
     const allExpectedIncoming = round2(expectedIncoming + recurringIncome);
     const stages = [
@@ -1785,13 +1809,15 @@ function buildCycle({
       knownCardOut,
       estimatedCardOut,
       fixedOut,
+      knownFixedOut: fixedOut,
+      estimatedFixedOut,
       // Fixed obligations and purchases already accumulated on cards are known future outflow.
       // The estimate switch only adds uncertain income and possible statement growth.
       knownNetChange: round2(-knownCardOut - fixedOut),
       // Expected income is a separate, visible stage. Switching historical card estimates off
       // must not silently remove linked salaries from the projection.
       expectedNetChange: round2(allExpectedIncoming - knownCardOut - fixedOut),
-      estimatedNetChange: round2(allExpectedIncoming - estimatedCardOut - fixedOut),
+      estimatedNetChange: round2(allExpectedIncoming - estimatedCardOut - estimatedFixedOut),
       stages,
     };
   })();

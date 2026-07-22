@@ -11,6 +11,20 @@ const card = (id, amount, date, processedDate) => ({
 });
 
 describe('cycle reconciliation invariant', () => {
+  test('prefers the bank-charge pattern explicitly linked to a card', () => {
+    const generic = { ...bank(1, -100, '2026-07-10', 'other debit'), identifier: 'generic' };
+    const learned = { ...bank(2, -100, '2026-07-10', 'monthly card debit'), identifier: 'card-line' };
+    const event = { source: 'isracard', accountNumber: '9999', chargeDate: '2026-07-10', total: -100 };
+    const result = engine.reconcile([generic, learned], [event], {
+      cardSettings: [{
+        source: 'isracard', accountNumber: '9999', linkedTransactionId: 2,
+        linkedBankSource: 'yahav', linkedBankAccountNumber: '123', linkedIdentifier: 'card-line',
+      }],
+    });
+
+    expect(result.matched[0].bankTxn.id).toBe(2);
+  });
+
   test('salary signatures remain scoped to the linked bank account', () => {
     const linked = bank(1, 1000, '2026-07-01', 'acme payroll');
     const otherAccount = {

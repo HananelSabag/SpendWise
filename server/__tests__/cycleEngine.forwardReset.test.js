@@ -111,6 +111,25 @@ describe('forward reset cycle primitives', () => {
     expect(forecast.streams.map((stream) => stream.primary)).toEqual([true, false]);
   });
 
+  test('keeps an automatically inferred recurring debit out of known charges', () => {
+    const bankTxns = [
+      { id: 10, amount: -100, date: '2026-05-25', processedDate: '2026-05-25', status: 'completed', description: 'Possible repeat', identifier: 'repeat-1', source: 'leumi', accountNumber: '1' },
+      { id: 11, amount: -100, date: '2026-06-25', processedDate: '2026-06-25', status: 'completed', description: 'Possible repeat', identifier: 'repeat-1', source: 'leumi', accountNumber: '1' },
+    ];
+    const cycle = engine.buildCycle({
+      bankTxns,
+      cards: [],
+      window: { start: '2026-07-10', end: '2026-08-10', running: true, mode: 'manual', anchorDay: 10, salary: { date: '2026-07-10', amount: 0, txn: null } },
+      asOf: new Date('2026-07-22T12:00:00+03:00'),
+      fundingForecast: { streams: [], expectedTotal: 0 },
+    });
+
+    expect(cycle.forwardReset.knownFixedOut).toBe(0);
+    expect(cycle.forwardReset.estimatedFixedOut).toBe(100);
+    expect(cycle.forwardReset.knownNetChange).toBe(0);
+    expect(cycle.forwardReset.estimatedNetChange).toBe(-100);
+  });
+
   test('closed-cycle averages include zero-activity calendar days and expose peak days', () => {
     const summary = engine.summarizeClosedCycle([
       { included: true, impactLine: 'income', impactAmount: 900, date: '2026-06-01' },

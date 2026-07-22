@@ -9,14 +9,7 @@
  * It now imports the REAL en/he dashboard translations (not a hand-kept subset), so a missing
  * or English-leaking key shows up here exactly as it would in the app.
  *
- * `liveCycle.json` holds a real user's salary, employer and debts, so it is gitignored and
- * absent on a fresh clone. Regenerate it against your own local server before opening this:
- *
- *   node -e "const s=require('./server/services/cycleService'),d=require('./server/config/db');
- *   s.getFinancialCycles(1).then(r=>{require('fs').writeFileSync(
- *     'client/src/dev/liveCycle.json', JSON.stringify({status:r.status,cycle:r.current,
- *     salaryTracking:r.salaryTracking,totalOutstanding:r.totalOutstanding},null,1));
- *   }).finally(()=>d.pool.end())"
+ * The fixture is synthetic and contains no credentials or private user data.
  */
 
 import React, { useState } from 'react';
@@ -26,16 +19,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../index.css';
 import enDash from '../translations/en/dashboard';
 import heDash from '../translations/he/dashboard';
-import FinancialCycleCard from '../components/features/dashboard/FinancialCycleCard';
-import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
-import CycleCardsTab from '../components/features/insights/CycleCardsTab';
-import CycleControlTab from '../components/features/insights/CycleControlTab';
 import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
 import CyclePositionPanelV2 from '../components/features/financialCycleV2/CyclePositionPanelV2';
 import CycleCardsPanelV2 from '../components/features/financialCycleV2/CycleCardsPanelV2';
+import CycleKnownExpensesPanelV2 from '../components/features/financialCycleV2/CycleKnownExpensesPanelV2';
 // Captured verbatim from GET /api/v1/cycles/current against the real database, so what
 // renders here is the actual end of the chain rather than numbers typed by hand.
-import liveCycle from './liveCycle.json';
 
 const formatCurrency = (value) => `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -128,44 +117,6 @@ const CYCLE = {
   ],
 };
 
-/** A partial (incomplete) cycle — the oldest statement is excluded, so figures understate reality. */
-const PARTIAL = {
-  ...CYCLE,
-  window: { ...CYCLE.window, start: '2026-05-09', end: '2026-06-09', running: false, projectedEnd: false },
-  operatingNet: -9288.12,
-  financing: { total: 0, count: 0 },
-  bankMovement: -9288.12,
-  projection: null,
-  partials: [{ chargeDate: '2026-05-10', total: -9468.19, count: 60, class: 'statement', source: 'max', accountNumber: '2254', partial: true, future: false, txns: [] }],
-};
-
-const CONTROL_CYCLE = {
-  ...CYCLE,
-  decisions: Array.from({ length: 19 }, (_, index) => {
-    const positive = index % 5 === 0;
-    const salary = index === 0;
-    const excluded = index % 7 === 0 && !salary;
-    return {
-      transactionId: 1000 + index,
-      date: `2026-07-${String((index % 18) + 1).padStart(2, '0')}`,
-      processedDate: `2026-07-${String((index % 18) + 1).padStart(2, '0')}`,
-      description: salary ? 'Horizon salary' : (positive ? `Refund ${index}` : `Card purchase ${index}`),
-      amount: salary ? 13327.75 : (positive ? 89.9 : -(42 + index * 11.35)),
-      source: salary ? 'leumi' : 'max',
-      accountNumber: salary ? '3478' : '2254',
-      classification: salary ? 'salary' : (positive ? 'refund' : (excluded ? 'transfer' : 'expense')),
-      included: !salary && !excluded,
-      automatic: true,
-      override: null,
-      editable: true,
-      needsAction: index === 6,
-      impactLine: excluded || salary ? 'none' : 'expenses',
-      impactAmount: excluded || salary ? 0 : (positive ? -(89.9) : 42 + index * 11.35),
-      reason: salary ? 'opening_salary_previous_cycle' : (positive ? 'auto_card_immediate' : (excluded ? 'user_override' : 'auto_card_accruing')),
-    };
-  }),
-};
-
 function Panel({ title, children, width = 'max-w-md' }) {
   return (
     <div className={`w-full ${width}`}>
@@ -196,40 +147,13 @@ function Preview() {
             <Panel title="V2 — NEW CYCLE OVERVIEW" width="max-w-6xl">
               <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
                 <CyclePositionPanelV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} onEstimateChange={(enabled) => setCycleSettings((current) => ({ ...current, useEstimates: enabled }))} />
+                <div className="mt-4"><CycleKnownExpensesPanelV2 cycle={CYCLE} formatCurrency={formatCurrency} language={lang} t={t} /></div>
               </div>
             </Panel>
             <Panel title="V2 — NEW CARD CONTROL" width="max-w-6xl">
               <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
                 <CycleCardsPanelV2 cycle={CYCLE} formatCurrency={formatCurrency} t={t} language={lang} onChange={() => {}} />
               </div>
-            </Panel>
-            <Panel title="LIVE — GET /api/v1/cycles/current">
-              <FinancialCycleCard cycle={liveCycle.cycle} salaryTracking={liveCycle.salaryTracking} totalOutstanding={liveCycle.totalOutstanding} formatCurrency={formatCurrency} t={t} language={lang} onOpenCycle={() => {}} />
-            </Panel>
-            <Panel title="dashboard card — deficit + borrowed">
-              <FinancialCycleCard cycle={CYCLE} formatCurrency={formatCurrency} t={t} language={lang} totalOutstanding={36828.21} onOpenCycle={() => {}} />
-            </Panel>
-            <Panel title="OVERVIEW tab (running)" width="max-w-lg">
-              <CycleOverviewTab cycle={CYCLE} salaryTracking={{ status: 'scheduled' }} formatCurrency={formatCurrency} t={t} language={lang} />
-            </Panel>
-            <Panel title="OVERVIEW tab (partial cycle)" width="max-w-lg">
-              <CycleOverviewTab cycle={PARTIAL} salaryTracking={{ status: 'scheduled' }} formatCurrency={formatCurrency} t={t} language={lang} />
-            </Panel>
-            <Panel title="CARDS tab — money first" width="max-w-lg">
-              <CycleCardsTab cycle={CYCLE} formatCurrency={formatCurrency} t={t} language={lang} />
-            </Panel>
-            <Panel title="CONTROL tab — compact mobile flow" width="max-w-lg">
-              <CycleControlTab
-                cycle={CONTROL_CYCLE}
-                salaryTracking={{ status: 'scheduled', last: CYCLE.window.salary, typicalAmount: 13327.75, expectedNext: '2026-08-09' }}
-                signatures={[{ id: 1 }]}
-                fundingForecast={{ streams: [{ signatureId: 1, expectedDate: '2026-08-09', expectedAmount: 13327.75, description: 'Horizon salary', primary: true }] }}
-                settings={cycleSettings}
-                onSettingsChange={(patch) => setCycleSettings((current) => ({ ...current, ...patch }))}
-                formatCurrency={formatCurrency}
-                t={t}
-                language={lang}
-              />
             </Panel>
           </div>
         </div>

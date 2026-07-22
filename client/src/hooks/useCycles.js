@@ -6,7 +6,7 @@ import { useTranslation } from '../stores';
 import { useToast } from './useToast';
 import { queryConfigs } from '../config/queryClient';
 
-const CYCLE_QUERY_VERSION = 6;
+const CYCLE_QUERY_VERSION = 7;
 const DEFAULT_SETTINGS = { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true };
 const EMPTY = {
   status: 'loading', cycles: [], loans: [], totalOutstanding: 0, recurring: [],

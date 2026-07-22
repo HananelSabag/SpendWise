@@ -76,6 +76,7 @@ function slimEvent(event) {
     txns: includedTxns
       .map(slimTxn)
       .sort((a, b) => String(b.date).localeCompare(String(a.date))),
+    bankTransaction: event.bankTransaction ? slimTxn(event.bankTransaction) : null,
   };
 }
 

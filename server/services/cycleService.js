@@ -14,7 +14,7 @@ const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 15_000;
 const MAX_CACHE_ENTRIES = 200;
-const CALCULATION_VERSION = 6;
+const CALCULATION_VERSION = 7;
 const resultCache = new Map();
 const cacheInvalidationEpochs = new Map();
 
@@ -309,10 +309,19 @@ async function loadCycleSettings(userId) {
 async function loadCardSettings(userId) {
   try {
     const { rows } = await db.query(
-      `SELECT bank_source, bank_account_number, statement_day, included, linked_transaction_id, updated_at
-         FROM financial_card_settings
-        WHERE user_id = $1
-        ORDER BY bank_source, bank_account_number`,
+      `SELECT settings.bank_source, settings.bank_account_number, settings.statement_day,
+              settings.included, settings.linked_transaction_id, settings.updated_at,
+              linked.bank_source AS linked_bank_source,
+              linked.bank_account_number AS linked_bank_account_number,
+              linked.identifier AS linked_identifier,
+              linked.description AS linked_description
+         FROM financial_card_settings settings
+         LEFT JOIN transactions linked
+           ON linked.id = settings.linked_transaction_id
+          AND linked.user_id = settings.user_id
+          AND linked.deleted_at IS NULL
+        WHERE settings.user_id = $1
+        ORDER BY settings.bank_source, settings.bank_account_number`,
       [userId],
     );
     return rows.map((row) => ({
@@ -321,6 +330,12 @@ async function loadCardSettings(userId) {
       statementDay: row.statement_day == null ? null : Number(row.statement_day),
       included: row.included !== false,
       linkedTransactionId: row.linked_transaction_id || null,
+      linkedBankSource: row.linked_bank_source || null,
+      linkedBankAccountNumber: row.linked_bank_account_number == null
+        ? null
+        : String(row.linked_bank_account_number),
+      linkedIdentifier: row.linked_identifier == null ? null : String(row.linked_identifier),
+      linkedDescription: row.linked_description || null,
       updatedAt: row.updated_at,
     }));
   } catch (error) {
@@ -362,13 +377,13 @@ async function saveCardSetting(userId, source, accountRef, {
     : (linkedTransactionId || null);
   if (linkedTransactionId) {
     const linked = await db.query(
-      `SELECT EXTRACT(DAY FROM COALESCE(bank_processed_date, date))::int AS statement_day
+      `SELECT bank_source,
+              EXTRACT(DAY FROM COALESCE(bank_processed_date, date))::int AS statement_day
          FROM transactions
-        WHERE id = $1 AND user_id = $2 AND bank_source = $3
-          AND bank_account_number::text = $4 AND deleted_at IS NULL`,
-      [linkedTransactionId, userId, source, accountNumber],
+        WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+      [linkedTransactionId, userId],
     );
-    if (!linked.rows.length) return null;
+    if (!linked.rows.length || institutionKind(linked.rows[0].bank_source) !== 'bank') return null;
     resolvedDay = Number(linked.rows[0].statement_day);
   }
   const { rows } = await db.query(
