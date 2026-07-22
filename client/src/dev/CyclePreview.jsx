@@ -30,6 +30,9 @@ import FinancialCycleCard from '../components/features/dashboard/FinancialCycleC
 import CycleOverviewTab from '../components/features/insights/CycleOverviewTab';
 import CycleCardsTab from '../components/features/insights/CycleCardsTab';
 import CycleControlTab from '../components/features/insights/CycleControlTab';
+import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
+import CyclePositionPanelV2 from '../components/features/financialCycleV2/CyclePositionPanelV2';
+import CycleCardsPanelV2 from '../components/features/financialCycleV2/CycleCardsPanelV2';
 // Captured verbatim from GET /api/v1/cycles/current against the real database, so what
 // renders here is the actual end of the chain rather than numbers typed by hand.
 import liveCycle from './liveCycle.json';
@@ -175,7 +178,7 @@ function Panel({ title, children, width = 'max-w-md' }) {
 function Preview() {
   const [lang, setLang] = useState('he');
   const [dark, setDark] = useState(false);
-  const [cycleSettings, setCycleSettings] = useState({ engineMode: 'automatic', manualAnchorDay: null });
+  const [cycleSettings, setCycleSettings] = useState({ engineMode: 'automatic', manualAnchorDay: null, useEstimates: true });
   const t = makeT(lang === 'he' ? heDash : enDash);
 
   return (
@@ -187,6 +190,19 @@ function Preview() {
             <button onClick={() => setDark(!dark)} className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-bold text-white dark:bg-gray-200 dark:text-gray-900">{dark ? 'Light' : 'Dark'}</button>
           </div>
           <div className="flex flex-wrap gap-6">
+            <Panel title="V2 — NEW DASHBOARD" width="max-w-2xl">
+              <FinancialCycleSnapshotV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} language={lang} onOpen={() => {}} />
+            </Panel>
+            <Panel title="V2 — NEW CYCLE OVERVIEW" width="max-w-6xl">
+              <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
+                <CyclePositionPanelV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} onEstimateChange={(enabled) => setCycleSettings((current) => ({ ...current, useEstimates: enabled }))} />
+              </div>
+            </Panel>
+            <Panel title="V2 — NEW CARD CONTROL" width="max-w-6xl">
+              <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
+                <CycleCardsPanelV2 cycle={CYCLE} formatCurrency={formatCurrency} t={t} language={lang} onChange={() => {}} />
+              </div>
+            </Panel>
             <Panel title="LIVE — GET /api/v1/cycles/current">
               <FinancialCycleCard cycle={liveCycle.cycle} salaryTracking={liveCycle.salaryTracking} totalOutstanding={liveCycle.totalOutstanding} formatCurrency={formatCurrency} t={t} language={lang} onOpenCycle={() => {}} />
             </Panel>

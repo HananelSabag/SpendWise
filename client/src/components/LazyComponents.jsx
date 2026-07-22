@@ -93,8 +93,8 @@ export const BankSyncPage = createLazyComponent(
 );
 
 export const InsightsPage = createLazyComponent(
-  () => import('../pages/InsightsPage.jsx'),
-  'InsightsPage'
+  () => import('../pages/FinancialCyclePageV2.jsx'),
+  'FinancialCyclePageV2'
 );
 
 export const YearlyReviewPage = createLazyComponent(

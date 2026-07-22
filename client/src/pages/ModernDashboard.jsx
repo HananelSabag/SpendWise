@@ -17,7 +17,7 @@ import { PageSkeleton } from '../components/ui';
 
 import BrandMark from '../components/common/BrandMark';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
-import FinancialCycleCard from '../components/features/dashboard/FinancialCycleCard';
+import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
 import GreetingHeader from '../components/features/dashboard/GreetingHeader';
 import DashboardError from '../components/features/dashboard/DashboardError';
@@ -114,20 +114,16 @@ export default function ModernDashboard() {
           {/* The salary-to-salary cycle is the only headline here. The removed calendar-month
               card contradicted it by counting financing as income, so every current money
               surface now reads from the same cycle engine. */}
-          <FinancialCycleCard
+          <FinancialCycleSnapshotV2
             cycle={currentCycle.cycle}
+            settings={currentCycle.settings}
             isLoading={currentCycle.isLoading}
-            salaryTracking={currentCycle.salaryTracking}
-            useEstimates={currentCycle.settings?.useEstimates !== false}
-            totalOutstanding={currentCycle.totalOutstanding}
             needsSalaryLink={currentCycle.needsSalaryLink}
             needsCycleAnchor={currentCycle.needsCycleAnchor}
             formatCurrency={formatCurrency}
             t={t}
             language={currentLanguage}
-            onOpenCycle={(tab) => navigate(tab ? `/financial-cycle?tab=${tab}` : '/financial-cycle')}
-            onOpenPrevious={() => navigate('/financial-cycle?cycle=previous')}
-            onLinkSalary={() => navigate('/financial-cycle')}
+            onOpen={() => navigate('/financial-cycle')}
           />
 
           <ModernRecentTransactionsWidget
