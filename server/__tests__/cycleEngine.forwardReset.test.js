@@ -14,6 +14,61 @@ function income(id, amount, date, description) {
 }
 
 describe('forward reset cycle primitives', () => {
+  test('automatic billing windows use the latest monthly statement day', () => {
+    const anchorDay = engine.latestStatementDay([
+      { view: { settlement: { mode: 'aggregated' }, statementDay: { day: 2, certain: true } } },
+      { view: { settlement: { mode: 'aggregated' }, statementDay: { day: 10, certain: true } } },
+      { view: { settlement: { mode: 'passthrough' }, statementDay: { day: null, certain: false } } },
+    ]);
+    const running = engine.buildBillingCycleWindows(anchorDay, {
+      asOf: new Date('2026-07-22T12:00:00+03:00'),
+      months: 3,
+    }).find((window) => window.running);
+
+    expect(anchorDay).toBe(10);
+    expect(running).toMatchObject({
+      start: '2026-07-10',
+      end: '2026-08-10',
+      mode: 'billing',
+      anchorDay: 10,
+    });
+  });
+
+  test('does not invent an automatic boundary from an uncertain card day', () => {
+    expect(engine.latestStatementDay([{
+      included: true,
+      view: { settlement: { mode: 'aggregated' }, statementDay: { day: 17, certain: false } },
+    }])).toBeNull();
+  });
+
+  test('every linked salary inside a billing window is received income', () => {
+    const signatures = [
+      { id: 1, normalizedDescription: 'salary a', cycleAnchor: true },
+      { id: 2, normalizedDescription: 'salary b', cycleAnchor: false },
+    ];
+    const bankTxns = [
+      income(1, 10000, '2026-07-11', 'salary a'),
+      income(2, 15000, '2026-07-15', 'salary b'),
+      { ...income(3, 700, '2026-07-18', 'refund'), amount: -700 },
+    ];
+    const window = {
+      start: '2026-07-10', end: '2026-08-10', running: true, mode: 'billing',
+      salary: { date: '2026-07-10', amount: 0, txn: null }, closingSalary: null,
+    };
+    const cycle = engine.buildCycle({
+      bankTxns,
+      cards: [],
+      window,
+      asOf: new Date('2026-07-22T12:00:00+03:00'),
+      salarySignatures: signatures,
+      fundingForecast: { streams: [], expectedTotal: 0 },
+    });
+
+    expect(cycle.income.salary.total).toBe(25000);
+    expect(cycle.income.total).toBe(25000);
+    expect(cycle.expenses.direct.total).toBe(700);
+  });
+
   test('a manual day stays stable and clamps to short months', () => {
     const windows = engine.buildFixedDayWindows(31, {
       asOf: new Date('2026-03-15T12:00:00+02:00'),

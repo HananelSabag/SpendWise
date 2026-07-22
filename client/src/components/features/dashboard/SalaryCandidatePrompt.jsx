@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '../../../api';
@@ -8,7 +8,6 @@ import { useAuthUser } from '../../../stores/authStore';
 export default function SalaryCandidatePrompt({
   formatCurrency,
   hasSalaryIdentity = false,
-  salaryIdentityCount = 0,
   onSelected,
 }) {
   const { t } = useTranslation('dashboard');
@@ -16,8 +15,9 @@ export default function SalaryCandidatePrompt({
   const queryClient = useQueryClient();
   // Keep the onboarding session available after the first choice so a joint
   // account can select a second salary before leaving the page.
-  const [startedWithoutIdentity] = useState(() => !hasSalaryIdentity);
-  const shouldOfferSelection = startedWithoutIdentity || salaryIdentityCount < 2;
+  // Joint accounts can have any number of income streams. The candidates endpoint already
+  // removes linked rows, so an arbitrary UI cap only hides valid salaries.
+  const shouldOfferSelection = Boolean(user?.id);
   const candidates = useQuery({
     queryKey: ['salaryCandidates', user?.id],
     enabled: shouldOfferSelection && Boolean(user?.id),

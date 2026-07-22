@@ -68,12 +68,12 @@ describe('projectBalanceAfterNextBills', () => {
   it('uses the complete multi-stage reset contract when available', () => {
     expect(projectBalanceAfterNextBills(10000, {
       window: { running: true },
-      forwardReset: { estimatedNetChange: 8201.08, knownNetChange: -1960.71 },
+      forwardReset: { estimatedNetChange: 8201.08, expectedNetChange: 7039.29, knownNetChange: -1960.71 },
     })).toBe(18201.08);
     expect(projectBalanceAfterNextBills(10000, {
       window: { running: true },
-      forwardReset: { estimatedNetChange: 8201.08, knownNetChange: -1960.71 },
-    }, false)).toBe(8039.29);
+      forwardReset: { estimatedNetChange: 8201.08, expectedNetChange: 7039.29, knownNetChange: -1960.71 },
+    }, false)).toBe(17039.29);
   });
 
   it('uses only future movements and does not subtract an already-settled card bill again', () => {

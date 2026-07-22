@@ -200,14 +200,20 @@ function buildCardView(txns, {
   minConfidence = MIN_STATEMENT_CONFIDENCE,
   bankTxns = null,
   mode = SETTLEMENT_MODES.AGGREGATED,
+  statementDayOverride = null,
 } = {}) {
   const settlement = bankTxns
     ? detectSettlementMode(txns, bankTxns, { asOf })
     : { mode, coverage: null };
 
-  const statementDay = settlement.mode === SETTLEMENT_MODES.PASSTHROUGH
+  const inferredStatementDay = settlement.mode === SETTLEMENT_MODES.PASSTHROUGH
     ? { day: null, confidence: 0, sampleSize: txns.length, certain: false }
     : detectStatementDay(txns, { minConfidence });
+  const configuredDay = Number(statementDayOverride);
+  const statementDay = settlement.mode !== SETTLEMENT_MODES.PASSTHROUGH
+    && Number.isInteger(configuredDay) && configuredDay >= 1 && configuredDay <= 31
+    ? { ...inferredStatementDay, day: configuredDay, confidence: 1, certain: true, source: 'user' }
+    : inferredStatementDay;
 
   const events = buildChargeEvents(txns, { mode: settlement.mode })
     .map((e) => classifyChargeEvent(e, { statementDay: statementDay.certain ? statementDay.day : null, asOf }));
@@ -440,6 +446,30 @@ function buildFixedDayWindows(anchorDay, { asOf = new Date(), months = 24 } = {}
       anchorDay: Number(anchorDay),
     };
   }).filter((window) => window.start <= today);
+}
+
+/**
+ * Automatic household cash-flow windows are anchored to the latest monthly card statement day.
+ * Other cards that settle earlier remain inside the same window; passthrough/debit cards never
+ * provide an anchor because they have no monthly reset event.
+ */
+function latestStatementDay(cardViews = []) {
+  const days = cardViews
+    .filter((card) => card.included !== false)
+    .filter((card) => card.view?.settlement?.mode !== SETTLEMENT_MODES.PASSTHROUGH)
+    .filter((card) => card.view?.statementDay?.certain === true)
+    .map((card) => Number(card.view?.statementDay?.day))
+    .filter((day) => Number.isInteger(day) && day >= 1 && day <= 31);
+  return days.length ? Math.max(...days) : null;
+}
+
+function buildBillingCycleWindows(anchorDay, options = {}) {
+  if (!Number.isInteger(Number(anchorDay))) return [];
+  return buildFixedDayWindows(Number(anchorDay), options).map((window) => ({
+    ...window,
+    mode: 'billing',
+    salary: { date: window.start, amount: 0, txn: null, signature: null },
+  }));
 }
 
 /** Build calendar-day averages and peak days from the exact included audit decisions. */
@@ -769,16 +799,17 @@ function statementDateOnOrAfter(day, boundary) {
  * Forecast the first aggregated card bills after the next salary boundary.
  *
  * The provider gives us the amount already assigned to that future statement, but more
- * purchases can still join it. Until the bank actually charges the bill, use the larger of
- * (a) the amount already known and (b) the average of up to three recent complete statements.
+ * purchases can still join it. Until the bank actually charges the bill, the known amount is the
+ * floor; two bills can add at most 25%, and three or more use a median of up to six complete bills.
  * Debit/passthrough cards are excluded because they have no monthly bill.
  */
-function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), historySize = 3 } = {}) {
+function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), historySize = 6 } = {}) {
   const today = ilDate(asOf);
   const bills = [];
 
   for (const card of cardViews || []) {
     const view = card.view || card;
+    if (card.included === false || view.included === false) continue;
     if (view.settlement?.mode === SETTLEMENT_MODES.PASSTHROUGH) continue;
     if (!view.statementDay?.certain || !view.statementDay.day) continue;
 
@@ -794,9 +825,26 @@ function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), histor
     const historicalAverage = history.length
       ? round2(history.reduce((sum, event) => sum + Math.abs(Number(event.total || 0)), 0) / history.length)
       : 0;
-    const estimatedAmount = round2(Math.max(knownAmount, historicalAverage));
+    const sortedHistory = history
+      .map((event) => Math.abs(Number(event.total || 0)))
+      .sort((a, b) => a - b);
+    const middle = Math.floor(sortedHistory.length / 2);
+    const historicalTypical = !sortedHistory.length ? 0 : round2(sortedHistory.length % 2
+      ? sortedHistory[middle]
+      : (sortedHistory[middle - 1] + sortedHistory[middle]) / 2);
+    // One exceptional month is useful context but not a forecast. Two complete bills may raise
+    // the known floor by at most 25%; only three or more earn the uncapped robust median.
+    const historicalForecast = history.length >= 3
+      ? historicalTypical
+      : (history.length === 2 ? Math.min(historicalTypical, knownAmount * 1.25) : 0);
+    const estimatedAmount = round2(Math.max(
+      knownAmount,
+      historicalForecast,
+    ));
 
-    if (!estimatedAmount && !knownAmount) continue;
+    // Keep a card with real statement history visible even when nothing has accumulated yet;
+    // "known 0 / last bill X" is useful context and makes the per-card picture complete.
+    if (!estimatedAmount && !knownAmount && !history.length) continue;
     bills.push({
       source: card.source,
       accountNumber: card.accountNumber,
@@ -808,9 +856,11 @@ function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), histor
       // auditable instead of a number with no provenance.
       knownTxns: knownEvent?.txns || [],
       historicalAverage,
+      historicalTypical,
+      lastStatementAmount: history.length ? round2(Math.abs(Number(history[0].total || 0))) : 0,
       historyCount: history.length,
       estimatedAmount,
-      certainty: knownEvent && knownAmount >= historicalAverage ? 'known' : 'estimated',
+      certainty: estimatedAmount > knownAmount ? 'estimated' : 'known',
     });
   }
 
@@ -943,25 +993,38 @@ function recurringOverrideFor(txn, transactionOverrides = []) {
 function deriveManualRecurring(txns, transactionOverrides = [], { excludeTxns = [], cardSources = [] } = {}) {
   const skip = excludeTxns instanceof Set ? excludeTxns : new Set(excludeTxns);
   const creditSources = new Set(cardSources.map(String));
-  const rules = new Map();
+  const groups = new Map();
   for (const override of transactionOverrides) {
     if (!override.recurrenceEnabled || !override.recurrenceKind) continue;
     const identity = recurringIdentity(override);
-    if (!identity || rules.has(identity)) continue;
-    const matches = txns.filter((txn) => !skip.has(txn) && recurringIdentity(txn) === identity)
+    if (!identity || override.recurrenceIncludeEstimate === false) continue;
+    const key = override.recurrenceGroupId ? `group:${override.recurrenceGroupId}` : `identity:${identity}`;
+    if (!groups.has(key)) groups.set(key, { key, overrides: [], identities: new Set() });
+    groups.get(key).overrides.push(override);
+    groups.get(key).identities.add(identity);
+  }
+  const rules = [];
+  for (const group of groups.values()) {
+    const override = group.overrides[0];
+    const matches = txns.filter((txn) => !skip.has(txn) && group.identities.has(recurringIdentity(txn)))
       .sort((a, b) => ilDate(a.processedDate || a.date).localeCompare(ilDate(b.processedDate || b.date)));
     const last = matches[matches.length - 1] || override;
-    const signedAmount = Number(last.amount);
+    const recentAmounts = matches.slice(-3).map((item) => Number(item.amount)).filter(Number.isFinite);
+    const signedAmount = recentAmounts.length
+      ? recentAmounts.reduce((sum, amount) => sum + amount, 0) / recentAmounts.length
+      : Number(last.amount);
     if (!Number.isFinite(signedAmount) || signedAmount === 0) continue;
     const dates = matches.length
       ? matches.map((txn) => ilDate(txn.processedDate || txn.date))
       : [ilDate(override.date)];
-    rules.set(identity, {
-      identifier: override.identifier || identity,
-      identity,
+    rules.push({
+      identifier: override.identifier || group.key,
+      identity: group.key,
+      recurrenceGroupId: override.recurrenceGroupId || null,
+      matchIdentities: [...group.identities],
       source: override.source,
       accountNumber: override.accountNumber,
-      description: override.description || last.description || '',
+      description: override.recurrenceLabel || override.description || last.description || '',
       occurrences: Math.max(1, matches.length),
       dates,
       typicalAmount: round2(Math.abs(signedAmount)),
@@ -975,7 +1038,7 @@ function deriveManualRecurring(txns, transactionOverrides = [], { excludeTxns = 
       needsUserLabel: false,
     });
   }
-  return [...rules.values()];
+  return rules;
 }
 
 /** Precompute full-collection facts once, then reuse them for every salary window. */
@@ -985,17 +1048,39 @@ function prepareCycleData({
   asOf = new Date(),
   creditClassifications = [],
   transactionOverrides = [],
+  cardSettings = [],
 } = {}) {
   const cardViews = cards
     .filter((card) => (card.txns || []).length)
-    .map((card) => ({ ...card, view: buildCardView(card.txns, { bankTxns, asOf }) }));
-  const allEvents = cardViews.flatMap((card) => card.view.events.map((event) => ({
+    .map((card) => {
+      const setting = cardSettings.find((item) => String(item.source) === String(card.source)
+        && String(item.accountNumber) === String(card.accountNumber));
+      return {
+        ...card,
+        included: setting?.included !== false,
+        setting: setting || null,
+        view: buildCardView(card.txns, {
+          bankTxns,
+          asOf,
+          statementDayOverride: setting?.statementDay,
+        }),
+      };
+    });
+  const cardEvents = cardViews.flatMap((card) => card.view.events.map((event) => ({
     ...event,
     source: card.source,
     accountNumber: card.accountNumber,
+    included: card.included !== false,
   })));
+  const allEvents = cardEvents.filter((event) => event.included !== false);
   const settledEvents = allEvents.filter((event) => !event.future);
-  const { matched, unmatchedEvents } = reconcile(bankTxns, settledEvents);
+  // Excluding a card removes its itemized spend from the product view, but its matching bank
+  // settlement must still be suppressed or the same card returns as an unexplained bank debit.
+  const { matched, unmatchedEvents: allUnmatchedEvents } = reconcile(
+    bankTxns,
+    cardEvents.filter((event) => !event.future),
+  );
+  const unmatchedEvents = allUnmatchedEvents.filter((event) => event.included !== false);
   const suppressed = new Set(matched.map((match) => match.bankTxn));
   const reconciledEvents = new Set(matched.map((match) => match.event));
   const reversalPool = bankTxns.filter((txn) => !suppressed.has(txn) && Number(txn.amount) > 0);
@@ -1062,7 +1147,7 @@ function prepareCycleData({
     series.recurrenceKind === 'loan_repayment'
       && loans.some((loan) => String(loan.identifier) === String(series.identifier))
   ));
-  const manualIdentities = new Set(manualRecurring.map((series) => series.identity));
+  const manualIdentities = new Set(manualRecurring.flatMap((series) => series.matchIdentities || [series.identity]));
   const automaticRecurring = deriveRecurringCharges(bankTxns, {
     knownLoanIds: loans.map((loan) => loan.identifier),
     excludeTxns: suppressed,
@@ -1164,7 +1249,12 @@ function buildCycle({
     ? { ...window, end: window.effectiveEnd }
     : window;
   const within = (t) => inWindow(hitDate(t), accountingWindow);
-  const cardEventWithin = (event) => inCardAttributionWindow(event, accountingWindow);
+  // A billing-anchored cash-flow window follows the provider's real charge date.  The weighted
+  // salary-cycle attribution remains available for legacy fixture/history helpers, but the live
+  // product no longer shifts a statement across a salary boundary.
+  const cardEventWithin = (event) => window.mode === 'billing' || window.mode === 'manual'
+    ? inWindow(ilDate(event.chargeDate), accountingWindow)
+    : inCardAttributionWindow(event, accountingWindow);
 
   const salaryClassificationById = new Map(salaryClassifications.map((item) => [
     Number(item.transactionId), item.classification,
@@ -1267,14 +1357,15 @@ function buildCycle({
   // is the exact bug that made the 09/07 salary look like July income. A closed window receives
   // its next salary instead; a running window has no settled salary yet and shows the expected
   // payment only inside the explicitly estimated projection below.
-  const openingSalaryTxn = window.mode === 'manual'
+  const cashFlowWindow = window.mode === 'billing' || window.mode === 'manual';
+  const openingSalaryTxn = cashFlowWindow
     ? null
     : (window.salary?.txn || bankTxns.find((txn) => (
       salarySignature
       && hitDate(txn) === window.start
       && matchesSignature(txn, salarySignature)
     )));
-  const closingSalary = window.closingSalary?.txn && !isPending(window.closingSalary.txn)
+  const closingSalary = !cashFlowWindow && window.closingSalary?.txn && !isPending(window.closingSalary.txn)
     ? window.closingSalary.txn
     : null;
   const isSecondarySalaryIdentity = (txn) => (
@@ -1286,7 +1377,7 @@ function buildCycle({
   // Salary signatures already carry their economic month offset, so group every linked salary by
   // the work period it pays: opening-period salaries belong to the previous cycle; closing-period
   // salaries belong here even if they arrived just before the primary boundary.
-  const secondarySalaryTxns = window.mode === 'manual' ? [] : bankTxns.filter((txn) => (
+  const secondarySalaryTxns = cashFlowWindow ? [] : bankTxns.filter((txn) => (
     isSecondarySalaryIdentity(txn) && !isPending(txn)
   ));
   const openingSalaryPeriod = salaryPeriod(window.start, salarySignature);
@@ -1317,8 +1408,14 @@ function buildCycle({
   const cardSalary = attributedCardTxns.filter((txn) => (
     Number(txn.amount) > 0 && overrideClass(txn) === 'salary'
   ));
-  const salary = [closingSalary, ...closingSecondarySalary, ...secondarySalary, ...cardSalary]
-    .filter((txn) => txn && !isOperatingExcluded(txn));
+  const cashFlowSalaries = cashFlowWindow
+    ? credits.filter((txn) => isSalary(txn) && !financingTxns.has(txn) && !isOperatingExcluded(txn))
+    : [];
+  const salary = [
+    ...cashFlowSalaries,
+    ...(!cashFlowWindow ? [closingSalary, ...closingSecondarySalary, ...secondarySalary] : []),
+    ...cardSalary,
+  ].filter((txn, index, list) => txn && !isOperatingExcluded(txn) && list.indexOf(txn) === index);
   const cardIncome = attributedCardTxns.filter((txn) => (
     Number(txn.amount) > 0 && overrideClass(txn) === 'income'
   ));
@@ -1395,6 +1492,9 @@ function buildCycle({
     override: overrideClass(txn),
     overrideTransactionId: overrideFor(txn)?.transactionId || null,
     recurrenceKind: overrideFor(txn)?.recurrenceKind || null,
+    recurrenceGroupId: overrideFor(txn)?.recurrenceGroupId || null,
+    recurrenceLabel: overrideFor(txn)?.recurrenceLabel || null,
+    recurrenceIncludeEstimate: overrideFor(txn)?.recurrenceIncludeEstimate !== false,
     editable: true,
     needsAction: reviewIds.has(Number(txn.id)),
     bankEffect: 0,
@@ -1601,7 +1701,9 @@ function buildCycle({
     const completedFundingSignatureIds = new Set(closingSecondarySalary
       .map((txn) => salaryIdentityFor(txn)?.id)
       .filter((id) => id !== undefined && id !== null));
-    const forecastStreams = fundingForecast?.streams || [];
+    const forecastStreams = (fundingForecast?.streams || []).filter((stream) => (
+      !cashFlowWindow || stream.expectedDate <= accountingWindow.end
+    ));
     const fundingStreams = forecastStreams.filter((stream) => (
       !completedFundingSignatureIds.has(stream.signatureId)
     ));
@@ -1686,6 +1788,9 @@ function buildCycle({
       // Fixed obligations and purchases already accumulated on cards are known future outflow.
       // The estimate switch only adds uncertain income and possible statement growth.
       knownNetChange: round2(-knownCardOut - fixedOut),
+      // Expected income is a separate, visible stage. Switching historical card estimates off
+      // must not silently remove linked salaries from the projection.
+      expectedNetChange: round2(allExpectedIncoming - knownCardOut - fixedOut),
       estimatedNetChange: round2(allExpectedIncoming - estimatedCardOut - fixedOut),
       stages,
     };
@@ -1754,6 +1859,8 @@ function buildCycle({
     cards: cardViews.map((cv) => ({
       source: cv.source,
       accountNumber: cv.accountNumber,
+      included: cv.included !== false,
+      setting: cv.setting,
       settlement: cv.view.settlement,
       statementDay: cv.view.statementDay,
     })),
@@ -1781,11 +1888,14 @@ module.exports = {
   detectSalaryChange,
   buildWindows,
   buildFixedDayWindows,
+  latestStatementDay,
+  buildBillingCycleWindows,
   summarizeClosedCycle,
   findSettlementReversals,
   buildIdentifierFamilies,
   deriveLoans,
   deriveRecurringCharges,
+  deriveManualRecurring,
   prepareCycleData,
   nextOccurrence,
   projectUpcoming,

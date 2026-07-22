@@ -43,7 +43,7 @@ function Flow({ label, value, tone, formatCurrency }) {
   return (
     <div className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-800/50">
       <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">{label}</p>
-      <p className={cn('mt-0.5 text-base font-bold tabular-nums', tones[tone])}>
+      <p className={cn('mt-0.5 whitespace-nowrap text-base font-bold tabular-nums', tones[tone])}>
         {signedCurrency(value, formatCurrency, { signPositive: true })}
       </p>
     </div>
@@ -59,6 +59,7 @@ export default function FinancialCycleCard({
   onOpenCycle,
   onLinkSalary,
   needsSalaryLink = false,
+  needsCycleAnchor = false,
   language = 'en',
   useEstimates = true,
 }) {
@@ -71,16 +72,16 @@ export default function FinancialCycleCard({
   }
 
   // Salary is the anchor of the whole model — without it there is no window to show.
-  if (needsSalaryLink) {
+  if (needsSalaryLink || needsCycleAnchor) {
     return (
       <section className="glass-card rounded-2xl p-5">
         <div className="flex items-start gap-3">
           <span className="rounded-xl bg-indigo-50 p-2 text-indigo-500 dark:bg-indigo-950/30"><Wallet className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{t('cycle.linkSalaryTitle', { fallback: 'Link your salary to see your cycle' })}</h3>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{t('cycle.linkSalaryHint', { fallback: 'Your financial cycle runs from one salary to the next. Point us at your salary once and we take it from there.' })}</p>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">{needsCycleAnchor ? t('cycle.anchorMissing', { fallback: 'Choose a billing day to start your cycle' }) : t('cycle.linkSalaryTitle', { fallback: 'Link your income' })}</h3>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{needsCycleAnchor ? t('cycle.anchorMissingHint', { fallback: 'No reliable card billing day was found. Choose a manual monthly reset once.' }) : t('cycle.linkSalaryHint', { fallback: 'Link income so every salary in the billing window is recognized.' })}</p>
             <button type="button" onClick={onLinkSalary} className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-indigo-700">
-              {t('cycle.linkSalaryCta', { fallback: 'Link salary' })}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
+              {needsCycleAnchor ? t('cycle.setCycleCta', { fallback: 'Set cycle day' }) : t('cycle.linkSalaryCta', { fallback: 'Link income' })}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
             </button>
           </div>
         </div>
@@ -101,7 +102,7 @@ export default function FinancialCycleCard({
   const projectedBalance = running && hasRealBalance
     ? projectBalanceAfterNextBills(totalRealBalance, cycle, useEstimates)
     : null;
-  const netChangeValue = useEstimates ? reset?.estimatedNetChange : reset?.knownNetChange;
+  const netChangeValue = useEstimates ? reset?.estimatedNetChange : (reset?.expectedNetChange ?? reset?.knownNetChange);
   const netChange = Number.isFinite(Number(netChangeValue)) ? Number(netChangeValue) : null;
   const expectedIn = reset ? Number(reset.expectedIncoming) || 0 : 0;
   const fixedOut = Number(reset?.fixedOut ?? reset?.estimatedFixedOut) || 0;
@@ -114,7 +115,7 @@ export default function FinancialCycleCard({
 
   return (
     <section className="glass-card rounded-2xl p-5">
-      <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-gray-900 dark:text-white">
           {t('cycle.title', { fallback: 'This financial cycle' })}
         </h3>
@@ -145,11 +146,11 @@ export default function FinancialCycleCard({
           </p>
 
           {projectedBalance !== null ? (
-            <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
+            <p className={cn('mt-1 whitespace-nowrap text-3xl font-bold tracking-tight tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
               ~{formatCurrency(projectedBalance)}
             </p>
           ) : netChange !== null ? (
-            <p className={cn('mt-1 text-3xl font-bold tracking-tight tabular-nums', netChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+            <p className={cn('mt-1 whitespace-nowrap text-3xl font-bold tracking-tight tabular-nums', netChange >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
               {signedCurrency(netChange, formatCurrency)}
             </p>
           ) : (

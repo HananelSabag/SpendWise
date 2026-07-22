@@ -29,6 +29,10 @@ const STATUS_TONE = {
 
 const FILTERS = ['all', 'attention', 'salary', 'income', 'charges', 'excluded'];
 const DECISIONS_PAGE_SIZE = 12;
+const RECURRING_CLASSIFICATIONS = new Set([
+  'salary', 'recurring_income', 'loan_repayment', 'standing_order', 'electricity', 'water',
+  'gas', 'municipal_tax', 'car_insurance', 'other_insurance', 'recurring_bill', 'fixed_monthly_expense',
+]);
 
 function decisionMatchesFilter(decision, filter) {
   if (filter === 'all') return true;
@@ -116,7 +120,7 @@ function DecisionRow({ decision, onOpen, formatCurrency, t, language }) {
 }
 
 /** The decision detail + classifier, shown in a bottom sheet on mobile and a modal on desktop. */
-function DecisionSheet({ decision, onChange, onReset, t, formatCurrency, language }) {
+function DecisionSheet({ decision, onChange, onReset, recurringGroups = [], t, formatCurrency, language }) {
   if (!decision) return null;
   const positive = Number(decision.amount) >= 0;
   const impact = Number(decision.impactAmount) || 0;
@@ -175,7 +179,12 @@ function DecisionSheet({ decision, onChange, onReset, t, formatCurrency, languag
                 <button
                   key={option}
                   type="button"
-                  onClick={() => onChange(decision, option)}
+                  onClick={() => RECURRING_CLASSIFICATIONS.has(option)
+                    ? onChange(decision, option, {
+                        recurrenceLabel: decision.recurrenceLabel || decision.description || option,
+                        recurrenceIncludeEstimate: true,
+                      })
+                    : onChange(decision, option)}
                   className={cn(
                     'flex min-h-[48px] w-full items-center justify-between gap-2 rounded-xl border px-4 text-sm font-semibold transition',
                     active
@@ -189,6 +198,26 @@ function DecisionSheet({ decision, onChange, onReset, t, formatCurrency, languag
               );
             })}
           </div>
+          {recurringGroups.length > 0 && (
+            <label className="mt-3 block text-xs font-bold text-gray-700 dark:text-gray-200">
+              {t('cycle.control.linkRecurring', { fallback: 'Link this transaction to an existing recurring rule' })}
+              <select
+                defaultValue=""
+                onChange={(event) => {
+                  const group = recurringGroups.find((item) => item.id === event.target.value);
+                  if (!group) return;
+                  onChange(decision, group.recurrenceKind || (positive ? 'recurring_income' : 'recurring_bill'), {
+                    recurrenceGroupId: group.id,
+                    recurrenceLabel: group.label,
+                  });
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium dark:border-gray-700 dark:bg-gray-900"
+              >
+                <option value="">{t('cycle.control.chooseRecurring', { fallback: 'Choose a recurring rule…' })}</option>
+                {recurringGroups.filter((group) => !String(group.id).startsWith('legacy-')).map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}
+              </select>
+            </label>
+          )}
           {decision.override && (
             <button
               type="button"
@@ -221,6 +250,7 @@ export default function CycleControlTab({
   onSettingsChange,
   isUpdatingSettings = false,
   language = 'en',
+  recurringGroups = [],
 }) {
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState('all');
@@ -271,7 +301,7 @@ export default function CycleControlTab({
           <CalendarCheck className="h-4 w-4 shrink-0 text-indigo-500" />
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-black text-gray-950 dark:text-white">
-              {t('cycle.control.setupTitle', { fallback: 'Cycle setup' })}
+              {t('cycle.control.setupTitle', { fallback: 'Billing cycle setup' })}
             </h2>
             <p className="mt-0.5 truncate text-[11px] text-gray-500">
               {t(`cycle.control.engine.${settings.engineMode}`, { fallback: settings.engineMode })}
@@ -288,7 +318,7 @@ export default function CycleControlTab({
 
         <div className="border-t border-gray-100 px-4 pb-4 pt-3 dark:border-gray-800">
           <p className="text-[11px] text-gray-500">
-            {t('cycle.control.engineHint', { fallback: 'Automatic follows your linked income streams. Manual uses the monthly day you choose.' })}
+            {t('cycle.control.engineHint', { fallback: 'Automatic uses the latest card billing day. Manual uses the monthly day you choose.' })}
           </p>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -374,9 +404,9 @@ export default function CycleControlTab({
           <CalendarCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
           <div className="min-w-0 flex-1">
             <p className="flex items-center gap-1 text-xs font-bold text-gray-900 dark:text-white">
-              {t('cycle.salary', { fallback: 'Salary' })}
+              {t('cycle.linkedIncome', { fallback: 'Linked income' })}
               <InfoHint title={t('cycle.salary', { fallback: 'Salary' })}>
-                {t('cycle.salaryHint', { fallback: 'A received salary closes the prior cycle; additional linked salaries inside the window are still identified as salary.' })}
+                {t('cycle.salaryHint', { fallback: 'Every linked salary received between two billing dates is counted as income. Salary does not set the cycle boundary.' })}
               </InfoHint>
             </p>
             {salaryTracking?.last ? (
@@ -504,11 +534,16 @@ export default function CycleControlTab({
       {(() => {
         const props = {
           decision: activeDecision,
-          onChange: (decision, classification) => { onDecisionChange?.(decision, classification); setActiveDecision(null); },
+          onChange: (decision, classification, metadata) => {
+            if (metadata) onDecisionChange?.(decision, classification, metadata);
+            else onDecisionChange?.(decision, classification);
+            setActiveDecision(null);
+          },
           onReset: (decision) => { onDecisionReset?.(decision); setActiveDecision(null); },
           t,
           formatCurrency,
           language,
+          recurringGroups,
         };
         const title = activeDecision?.description || t('cycle.control.title', { fallback: 'Decision' });
         return isMobile ? (

@@ -35,6 +35,12 @@ export const cyclesApi = {
 
   /** Choose automatic reset detection or a fixed monthly anchor day. */
   updateSettings: (settings) => api.put('/cycles/settings', settings).then((r) => r.data),
+
+  updateRecurringGroup: (groupId, patch) =>
+    api.put(`/cycles/recurring/${groupId}`, patch).then((r) => r.data),
+
+  updateCardSettings: (source, accountNumber, patch) =>
+    api.put(`/cycles/cards/${encodeURIComponent(source)}/${encodeURIComponent(accountNumber)}/settings`, patch).then((r) => r.data),
 };
 
 export default cyclesApi;

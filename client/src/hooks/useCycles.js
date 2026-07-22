@@ -23,6 +23,7 @@ const EMPTY = {
   loans: [],
   totalOutstanding: 0,
   recurring: [],
+  recurringGroups: [],
   salaryTracking: null,
   salaryChange: null,
   signatures: [],
@@ -50,9 +51,9 @@ export function useCycles() {
   });
 
   const transactionClassificationMutation = useMutation({
-    mutationFn: ({ transactionId, classification, reason }) => cyclesApi.classifyTransaction(
+    mutationFn: ({ transactionId, ...payload }) => cyclesApi.classifyTransaction(
       transactionId,
-      { classification, reason },
+      payload,
     ),
     onSuccess: async () => {
       await Promise.all([
@@ -76,12 +77,52 @@ export function useCycles() {
 
   const settingsMutation = useMutation({
     mutationFn: (settings) => cyclesApi.updateSettings(settings),
-    onSuccess: async () => {
+    onMutate: async (patch) => {
+      const queryKey = ['cycles', user?.id];
+      await queryClient.cancelQueries({ queryKey });
+      const snapshots = queryClient.getQueriesData({ queryKey });
+      queryClient.setQueriesData({ queryKey }, (cached) => {
+        if (!cached?.data) return cached;
+        return {
+          ...cached,
+          data: {
+            ...cached.data,
+            settings: { ...(cached.data.settings || EMPTY.settings), ...patch },
+          },
+        };
+      });
+      return { snapshots };
+    },
+    onSuccess: (result) => {
+      const saved = result?.data;
+      if (!saved) return;
+      queryClient.setQueriesData({ queryKey: ['cycles', user?.id] }, (cached) => (
+        cached?.data
+          ? { ...cached, data: { ...cached.data, settings: saved } }
+          : cached
+      ));
+    },
+    onError: (_error, _variables, context) => {
+      (context?.snapshots || []).forEach(([key, value]) => queryClient.setQueryData(key, value));
+      notifyFailure();
+    },
+    onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
       ]);
     },
+  });
+
+  const recurringMutation = useMutation({
+    mutationFn: ({ groupId, ...patch }) => cyclesApi.updateRecurringGroup(groupId, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
+    onError: notifyFailure,
+  });
+
+  const cardSettingsMutation = useMutation({
+    mutationFn: ({ source, accountNumber, ...patch }) => cyclesApi.updateCardSettings(source, accountNumber, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['cycles', user?.id] }),
     onError: notifyFailure,
   });
 
@@ -96,6 +137,7 @@ export function useCycles() {
      * ask the user to link their salary rather than invent a window.
      */
     needsSalaryLink: data.status === 'salary_not_linked' || data.status === 'salary_never_seen',
+    needsCycleAnchor: data.status === 'cycle_anchor_not_found',
     hasNoBankData: data.status === 'no_bank_data',
     isLoading: query.isLoading,
     isError: query.isError,
@@ -113,12 +155,18 @@ export function useCycles() {
         : null) || null,
     updateCycleSettings: settingsMutation.mutate,
     isUpdatingSettings: settingsMutation.isPending,
+    updateRecurringGroup: recurringMutation.mutate,
+    isUpdatingRecurring: recurringMutation.isPending,
+    updateCardSettings: cardSettingsMutation.mutate,
+    isUpdatingCard: cardSettingsMutation.isPending,
   }), [data, query.isLoading, query.isError, query.error, query.refetch,
     transactionClassificationMutation.mutate, transactionClassificationMutation.isPending,
     transactionClassificationMutation.variables?.transactionId,
     resetClassificationMutation.mutate, resetClassificationMutation.isPending,
     resetClassificationMutation.variables?.transactionId,
-    settingsMutation.mutate, settingsMutation.isPending]);
+    settingsMutation.mutate, settingsMutation.isPending,
+    recurringMutation.mutate, recurringMutation.isPending,
+    cardSettingsMutation.mutate, cardSettingsMutation.isPending]);
 }
 
 export function useCurrentCycle() {
@@ -144,6 +192,7 @@ export function useCurrentCycle() {
     settings: data.settings || { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true },
     totalOutstanding: data.totalOutstanding || 0,
     needsSalaryLink: data.status === 'salary_not_linked' || data.status === 'salary_never_seen',
+    needsCycleAnchor: data.status === 'cycle_anchor_not_found',
     isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,

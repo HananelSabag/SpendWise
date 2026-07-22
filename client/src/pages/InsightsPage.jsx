@@ -25,6 +25,7 @@ import CycleDebtsTab from '../components/features/insights/CycleDebtsTab';
 import CycleControlTab from '../components/features/insights/CycleControlTab';
 import CycleBalanceStrip from '../components/features/insights/CycleBalanceStrip';
 import SalaryCandidatePrompt from '../components/features/dashboard/SalaryCandidatePrompt';
+import RecurringRulesPanel from '../components/features/insights/RecurringRulesPanel';
 
 const TABS = ['overview', 'control'];
 
@@ -62,10 +63,11 @@ export default function InsightsPage() {
   // can reorder or shrink the cycles array, and an index would then point at a different cycle.
   const [selectedCycleStart, setSelectedCycleStart] = useState(null);
   const [showPreviousInitially] = useState(initiallyShowPreviousCycle);
-  const { cycles, signatures, loans, totalOutstanding, recurring, salaryTracking, salaryChange,
-    needsSalaryLink, hasNoBankData, isLoading, isError, refetch, classifyTransaction,
+  const { cycles, signatures, loans, totalOutstanding, recurring, recurringGroups, salaryTracking, salaryChange,
+    needsSalaryLink, needsCycleAnchor, hasNoBankData, isLoading, isError, refetch, classifyTransaction,
     resetTransactionClassification, isUpdatingDecision, updatingTransactionId,
-    settings, fundingForecast, updateCycleSettings, isUpdatingSettings } = useCycles();
+    settings, fundingForecast, updateCycleSettings, isUpdatingSettings,
+    updateRecurringGroup, isUpdatingRecurring, updateCardSettings, isUpdatingCard } = useCycles();
 
   const cycle = useMemo(() => {
     // Changing automatic/manual mode rebuilds every window.  The old start key is then stale;
@@ -75,11 +77,12 @@ export default function InsightsPage() {
 
   const useCardEstimate = settings?.useEstimates !== false;
 
-  const changeDecision = useCallback((item, classification) => {
+  const changeDecision = useCallback((item, classification, recurrence = {}) => {
     classifyTransaction({
       transactionId: item.overrideTransactionId || item.transactionId,
       classification,
       reason: `control_override:${item.reason}`,
+      ...recurrence,
     });
   }, [classifyTransaction]);
 
@@ -88,18 +91,14 @@ export default function InsightsPage() {
   }, [resetTransactionClassification]);
 
   const changeCardEstimate = useCallback((enabled) => {
-    updateCycleSettings({
-      engineMode: settings?.engineMode || 'automatic',
-      manualAnchorDay: settings?.engineMode === 'manual' ? (settings.manualAnchorDay || 10) : null,
-      useEstimates: enabled,
-    });
-  }, [settings?.engineMode, settings?.manualAnchorDay, updateCycleSettings]);
+    updateCycleSettings({ useEstimates: enabled });
+  }, [updateCycleSettings]);
 
   if (isLoading && !cycles?.length) {
     return <PageSkeleton page="financial-cycle" />;
   }
 
-  const empty = hasNoBankData || needsSalaryLink || !cycle;
+  const empty = hasNoBankData || needsCycleAnchor || needsSalaryLink || !cycle;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
@@ -170,6 +169,7 @@ export default function InsightsPage() {
           language={currentLanguage}
           useCardEstimate={useCardEstimate}
           onCardEstimateChange={changeCardEstimate}
+          isUpdatingEstimate={isUpdatingSettings}
           className="mb-4"
         />
 
@@ -191,12 +191,16 @@ export default function InsightsPage() {
             <p className="text-sm font-bold text-gray-900 dark:text-white">
               {hasNoBankData
                 ? t('cycle.noBankData', { fallback: 'Connect a bank to see your cycle' })
-                : t('cycle.linkSalaryTitle', { fallback: 'Link your salary to see your cycle' })}
+                : needsCycleAnchor
+                  ? t('cycle.anchorMissing', { fallback: 'Choose a billing day to start your cycle' })
+                  : t('cycle.linkSalaryTitle', { fallback: 'Link your salary to see your cycle' })}
             </p>
             <p className="mx-auto mt-1 max-w-sm text-xs text-gray-500">
               {hasNoBankData
                 ? t('cycle.noBankDataHint', { fallback: 'Your cycle is built from your real bank and card activity.' })
-                : t('cycle.linkSalaryHint', { fallback: 'Your financial cycle runs from one salary to the next. Point us at your salary once and we take it from there.' })}
+                : needsCycleAnchor
+                  ? t('cycle.anchorMissingHint', { fallback: 'No reliable card billing day was found. Pick your monthly reset day once; you can change it later.' })
+                  : t('cycle.linkSalaryHint', { fallback: 'Link income so the forecast can recognize every salary in the billing window.' })}
             </p>
             {hasNoBankData ? (
               <button type="button" onClick={() => navigate('/bank-sync')} className="mt-4 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700">
@@ -204,7 +208,7 @@ export default function InsightsPage() {
               </button>
             ) : (
               <div className="mx-auto mt-4 max-w-2xl text-start">
-                <SalaryCandidatePrompt formatCurrency={formatCurrency} onSelected={refetch} />
+                {!needsCycleAnchor && <SalaryCandidatePrompt formatCurrency={formatCurrency} onSelected={refetch} />}
                 <button
                   type="button"
                   disabled={isUpdatingSettings}
@@ -234,13 +238,14 @@ export default function InsightsPage() {
             {tab === 'overview' && (
               <div className="space-y-4">
                 <CycleOverviewTab cycle={cycle} salaryTracking={salaryTracking} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} />
-                <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} />
+                <CycleCardsTab cycle={cycle} formatCurrency={formatCurrency} t={t} language={currentLanguage} useCardEstimate={useCardEstimate} onCardSettingsChange={updateCardSettings} isUpdatingCard={isUpdatingCard} />
                 <CycleDebtsTab loans={loans} totalOutstanding={totalOutstanding} recurring={recurring} formatCurrency={formatCurrency} t={t} language={currentLanguage} />
               </div>
             )}
             {/* Control — the only tab that asks something of you: salary, job change, the credit
                 questions, and merchant watch, each its own clear section. */}
             {tab === 'control' && (
+              <>
               <CycleControlTab
                 cycle={cycle}
                 salaryTracking={salaryTracking}
@@ -259,7 +264,12 @@ export default function InsightsPage() {
                 onSettingsChange={updateCycleSettings}
                 isUpdatingSettings={isUpdatingSettings}
                 language={currentLanguage}
+                recurringGroups={recurringGroups}
               />
+              <div className="mt-4">
+                <RecurringRulesPanel groups={recurringGroups} onUpdate={updateRecurringGroup} isUpdating={isUpdatingRecurring} t={t} />
+              </div>
+              </>
             )}
           </>
         )}

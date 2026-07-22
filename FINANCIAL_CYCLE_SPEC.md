@@ -6,6 +6,28 @@
 > read this before touching any cycle/accounting/reconciliation code. Keep the fixture numbers as the
 > regression oracle.
 
+## V6 BILLING-CYCLE CONTRACT (supersedes salary-anchor rules below)
+
+- Automatic windows run from the **latest included aggregated card statement day** to the same day
+  next month. A user may override the day per card, exclude a card, or select one manual household
+  reset day. Salary never defines or splits the window.
+- Every received salary and other operating income whose bank date is inside `[start, end)` is
+  counted. This includes one, two, or more salaries in a joint account.
+- The current-balance presentation separates: real checking balance now; balance after known income,
+  known accumulated card spend, and confirmed fixed obligations; and a conservative card forecast.
+  `use_estimates` controls only possible card-bill growth. It never removes expected linked income or
+  confirmed recurring obligations.
+- Card history is context, not truth. One historical bill cannot inflate a forecast. Two complete
+  bills may raise known spend by at most 25%; with at least three, the engine uses the median of up
+  to six. It never projects below accumulated purchases. Each card shows known, last, and forecast.
+- User-confirmed recurring transactions are grouped by a durable `recurrence_group_id`. Multiple
+  provider identifiers/descriptions may link to one named rule. The user can rename a group and
+  include/exclude it from the forecast without mutating raw bank transactions.
+- `financial_card_settings` stores per-card statement day, include/exclude state, and optional linked
+  evidence transaction. `cycle_transaction_overrides` stores recurring group/label/forecast fields.
+- The older salary-attribution fixture remains a compatibility oracle for legacy explicit windows;
+  it is not the v6 product boundary model.
+
 ## 1. FOUNDATION — one field rules everything: `processedDate`
 Every scraped transaction (israeli-bank-scrapers, all providers) carries:
 `type` (normal|installments), `date` (purchase date), **`processedDate` (the day it debits the bank)**,

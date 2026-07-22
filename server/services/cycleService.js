@@ -5,6 +5,7 @@
  */
 
 const db = require('../config/db');
+const { randomUUID } = require('crypto');
 const engine = require('./cycleEngine');
 const { institutionKind } = require('../config/institutions');
 const logger = require('../utils/logger');
@@ -13,7 +14,7 @@ const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 15_000;
 const MAX_CACHE_ENTRIES = 200;
-const CALCULATION_VERSION = 5;
+const CALCULATION_VERSION = 6;
 const resultCache = new Map();
 const cacheInvalidationEpochs = new Map();
 
@@ -198,8 +199,9 @@ async function loadTransactionOverrides(userId) {
   try {
     const { rows } = await db.query(
       `SELECT o.transaction_id, o.classification, o.reason, o.updated_at,
-              o.recurrence_kind, o.recurrence_enabled,
-              t.bank_source, t.bank_account_number, t.bank_sync_id, t.description,
+               o.recurrence_kind, o.recurrence_enabled,
+               o.recurrence_group_id, o.recurrence_label, o.recurrence_include_estimate,
+               t.bank_source, t.bank_account_number, t.bank_sync_id, t.description,
               t.date::text AS date, t.bank_processed_date::text AS bank_processed_date,
               CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END AS signed_amount
          FROM cycle_transaction_overrides o
@@ -215,6 +217,9 @@ async function loadTransactionOverrides(userId) {
       ...(row.recurrence_kind !== undefined ? {
         recurrenceKind: row.recurrence_kind,
         recurrenceEnabled: row.recurrence_enabled === true,
+        recurrenceGroupId: row.recurrence_group_id || null,
+        recurrenceLabel: row.recurrence_label || null,
+        recurrenceIncludeEstimate: row.recurrence_include_estimate !== false,
       } : {}),
       ...(row.bank_source !== undefined ? {
         source: row.bank_source,
@@ -231,18 +236,32 @@ async function loadTransactionOverrides(userId) {
     // classification still works; only recurrence projection waits for the additive migration.
     if (error.code === '42703') {
       const { rows } = await db.query(
-        `SELECT transaction_id, classification, reason, updated_at
-           FROM cycle_transaction_overrides
-          WHERE user_id = $1
-          ORDER BY transaction_id`,
+        `SELECT o.transaction_id, o.classification, o.reason, o.updated_at,
+                o.recurrence_kind, o.recurrence_enabled,
+                t.bank_source, t.bank_account_number, t.bank_sync_id, t.description,
+                t.date::text AS date, t.bank_processed_date::text AS bank_processed_date,
+                CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END AS signed_amount
+           FROM cycle_transaction_overrides o
+           JOIN transactions t ON t.id = o.transaction_id AND t.user_id = o.user_id
+          WHERE o.user_id = $1
+          ORDER BY o.transaction_id`,
         [userId],
       );
       return rows.map((row) => ({
         transactionId: row.transaction_id,
         classification: row.classification,
         reason: row.reason,
-        recurrenceKind: null,
-        recurrenceEnabled: false,
+        recurrenceKind: row.recurrence_kind,
+        recurrenceEnabled: row.recurrence_enabled === true,
+        recurrenceGroupId: null,
+        recurrenceLabel: null,
+        recurrenceIncludeEstimate: true,
+        source: row.bank_source,
+        accountNumber: row.bank_account_number == null ? null : String(row.bank_account_number),
+        identifier: extractIdentifier(row.bank_sync_id),
+        description: row.description || '',
+        date: row.bank_processed_date || row.date,
+        amount: Number(row.signed_amount),
         updatedAt: row.updated_at,
       }));
     }
@@ -285,6 +304,94 @@ async function loadCycleSettings(userId) {
     if (error.code === '42P01') return { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true, updatedAt: null };
     throw error;
   }
+}
+
+async function loadCardSettings(userId) {
+  try {
+    const { rows } = await db.query(
+      `SELECT bank_source, bank_account_number, statement_day, included, linked_transaction_id, updated_at
+         FROM financial_card_settings
+        WHERE user_id = $1
+        ORDER BY bank_source, bank_account_number`,
+      [userId],
+    );
+    return rows.map((row) => ({
+      source: row.bank_source,
+      accountNumber: String(row.bank_account_number),
+      statementDay: row.statement_day == null ? null : Number(row.statement_day),
+      included: row.included !== false,
+      linkedTransactionId: row.linked_transaction_id || null,
+      updatedAt: row.updated_at,
+    }));
+  } catch (error) {
+    if (error.code === '42P01') return [];
+    throw error;
+  }
+}
+
+async function saveCardSetting(userId, source, accountRef, {
+  statementDay,
+  included,
+  linkedTransactionId,
+} = {}) {
+  const suffix = String(accountRef || '');
+  const accountLookup = await db.query(
+    `SELECT bank_account_number
+       FROM transactions
+      WHERE user_id = $1 AND bank_source = $2 AND deleted_at IS NULL
+        AND RIGHT(COALESCE(bank_account_number::text, ''), LENGTH($3)) = $3
+      GROUP BY bank_account_number
+      LIMIT 2`,
+    [userId, source, suffix],
+  );
+  if (accountLookup.rows.length !== 1) return null;
+  const accountNumber = String(accountLookup.rows[0].bank_account_number);
+  const current = await db.query(
+    `SELECT statement_day, included, linked_transaction_id
+       FROM financial_card_settings
+      WHERE user_id = $1 AND bank_source = $2 AND bank_account_number = $3`,
+    [userId, source, accountNumber],
+  );
+  const previous = current.rows[0];
+  let resolvedDay = statementDay === undefined
+    ? (previous?.statement_day ?? null)
+    : (statementDay == null ? null : Number(statementDay));
+  const resolvedIncluded = included === undefined ? previous?.included !== false : included !== false;
+  const resolvedLinkedTransactionId = linkedTransactionId === undefined
+    ? (previous?.linked_transaction_id || null)
+    : (linkedTransactionId || null);
+  if (linkedTransactionId) {
+    const linked = await db.query(
+      `SELECT EXTRACT(DAY FROM COALESCE(bank_processed_date, date))::int AS statement_day
+         FROM transactions
+        WHERE id = $1 AND user_id = $2 AND bank_source = $3
+          AND bank_account_number::text = $4 AND deleted_at IS NULL`,
+      [linkedTransactionId, userId, source, accountNumber],
+    );
+    if (!linked.rows.length) return null;
+    resolvedDay = Number(linked.rows[0].statement_day);
+  }
+  const { rows } = await db.query(
+    `INSERT INTO financial_card_settings (
+       user_id, bank_source, bank_account_number, statement_day, included, linked_transaction_id
+     ) VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (user_id, bank_source, bank_account_number) DO UPDATE SET
+       statement_day = EXCLUDED.statement_day,
+       included = EXCLUDED.included,
+       linked_transaction_id = EXCLUDED.linked_transaction_id,
+       updated_at = NOW()
+     RETURNING bank_source, bank_account_number, statement_day, included, linked_transaction_id, updated_at`,
+    [userId, source, accountNumber, resolvedDay, resolvedIncluded, resolvedLinkedTransactionId],
+  );
+  await invalidateCycleDerivedData(userId);
+  return {
+    source: rows[0].bank_source,
+    accountNumber: String(rows[0].bank_account_number),
+    statementDay: rows[0].statement_day == null ? null : Number(rows[0].statement_day),
+    included: rows[0].included !== false,
+    linkedTransactionId: rows[0].linked_transaction_id || null,
+    updatedAt: rows[0].updated_at,
+  };
 }
 
 async function saveCycleSettings(userId, { engineMode, manualAnchorDay = null, useEstimates }) {
@@ -362,13 +469,38 @@ async function saveTransactionOverride(
   transactionId,
   classification,
   reason = null,
-  { recurrenceKind = null, recurrenceEnabled = false } = {},
+  {
+    recurrenceKind = null,
+    recurrenceEnabled = false,
+    recurrenceGroupId = null,
+    recurrenceLabel = null,
+    recurrenceIncludeEstimate = true,
+  } = {},
 ) {
+  let groupId = recurrenceEnabled ? recurrenceGroupId : null;
+  let groupLabel = recurrenceEnabled ? String(recurrenceLabel || '').trim() : null;
+  let includeEstimate = recurrenceEnabled ? recurrenceIncludeEstimate !== false : true;
+  if (recurrenceEnabled && groupId) {
+    const existing = await db.query(
+      `SELECT recurrence_kind, recurrence_label, recurrence_include_estimate
+         FROM cycle_transaction_overrides
+        WHERE user_id = $1 AND recurrence_group_id = $2::uuid
+        LIMIT 1`,
+      [userId, groupId],
+    );
+    if (!existing.rows.length) return null;
+    recurrenceKind = existing.rows[0].recurrence_kind;
+    groupLabel = groupLabel || existing.rows[0].recurrence_label;
+    includeEstimate = existing.rows[0].recurrence_include_estimate !== false;
+  }
+  if (recurrenceEnabled && !groupId) groupId = randomUUID();
+  if (recurrenceEnabled && !groupLabel) groupLabel = null;
   const { rows } = await db.query(
     `INSERT INTO cycle_transaction_overrides (
-       transaction_id, user_id, classification, reason, recurrence_kind, recurrence_enabled
+       transaction_id, user_id, classification, reason, recurrence_kind, recurrence_enabled,
+       recurrence_group_id, recurrence_label, recurrence_include_estimate
      )
-     SELECT t.id, t.user_id, $3, $4, $5, $6
+     SELECT t.id, t.user_id, $3, $4, $5, $6, $7::uuid, $8, $9
        FROM transactions t
       WHERE t.id = $1
         AND t.user_id = $2
@@ -384,10 +516,17 @@ async function saveTransactionOverride(
        reason = EXCLUDED.reason,
        recurrence_kind = EXCLUDED.recurrence_kind,
        recurrence_enabled = EXCLUDED.recurrence_enabled,
+       recurrence_group_id = EXCLUDED.recurrence_group_id,
+       recurrence_label = EXCLUDED.recurrence_label,
+       recurrence_include_estimate = EXCLUDED.recurrence_include_estimate,
        updated_at = NOW()
      WHERE cycle_transaction_overrides.user_id = EXCLUDED.user_id
-     RETURNING transaction_id, classification, reason, recurrence_kind, recurrence_enabled, updated_at`,
-    [transactionId, userId, classification, reason, recurrenceKind, recurrenceEnabled === true],
+     RETURNING transaction_id, classification, reason, recurrence_kind, recurrence_enabled,
+               recurrence_group_id, recurrence_label, recurrence_include_estimate, updated_at`,
+    [
+      transactionId, userId, classification, reason, recurrenceKind, recurrenceEnabled === true,
+      groupId, groupLabel, includeEstimate,
+    ],
   );
   if (!rows.length) return null;
   await invalidateCycleDerivedData(userId);
@@ -397,6 +536,9 @@ async function saveTransactionOverride(
     reason: rows[0].reason,
     recurrenceKind: rows[0].recurrence_kind,
     recurrenceEnabled: rows[0].recurrence_enabled === true,
+    recurrenceGroupId: rows[0].recurrence_group_id,
+    recurrenceLabel: rows[0].recurrence_label,
+    recurrenceIncludeEstimate: rows[0].recurrence_include_estimate !== false,
     updatedAt: rows[0].updated_at,
   };
 }
@@ -409,6 +551,70 @@ async function deleteTransactionOverride(userId, transactionId) {
   );
   await invalidateCycleDerivedData(userId);
   return rowCount > 0;
+}
+
+function buildRecurringGroups(transactionOverrides = []) {
+  const groups = new Map();
+  for (const item of transactionOverrides) {
+    if (!item.recurrenceEnabled || !item.recurrenceKind) continue;
+    const id = item.recurrenceGroupId || `legacy-${item.transactionId}`;
+    if (!groups.has(id)) {
+      groups.set(id, {
+        id,
+        label: item.recurrenceLabel || item.description || 'Recurring transaction',
+        recurrenceKind: item.recurrenceKind,
+        includeInEstimate: item.recurrenceIncludeEstimate !== false,
+        matchers: [],
+      });
+    }
+    groups.get(id).matchers.push({
+      transactionId: item.transactionId,
+      description: item.description || '',
+      source: item.source || null,
+      accountLast4: item.accountNumber == null ? null : String(item.accountNumber).slice(-4),
+    });
+  }
+  return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+async function updateRecurringGroup(userId, groupRef, {
+  label,
+  includeInEstimate,
+  active,
+} = {}) {
+  let groupId = groupRef;
+  if (String(groupRef).startsWith('legacy-')) {
+    const transactionId = Number(String(groupRef).slice(7));
+    if (!Number.isInteger(transactionId)) return null;
+    groupId = randomUUID();
+    const promoted = await db.query(
+      `UPDATE cycle_transaction_overrides
+          SET recurrence_group_id = $3::uuid,
+              recurrence_label = COALESCE($4, recurrence_label),
+              recurrence_include_estimate = COALESCE($5, recurrence_include_estimate),
+              recurrence_enabled = COALESCE($6, recurrence_enabled),
+              updated_at = NOW()
+        WHERE user_id = $1 AND transaction_id = $2 AND recurrence_enabled = true
+        RETURNING transaction_id`,
+      [userId, transactionId, groupId, label || null, includeInEstimate, active],
+    );
+    if (!promoted.rows.length) return null;
+  } else {
+    const changed = await db.query(
+      `UPDATE cycle_transaction_overrides
+          SET recurrence_label = COALESCE($3, recurrence_label),
+              recurrence_include_estimate = COALESCE($4, recurrence_include_estimate),
+              recurrence_enabled = COALESCE($5, recurrence_enabled),
+              updated_at = NOW()
+        WHERE user_id = $1 AND recurrence_group_id = $2::uuid
+        RETURNING transaction_id`,
+      [userId, groupId, label || null, includeInEstimate, active],
+    );
+    if (!changed.rows.length) return null;
+  }
+  await invalidateCycleDerivedData(userId);
+  const groups = buildRecurringGroups(await loadTransactionOverrides(userId));
+  return groups.find((group) => group.id === groupId) || { id: groupId, active: false };
 }
 
 function effectiveSalaryAnchors(signatures) {
@@ -436,7 +642,7 @@ function findSalaryWindows(bankTxns, signatures, asOf, salaryClassifications = [
   return { anchors, primary, events, windows: engine.buildWindows(events, { asOf }) };
 }
 
-function resolveCycleWindows({ bankTxns, signatures, settings, asOf, months, salaryClassifications }) {
+function resolveCycleWindows({ bankTxns, signatures, settings, asOf, months, salaryClassifications, preparedData }) {
   if (settings.engineMode === 'manual') {
     return {
       anchors: effectiveSalaryAnchors(signatures),
@@ -445,7 +651,17 @@ function resolveCycleWindows({ bankTxns, signatures, settings, asOf, months, sal
       windows: engine.buildFixedDayWindows(settings.manualAnchorDay, { asOf, months }),
     };
   }
-  return findSalaryWindows(bankTxns, signatures, asOf, salaryClassifications);
+  const anchors = effectiveSalaryAnchors(signatures);
+  const primary = anchors[0] || signatures[0] || null;
+  const anchorDay = engine.latestStatementDay(preparedData?.cardViews || []);
+  return {
+    anchors,
+    primary,
+    events: [],
+    windows: anchorDay
+      ? engine.buildBillingCycleWindows(anchorDay, { asOf, months })
+      : [],
+  };
 }
 
 async function loadCycleInputs(userId, { asOf, months, creditClassifications }) {
@@ -454,6 +670,7 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
   const endDate = engine.addMonths(today, 2);
   const [
     data, signatures, storedClassifications, salaryClassifications, transactionOverrides, settings,
+    cardSettings,
   ] = await Promise.all([
     loadUserData(userId, { startDate, endDate }),
     loadSalarySignatures(userId),
@@ -463,6 +680,7 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
     loadSalaryClassifications(userId),
     loadTransactionOverrides(userId),
     loadCycleSettings(userId),
+    loadCardSettings(userId),
   ]);
   return {
     ...data,
@@ -471,6 +689,7 @@ async function loadCycleInputs(userId, { asOf, months, creditClassifications }) 
     salaryClassifications,
     transactionOverrides,
     settings,
+    cardSettings,
   };
 }
 
@@ -483,6 +702,7 @@ function emptyCycleResult(status, signatures, loans = [], settings = { engineMod
     loans,
     totalOutstanding: loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: [],
+    recurringGroups: [],
     salaryTracking: null,
     salaryChange: null,
     fundingForecast: { streams: [], expectedTotal: 0, start: null, end: null },
@@ -599,7 +819,7 @@ async function getFinancialCycles(userId, {
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
-    transactionOverrides, settings,
+    transactionOverrides, settings, cardSettings,
   } = await loadCycleInputs(userId, {
     asOf,
     months: (boundedYears * 12) + 2,
@@ -613,15 +833,8 @@ async function getFinancialCycles(userId, {
     asOf,
     creditClassifications: storedClassifications,
     transactionOverrides,
+    cardSettings,
   });
-  if (!signatures.length && settings.engineMode !== 'manual') {
-    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans, settings);
-    if (requestEpoch === cacheInvalidationEpoch(userId)) {
-      await syncCycleNotifications(userId, empty);
-    }
-    return empty;
-  }
-
   const { events, windows, primary } = resolveCycleWindows({
     bankTxns,
     signatures,
@@ -629,9 +842,10 @@ async function getFinancialCycles(userId, {
     asOf,
     months: (boundedYears * 12) + 2,
     salaryClassifications,
+    preparedData: prepared,
   });
   if (!windows.length) {
-    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans, settings);
+    const empty = emptyCycleResult('cycle_anchor_not_found', signatures, prepared.loans, settings);
     if (requestEpoch === cacheInvalidationEpoch(userId)) {
       await syncCycleNotifications(userId, empty);
     }
@@ -666,6 +880,7 @@ async function getFinancialCycles(userId, {
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: prepared.recurring.filter((series) => series.needsUserLabel),
+    recurringGroups: buildRecurringGroups(transactionOverrides),
     salaryTracking: latest ? engine.trackSalary(salaryTrackingTxns, latest, { asOf }) : null,
     fundingForecast,
     settings,
@@ -702,7 +917,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
 
   const {
     bankTxns, cards, signatures, storedClassifications, salaryClassifications,
-    transactionOverrides, settings,
+    transactionOverrides, settings, cardSettings,
   } = await loadCycleInputs(userId, {
     asOf,
     months: CONTEXT_MONTHS,
@@ -715,15 +930,8 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     asOf,
     creditClassifications: storedClassifications,
     transactionOverrides,
+    cardSettings,
   });
-  if (!signatures.length && settings.engineMode !== 'manual') {
-    const empty = emptyCycleResult('salary_not_linked', signatures, prepared.loans, settings);
-    if (requestEpoch === cacheInvalidationEpoch(userId)) {
-      await syncCycleNotifications(userId, empty);
-    }
-    return empty;
-  }
-
   const { windows, primary } = resolveCycleWindows({
     bankTxns,
     signatures,
@@ -731,9 +939,10 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     asOf,
     months: CONTEXT_MONTHS,
     salaryClassifications,
+    preparedData: prepared,
   });
   if (!windows.length) {
-    const empty = emptyCycleResult('salary_never_seen', signatures, prepared.loans, settings);
+    const empty = emptyCycleResult('cycle_anchor_not_found', signatures, prepared.loans, settings);
     if (requestEpoch === cacheInvalidationEpoch(userId)) {
       await syncCycleNotifications(userId, empty);
     }
@@ -768,6 +977,7 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     loans: prepared.loans,
     totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
     recurring: prepared.recurring.filter((series) => series.needsUserLabel),
+    recurringGroups: buildRecurringGroups(transactionOverrides),
     salaryTracking: primary ? engine.trackSalary(salaryTrackingTxns, primary, { asOf }) : null,
     fundingForecast,
     settings,
@@ -967,9 +1177,12 @@ module.exports = {
   loadCreditClassifications,
   loadTransactionOverrides,
   loadCycleSettings,
+  loadCardSettings,
   saveCreditClassification,
   saveTransactionOverride,
+  updateRecurringGroup,
   deleteTransactionOverride,
+  saveCardSetting,
   saveCycleSettings,
   getFinancialCycles,
   getCurrentFinancialCycle,

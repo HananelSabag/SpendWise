@@ -25,7 +25,10 @@ const {
   saveCreditClassification,
   saveTransactionOverride,
   deleteTransactionOverride,
+  updateRecurringGroup,
+  loadCycleSettings,
   saveCycleSettings,
+  saveCardSetting,
 } = require('../services/cycleService');
 
 /**
@@ -87,6 +90,9 @@ function slimDecision(decision) {
     accountNumber: accountLast4(decision.accountNumber),
     classification: decision.classification,
     recurrenceKind: decision.recurrenceKind || null,
+    recurrenceGroupId: decision.recurrenceGroupId || null,
+    recurrenceLabel: decision.recurrenceLabel || null,
+    recurrenceIncludeEstimate: decision.recurrenceIncludeEstimate !== false,
     included: decision.included,
     automatic: decision.automatic,
     override: decision.override,
@@ -210,8 +216,16 @@ function slimCycle(cycle, { includeControl = false } = {}) {
     partials: cycle.partials.map(slimEvent),
     unreconciledCardEvents: cycle.unreconciledCardEvents.map(slimEvent),
     cards: cycle.cards.map((card) => ({
-      ...card,
+      source: card.source,
       accountNumber: accountLast4(card.accountNumber),
+      included: card.included !== false,
+      statementDay: card.statementDay,
+      settlement: card.settlement,
+      setting: card.setting ? {
+        statementDay: card.setting.statementDay,
+        included: card.setting.included !== false,
+        linkedTransactionId: card.setting.linkedTransactionId || null,
+      } : null,
     })),
     ...(includeControl ? { decisions: (cycle.decisions || []).map(slimDecision) } : {}),
   };
@@ -240,6 +254,7 @@ router.get('/', auth, async (req, res, next) => {
         loans: result.loans.map(slimLoan),
         totalOutstanding: result.totalOutstanding || 0,
         recurring: result.recurring,
+        recurringGroups: result.recurringGroups || [],
         salaryTracking: slimSalaryTracking(result.salaryTracking),
         salaryChange: result.salaryChange
           ? { suspected: result.salaryChange.suspected, reason: result.salaryChange.reason, candidates: result.salaryChange.candidates.map((c) => ({ date: c.date, amount: c.amount, description: c.txn.description })) }
@@ -257,19 +272,24 @@ router.get('/', auth, async (req, res, next) => {
 
 /** Select automatic household-income detection or a fixed monthly reset day. */
 router.put('/settings', auth, async (req, res, next) => {
-  const engineMode = req.body?.engineMode;
-  const manualAnchorDay = Number(req.body?.manualAnchorDay);
+  const requestedMode = req.body?.engineMode;
   const useEstimates = req.body?.useEstimates;
-  if (!['automatic', 'manual'].includes(engineMode)) {
+  if (requestedMode !== undefined && !['automatic', 'manual'].includes(requestedMode)) {
     return res.status(400).json({ success: false, error: 'engineMode must be automatic or manual' });
-  }
-  if (engineMode === 'manual' && (!Number.isInteger(manualAnchorDay) || manualAnchorDay < 1 || manualAnchorDay > 31)) {
-    return res.status(400).json({ success: false, error: 'manualAnchorDay must be an integer from 1 to 31' });
   }
   if (useEstimates !== undefined && typeof useEstimates !== 'boolean') {
     return res.status(400).json({ success: false, error: 'useEstimates must be a boolean' });
   }
   try {
+    const current = await loadCycleSettings(req.user.id);
+    const engineMode = requestedMode || current.engineMode || 'automatic';
+    const requestedAnchor = req.body?.manualAnchorDay;
+    const manualAnchorDay = engineMode === 'manual'
+      ? Number(requestedAnchor ?? current.manualAnchorDay)
+      : null;
+    if (engineMode === 'manual' && (!Number.isInteger(manualAnchorDay) || manualAnchorDay < 1 || manualAnchorDay > 31)) {
+      return res.status(400).json({ success: false, error: 'manualAnchorDay must be an integer from 1 to 31' });
+    }
     const settings = await saveCycleSettings(req.user.id, { engineMode, manualAnchorDay, useEstimates });
     return res.json({ success: true, data: settings });
   } catch (error) {
@@ -319,6 +339,9 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
   const transactionId = parseTransactionId(req.params.transactionId);
   const classification = req.body && req.body.classification;
   const reason = req.body && req.body.reason;
+  const recurrenceGroupId = req.body?.recurrenceGroupId || null;
+  const recurrenceLabel = req.body?.recurrenceLabel;
+  const recurrenceIncludeEstimate = req.body?.recurrenceIncludeEstimate;
   if (!Number.isInteger(transactionId) || transactionId <= 0) {
     return res.status(400).json({ success: false, error: 'Invalid transaction id' });
   }
@@ -329,6 +352,15 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
   if (reason !== undefined && reason !== null && (typeof reason !== 'string' || reason.length > 160)) {
     return res.status(400).json({ success: false, error: 'reason must be a string of at most 160 characters' });
   }
+  if (recurrenceGroupId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(recurrenceGroupId)) {
+    return res.status(400).json({ success: false, error: 'Invalid recurring group id' });
+  }
+  if (recurrenceLabel !== undefined && (typeof recurrenceLabel !== 'string' || !recurrenceLabel.trim() || recurrenceLabel.trim().length > 100)) {
+    return res.status(400).json({ success: false, error: 'recurrenceLabel must contain 1 to 100 characters' });
+  }
+  if (recurrenceIncludeEstimate !== undefined && typeof recurrenceIncludeEstimate !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'recurrenceIncludeEstimate must be a boolean' });
+  }
   try {
     const saved = await saveTransactionOverride(
       req.user.id,
@@ -338,6 +370,9 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
       {
         recurrenceKind: classificationRule.recurrenceKind || null,
         recurrenceEnabled: classificationRule.recurring === true,
+        recurrenceGroupId,
+        recurrenceLabel: recurrenceLabel?.trim() || null,
+        recurrenceIncludeEstimate,
       },
     );
     if (!saved) return res.status(404).json({ success: false, error: 'Transaction not found' });
@@ -348,6 +383,70 @@ router.put('/transactions/:transactionId/classification', auth, async (req, res,
       transactionId,
       error: error.message,
     });
+    return next(error);
+  }
+});
+
+/** Rename/toggle a recurring rule without changing the underlying bank transaction. */
+router.put('/recurring/:groupId', auth, async (req, res, next) => {
+  const groupId = String(req.params.groupId || '');
+  const validRef = /^legacy-[1-9]\d*$/.test(groupId)
+    || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(groupId);
+  const label = req.body?.label;
+  const includeInEstimate = req.body?.includeInEstimate;
+  const active = req.body?.active;
+  if (!validRef) return res.status(400).json({ success: false, error: 'Invalid recurring group id' });
+  if (label !== undefined && (typeof label !== 'string' || !label.trim() || label.trim().length > 100)) {
+    return res.status(400).json({ success: false, error: 'label must contain 1 to 100 characters' });
+  }
+  if (includeInEstimate !== undefined && typeof includeInEstimate !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'includeInEstimate must be a boolean' });
+  }
+  if (active !== undefined && typeof active !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'active must be a boolean' });
+  }
+  try {
+    const saved = await updateRecurringGroup(req.user.id, groupId, {
+      label: label?.trim(), includeInEstimate, active,
+    });
+    if (!saved) return res.status(404).json({ success: false, error: 'Recurring group not found' });
+    return res.json({ success: true, data: saved });
+  } catch (error) {
+    logger.error('PUT /cycles/recurring/:groupId failed', { userId: req.user?.id, groupId, error: error.message });
+    return next(error);
+  }
+});
+
+/** Per-card cycle control: include/exclude and explicit statement date or linked observed debit. */
+router.put('/cards/:source/:account/settings', auth, async (req, res, next) => {
+  const source = String(req.params.source || '');
+  const account = String(req.params.account || '');
+  const statementDay = req.body?.statementDay;
+  const included = req.body?.included;
+  const linkedTransactionId = req.body?.linkedTransactionId;
+  if (!/^[a-z0-9_-]{1,50}$/i.test(source) || !/^.{1,40}$/.test(account)) {
+    return res.status(400).json({ success: false, error: 'Invalid card reference' });
+  }
+  if (statementDay !== undefined && statementDay !== null
+      && (!Number.isInteger(Number(statementDay)) || Number(statementDay) < 1 || Number(statementDay) > 31)) {
+    return res.status(400).json({ success: false, error: 'statementDay must be an integer from 1 to 31' });
+  }
+  if (included !== undefined && typeof included !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'included must be a boolean' });
+  }
+  if (linkedTransactionId !== undefined && linkedTransactionId !== null && !Number.isInteger(Number(linkedTransactionId))) {
+    return res.status(400).json({ success: false, error: 'Invalid linked transaction id' });
+  }
+  try {
+    const saved = await saveCardSetting(req.user.id, source, account, {
+      statementDay,
+      included,
+      linkedTransactionId,
+    });
+    if (!saved) return res.status(404).json({ success: false, error: 'Card or linked transaction not found' });
+    return res.json({ success: true, data: { ...saved, accountNumber: accountLast4(saved.accountNumber) } });
+  } catch (error) {
+    logger.error('PUT /cycles/cards/:source/:account/settings failed', { userId: req.user?.id, source, error: error.message });
     return next(error);
   }
 });
@@ -447,6 +546,7 @@ router.get('/current', auth, async (req, res, next) => {
         salaryTracking: slimSalaryTracking(result.salaryTracking),
         fundingForecast: slimFundingForecast(result.fundingForecast),
         settings: result.settings,
+        recurringGroups: result.recurringGroups || [],
         totalOutstanding: result.totalOutstanding || 0,
       },
     });

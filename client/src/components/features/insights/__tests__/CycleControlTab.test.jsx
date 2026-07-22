@@ -148,4 +148,16 @@ describe('CycleControlTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
     expect(screen.getByText('Decision 13')).toBeInTheDocument();
   });
+
+  it('switches to a persisted manual billing day from the setup disclosure', () => {
+    const onSettingsChange = vi.fn();
+    render(
+      <CycleControlTab cycle={cycle} signatures={[]} formatCurrency={formatCurrency} t={t}
+        settings={{ engineMode: 'automatic', manualAnchorDay: null }}
+        onSettingsChange={onSettingsChange} language="en" />,
+    );
+    fireEvent.click(screen.getByText('Billing cycle setup'));
+    fireEvent.click(screen.getByRole('button', { name: 'Manual anchor' }));
+    expect(onSettingsChange).toHaveBeenCalledWith({ engineMode: 'manual', manualAnchorDay: 10 });
+  });
 });

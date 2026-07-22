@@ -121,6 +121,7 @@ export default function ModernDashboard() {
             useEstimates={currentCycle.settings?.useEstimates !== false}
             totalOutstanding={currentCycle.totalOutstanding}
             needsSalaryLink={currentCycle.needsSalaryLink}
+            needsCycleAnchor={currentCycle.needsCycleAnchor}
             formatCurrency={formatCurrency}
             t={t}
             language={currentLanguage}

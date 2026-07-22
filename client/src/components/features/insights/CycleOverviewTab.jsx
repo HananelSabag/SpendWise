@@ -102,7 +102,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
       <div className="space-y-3">
         {salaryLate && <SalaryLate t={t} />}
         {isPartial && <PartialWarning t={t} />}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           <Figure label={t('cycle.receivedSoFar', { fallback: 'Received so far' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
           <Figure label={t('cycle.cardSpentSoFar', { fallback: 'Credit-card spending' })} value={-expenses.cards} tone="negative" formatCurrency={formatCurrency} />
           <Figure label={t('cycle.directSpentSoFar', { fallback: 'Direct bank expenses' })} value={-expenses.direct} tone="negative" formatCurrency={formatCurrency} />
@@ -131,7 +131,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
           {t('cycle.operatingNet', { fallback: 'Net — how you are living' })}
         </p>
-        <p className={cn('mt-1 text-3xl font-black tabular-nums', deficit ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
+        <p className={cn('mt-1 whitespace-nowrap text-3xl font-black tabular-nums', deficit ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400')}>
           {signedCurrency(operatingNet, formatCurrency)}
         </p>
         <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
@@ -141,7 +141,7 @@ export default function CycleOverviewTab({ cycle, salaryTracking, formatCurrency
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-4">
         <Figure label={t('cycle.income', { fallback: 'Income' })} value={income.total} tone="positive" formatCurrency={formatCurrency} />
         <Figure label={t('cycle.expenses', { fallback: 'Expenses' })} value={-expenses.total} tone="negative" formatCurrency={formatCurrency} />
         {financing.total > 0 && (

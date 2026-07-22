@@ -30,6 +30,7 @@ export default function CycleBalanceStrip({
   language = 'en',
   useCardEstimate = true,
   onCardEstimateChange,
+  isUpdatingEstimate = false,
   className,
 }) {
   const {
@@ -63,6 +64,9 @@ export default function CycleBalanceStrip({
   const projectedBalance = hasRealBalance
     ? projectBalanceAfterNextBills(totalRealBalance, cycle, useCardEstimate)
     : null;
+  const knownBalance = hasRealBalance
+    ? projectBalanceAfterNextBills(totalRealBalance, cycle, false)
+    : null;
   const cardAmount = Number(
     useCardEstimate
       ? (reset?.estimatedCardOut ?? forecast?.estimatedTotal)
@@ -90,13 +94,19 @@ export default function CycleBalanceStrip({
           </p>
 
           {hasRealBalance ? (
-            <p className={cn('mt-1 text-3xl font-black tabular-nums', totalRealBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
+            <p className={cn('mt-1 whitespace-nowrap text-2xl font-black tabular-nums min-[360px]:text-3xl', totalRealBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white')}>
               {formatCurrency(totalRealBalance)}
             </p>
           ) : (
             <p className="mt-1 text-xl font-bold text-gray-400 dark:text-gray-500">
               {t('cycle.balanceUnavailable', { fallback: 'Not available' })}
             </p>
+          )}
+          {knownBalance !== null && (
+            <div className="mt-3 rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+              <p className="text-[10px] font-bold text-gray-500">{t('cycle.afterKnown', { fallback: 'After known income and expenses' })}</p>
+              <p className={cn('whitespace-nowrap text-lg font-black tabular-nums', knownBalance < 0 ? 'text-rose-600' : 'text-gray-900 dark:text-white')}>{formatCurrency(knownBalance)}</p>
+            </div>
           )}
         </div>
 
@@ -114,7 +124,7 @@ export default function CycleBalanceStrip({
               {lastBillDate && <span className="shrink-0 text-[10px] font-medium text-indigo-500 dark:text-indigo-400">{formatCycleDay(lastBillDate, language)}</span>}
             </div>
             <div className="mt-1 flex items-end justify-between gap-3">
-              <p className={cn('min-w-0 text-3xl font-black tabular-nums', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
+              <p className={cn('min-w-0 whitespace-nowrap text-2xl font-black tabular-nums min-[360px]:text-3xl', projectedBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-950 dark:text-white')}>
                 ~{formatCurrency(projectedBalance)}
               </p>
               {onCardEstimateChange && (
@@ -122,8 +132,9 @@ export default function CycleBalanceStrip({
                   type="button"
                   role="switch"
                   aria-checked={useCardEstimate}
+                  disabled={isUpdatingEstimate}
                   onClick={() => onCardEstimateChange(!useCardEstimate)}
-                  className="-my-2 -me-1 inline-flex shrink-0 items-center gap-1.5 py-2 pe-1 text-[10px] font-bold text-indigo-700 dark:text-indigo-300"
+                  className="-my-2 -me-1 inline-flex shrink-0 items-center gap-1.5 py-2 pe-1 text-[10px] font-bold text-indigo-700 disabled:opacity-50 dark:text-indigo-300"
                 >
                   {t('cycle.useEstimate', { fallback: 'Include estimates' })}
                   <span className={cn('relative h-4 w-7 rounded-full transition', useCardEstimate ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600')}>

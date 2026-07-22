@@ -66,7 +66,11 @@ export function projectBalanceAfterNextBills(currentBalance, cycle, useHistorica
   const reset = cycle?.forwardReset;
   const current = Number(currentBalance);
   if (cycle?.window?.running && reset) {
-    const change = Number(useHistoricalEstimate ? reset.estimatedNetChange : reset.knownNetChange);
+    // Historical estimates only control possible card-bill growth. Linked future income remains
+    // a visible forecast in both modes instead of disappearing when the card estimate is off.
+    const change = Number(useHistoricalEstimate
+      ? reset.estimatedNetChange
+      : (reset.expectedNetChange ?? reset.knownNetChange));
     return [current, change].every(Number.isFinite) ? current + change : null;
   }
 

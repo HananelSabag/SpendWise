@@ -161,7 +161,13 @@ describe('financial-cycle route validation', () => {
       42,
       'expense',
       'user_control',
-      { recurrenceKind: 'loan_repayment', recurrenceEnabled: true },
+      {
+        recurrenceKind: 'loan_repayment',
+        recurrenceEnabled: true,
+        recurrenceGroupId: null,
+        recurrenceLabel: null,
+        recurrenceIncludeEstimate: undefined,
+      },
     );
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });

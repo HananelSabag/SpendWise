@@ -81,7 +81,10 @@ function ChargeRow({ label, meta, amount, formatCurrency, onClick }) {
   );
 }
 
-export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en', useCardEstimate = true }) {
+export default function CycleCardsTab({
+  cycle, formatCurrency, t, language = 'en', useCardEstimate = true,
+  onCardSettingsChange, isUpdatingCard = false,
+}) {
   const isMobile = useIsMobile();
   const [group, setGroup] = useState(null);
   const cards = cycle?.cards || [];
@@ -151,7 +154,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
             : t('cycle.modeUnknown', { fallback: 'No billing day detected yet' });
 
         return (
-          <div key={`${card.source}-${card.accountNumber}`} className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+          <div key={`${card.source}-${card.accountNumber}`} className={`rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900 ${card.included === false ? 'opacity-60' : ''}`}>
             {/* Brand is quiet; the money is loud. */}
             <div className="flex min-w-0 items-start gap-2">
               <span className="shrink-0 rounded-xl bg-violet-50 p-2 text-violet-500 dark:bg-violet-950/25"><CreditCard className="h-4 w-4" /></span>
@@ -167,6 +170,56 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
                 </p>
               </div>
             </div>
+
+            {onCardSettingsChange && (
+              <details className="mt-3 rounded-xl border border-gray-100 px-3 py-2 dark:border-gray-800">
+                <summary className="cursor-pointer text-[11px] font-bold text-indigo-600 dark:text-indigo-300">
+                  {t('cycle.cardControls', { fallback: 'Card cycle settings' })}
+                </summary>
+                <div className="mt-2 grid gap-2 min-[360px]:grid-cols-2">
+                  <label className="flex items-center justify-between gap-2 text-[11px] text-gray-600 dark:text-gray-300">
+                    {t('cycle.includeCard', { fallback: 'Include in cycle' })}
+                    <input type="checkbox" checked={card.included !== false} disabled={isUpdatingCard}
+                      onChange={(event) => onCardSettingsChange({ source: card.source, accountNumber: card.accountNumber, included: event.target.checked, statementDay: day })}
+                      className="h-4 w-4 accent-indigo-600" />
+                  </label>
+                  {!passthrough && (
+                    <label className="flex items-center justify-between gap-2 text-[11px] text-gray-600 dark:text-gray-300">
+                      {t('cycle.statementDay', { fallback: 'Billing day' })}
+                      <select value={day || ''} disabled={isUpdatingCard}
+                        onChange={(event) => onCardSettingsChange({ source: card.source, accountNumber: card.accountNumber, included: card.included !== false, statementDay: Number(event.target.value) })}
+                        className="rounded-lg border border-gray-200 bg-white px-2 py-1 dark:border-gray-700 dark:bg-gray-900">
+                        <option value="" disabled>—</option>
+                        {Array.from({ length: 31 }, (_, index) => index + 1).map((value) => <option key={value} value={value}>{value}</option>)}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                {!passthrough && events.some((event) => event.source === card.source && event.accountNumber === card.accountNumber && event.txns?.[0]?.id) && (
+                  <label className="mt-2 block text-[11px] text-gray-600 dark:text-gray-300">
+                    {t('cycle.linkObservedCharge', { fallback: 'Use an observed card charge as the billing date' })}
+                    <select
+                      defaultValue=""
+                      disabled={isUpdatingCard}
+                      onChange={(event) => {
+                        if (!event.target.value) return;
+                        onCardSettingsChange({
+                          source: card.source, accountNumber: card.accountNumber,
+                          included: card.included !== false, statementDay: day,
+                          linkedTransactionId: Number(event.target.value),
+                        });
+                      }}
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 dark:border-gray-700 dark:bg-gray-900"
+                    >
+                      <option value="">{t('cycle.chooseCharge', { fallback: 'Choose charge…' })}</option>
+                      {events.filter((item) => item.source === card.source && item.accountNumber === card.accountNumber && item.txns?.[0]?.id).map((item) => (
+                        <option key={`${item.chargeDate}-${item.txns[0].id}`} value={item.txns[0].id}>{formatCycleDay(item.chargeDate, language)} · {formatCurrency(Math.abs(item.total))}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </details>
+            )}
 
             <div className="mt-3 flex items-end justify-between gap-3 rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-gray-800/45">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t('cycle.cardSpend', { fallback: 'Charged this cycle' })}</p>
@@ -198,6 +251,19 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
               <p className="mt-3 text-center text-[11px] text-gray-400">{t('cycle.noCardCharges', { fallback: 'Nothing charged this cycle' })}</p>
             )}
 
+            {nextBill && (
+              <div className="mt-2 rounded-xl border border-indigo-100 bg-indigo-50/50 px-3 py-2 text-[11px] dark:border-indigo-900/50 dark:bg-indigo-950/20">
+                <p className="font-bold text-indigo-800 dark:text-indigo-200">
+                  {t('cycle.nextBill', { fallback: 'Next card bill' })}
+                  {nextBill.chargeDate !== split.statement.chargeDate ? ` · ${formatCycleDay(nextBill.chargeDate, language)}` : ''}
+                </p>
+                <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-1 tabular-nums">
+                  <span className="text-gray-500">{t('cycle.knownNow', { fallback: 'Accumulated now' })}</span><strong className="whitespace-nowrap text-end">{formatCurrency(nextBill.knownAmount)}</strong>
+                  <span className="text-gray-500">{t('cycle.lastBill', { fallback: 'Last bill' })}</span><strong className="whitespace-nowrap text-end">{formatCurrency(nextBill.lastStatementAmount || 0)}</strong>
+                </div>
+              </div>
+            )}
+
             {/* The bill is already counted above as it builds; this only flags how much bigger it
                 may still get by the time the bank charges it, based on recent statements. */}
             {nextBill && split.statement.accruing && useCardEstimate
@@ -207,7 +273,7 @@ export default function CycleCardsTab({ cycle, formatCurrency, t, language = 'en
                   {t('cycle.mayGrowTo', { fallback: 'May grow to' })} ~{formatCurrency(nextBill.estimatedAmount)}
                 </span>
                 {nextBill.historyCount > 0 && (
-                  <span className="text-gray-500 dark:text-gray-400"> · {t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `average of ${nextBill.historyCount} recent bills` })}</span>
+                  <span className="text-gray-500 dark:text-gray-400"> · {t('cycle.historyAverage', { count: nextBill.historyCount, fallback: `based on ${nextBill.historyCount} recent bills` })}</span>
                 )}
               </p>
             )}

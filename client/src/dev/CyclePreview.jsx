@@ -175,6 +175,7 @@ function Panel({ title, children, width = 'max-w-md' }) {
 function Preview() {
   const [lang, setLang] = useState('he');
   const [dark, setDark] = useState(false);
+  const [cycleSettings, setCycleSettings] = useState({ engineMode: 'automatic', manualAnchorDay: null });
   const t = makeT(lang === 'he' ? heDash : enDash);
 
   return (
@@ -207,7 +208,8 @@ function Preview() {
                 salaryTracking={{ status: 'scheduled', last: CYCLE.window.salary, typicalAmount: 13327.75, expectedNext: '2026-08-09' }}
                 signatures={[{ id: 1 }]}
                 fundingForecast={{ streams: [{ signatureId: 1, expectedDate: '2026-08-09', expectedAmount: 13327.75, description: 'Horizon salary', primary: true }] }}
-                settings={{ engineMode: 'automatic', manualAnchorDay: null }}
+                settings={cycleSettings}
+                onSettingsChange={(patch) => setCycleSettings((current) => ({ ...current, ...patch }))}
                 formatCurrency={formatCurrency}
                 t={t}
                 language={lang}
@@ -220,7 +222,10 @@ function Preview() {
   );
 }
 
-createRoot(document.getElementById('preview-root')).render(
+const previewRoot = globalThis.__spendWiseCyclePreviewRoot
+  || createRoot(document.getElementById('preview-root'));
+globalThis.__spendWiseCyclePreviewRoot = previewRoot;
+previewRoot.render(
   <QueryClientProvider client={previewQueryClient}>
     <Preview />
   </QueryClientProvider>,

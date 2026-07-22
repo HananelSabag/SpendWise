@@ -76,6 +76,6 @@ describe('FinancialCycleCard', () => {
 
   it('asks for a salary link instead of inventing an automatic window', () => {
     renderCard({ needsSalaryLink: true, cycle: null });
-    expect(screen.getByText('Link your salary to see your cycle')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Link your income' })).toBeInTheDocument();
   });
 });
