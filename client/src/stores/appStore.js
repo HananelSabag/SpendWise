@@ -74,8 +74,6 @@ export const useAppStore = create(
       immer((set, get) => ({
         // ✅ Date Management
         selectedDate: new Date().toISOString().split('T')[0], // Today in YYYY-MM-DD format
-        dateFormat: 'MM/DD/YYYY',
-        timeFormat: '12h',
 
         // ✅ Theme State
         theme: 'auto',
@@ -325,8 +323,6 @@ export const useAppStore = create(
                   let rates = null;
                   if (data && typeof data === 'object') {
                     if (data.rates && typeof data.rates === 'object') {
-                      rates = data.rates;
-                    } else if (data.result === 'success' && data.rates && typeof data.rates === 'object') {
                       rates = data.rates;
                     }
                   }
@@ -704,4 +700,4 @@ if (typeof window !== 'undefined') {
   store.actions.applyAccessibilitySettings();
 }
 
-export default useAppStore; 
+export default useAppStore;

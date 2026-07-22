@@ -149,7 +149,6 @@ export const queryClient = new QueryClient({
       // Individual hooks can override with longer staleTime where safe (categories, etc.)
       // or shorter / 0 for real-time data.
       staleTime: 30 * 1000, // 30 s
-      gcTime: 5 * 60 * 1000, // 5 min
       refetchOnMount: true,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
@@ -212,7 +211,6 @@ export const queryClient = new QueryClient({
 if (isDevelopment && enableQueryLogging) {
   // Use the correct event listener approach
   const originalQuery = queryClient.fetchQuery;
-  const originalMutate = queryClient.executeMutation;
   
   // Wrap fetchQuery to monitor performance
   queryClient.fetchQuery = function(...args) {

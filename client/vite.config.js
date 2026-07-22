@@ -8,11 +8,9 @@ import path from 'path';
 // coupling the config to platform-specific path separators.
 const VENDOR_CHUNKS = {
   'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-  'ui-vendor': ['framer-motion', '@radix-ui/react-tabs', 'lucide-react'],
+  'ui-vendor': ['framer-motion', 'lucide-react'],
   'data-vendor': ['@tanstack/react-query', 'axios', 'date-fns', 'zustand'],
-  'chart-vendor': ['recharts'],
-  'form-vendor': ['react-hook-form', '@hookform/resolvers', 'zod'],
-  'style-vendor': ['clsx', 'classnames', 'tailwind-merge'],
+  'style-vendor': ['clsx', 'tailwind-merge'],
 };
 
 function vendorChunk(id) {
@@ -165,8 +163,7 @@ export default defineConfig(({ command, mode }) => {
         'date-fns',
         'zustand',
         'framer-motion',
-        'lucide-react',
-        'recharts'
+        'lucide-react'
       ],
       exclude: ['@vitejs/plugin-react'],
       force: isDev
