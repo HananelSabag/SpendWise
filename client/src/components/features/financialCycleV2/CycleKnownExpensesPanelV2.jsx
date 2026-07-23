@@ -19,7 +19,13 @@ function ExpenseRow({ item, formatCurrency, language, t, estimate = false }) {
   );
 }
 
-export default function CycleKnownExpensesPanelV2({ cycle, formatCurrency, language, t }) {
+export default function CycleKnownExpensesPanelV2({
+  cycle,
+  useEstimates = true,
+  formatCurrency,
+  language,
+  t,
+}) {
   const [showForecast, setShowForecast] = useState(false);
   const stages = (cycle?.forwardReset?.stages || []).filter((item) => Number(item.amount) < 0);
   const isKnown = (item) => ['known', 'proven'].includes(item.certainty)
@@ -52,7 +58,7 @@ export default function CycleKnownExpensesPanelV2({ cycle, formatCurrency, langu
         {!known.length && <p className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-xs text-slate-500 dark:border-slate-700">{t('cycleV2.noKnownExpenses')}</p>}
       </div>
 
-      {uncertain.length > 0 && (
+      {useEstimates && uncertain.length > 0 && (
         <div className="mt-3 border-t border-slate-100 pt-3 dark:border-slate-800">
           <button type="button" onClick={() => setShowForecast((open) => !open)} aria-expanded={showForecast} className="flex w-full items-center gap-2 rounded-xl px-1 py-1 text-start text-xs font-black text-amber-700 dark:text-amber-300">
             <Sparkles className="h-4 w-4" />

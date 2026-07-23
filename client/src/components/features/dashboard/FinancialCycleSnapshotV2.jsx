@@ -1,9 +1,10 @@
 import React from 'react';
-import { ArrowRight, CalendarDays, CheckCircle2, CreditCard, Landmark, Sparkles, WalletCards } from 'lucide-react';
+import { ArrowRight, CalendarDays, CreditCard, Landmark, Sparkles, TrendingUp, WalletCards } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { formatCycleWindow, signedCurrency } from '../../../utils/cycleFormat';
 import { useBankBalance } from '../../../hooks/useBankBalance';
+import { getCycleProjection } from '../../../utils/cycleProjection';
 
 function Money({ value, formatCurrency, className }) {
   return (
@@ -58,21 +59,9 @@ export default function FinancialCycleSnapshotV2({
 
   const reset = cycle.forwardReset || {};
   const now = hasRealBalance ? Number(totalRealBalance) : null;
-  const knownCards = Number(reset.knownCardOut) || 0;
-  const knownDirect = Number(reset.knownFixedOut ?? reset.fixedOut) || 0;
-  const estimatedCards = Number(reset.estimatedCardOut) || knownCards;
-  const estimatedDirect = Number(reset.estimatedFixedOut) || knownDirect;
-  const knownChange = Number.isFinite(Number(reset.knownNetChange))
-    ? Number(reset.knownNetChange)
-    : -(knownCards + knownDirect);
-  const forecastChange = -(estimatedCards + estimatedDirect);
-  const afterKnown = Number.isFinite(now) && Number.isFinite(knownChange) ? now + knownChange : null;
-  const forecast = Number.isFinite(now) && Number.isFinite(forecastChange) ? now + forecastChange : null;
-  const alreadyCard = Number(cycle?.expenses?.cards) || 0;
-  const alreadyDirect = Number(cycle?.expenses?.direct) || 0;
-  const possibleGrowth = Math.max(0, (estimatedCards + estimatedDirect) - (knownCards + knownDirect));
+  const projection = getCycleProjection(reset, now);
   const useEstimate = settings?.useEstimates !== false;
-  const headline = useEstimate ? forecast : afterKnown;
+  const headline = useEstimate ? projection.forecast : projection.afterKnown;
 
   return (
     <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-5 text-white shadow-xl shadow-slate-900/15 sm:p-6">
@@ -100,16 +89,15 @@ export default function FinancialCycleSnapshotV2({
 
         <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
           <MiniMetric label={t('cycleV2.balanceNow')} value={now} formatCurrency={formatCurrency} />
-          <MiniMetric label={t('cycleV2.afterKnown')} value={afterKnown} formatCurrency={formatCurrency} />
-          <MiniMetric label={t('cycleV2.knownExpenses')} value={-(knownCards + knownDirect)} formatCurrency={formatCurrency} />
+          <MiniMetric label={t('cycleV2.afterKnown')} value={projection.afterKnown} formatCurrency={formatCurrency} />
+          <MiniMetric label={t('cycleV2.knownExpenses')} value={-(projection.knownCardOut + projection.knownFixedOut)} formatCurrency={formatCurrency} />
         </div>
 
         <div className="mt-4 grid gap-2 text-xs text-slate-300 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-emerald-300" /><span>{t('cycleV2.alreadyCard')} <strong className="whitespace-nowrap text-white">{signedCurrency(-alreadyCard, formatCurrency)}</strong></span></div>
-          <div className="flex items-center gap-2"><Landmark className="h-4 w-4 text-emerald-300" /><span>{t('cycleV2.alreadyDirect')} <strong className="whitespace-nowrap text-white">{signedCurrency(-alreadyDirect, formatCurrency)}</strong></span></div>
-          <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-indigo-300" /><span>{t('cycleV2.cardsKnown')} <strong className="whitespace-nowrap text-white">{signedCurrency(-knownCards, formatCurrency)}</strong></span></div>
-          <div className="flex items-center gap-2"><WalletCards className="h-4 w-4 text-indigo-300" /><span>{t('cycleV2.fixedOut')} <strong className="whitespace-nowrap text-white">{signedCurrency(-knownDirect, formatCurrency)}</strong></span></div>
-          {possibleGrowth > 0 && <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-300" /><span>{t('cycleV2.possibleGrowth')} <strong className="whitespace-nowrap text-white">{signedCurrency(-possibleGrowth, formatCurrency)}</strong></span></div>}
+          <div className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-indigo-300" /><span>{t('cycleV2.cardsKnown')} <strong className="whitespace-nowrap text-white">{signedCurrency(-projection.knownCardOut, formatCurrency)}</strong></span></div>
+          <div className="flex items-center gap-2"><Landmark className="h-4 w-4 text-indigo-300" /><span>{t('cycleV2.fixedOut')} <strong className="whitespace-nowrap text-white">{signedCurrency(-projection.knownFixedOut, formatCurrency)}</strong></span></div>
+          {useEstimate && projection.expectedIncome > 0 && <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-emerald-300" /><span>{t('cycleV2.expectedIncome')} <strong className="whitespace-nowrap text-emerald-200">{signedCurrency(projection.expectedIncome, formatCurrency, { signPositive: true })}</strong></span></div>}
+          {useEstimate && projection.forecastExtraOut > 0 && <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-amber-300" /><span>{t('cycleV2.possibleGrowth')} <strong className="whitespace-nowrap text-white">{signedCurrency(-projection.forecastExtraOut, formatCurrency)}</strong></span></div>}
         </div>
 
         <button type="button" onClick={onOpen} className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-white py-3 text-sm font-black text-slate-950 transition hover:bg-indigo-50">

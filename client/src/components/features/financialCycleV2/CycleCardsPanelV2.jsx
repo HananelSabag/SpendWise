@@ -25,7 +25,15 @@ function TransactionList({ transactions, formatCurrency, language, t }) {
   );
 }
 
-export default function CycleCardsPanelV2({ cycle, formatCurrency, language, t, onChange, isSaving }) {
+export default function CycleCardsPanelV2({
+  cycle,
+  useEstimates = true,
+  formatCurrency,
+  language,
+  t,
+  onChange,
+  isSaving,
+}) {
   const [openCard, setOpenCard] = useState(null);
   const [settingsCard, setSettingsCard] = useState(null);
   const cards = cycle?.cards || [];
@@ -71,9 +79,9 @@ export default function CycleCardsPanelV2({ cycle, formatCurrency, language, t, 
                   <button type="button" onClick={() => setSettingsCard((value) => value === key ? null : key)} aria-expanded={settingsCard === key} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label={t('cycleV2.cardSettings')}><Settings2 className="h-4 w-4" /></button>
                 </div>
 
-                <button type="button" onClick={() => setOpenCard((value) => value === key ? null : key)} aria-expanded={openCard === key} className="mt-4 grid w-full grid-cols-2 gap-2 text-start sm:grid-cols-3">
+                <button type="button" onClick={() => setOpenCard((value) => value === key ? null : key)} aria-expanded={openCard === key} className={cn('mt-4 grid w-full grid-cols-2 gap-2 text-start', !passthrough && useEstimates && 'sm:grid-cols-3')}>
                   <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-950/25"><p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">{passthrough ? t('cycleV2.alreadyFromBalance') : t('cycleV2.knownNextCharge')}</p><p className="mt-1 text-sm font-black tabular-nums text-slate-950 dark:text-white">{formatCurrency(knownAmount)}</p></div>
-                  {!passthrough && <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/25"><p className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{t('cycleV2.forecastExtra')}</p><p className="mt-1 text-sm font-black tabular-nums text-slate-950 dark:text-white">{formatCurrency(extraEstimate)}</p></div>}
+                  {!passthrough && useEstimates && <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/25"><p className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{t('cycleV2.forecastExtra')}</p><p className="mt-1 text-sm font-black tabular-nums text-slate-950 dark:text-white">{formatCurrency(extraEstimate)}</p></div>}
                   <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"><div><p className="text-[10px] font-bold text-slate-400">{t('cycleV2.transactionsCount')}</p><p className="mt-1 text-sm font-black text-slate-950 dark:text-white">{knownTransactions.length}</p></div><ChevronDown className={cn('h-4 w-4 text-slate-400 transition', openCard === key && 'rotate-180')} /></div>
                 </button>
 

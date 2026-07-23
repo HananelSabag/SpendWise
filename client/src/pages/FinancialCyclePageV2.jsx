@@ -13,6 +13,7 @@ import CycleManagePanelV2 from '../components/features/financialCycleV2/CycleMan
 import CycleKnownExpensesPanelV2 from '../components/features/financialCycleV2/CycleKnownExpensesPanelV2';
 import CycleRecurringPanelV2 from '../components/features/financialCycleV2/CycleRecurringPanelV2';
 import CycleLoansPanelV2 from '../components/features/financialCycleV2/CycleLoansPanelV2';
+import { getCycleProjection } from '../utils/cycleProjection';
 
 const TABS = [
   { id: 'overview', icon: TrendingUp },
@@ -33,17 +34,15 @@ function initialTab() {
   }
 }
 
-function Breakdown({ cycle, formatCurrency, t }) {
+function Breakdown({ cycle, useEstimates, formatCurrency, t }) {
   const reset = cycle?.forwardReset || {};
-  const knownCards = Number(reset.knownCardOut) || 0;
-  const estimatedCards = Number(reset.estimatedCardOut) || knownCards;
-  const knownDirect = Number(reset.knownFixedOut ?? reset.fixedOut) || 0;
-  const estimatedDirect = Number(reset.estimatedFixedOut) || knownDirect;
+  const projection = getCycleProjection(reset);
   const rows = [
     { label: t('cycleV2.startBalance'), value: null, meta: t('cycleV2.startBalanceHint') },
-    { label: t('cycleV2.cardsKnown'), value: -knownCards, meta: t('cycleV2.cardsKnownHint') },
-    { label: t('cycleV2.fixedOut'), value: -knownDirect, meta: t('cycleV2.fixedOutHint') },
-    { label: t('cycleV2.estimateExtra'), value: -Math.max(0, (estimatedCards + estimatedDirect) - (knownCards + knownDirect)), estimate: true, meta: t('cycleV2.growthHint') },
+    { label: t('cycleV2.cardsKnown'), value: -projection.knownCardOut, meta: t('cycleV2.cardsKnownHint') },
+    { label: t('cycleV2.fixedOut'), value: -projection.knownFixedOut, meta: t('cycleV2.fixedOutHint') },
+    ...(useEstimates && projection.expectedIncome > 0 ? [{ label: t('cycleV2.expectedIncome'), value: projection.expectedIncome, estimate: true, positive: true, meta: t('cycleV2.expectedIncomeHint') }] : []),
+    ...(useEstimates && projection.forecastExtraOut > 0 ? [{ label: t('cycleV2.estimateExtra'), value: -projection.forecastExtraOut, estimate: true, meta: t('cycleV2.growthHint') }] : []),
   ];
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-5">
@@ -101,8 +100,8 @@ export default function FinancialCyclePageV2() {
             {tab === 'overview' && (
               <div className="space-y-4">
                 <CyclePositionPanelV2 cycle={cycle} settings={workspace.settings} formatCurrency={formatCurrency} t={t} onEstimateChange={(enabled) => workspace.updateCycleSettings({ useEstimates: enabled })} isSaving={workspace.isUpdatingSettings} />
-                <div className="grid gap-4 lg:grid-cols-2"><CycleKnownExpensesPanelV2 cycle={cycle} formatCurrency={formatCurrency} language={currentLanguage} t={t} /><Breakdown cycle={cycle} formatCurrency={formatCurrency} t={t} /></div>
-                <CycleCardsPanelV2 cycle={cycle} formatCurrency={formatCurrency} language={currentLanguage} t={t} onChange={workspace.updateCardSettings} isSaving={workspace.isUpdatingCard} />
+                <div className="grid gap-4 lg:grid-cols-2"><CycleKnownExpensesPanelV2 cycle={cycle} useEstimates={workspace.settings?.useEstimates !== false} formatCurrency={formatCurrency} language={currentLanguage} t={t} /><Breakdown cycle={cycle} useEstimates={workspace.settings?.useEstimates !== false} formatCurrency={formatCurrency} t={t} /></div>
+                <CycleCardsPanelV2 cycle={cycle} useEstimates={workspace.settings?.useEstimates !== false} formatCurrency={formatCurrency} language={currentLanguage} t={t} onChange={workspace.updateCardSettings} isSaving={workspace.isUpdatingCard} />
               </div>
             )}
             {tab === 'recurring' && <CycleRecurringPanelV2 recurringGroups={workspace.recurringGroups} onRecurringChange={workspace.updateRecurringGroup} isSavingRecurring={workspace.isUpdatingRecurring} formatCurrency={formatCurrency} language={currentLanguage} t={t} />}
