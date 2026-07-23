@@ -5,6 +5,22 @@ import { useCycles } from '../../../hooks/useCycles';
 import { formatCycleDay } from '../../../utils/cycleDate';
 import { signedCurrency } from '../../../utils/cycleFormat';
 
+export function selectRecurringCandidates(decisions = []) {
+  return decisions
+    .filter((item) => (
+      item.editable !== false && Number(item.amount) < 0 && item.classification !== 'card_settlement'
+        && !item.recurrenceGroupId
+    ))
+    .sort((left, right) => {
+      const leftDate = String(left.processedDate || left.date || '');
+      const rightDate = String(right.processedDate || right.date || '');
+      return rightDate.localeCompare(leftDate)
+        || Number(right.overrideTransactionId || right.transactionId || 0)
+          - Number(left.overrideTransactionId || left.transactionId || 0);
+    })
+    .slice(0, 80);
+}
+
 function RecurringRule({ group, onUpdate, formatCurrency, t }) {
   const [label, setLabel] = useState(group.label || '');
   const changed = label.trim() && label.trim() !== group.label;
@@ -29,10 +45,7 @@ export default function CycleRecurringPanelV2({ recurringGroups, onRecurringChan
   const [label, setLabel] = useState('');
   const [kind, setKind] = useState('recurring_bill');
   const groups = details.recurringGroups?.length ? details.recurringGroups : recurringGroups;
-  const candidates = (details.current?.decisions || []).filter((item) => (
-    item.editable !== false && Number(item.amount) < 0 && item.classification !== 'card_settlement'
-      && !item.recurrenceGroupId
-  )).slice(0, 80);
+  const candidates = selectRecurringCandidates(details.current?.decisions);
   const selected = candidates.find((item) => String(item.overrideTransactionId || item.transactionId) === transactionId);
 
   const createRule = () => {
