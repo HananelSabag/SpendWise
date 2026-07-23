@@ -122,9 +122,7 @@ export default {
   accessibility: {
     title: "הגדרות נגישות",
     subtitle: "התאם את חוויית הצפייה שלך",
-    showFab: "הצג כלי נגישות",
     openSettings: "הגדרות נגישות",
-    hideFab: "הסתר כפתור נגישות",
     fontSize: {
       title: "גודל גופן",
       extraSmall: "קטן במיוחד",

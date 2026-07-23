@@ -17,6 +17,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
+  Accessibility,
   Home, CreditCard, User,
   PlusCircle, MinusCircle, Calculator,
   Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, Wallet, ChevronRight,
@@ -29,6 +30,7 @@ import { useToast } from '../../hooks/useToast';
 import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
 import BrandMark from './BrandMark';
+import { openAccessibilityMenu } from './AccessibilityMenuHost';
 
 // ─── Shopping-only 2-tab nav ──────────────────────────────────────────────────
 
@@ -130,7 +132,7 @@ const FullNav = () => {
 
   // Close the sheet (and optionally navigate after the BottomSheet
   // history.back() cleanup has had time to complete).
-  const handleClose = useCallback((afterMs) => {
+  const handleClose = useCallback(() => {
     setMenuOpen(false);
     if (nonInviteUnread > 0) markAllRead();
   }, [nonInviteUnread, markAllRead]);
@@ -200,6 +202,18 @@ const FullNav = () => {
       icon: HelpCircle,
       iconTint: 'text-teal-500 dark:text-teal-400',
       action: () => { handleClose(); dispatch('open-help'); },
+    },
+    {
+      key: 'accessibility',
+      label: t('common.accessibility.openSettings', {
+        fallback: currentLanguage === 'he' ? 'הגדרות נגישות' : 'Accessibility settings',
+      }),
+      icon: Accessibility,
+      iconTint: 'text-indigo-500 dark:text-indigo-400',
+      action: () => {
+        handleClose();
+        setTimeout(openAccessibilityMenu, 80);
+      },
     },
     ...(isAdmin ? [{
       key: 'admin',

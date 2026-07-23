@@ -9,8 +9,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings, X, Eye, Type, Contrast, Volume2, VolumeX,
-  Palette, Sun, Moon, Zap, Shield, RefreshCw, Check,
-  Plus, Minus, RotateCcw, Save
+  Palette, Sun, Moon, Zap, Shield, Check, RotateCcw, Save
 } from 'lucide-react';
 
 // ✅ NEW: Import from Zustand stores instead of Context
@@ -21,7 +20,7 @@ import {
   useNotifications 
 } from '../../stores';
 
-import { Button, Card, Tooltip } from '../ui';
+import { Button } from '../ui';
 import { cn } from '../../utils/helpers';
 
 const AccessibilityMenu = ({ 
@@ -31,15 +30,13 @@ const AccessibilityMenu = ({
 }) => {
   // ✅ NEW: Use Zustand stores
   const { t, isRTL } = useTranslation('common');
-  const { theme, isDark, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { accessibility, updateAccessibility } = useAccessibility();
   const { fontSize, reducedMotion, screenReader, contrast, focusVisible, announcements } = accessibility;
   const { addNotification } = useNotifications();
 
   // Local state
   const [hasChanges, setHasChanges] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
-
   // Track changes
   const [originalSettings, setOriginalSettings] = useState(null);
 
@@ -149,52 +146,40 @@ const AccessibilityMenu = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleCancel}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 z-[190] bg-black/60 backdrop-blur-sm"
           />
 
-          {/* Menu */}
-          <motion.div
-            initial={{ 
-              opacity: 0, 
-              scale: 0.95,
-              y: isRTL ? -20 : 20 
-            }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1,
-              y: 0 
-            }}
-            exit={{ 
-              opacity: 0, 
-              scale: 0.95,
-              y: isRTL ? -20 : 20 
-            }}
-            transition={{ duration: 0.2 }}
-            className={cn(
-              "fixed z-50 bg-white dark:bg-gray-800 shadow-2xl overflow-hidden",
-              // Mobile: Full width bottom sheet
-              "w-full bottom-0 left-0 right-0 rounded-t-2xl max-h-[90vh] mx-auto",
-              // Desktop: Large centered modal - RESET positioning for desktop
-              "sm:bottom-auto sm:left-auto sm:right-auto sm:mx-0",
-              "sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2",
-              "sm:w-auto sm:min-w-[600px] sm:max-w-[800px] sm:rounded-2xl sm:max-h-[80vh]",
-              // Large desktop: Even bigger
-              "lg:min-w-[700px] lg:max-w-[900px] lg:max-h-[85vh]",
-              className
-            )}
-            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
-          >
+          {/* A layout wrapper owns centering so Framer Motion transforms cannot
+              override the responsive positioning. It also sits above the mobile nav. */}
+          <div className="pointer-events-none fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 24 }}
+              transition={{ duration: 0.2 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="accessibility-menu-title"
+              className={cn(
+                "pointer-events-auto flex w-full max-h-[calc(100dvh-0.5rem)] flex-col overflow-hidden",
+                "rounded-t-2xl bg-white shadow-2xl dark:bg-gray-800",
+                "sm:max-w-[800px] sm:max-h-[85vh] sm:rounded-2xl",
+                "lg:max-w-[900px]",
+                className
+              )}
+              style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+            >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
                   <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <div className="min-w-0">
+                  <h2 id="accessibility-menu-title" className="truncate text-lg font-semibold text-gray-900 dark:text-white">
                     {t('accessibility.title')}
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <p className="truncate text-sm text-gray-500 dark:text-gray-400">
                     {t('accessibility.subtitle')}
                   </p>
                 </div>
@@ -204,7 +189,7 @@ const AccessibilityMenu = ({
                 variant="ghost"
                 size="sm"
                 onClick={handleCancel}
-                className="p-2"
+                className="shrink-0 p-2"
                 aria-label={t('close')}
               >
                 <X className="w-5 h-5" />
@@ -212,7 +197,7 @@ const AccessibilityMenu = ({
             </div>
 
             {/* Content */}
-            <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-h-[60vh] sm:max-h-[55vh] lg:max-h-[60vh] overflow-y-auto overscroll-contain">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:space-y-6 sm:p-6">
               {/* Font Size */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -362,7 +347,7 @@ const AccessibilityMenu = ({
             </div>
 
             {/* Footer Actions */}
-            <div className="p-6 sm:p-8 border-t border-gray-200 dark:border-gray-700 space-y-3">
+            <div className="shrink-0 space-y-3 border-t border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               {hasChanges && (
                 <div className="flex items-center justify-center text-xs text-orange-600 dark:text-orange-400 mb-3">
                   <Shield className="w-4 h-4 mr-1" />
@@ -400,9 +385,9 @@ const AccessibilityMenu = ({
                 </Button>
               </div>
 
-
             </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

@@ -2,6 +2,7 @@ import React, { useState, useCallback, Suspense, useEffect, useMemo } from 'reac
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
+  Accessibility,
   Building2,
   Wallet,
   Calculator,
@@ -34,6 +35,7 @@ import { cn } from '../../utils/helpers';
 import { Avatar, LoadingSpinner } from '../ui';
 import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 import BrandMark from '../common/BrandMark';
+import { openAccessibilityMenu } from '../common/AccessibilityMenuHost';
 
 const ExchangeCalculator = React.lazy(() => import('../features/exchange/ExchangeCalculator'));
 const HelpCenter = React.lazy(() => import('../features/help/HelpCenter'));
@@ -186,6 +188,14 @@ const Header = () => {
       label: t('nav.help', { fallback: currentLanguage === 'he' ? 'עזרה' : 'Help' }),
       icon: HelpCircle,
       onClick: () => openModal('onboarding')
+    },
+    {
+      key: 'accessibility',
+      label: t('common.accessibility.openSettings', {
+        fallback: currentLanguage === 'he' ? 'הגדרות נגישות' : 'Accessibility settings'
+      }),
+      icon: Accessibility,
+      onClick: openAccessibilityMenu
     }
   ]), [currentLanguage, openModal, t]);
 

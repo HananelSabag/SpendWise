@@ -22,7 +22,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 import TopProgressBar from './components/common/TopProgressBar.jsx';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-import AccessibilityFab from './components/common/AccessibilityFab.jsx';
+import AccessibilityMenuHost from './components/common/AccessibilityMenuHost.jsx';
 import ModernOnboardingManager from './components/common/ModernOnboardingManager';
 import MobileBottomNav from './components/common/MobileBottomNav';
 
@@ -159,10 +159,9 @@ const AppContent = () => {
         <AppRoutes isAuthenticated={isAuthenticated} />
       </main>
 
-      {/* Footer & Accessibility */}
+      {/* Footer & accessibility settings host */}
       {isAuthenticated && !isQuickExpensePage && <Footer />}
-      {/* Floating accessibility button (works on mobile and desktop) */}
-      {isAuthenticated && <AccessibilityFab />}
+      {isAuthenticated && <AccessibilityMenuHost />}
       {/* Global unified transaction actions (modals orchestrator) */}
       {isAuthenticated && <UnifiedTransactionActions />}
 

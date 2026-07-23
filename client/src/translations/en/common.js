@@ -122,9 +122,7 @@ export default {
   accessibility: {
     title: "Accessibility Settings",
     subtitle: "Customize your viewing experience",
-    showFab: "Show accessibility tools",
     openSettings: "Accessibility settings",
-    hideFab: "Hide accessibility button",
     fontSize: {
       title: "Font Size",
       extraSmall: "Extra Small",

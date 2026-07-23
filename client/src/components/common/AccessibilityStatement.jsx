@@ -10,23 +10,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Eye, Keyboard, Volume2, Monitor, Smartphone,
   CheckCircle, AlertCircle, Mail, ExternalLink, Heart,
-  Settings, Users, Globe, Book, HelpCircle
+  Settings, Users, Book, HelpCircle
 } from 'lucide-react';
 
 // ✅ NEW: Import from Zustand stores instead of Context
-import { useTranslation, useTheme } from '../../stores';
+import { useTranslation } from '../../stores';
 
 import { Button, Card, Badge, Modal } from '../ui';
 import { cn } from '../../utils/helpers';
+import { openAccessibilityMenu } from './AccessibilityMenuHost';
 
 const AccessibilityStatement = ({ 
   isOpen, 
-  onClose,
-  className = '' 
+  onClose
 }) => {
   // ✅ NEW: Use Zustand stores
-  const { t, isRTL, currentLanguage } = useTranslation('accessibility');
-  const { isDark } = useTheme();
+  const { t, isRTL } = useTranslation('accessibility');
 
   const [activeSection, setActiveSection] = useState('overview');
 
@@ -490,7 +489,10 @@ const AccessibilityStatement = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {/* Open accessibility menu */}}
+                onClick={() => {
+                  onClose?.();
+                  setTimeout(openAccessibilityMenu, 0);
+                }}
                 className="w-full justify-start"
               >
                 <Settings className="w-4 h-4 mr-2" />
