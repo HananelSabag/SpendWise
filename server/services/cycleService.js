@@ -313,7 +313,7 @@ async function loadCardSettings(userId) {
               settings.included, settings.linked_transaction_id, settings.updated_at,
               linked.bank_source AS linked_bank_source,
               linked.bank_account_number AS linked_bank_account_number,
-              linked.identifier AS linked_identifier,
+              linked.bank_sync_id AS linked_bank_sync_id,
               linked.description AS linked_description
          FROM financial_card_settings settings
          LEFT JOIN transactions linked
@@ -334,7 +334,7 @@ async function loadCardSettings(userId) {
       linkedBankAccountNumber: row.linked_bank_account_number == null
         ? null
         : String(row.linked_bank_account_number),
-      linkedIdentifier: row.linked_identifier == null ? null : String(row.linked_identifier),
+      linkedIdentifier: extractIdentifier(row.linked_bank_sync_id),
       linkedDescription: row.linked_description || null,
       updatedAt: row.updated_at,
     }));
