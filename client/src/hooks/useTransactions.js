@@ -161,16 +161,20 @@ export const useTransactions = (options = {}) => {
   });
 
   // The server routes deletes by type; resolve it from the loaded rows.
-  const resolveTypeForDelete = useCallback((transactionId) => {
-    const tx = allTransactions.find((t) => t.id === transactionId);
+  const resolveTypeForDelete = useCallback((transactionId, suppliedTransaction = null) => {
+    const tx = suppliedTransaction
+      || allTransactions.find((t) => t.id === transactionId);
     if (tx?.type === 'income' || tx?.type === 'expense') return tx.type;
     if (typeof tx?.amount === 'number') return tx.amount > 0 ? 'income' : 'expense';
     return 'expense';
   }, [allTransactions]);
 
   const deleteTransactionMutation = useMutation({
-    mutationFn: async (transactionId) => {
-      const response = await api.transactions.delete(resolveTypeForDelete(transactionId), transactionId);
+    mutationFn: async ({ transactionId, transaction }) => {
+      const response = await api.transactions.delete(
+        resolveTypeForDelete(transactionId, transaction),
+        transactionId,
+      );
       return response.data;
     },
     onSuccess: () => {
@@ -190,7 +194,10 @@ export const useTransactions = (options = {}) => {
     [updateTransactionMutation],
   );
   const deleteTransaction = useCallback(
-    (transactionId) => deleteTransactionMutation.mutateAsync(transactionId),
+    (transactionId, options = {}) => deleteTransactionMutation.mutateAsync({
+      transactionId,
+      transaction: options.transaction || null,
+    }),
     [deleteTransactionMutation],
   );
 

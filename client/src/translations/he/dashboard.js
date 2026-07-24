@@ -166,6 +166,7 @@ export default {
     picker_expense: "הוצאות",
     picker_income: "הכנסות",
     transactionsFound: "נמצאו {{count}} עסקאות",
+    showMoreTransactions: "הצג עוד {{count}}",
     unnamedTransaction: "עסקה ללא שם",
     unknownSource: "מקור לא ידוע",
     noPickerResults: "לא נמצאו עסקאות מתאימות",

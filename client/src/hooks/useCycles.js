@@ -6,10 +6,16 @@ import { useTranslation } from '../stores';
 import { useToast } from './useToast';
 import { queryConfigs } from '../config/queryClient';
 
-const CYCLE_QUERY_VERSION = 7;
+export const CYCLE_QUERY_VERSION = 7;
+export const currentCycleQueryKey = (userId) => [
+  'cycles',
+  userId,
+  'current',
+  CYCLE_QUERY_VERSION,
+];
 const DEFAULT_SETTINGS = { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true };
 const EMPTY = {
-  status: 'loading', cycles: [], loans: [], totalOutstanding: 0, recurring: [],
+  status: 'loading', cycles: [], decisions: [], loans: [], totalOutstanding: 0, recurring: [],
   recurringGroups: [], salaryTracking: null, salaryChange: null, signatures: [],
   settings: DEFAULT_SETTINGS,
   fundingForecast: { streams: [], expectedTotal: 0, start: null, end: null },
@@ -152,12 +158,12 @@ export function useCycles() {
   }));
 
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'list', CYCLE_QUERY_VERSION],
-    queryFn: () => cyclesApi.list({ years: 2 }),
+    queryKey: ['cycles', user?.id, 'control', CYCLE_QUERY_VERSION],
+    queryFn: () => cyclesApi.control(),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
-    staleTime: 60_000,
-    refetchOnMount: true,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
   });
 
   const classification = useMutation({
@@ -183,13 +189,9 @@ export function useCycles() {
   });
 
   const data = query.data?.data || EMPTY;
-  const current = data.cycles?.find((cycle) => cycle.window.running)
-    || data.cycles?.[data.cycles.length - 1]
-    || null;
-
   return {
     ...data,
-    current,
+    current: null,
     needsSalaryLink: data.status === 'salary_not_linked' || data.status === 'salary_never_seen',
     needsCycleAnchor: data.status === 'cycle_anchor_not_found',
     hasNoBankData: data.status === 'no_bank_data',
@@ -213,12 +215,12 @@ export function useCurrentCycle() {
   const isAuthenticated = useIsAuthenticated();
   const user = useAuthUser();
   const query = useQuery({
-    queryKey: ['cycles', user?.id, 'current', CYCLE_QUERY_VERSION],
+    queryKey: currentCycleQueryKey(user?.id),
     queryFn: () => cyclesApi.current(),
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
-    staleTime: 30_000,
-    refetchOnMount: true,
+    staleTime: 2 * 60_000,
+    refetchOnMount: false,
   });
   const data = query.data?.data || {};
   return {

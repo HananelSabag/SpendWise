@@ -12,7 +12,7 @@ const logger = require('../utils/logger');
 
 const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
-const CACHE_TTL_MS = 15_000;
+const CACHE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 200;
 const CALCULATION_VERSION = 7;
 const resultCache = new Map();
@@ -1006,6 +1006,86 @@ async function getCurrentFinancialCycle(userId, { asOf = new Date(), skipCache =
     : result;
 }
 
+/**
+ * The recurring/loan control tabs need classified source rows, not 26 fully
+ * calculated historical cycle summaries. Build one wide control window so
+ * card settlements are still suppressed correctly while each source row is
+ * classified only once.
+ */
+async function getCycleControlData(userId, { asOf = new Date(), skipCache = false } = {}) {
+  const today = isoDate(asOf);
+  const cacheKey = `${userId}:control:${today}`;
+  if (!skipCache) {
+    const cached = cacheGet(cacheKey);
+    if (cached) return cached;
+  }
+  const requestEpoch = cacheInvalidationEpoch(userId);
+  const months = (HISTORY_YEARS * 12) + 2;
+  const {
+    bankTxns, cards, signatures, storedClassifications, salaryClassifications,
+    transactionOverrides, settings, cardSettings,
+  } = await loadCycleInputs(userId, { asOf, months });
+  if (!bankTxns.length) {
+    return {
+      status: 'no_bank_data',
+      decisions: [],
+      loans: [],
+      recurring: [],
+      recurringGroups: buildRecurringGroups(transactionOverrides),
+      totalOutstanding: 0,
+      settings,
+    };
+  }
+
+  const prepared = engine.prepareCycleData({
+    bankTxns,
+    cards,
+    asOf,
+    creditClassifications: storedClassifications,
+    transactionOverrides,
+    cardSettings,
+  });
+  const primary = effectiveSalaryAnchors(signatures)[0] || signatures[0] || null;
+  const start = engine.addMonths(today, -months);
+  const end = engine.addMonths(today, 2);
+  const fundingForecast = engine.buildFundingForecast(bankTxns, signatures, { asOf });
+  const controlCycle = engine.buildCycle({
+    bankTxns,
+    cards,
+    window: {
+      index: 0,
+      start,
+      end,
+      effectiveEnd: end,
+      running: false,
+      projectedEnd: false,
+      mode: 'manual',
+      anchorDay: null,
+      salary: { date: start, amount: 0, txn: null, signature: primary },
+    },
+    asOf,
+    salarySignature: primary,
+    salarySignatures: signatures,
+    fundingForecast,
+    creditClassifications: storedClassifications,
+    salaryClassifications,
+    transactionOverrides,
+    preparedData: prepared,
+  });
+  const result = {
+    status: 'ok',
+    decisions: controlCycle.decisions || [],
+    loans: prepared.loans,
+    recurring: prepared.recurring.filter((series) => series.needsUserLabel),
+    recurringGroups: buildRecurringGroups(transactionOverrides),
+    totalOutstanding: prepared.loans.reduce((sum, loan) => sum + loan.outstanding, 0),
+    settings,
+  };
+  return !skipCache && requestEpoch === cacheInvalidationEpoch(userId)
+    ? cacheSet(cacheKey, result)
+    : result;
+}
+
 function cycleCategoryTotals(cycle) {
   const totals = new Map();
   const add = (txn) => {
@@ -1201,6 +1281,7 @@ module.exports = {
   saveCycleSettings,
   getFinancialCycles,
   getCurrentFinancialCycle,
+  getCycleControlData,
   getYearReview,
   getAvailableCycleYears,
   invalidateCycleCache,

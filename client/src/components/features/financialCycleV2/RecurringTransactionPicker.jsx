@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, CreditCard, Landmark, Search } from 'lucide-react';
 
 import { Modal } from '../../ui';
@@ -7,6 +7,7 @@ import { formatCycleDay } from '../../../utils/cycleDate';
 import { signedCurrency } from '../../../utils/cycleFormat';
 
 const CARD_SOURCES = new Set(['max', 'visa_cal', 'isracard', 'amex']);
+export const PICKER_PAGE_SIZE = 24;
 
 export function filterRecurringTransactions(candidates, query, direction = 'all') {
   const normalized = String(query || '').trim().toLocaleLowerCase();
@@ -39,11 +40,18 @@ export default function RecurringTransactionPicker({
 }) {
   const [query, setQuery] = useState('');
   const [direction, setDirection] = useState(lockedDirection || 'all');
+  const [visibleCount, setVisibleCount] = useState(PICKER_PAGE_SIZE);
   const activeDirection = lockedDirection || direction;
   const filtered = useMemo(
     () => filterRecurringTransactions(candidates, query, activeDirection),
     [activeDirection, candidates, query],
   );
+  const visible = filtered.slice(0, visibleCount);
+  const remaining = Math.max(0, filtered.length - visible.length);
+
+  useEffect(() => {
+    setVisibleCount(PICKER_PAGE_SIZE);
+  }, [activeDirection, isOpen, query]);
 
   const close = () => {
     setQuery('');
@@ -98,7 +106,7 @@ export default function RecurringTransactionPicker({
         </div>
 
         <div className="space-y-2">
-          {filtered.slice(0, 100).map((item) => {
+          {visible.map((item) => {
             const amount = Number(item.amount);
             const income = amount > 0;
             const card = CARD_SOURCES.has(String(item.source || '').toLowerCase());
@@ -145,6 +153,17 @@ export default function RecurringTransactionPicker({
             <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm font-bold text-slate-400 dark:border-slate-700">
               {t('cycleV2.noPickerResults')}
             </div>
+          )}
+          {remaining > 0 && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((count) => count + PICKER_PAGE_SIZE)}
+              className="w-full rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+            >
+              {t('cycleV2.showMoreTransactions', {
+                count: Math.min(PICKER_PAGE_SIZE, remaining),
+              })}
+            </button>
           )}
         </div>
       </div>

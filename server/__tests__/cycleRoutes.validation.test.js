@@ -3,6 +3,7 @@ jest.mock('../utils/logger', () => ({ error: jest.fn() }));
 jest.mock('../services/cycleService', () => ({
   getFinancialCycles: jest.fn(),
   getCurrentFinancialCycle: jest.fn(),
+  getCycleControlData: jest.fn(),
   getYearReview: jest.fn(),
   getAvailableCycleYears: jest.fn(),
   saveCreditClassification: jest.fn(),
@@ -170,5 +171,43 @@ describe('financial-cycle route validation', () => {
       },
     );
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+  });
+
+  test('control data returns masked, compact classified rows', async () => {
+    cycleService.getCycleControlData.mockResolvedValue({
+      status: 'ok',
+      decisions: [{
+        transactionId: 42,
+        date: '2026-07-01',
+        processedDate: '2026-07-01',
+        description: 'Mortgage',
+        amount: -1000,
+        source: 'leumi',
+        accountNumber: '12345678',
+        classification: 'expense',
+        editable: true,
+      }],
+      loans: [],
+      totalOutstanding: 0,
+      recurring: [],
+      recurringGroups: [],
+      settings: { engineMode: 'automatic' },
+    });
+
+    const res = responseDouble();
+    await routeHandler('/control-data', 'get')(
+      { user: { id: 7 } },
+      res,
+      jest.fn(),
+    );
+
+    const data = res.json.mock.calls[0][0].data;
+    expect(cycleService.getCycleControlData).toHaveBeenCalledWith(7);
+    expect(data.decisions).toHaveLength(1);
+    expect(data.decisions[0]).toMatchObject({
+      transactionId: 42,
+      accountNumber: '5678',
+      classification: 'expense',
+    });
   });
 });

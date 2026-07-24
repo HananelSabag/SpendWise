@@ -76,6 +76,7 @@ const logger = winston.createLogger({
       datePattern: 'YYYY-MM-DD',
       level: 'error',
       maxFiles: '30d',
+      maxSize: '20m',
       zippedArchive: true
     }),
     // Combined log file (rotated daily)
@@ -83,6 +84,7 @@ const logger = winston.createLogger({
       filename: 'logs/combined-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
       maxFiles: '14d',
+      maxSize: '20m',
       zippedArchive: true,
       level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' // Less verbose in production
     })

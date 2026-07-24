@@ -57,8 +57,8 @@ export default function CycleRecurringPanelV2({ recurringGroups, onRecurringChan
   const [linkTarget, setLinkTarget] = useState(null);
   const groups = details.recurringGroups?.length ? details.recurringGroups : recurringGroups;
   const candidates = useMemo(() => selectRecurringCandidates(
-    (details.cycles || []).flatMap((cycle) => cycle.decisions || []),
-  ), [details.cycles]);
+    details.decisions || [],
+  ), [details.decisions]);
   const selected = candidates.find((item) => String(item.overrideTransactionId || item.transactionId) === transactionId);
 
   const createRule = () => {

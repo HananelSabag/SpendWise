@@ -27,7 +27,7 @@ export function useBankSyncMonitor() {
       const active = connections.some((connection) =>
         ['pending', 'running'].includes(connection.latest_job_status),
       );
-      return active ? 8_000 : 60_000;
+      return active ? 8_000 : 5 * 60_000;
     },
   });
 
@@ -54,4 +54,3 @@ export function useBankSyncMonitor() {
 }
 
 export default useBankSyncMonitor;
-

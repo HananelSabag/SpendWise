@@ -73,8 +73,11 @@ export const useTransactionActions = (context = 'transactions') => {
     creating: isCreating,
     updating: isUpdating,
     deleting: isDeleting,
-    refetch: refetchTransactions
-  } = useTransactions({ strategy: contextConfig.strategy });
+  } = useTransactions({
+    strategy: contextConfig.strategy,
+    // Global action modals need mutations, not a hidden 50-row list query.
+    enabled: false,
+  });
 
   // ✅ FIXED: Add proper logging utility
   const logAction = useCallback((message, data = null) => {
@@ -104,7 +107,7 @@ export const useTransactionActions = (context = 'transactions') => {
     await Promise.allSettled(invalidatePromises);
     // Note: invalidateQueries already triggers refetch for active observers — no need for
     // a separate refetchQueries call which would send duplicate API requests.
-  }, [queryClient, context]);
+  }, [queryClient]);
 
   /**
    * Create Transaction - Fixed parameter handling for forms
@@ -124,20 +127,13 @@ export const useTransactionActions = (context = 'transactions') => {
       // ✅ ENHANCED: Context-aware invalidation
       await invalidateRelevantQueries(contextConfig.invalidationPriority);
       
-      // ✅ NEW: Auto-refresh for high-priority contexts
-      if (contextConfig.autoRefresh && (context === 'quickActions' || context === 'dashboard')) {
-        setTimeout(() => {
-          refetchTransactions();
-        }, 500);
-      }
-
       logAction(`${transactionType} transaction created successfully`);
       return result;
     } catch (error) {
       logAction(`Failed to create transaction`, { error: error.message });
       throw error;
     }
-      }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, context, refetchTransactions, logAction]);
+      }, [baseCreateTransaction, invalidateRelevantQueries, contextConfig, logAction]);
 
   /**
    * Update Transaction - Context-aware immediate refresh
@@ -153,12 +149,6 @@ export const useTransactionActions = (context = 'transactions') => {
       
       await invalidateRelevantQueries('high');
       
-      if (contextConfig.autoRefresh) {
-        setTimeout(() => {
-          refetchTransactions();
-        }, 300);
-      }
-      
       logAction(`Transaction ${id} updated successfully`);
 
       return result;
@@ -166,7 +156,7 @@ export const useTransactionActions = (context = 'transactions') => {
       logAction(`Failed to update transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseUpdateTransaction, invalidateRelevantQueries, contextConfig, refetchTransactions, logAction]);
+  }, [baseUpdateTransaction, invalidateRelevantQueries, logAction]);
 
   /**
    * Delete Transaction (soft delete, one-time transactions only)
@@ -174,17 +164,13 @@ export const useTransactionActions = (context = 'transactions') => {
    * @param {number} id - Transaction ID to delete
    * @returns {Promise} - Deletion result
    */
-  const deleteTransaction = useCallback(async (id) => {
+  const deleteTransaction = useCallback(async (id, options = {}) => {
     try {
       logAction(`Deleting transaction ${id}`);
 
-      const result = await baseDeleteTransaction(id);
+      const result = await baseDeleteTransaction(id, options);
 
       await invalidateRelevantQueries('critical');
-
-      setTimeout(() => {
-        refetchTransactions();
-      }, 200);
 
       logAction(`Transaction ${id} deleted successfully`);
       return result;
@@ -192,7 +178,7 @@ export const useTransactionActions = (context = 'transactions') => {
       logAction(`Failed to delete transaction ${id}`, { error: error.message });
       throw error;
     }
-  }, [baseDeleteTransaction, invalidateRelevantQueries, refetchTransactions, logAction]);
+  }, [baseDeleteTransaction, invalidateRelevantQueries, logAction]);
 
   /**
    * 🔥 FRESH BULK DELETE - Simple and reliable implementation
@@ -210,11 +196,6 @@ export const useTransactionActions = (context = 'transactions') => {
         // ✅ FULL REFRESH LIKE SINGLE DELETE: Complete query invalidation
         await invalidateRelevantQueries('critical');
 
-        // ✅ DELAYED REFETCH FOR SMOOTH ANIMATION (just like single delete)
-        setTimeout(() => {
-          refetchTransactions();
-        }, 200);
-
         const deletedCount = result.data?.deleted_count || result.data?.summary?.successful || transactionIds.length;
         
         toastService.success('transactions.bulkDeleteSuccess', { 
@@ -231,7 +212,7 @@ export const useTransactionActions = (context = 'transactions') => {
       toastService.error('Fresh bulk delete failed. Please try again.');
       throw error;
     }
-  }, [transactionAPI, invalidateRelevantQueries, refetchTransactions, logAction]);
+  }, [invalidateRelevantQueries, logAction, toastService]);
 
   /**
    * ✅ SIMPLIFIED: Bulk Operations optimized for infinite loading
@@ -300,7 +281,7 @@ export const useTransactionActions = (context = 'transactions') => {
         });
       throw error;
     }
-  }, [baseDeleteTransaction, baseUpdateTransaction, invalidateRelevantQueries]);
+  }, [baseDeleteTransaction, baseUpdateTransaction, invalidateRelevantQueries, toastService]);
 
   /**
    * ✅ ENHANCED: Force refresh with infinite query support
@@ -337,7 +318,7 @@ export const useTransactionActions = (context = 'transactions') => {
               toastService.error('error.operationFailed');
       console.error('Force refresh error:', error);
     }
-  }, [queryClient]);
+  }, [queryClient, toastService]);
 
   return {
     // ✅ PRESERVED: CRUD Operations (enhanced with infinite loading support)

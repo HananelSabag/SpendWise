@@ -49,6 +49,7 @@ import { AppRoutes } from './components/routing/AppRoutes';
 
 // ✅ Use centralized QueryClient configuration
 import queryClient from './config/queryClient';
+import { shouldPersistQuery } from './config/queryPersistence';
 import { getSessionFlag } from './utils/sessionFlags';
 
 // 🟢 Persister for offline-survives-reload. localStorage is fine here:
@@ -226,11 +227,11 @@ function App() {
           // Bump this if the cache shape ever changes (forces a clean rehydrate).
           // v4 drops cycle snapshots persisted before bank-sync invalidation covered the
           // `cycles` query family. Rehydrating them could show a stale statement after sync.
-          buster: 'spendwise-cache-v4',
+          buster: 'spendwise-cache-v5',
           dehydrateOptions: {
-            // Don't persist mutations or in-flight queries. Only successful data.
-            shouldDehydrateQuery: (query) =>
-              query.state.status === 'success' && !query.isStale(),
+            // Full transaction/cycle histories make synchronous localStorage
+            // hydration slower than a clean mobile network fetch.
+            shouldDehydrateQuery: shouldPersistQuery,
           },
         },
       }

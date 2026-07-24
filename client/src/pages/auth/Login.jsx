@@ -21,6 +21,7 @@ import GuestSettings from '../../components/common/GuestSettings';
 import { api } from '../../api';
 import apiClient from '../../api/client';
 import cyclesApi from '../../api/cycles';
+import { currentCycleQueryKey } from '../../hooks/useCycles';
 import { queryClient } from '../../config/queryClient';
 import { takePendingGoogleCredential } from '../../services/simpleGoogleAuth';
 import { Button } from '../../components/ui';
@@ -43,9 +44,9 @@ function warmFinancialHome(userId) {
       staleTime: 5 * 60_000,
     }),
     queryClient.prefetchQuery({
-      queryKey: ['cycles', userId, 'current'],
+      queryKey: currentCycleQueryKey(userId),
       queryFn: () => cyclesApi.current(),
-      staleTime: 30_000,
+      staleTime: 2 * 60_000,
     }),
     queryClient.prefetchQuery({
       queryKey: ['bankSyncStats', userId],

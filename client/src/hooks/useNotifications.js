@@ -16,12 +16,11 @@ export function useNotifications() {
       if (!r.success) throw new Error('Failed to fetch notifications');
       return r.data; // { notifications, unreadCount }
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
+    staleTime: 60 * 1000,
+    refetchInterval: 2 * 60 * 1000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
   });
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: QUERY_KEY });
 
   const markAllReadMutation = useMutation({
     mutationFn: () => api.notifications.markAllRead(),

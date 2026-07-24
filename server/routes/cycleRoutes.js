@@ -20,6 +20,7 @@ const logger = require('../utils/logger');
 const {
   getFinancialCycles,
   getCurrentFinancialCycle,
+  getCycleControlData,
   getYearReview,
   getAvailableCycleYears,
   saveCreditClassification,
@@ -268,6 +269,30 @@ router.get('/', auth, async (req, res, next) => {
   } catch (error) {
     logger.error('GET /cycles failed', { userId: req.user && req.user.id, error: error.message });
     next(error);
+  }
+});
+
+router.get('/control-data', auth, async (req, res, next) => {
+  try {
+    const result = await getCycleControlData(req.user.id);
+    return res.json({
+      success: true,
+      data: {
+        status: result.status,
+        decisions: (result.decisions || []).map(slimDecision),
+        loans: (result.loans || []).map(slimLoan),
+        totalOutstanding: result.totalOutstanding || 0,
+        recurring: result.recurring || [],
+        recurringGroups: result.recurringGroups || [],
+        settings: result.settings,
+      },
+    });
+  } catch (error) {
+    logger.error('GET /cycles/control-data failed', {
+      userId: req.user && req.user.id,
+      error: error.message,
+    });
+    return next(error);
   }
 });
 

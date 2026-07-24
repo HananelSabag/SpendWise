@@ -164,6 +164,7 @@ export default {
     picker_expense: "Expenses",
     picker_income: "Income",
     transactionsFound: "{{count}} transactions found",
+    showMoreTransactions: "Show {{count}} more",
     unnamedTransaction: "Unnamed transaction",
     unknownSource: "Unknown source",
     noPickerResults: "No matching transactions",

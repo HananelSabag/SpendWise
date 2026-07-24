@@ -19,6 +19,9 @@ export const cyclesApi = {
   /** Just the running cycle — the dashboard hot path. */
   current: () => api.get('/cycles/current').then((r) => r.data),
 
+  /** Classified source rows for recurring/loan control, without rebuilding every history cycle. */
+  control: () => api.get('/cycles/control-data').then((r) => r.data),
+
   /** Years backed by either durable aggregates or currently available raw data. */
   years: () => api.get('/cycles/years').then((r) => r.data),
 
