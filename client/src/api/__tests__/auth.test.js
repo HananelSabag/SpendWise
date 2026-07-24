@@ -13,6 +13,63 @@ beforeEach(() => {
 });
 
 describe('auth API route contracts', () => {
+  it('posts a Google credential and returns the normalized session', async () => {
+    mockPost.mockResolvedValue({
+      data: {
+        data: {
+          user: { id: 1, email: 'person@example.com', role: 'user' },
+          accessToken: 'google-access',
+          tokens: { refreshToken: 'google-refresh' },
+        },
+      },
+    });
+
+    const result = await authAPI.processGoogleCredential('header.payload.signature');
+
+    expect(mockPost).toHaveBeenCalledWith('/users/auth/google', {
+      idToken: 'header.payload.signature',
+    });
+    expect(result).toMatchObject({
+      success: true,
+      token: 'google-access',
+      refreshToken: 'google-refresh',
+      user: { id: 1, email: 'person@example.com' },
+    });
+  });
+
+  it('preserves Google server error codes for the login screen', async () => {
+    mockPost.mockRejectedValue({
+      response: {
+        status: 403,
+        data: {
+          error: {
+            code: 'GOOGLE_AUTH_DISABLED',
+            message: 'Google sign-in is currently disabled.',
+          },
+        },
+      },
+    });
+
+    await expect(
+      authAPI.processGoogleCredential('header.payload.signature'),
+    ).resolves.toMatchObject({
+      success: false,
+      error: {
+        code: 'GOOGLE_AUTH_DISABLED',
+        status: 403,
+        message: 'Google sign-in is currently disabled.',
+      },
+    });
+  });
+
+  it('rejects malformed Google credentials before making a request', async () => {
+    await expect(authAPI.processGoogleCredential('not-a-jwt')).resolves.toMatchObject({
+      success: false,
+      error: { code: 'GOOGLE_LOGIN_ERROR' },
+    });
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+
   it('uses the server password-reset request route', async () => {
     mockPost.mockResolvedValue({ data: { message: 'sent' } });
     await expect(authAPI.requestPasswordReset('Person@Example.com')).resolves.toMatchObject({ success: true });

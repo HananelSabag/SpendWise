@@ -370,19 +370,9 @@ export const useAuthStore = create(
               // Stop refresh scheduling first so nothing refreshes mid-logout
               sessionEnded();
 
-              // Call logout API with a short timeout. Previously this used the
-              // default 45s axios timeout — which meant when the server was
-              // down (Render asleep / Supabase paused), clicking "logout"
-              // appeared to do nothing for 45s. The local cleanup below is
-              // what actually logs the user out; the server call is a courtesy.
-              try {
-                await Promise.race([
-                  authAPI.logout(),
-                  new Promise((_, rej) => setTimeout(() => rej(new Error('logout-timeout')), 3000))
-                ]);
-              } catch (error) {
-                // Server unreachable / timed out — proceed with local cleanup anyway.
-              }
+              // Start refresh-token revocation, but do not block the visible
+              // transition on network latency or a sleeping server.
+              void authAPI.logout();
 
               // ✅ Clear ALL caches before touching auth state
               clearAllCaches();

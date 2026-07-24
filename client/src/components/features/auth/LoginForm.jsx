@@ -48,6 +48,13 @@ const LoginForm = ({
     onSubmit?.({ ...formData, rememberMe });
   }, [formData, rememberMe, validateForm, onSubmit, addNotification, t]);
 
+  const handleGoogleError = useCallback((err) => {
+    addNotification({
+      type: 'error',
+      message: err?.message || t('googleSignInFailed'),
+    });
+  }, [addNotification, t]);
+
   // ── shared field styles ────────────────────────────────────────────────────
   const fieldBase = cn(
     'block w-full h-12 rounded-xl border bg-white dark:bg-gray-700/60',
@@ -191,8 +198,8 @@ const LoginForm = ({
           >
             <SimpleGoogleButton
               onSuccess={onGoogleLogin}
-              onError={(err) => addNotification({ type: 'error', message: err.message || t('googleSignInFailed') })}
-              disabled={isSubmitting}
+              onError={handleGoogleError}
+              disabled={isSubmitting || isGoogleLoading}
             />
           </motion.div>
         )}

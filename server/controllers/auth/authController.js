@@ -480,7 +480,13 @@ const authController = {
           };
         }
 
-        const updateData = { email_verified: true };
+        const updateData = {};
+
+        // Avoid a database UPDATE on every login for users Google has already
+        // verified. Persist only when repairing an older linked account.
+        if (!user.email_verified) {
+          updateData.email_verified = true;
+        }
 
         // Link Google account if not already linked
         if (!user.google_id) {

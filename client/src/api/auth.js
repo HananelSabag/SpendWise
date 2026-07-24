@@ -6,7 +6,6 @@
  */
 
 import { api } from "./client.js";
-import { jwtDecode } from "jwt-decode";
 import { normalizeUserData } from "../utils/userNormalizer";
 import { simpleGoogleAuth } from "../services/simpleGoogleAuth.js";
 import { getRefreshToken, setTokens, clearTokens } from "../auth/tokenStorage.js";
@@ -271,73 +270,60 @@ export const authAPI = {
   },
 
   async processGoogleCredential(credential) {
-    // ✅ Validate credential
-    if (!credential || typeof credential !== "string") {
-      throw new Error("Invalid Google credential received");
-    }
-
-    // ✅ Check JWT format
-    const parts = credential.split(".");
-    if (parts.length !== 3) {
-      throw new Error("Invalid token format - expected JWT ID token");
-    }
-
-    // ✅ Extract user info
-    let userInfo = null;
-
     try {
-      userInfo = jwtDecode(credential);
-    } catch (decodeError) {
-      throw new Error("Failed to decode Google ID token");
-    }
+      // Validate only the envelope here. Signature, audience, expiry and
+      // claims are verified by google-auth-library on the server.
+      if (!credential || typeof credential !== "string") {
+        throw new Error("Invalid Google credential received");
+      }
 
-    if (!userInfo) throw new Error("Invalid Google credential");
+      if (credential.split(".").length !== 3) {
+        throw new Error("Invalid token format - expected JWT ID token");
+      }
 
-    // ✅ Send to backend
-    const payload = {
-      idToken: credential,
-    };
-
-    const response = await api.client.post("/users/auth/google", payload);
-
-    // ✅ Extract response data (server returns data.user and data.accessToken)
-    let user, token;
-    const d = response?.data || {};
-    if (d?.data?.user && (d?.data?.accessToken || d?.data?.token)) {
-      user = d.data.user;
-      token = d.data.accessToken || d.data.token;
-    } else if (d?.user && (d?.accessToken || d?.token)) {
-      user = d.user;
-      token = d.accessToken || d.token;
-    }
-
-    if (!user || !token) {
-      console.error("❌ Server response debug:", {
-        fullResponse: response,
-        responseData: response.data,
-        userFound: !!user,
-        tokenFound: !!token,
-        responseStatus: response?.status,
-        responseHeaders: response?.headers,
+      const response = await api.client.post("/users/auth/google", {
+        idToken: credential,
       });
-      throw new Error("Invalid response format from server");
+
+      // Extract response data (server returns data.user and data.accessToken).
+      let user, token;
+      const d = response?.data || {};
+      if (d?.data?.user && (d?.data?.accessToken || d?.data?.token)) {
+        user = d.data.user;
+        token = d.data.accessToken || d.data.token;
+      } else if (d?.user && (d?.accessToken || d?.token)) {
+        user = d.user;
+        token = d.accessToken || d.token;
+      }
+
+      if (!user || !token) {
+        throw new Error("Invalid response format from server");
+      }
+
+      const normalizedUser = normalizeUserData(user);
+
+      const rt =
+        response.data.data?.tokens?.refreshToken ||
+        response.data.refreshToken ||
+        "";
+      setTokens({ access: token, refresh: rt || undefined });
+
+      return {
+        success: true,
+        user: normalizedUser,
+        token,
+        refreshToken: rt,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: normalizeAuthError(
+          error,
+          "Google sign-in failed",
+          "GOOGLE_LOGIN_ERROR",
+        ),
+      };
     }
-
-    // ✅ Normalize and store
-    const normalizedUser = normalizeUserData(user);
-
-    const rt =
-      response.data.data?.tokens?.refreshToken ||
-      response.data.refreshToken ||
-      "";
-    setTokens({ access: token, refresh: rt || undefined });
-
-    return {
-      success: true,
-      user: normalizedUser,
-      token,
-      refreshToken: rt,
-    };
   },
 
   // ✅ Register

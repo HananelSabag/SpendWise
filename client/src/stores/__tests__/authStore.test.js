@@ -16,7 +16,8 @@ vi.mock('../../api', () => ({
     updateProfile: vi.fn(),
     refreshToken: vi.fn(),
     verifyEmail: vi.fn(),
-    googleLogin: vi.fn()
+    googleLogin: vi.fn(),
+    processGoogleCredential: vi.fn()
   }
 }));
 
@@ -277,5 +278,44 @@ describe('authStore — login action', () => {
     expect(result.success).toBe(false);
     expect(getStore().error).toBeTruthy();
     expect(getStore().isAuthenticated).toBe(false);
+  });
+});
+
+describe('authStore — Google login and logout transitions', () => {
+  it('keeps the server Google error code available to the page', async () => {
+    const { authAPI } = await import('../../api');
+    authAPI.processGoogleCredential.mockResolvedValueOnce({
+      success: false,
+      error: {
+        code: 'GOOGLE_AUTH_DISABLED',
+        message: 'Google sign-in is currently disabled.',
+        status: 403,
+      },
+    });
+
+    const result = await getStore().actions.googleLogin('header.payload.signature');
+
+    expect(result).toMatchObject({
+      success: false,
+      error: { code: 'GOOGLE_AUTH_DISABLED', status: 403 },
+    });
+    expect(getStore().error.code).toBe('GOOGLE_AUTH_DISABLED');
+  });
+
+  it('logs out locally without waiting for server revocation', async () => {
+    const { authAPI } = await import('../../api');
+    let finishRevocation;
+    authAPI.logout.mockReturnValueOnce(new Promise((resolve) => {
+      finishRevocation = resolve;
+    }));
+    window.spendWiseNavigate = vi.fn();
+    getStore().actions.setUser({ id: 1, email: 'a@b.com', role: 'user' });
+
+    await expect(getStore().actions.logout(false)).resolves.toEqual({ success: true });
+
+    expect(getStore().isAuthenticated).toBe(false);
+    expect(window.spendWiseNavigate).toHaveBeenCalledWith('/login', { replace: true });
+    finishRevocation({ success: true });
+    delete window.spendWiseNavigate;
   });
 });

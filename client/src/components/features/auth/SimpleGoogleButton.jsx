@@ -21,42 +21,72 @@ const SimpleGoogleButton = ({ onSuccess, onError, disabled = false }) => {
   const buttonRef   = useRef(null);
   const retryRef    = useRef(0);
   const initOnceRef = useRef(false);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
   const [isReady,   setIsReady]   = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError,  setHasError]  = useState(false);
+
+  // Keep the GSI iframe stable while React callbacks and form state change.
+  // Rebuilding it during a Google flow can drop the credential callback.
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
 
   useEffect(() => {
     if (disabled || hasError || initOnceRef.current) return;
     initOnceRef.current = true;
     retryRef.current = 0;
+    let cancelled = false;
+    let retryTimer;
 
     const init = async () => {
       if (!buttonRef.current) {
-        if (retryRef.current++ < 10) { setTimeout(init, 300); return; }
-        setHasError(true); onError?.(new Error('Container not available')); return;
+        if (retryRef.current++ < 10) {
+          retryTimer = setTimeout(init, 50);
+          return;
+        }
+        if (!cancelled) {
+          const error = new Error('Container not available');
+          setHasError(true);
+          onErrorRef.current?.(error);
+        }
+        return;
       }
       try {
         setIsLoading(true);
         const ok = await simpleGoogleAuth.renderButton(
           buttonRef.current,
-          (credential) => onSuccess?.(credential),
-          (err)        => { setHasError(true); onError?.(err); },
+          (credential) => onSuccessRef.current?.(credential),
+          (err) => {
+            if (!cancelled) setHasError(true);
+            onErrorRef.current?.(err);
+          },
         );
-        if (ok) setIsReady(true); else setHasError(true);
+        if (!cancelled) {
+          if (ok) setIsReady(true);
+          else setHasError(true);
+        }
       } catch (err) {
-        setHasError(true); onError?.(err);
+        if (!cancelled) {
+          setHasError(true);
+          onErrorRef.current?.(err);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    const t = setTimeout(init, 300);
+    // The ref exists after commit; start loading GSI without a fixed delay.
+    void init();
     return () => {
-      clearTimeout(t);
+      cancelled = true;
+      clearTimeout(retryTimer);
       try { if (buttonRef.current) buttonRef.current.innerHTML = ''; } catch (_) {}
       initOnceRef.current = false;
     };
-  }, [disabled, hasError, onSuccess, onError]);
+  }, [disabled, hasError]);
 
   return (
     <div className="relative w-full">
