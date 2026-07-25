@@ -10,7 +10,7 @@ import { RefreshCw } from 'lucide-react';
 
 import { useTranslation, useAuth, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
-import { useCurrentCycle } from '../hooks/useCycles';
+import { useCurrentCycle, useCycleControls } from '../hooks/useCycles';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { cn } from '../utils/helpers';
 import { PageSkeleton } from '../components/ui';
@@ -18,6 +18,7 @@ import { PageSkeleton } from '../components/ui';
 import BrandMark from '../components/common/BrandMark';
 import ModernBalancePanel from '../components/features/dashboard/ModernBalancePanel';
 import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
+import OverdraftRunwayCard from '../components/features/dashboard/OverdraftRunwayCard';
 import ModernRecentTransactionsWidget from '../components/features/dashboard/ModernRecentTransactionsWidget';
 import GreetingHeader from '../components/features/dashboard/GreetingHeader';
 import DashboardError from '../components/features/dashboard/DashboardError';
@@ -50,6 +51,7 @@ export default function ModernDashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const currentCycle = useCurrentCycle();
+  const cycleControls = useCycleControls();
 
   const {
     data: dashboardData,
@@ -124,6 +126,15 @@ export default function ModernDashboard() {
             t={t}
             language={currentLanguage}
             onOpen={() => navigate('/financial-cycle')}
+          />
+
+          <OverdraftRunwayCard
+            cycle={currentCycle.cycle}
+            settings={currentCycle.settings}
+            formatCurrency={formatCurrency}
+            t={t}
+            onSaveLimit={(overdraftLimit) => cycleControls.updateCycleSettingsAsync({ overdraftLimit })}
+            isSaving={cycleControls.isUpdatingSettings}
           />
 
           <ModernRecentTransactionsWidget

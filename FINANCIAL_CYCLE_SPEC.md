@@ -339,6 +339,14 @@ link**, and everywhere the user can **see the provenance and take control**. Nev
   received so far, spent so far, future income, future expenses and projected checking balance.
   Detailed card/bank provenance stays behind the full-breakdown action instead of expanding the
   dashboard card.
+- **Checking-limit runway**: the user enters the aggregate overdraft facility for the checking
+  balance. The dashboard always shows both `afterKnown` and `forecast` scenarios and marks the
+  active one from `useEstimates`. For either scenario:
+  `remainingUntilBreach = projectedBalance + overdraftLimit` and
+  `exceededBy = max(0, -remainingUntilBreach)`. A projected balance of `-6,000` against a `5,000`
+  facility therefore warns about a `1,000` breach. The value is user-entered presentation data,
+  not a live facility scraped from the bank, and saving it must invalidate only the short-lived
+  cycle response cache rather than rebuilding durable cycle aggregates.
 - Demote the **calendar** view to Insights (retro/archive), not primary.
 
 ### Financial-cycle detail page = the control/tracking center
@@ -404,5 +412,6 @@ S = ✅ locked in logic (§1–7) · ◐ = to build · ○ = half-built, needs s
 | 16 | Fallback: if we can't auto-determine a cycle, **ask the user to link** | §5 links as fallback; §10 "link a charge" | ◐ |
 | 17 | Backfill/partial: only whole cycles, clean/set-aside the rest | §11 | ◐ |
 | 18 | Present the logic to the user + give **control** over what they need | §10 | ◐ |
+| 19 | Warn before the projected checking balance breaches the user's overdraft facility, with separate known/forecast scenarios | §6, §10 dashboard | ✅ |
 | 19 | Merchant-watch "condition" tracking is invisible — no label on txn, buried | §10 controls; server done, client `MerchantWatchControl`/`WatchedMerchants` exist but no list badge → surface | ○ |
 | 20 | Many half-built features not finished → find & surface/finish | audit pass alongside build | ○ |

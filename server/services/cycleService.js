@@ -273,7 +273,7 @@ async function loadTransactionOverrides(userId) {
 async function loadCycleSettings(userId) {
   try {
     const { rows } = await db.query(
-      `SELECT engine_mode, manual_anchor_day, use_estimates, updated_at
+      `SELECT engine_mode, manual_anchor_day, use_estimates, overdraft_limit, updated_at
          FROM financial_cycle_settings
         WHERE user_id = $1`,
       [userId],
@@ -283,12 +283,13 @@ async function loadCycleSettings(userId) {
       engineMode: row?.engine_mode || 'automatic',
       manualAnchorDay: row?.manual_anchor_day == null ? null : Number(row.manual_anchor_day),
       useEstimates: row?.use_estimates !== false,
+      overdraftLimit: row?.overdraft_limit == null ? null : Number(row.overdraft_limit),
       updatedAt: row?.updated_at || null,
     };
   } catch (error) {
     if (error.code === '42703') {
       const { rows } = await db.query(
-        `SELECT engine_mode, manual_anchor_day, updated_at
+        `SELECT engine_mode, manual_anchor_day, use_estimates, updated_at
            FROM financial_cycle_settings
           WHERE user_id = $1`,
         [userId],
@@ -297,11 +298,18 @@ async function loadCycleSettings(userId) {
       return {
         engineMode: row?.engine_mode || 'automatic',
         manualAnchorDay: row?.manual_anchor_day == null ? null : Number(row.manual_anchor_day),
-        useEstimates: true,
+        useEstimates: row?.use_estimates !== false,
+        overdraftLimit: null,
         updatedAt: row?.updated_at || null,
       };
     }
-    if (error.code === '42P01') return { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true, updatedAt: null };
+    if (error.code === '42P01') return {
+      engineMode: 'automatic',
+      manualAnchorDay: null,
+      useEstimates: true,
+      overdraftLimit: null,
+      updatedAt: null,
+    };
     throw error;
   }
 }
@@ -409,29 +417,47 @@ async function saveCardSetting(userId, source, accountRef, {
   };
 }
 
-async function saveCycleSettings(userId, { engineMode, manualAnchorDay = null, useEstimates }) {
+async function saveCycleSettings(userId, {
+  engineMode,
+  manualAnchorDay = null,
+  useEstimates,
+  overdraftLimit,
+  rebuildAggregates = true,
+}) {
   const anchorDay = engineMode === 'manual' ? Number(manualAnchorDay) : null;
   const { rows } = await db.query(
     `WITH saved AS (
-       INSERT INTO financial_cycle_settings (user_id, engine_mode, manual_anchor_day, use_estimates)
-       VALUES ($1, $2, $3, COALESCE($4, true))
+       INSERT INTO financial_cycle_settings (
+         user_id, engine_mode, manual_anchor_day, use_estimates, overdraft_limit
+       )
+       VALUES ($1, $2, $3, COALESCE($4, true), $5)
        ON CONFLICT (user_id) DO UPDATE SET
          engine_mode = EXCLUDED.engine_mode,
          manual_anchor_day = EXCLUDED.manual_anchor_day,
          use_estimates = COALESCE($4, financial_cycle_settings.use_estimates),
+         overdraft_limit = COALESCE($5, financial_cycle_settings.overdraft_limit),
          updated_at = NOW()
-       RETURNING engine_mode, manual_anchor_day, use_estimates, updated_at
-     ), cleared AS (
-       DELETE FROM financial_cycle_aggregates WHERE user_id = $1
+       RETURNING engine_mode, manual_anchor_day, use_estimates, overdraft_limit, updated_at
      )
      SELECT * FROM saved`,
-    [userId, engineMode, anchorDay, useEstimates == null ? null : useEstimates !== false],
+    [
+      userId,
+      engineMode,
+      anchorDay,
+      useEstimates == null ? null : useEstimates !== false,
+      overdraftLimit == null ? null : Number(overdraftLimit),
+    ],
   );
-  await invalidateCycleDerivedData(userId);
+  if (rebuildAggregates) {
+    await invalidateCycleDerivedData(userId);
+  } else {
+    invalidateCycleCache(userId);
+  }
   return {
     engineMode: rows[0].engine_mode,
     manualAnchorDay: rows[0].manual_anchor_day == null ? null : Number(rows[0].manual_anchor_day),
     useEstimates: rows[0].use_estimates !== false,
+    overdraftLimit: rows[0].overdraft_limit == null ? null : Number(rows[0].overdraft_limit),
     updatedAt: rows[0].updated_at,
   };
 }

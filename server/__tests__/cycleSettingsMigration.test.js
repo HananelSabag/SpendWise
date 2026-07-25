@@ -30,3 +30,16 @@ describe('financial cycle recurring override migration', () => {
     expect(sql).not.toMatch(/DELETE FROM transactions/i);
   });
 });
+
+describe('financial cycle overdraft-limit migration', () => {
+  const sql = fs.readFileSync(
+    path.join(__dirname, '..', 'DB Migrations', '37_financial_cycle_overdraft_limit.sql'),
+    'utf8',
+  );
+
+  test('adds a non-negative planning threshold without touching financial data', () => {
+    expect(sql).toMatch(/ADD COLUMN IF NOT EXISTS overdraft_limit/i);
+    expect(sql).toMatch(/overdraft_limit >= 0/i);
+    expect(sql).not.toMatch(/UPDATE\s+transactions|DELETE\s+FROM\s+transactions/i);
+  });
+});

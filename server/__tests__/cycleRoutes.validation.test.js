@@ -9,6 +9,7 @@ jest.mock('../services/cycleService', () => ({
   saveCreditClassification: jest.fn(),
   saveTransactionOverride: jest.fn(),
   deleteTransactionOverride: jest.fn(),
+  loadCycleSettings: jest.fn(),
   saveCycleSettings: jest.fn(),
 }));
 
@@ -31,6 +32,54 @@ function responseDouble() {
 
 describe('financial-cycle route validation', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  test.each([-1, null, '', 'not-a-number', 10_000_001])(
+    'rejects an invalid overdraft limit: %p',
+    async (overdraftLimit) => {
+      const res = responseDouble();
+      await routeHandler('/settings', 'put')(
+        { body: { overdraftLimit }, user: { id: 7 } },
+        res,
+        jest.fn(),
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(cycleService.saveCycleSettings).not.toHaveBeenCalled();
+    },
+  );
+
+  test('persists a rounded overdraft limit without changing cycle mode', async () => {
+    cycleService.loadCycleSettings.mockResolvedValue({
+      engineMode: 'automatic',
+      manualAnchorDay: null,
+      useEstimates: true,
+    });
+    cycleService.saveCycleSettings.mockResolvedValue({
+      engineMode: 'automatic',
+      manualAnchorDay: null,
+      useEstimates: true,
+      overdraftLimit: 5000.13,
+    });
+    const res = responseDouble();
+
+    await routeHandler('/settings', 'put')(
+      { body: { overdraftLimit: 5000.129 }, user: { id: 7 } },
+      res,
+      jest.fn(),
+    );
+
+    expect(cycleService.saveCycleSettings).toHaveBeenCalledWith(7, {
+      engineMode: 'automatic',
+      manualAnchorDay: null,
+      useEstimates: undefined,
+      overdraftLimit: 5000.13,
+      rebuildAggregates: false,
+    });
+    expect(res.json).toHaveBeenCalledWith({
+      success: true,
+      data: expect.objectContaining({ overdraftLimit: 5000.13 }),
+    });
+  });
 
   test.each([
     ['put', '/transactions/:transactionId/classification', '12junk', { classification: 'exclude' }],

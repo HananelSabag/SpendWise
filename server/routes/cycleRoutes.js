@@ -300,11 +300,27 @@ router.get('/control-data', auth, async (req, res, next) => {
 router.put('/settings', auth, async (req, res, next) => {
   const requestedMode = req.body?.engineMode;
   const useEstimates = req.body?.useEstimates;
+  const requestedOverdraftLimit = req.body?.overdraftLimit;
   if (requestedMode !== undefined && !['automatic', 'manual'].includes(requestedMode)) {
     return res.status(400).json({ success: false, error: 'engineMode must be automatic or manual' });
   }
   if (useEstimates !== undefined && typeof useEstimates !== 'boolean') {
     return res.status(400).json({ success: false, error: 'useEstimates must be a boolean' });
+  }
+  if (
+    requestedOverdraftLimit !== undefined
+    && (
+      requestedOverdraftLimit === null
+      || requestedOverdraftLimit === ''
+      || !Number.isFinite(Number(requestedOverdraftLimit))
+      || Number(requestedOverdraftLimit) < 0
+      || Number(requestedOverdraftLimit) > 10_000_000
+    )
+  ) {
+    return res.status(400).json({
+      success: false,
+      error: 'overdraftLimit must be a number from 0 to 10000000',
+    });
   }
   try {
     const current = await loadCycleSettings(req.user.id);
@@ -316,7 +332,17 @@ router.put('/settings', auth, async (req, res, next) => {
     if (engineMode === 'manual' && (!Number.isInteger(manualAnchorDay) || manualAnchorDay < 1 || manualAnchorDay > 31)) {
       return res.status(400).json({ success: false, error: 'manualAnchorDay must be an integer from 1 to 31' });
     }
-    const settings = await saveCycleSettings(req.user.id, { engineMode, manualAnchorDay, useEstimates });
+    const overdraftLimit = requestedOverdraftLimit === undefined
+      ? undefined
+      : Math.round(Number(requestedOverdraftLimit) * 100) / 100;
+    const rebuildAggregates = requestedMode !== undefined || requestedAnchor !== undefined;
+    const settings = await saveCycleSettings(req.user.id, {
+      engineMode,
+      manualAnchorDay,
+      useEstimates,
+      overdraftLimit,
+      rebuildAggregates,
+    });
     return res.json({ success: true, data: settings });
   } catch (error) {
     logger.error('PUT /cycles/settings failed', {

@@ -20,6 +20,7 @@ const {
   getCurrentFinancialCycle,
   invalidateCycleCache,
   invalidateCycleDerivedData,
+  saveCycleSettings,
 } = require('../services/cycleService');
 
 function deferred() {
@@ -134,5 +135,28 @@ describe('financial-cycle cache concurrency', () => {
       'Could not invalidate persisted financial-cycle aggregates',
       expect.objectContaining({ userId: 7, error: 'database unavailable' }),
     );
+  });
+
+  test('saving a presentation-only overdraft limit does not rebuild cycle aggregates', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        engine_mode: 'automatic',
+        manual_anchor_day: null,
+        use_estimates: true,
+        overdraft_limit: '5000.00',
+        updated_at: '2026-07-25T00:00:00Z',
+      }],
+    });
+
+    await expect(saveCycleSettings(7, {
+      engineMode: 'automatic',
+      manualAnchorDay: null,
+      overdraftLimit: 5000,
+      rebuildAggregates: false,
+    })).resolves.toMatchObject({ overdraftLimit: 5000 });
+
+    expect(db.query).toHaveBeenCalledTimes(1);
+    expect(db.query.mock.calls[0][0]).toContain('overdraft_limit');
+    expect(db.query.mock.calls.some(([sql]) => sql.includes('DELETE FROM financial_cycle_aggregates'))).toBe(false);
   });
 });

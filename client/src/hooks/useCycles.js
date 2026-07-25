@@ -13,7 +13,12 @@ export const currentCycleQueryKey = (userId) => [
   'current',
   CYCLE_QUERY_VERSION,
 ];
-const DEFAULT_SETTINGS = { engineMode: 'automatic', manualAnchorDay: null, useEstimates: true };
+const DEFAULT_SETTINGS = {
+  engineMode: 'automatic',
+  manualAnchorDay: null,
+  useEstimates: true,
+  overdraftLimit: null,
+};
 const EMPTY = {
   status: 'loading', cycles: [], decisions: [], loans: [], totalOutstanding: 0, recurring: [],
   recurringGroups: [], salaryTracking: null, salaryChange: null, signatures: [],

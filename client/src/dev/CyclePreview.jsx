@@ -12,7 +12,7 @@
  * The fixture is synthetic and contains no credentials or private user data.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -20,6 +20,7 @@ import '../index.css';
 import enDash from '../translations/en/dashboard';
 import heDash from '../translations/he/dashboard';
 import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
+import OverdraftRunwayCard from '../components/features/dashboard/OverdraftRunwayCard';
 import CyclePositionPanelV2 from '../components/features/financialCycleV2/CyclePositionPanelV2';
 import CycleCardsPanelV2 from '../components/features/financialCycleV2/CycleCardsPanelV2';
 import CycleKnownExpensesPanelV2 from '../components/features/financialCycleV2/CycleKnownExpensesPanelV2';
@@ -129,8 +130,17 @@ function Panel({ title, children, width = 'max-w-md' }) {
 function Preview() {
   const [lang, setLang] = useState('he');
   const [dark, setDark] = useState(false);
-  const [cycleSettings, setCycleSettings] = useState({ engineMode: 'automatic', manualAnchorDay: null, useEstimates: true });
+  const [cycleSettings, setCycleSettings] = useState({
+    engineMode: 'automatic',
+    manualAnchorDay: null,
+    useEstimates: true,
+    overdraftLimit: 5000,
+  });
   const t = makeT(lang === 'he' ? heDash : enDash);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', dark);
+  }, [dark]);
 
   return (
     <div className={dark ? 'dark' : ''}>
@@ -142,7 +152,16 @@ function Preview() {
           </div>
           <div className="flex flex-wrap gap-6">
             <Panel title="V2 — NEW DASHBOARD" width="max-w-2xl">
-              <FinancialCycleSnapshotV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} language={lang} onOpen={() => {}} />
+              <div className="space-y-4">
+                <FinancialCycleSnapshotV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} language={lang} onOpen={() => {}} />
+                <OverdraftRunwayCard
+                  cycle={CYCLE}
+                  settings={cycleSettings}
+                  formatCurrency={formatCurrency}
+                  t={t}
+                  onSaveLimit={async (overdraftLimit) => setCycleSettings((current) => ({ ...current, overdraftLimit }))}
+                />
+              </div>
             </Panel>
             <Panel title="V2 — NEW CYCLE OVERVIEW" width="max-w-6xl">
               <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
