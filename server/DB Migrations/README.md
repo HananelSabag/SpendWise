@@ -19,4 +19,4 @@ Migrations must not delete user financial data. Data cleanup scripts belong in `
 
 ## Security note
 
-Do not enable RLS on an existing table without first defining the intended access policies. Enabling RLS alone can block all client access; policy changes require a dedicated reviewed migration.
+Do not enable RLS on an existing table without first defining the intended access model. Enabling RLS alone can block all client access; policy changes require a dedicated reviewed migration. For tables intentionally owned only by the authenticated Express API, enabling RLS with no anon/authenticated policy is the deny-by-default model; document that choice in the migration and verify that every server query remains scoped by `user_id`.
