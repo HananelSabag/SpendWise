@@ -92,6 +92,29 @@ export const STATUS_STYLE = {
   },
 };
 
+// Derived sync health (server: services/bankConnectionHealth.js). This is what
+// the user actually needs to see — `status` alone stays 'active' forever while
+// nothing syncs, because an unclaimed job expires without touching it.
+const AMBER = {
+  cls: 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  dot: 'bg-amber-500',
+};
+const BLUE = {
+  cls: 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  dot: 'bg-blue-500',
+};
+export const HEALTH_STYLE = {
+  ok: STATUS_STYLE.active,
+  paused: STATUS_STYLE.paused,
+  error: STATUS_STYLE.error,
+  needs_credentials: { ...STATUS_STYLE.error, key: 'statusNeedsCredentials' },
+  syncing: { ...BLUE, key: 'statusSyncing' },
+  queued: { ...BLUE, key: 'statusQueued' },
+  waiting_for_agent: { ...AMBER, key: 'statusWaiting' },
+  agent_offline: { ...AMBER, key: 'statusAgentOffline' },
+  stalled: { ...AMBER, key: 'statusStalled' },
+};
+
 // Next automatic sync — mirrors the server's enqueue targets (07:00 / 18:00
 // Asia/Jerusalem, see services/syncSchedulingService.js). Client-side hint
 // only; the server is the source of truth. Returns { time: 'HH:00', tomorrow }.

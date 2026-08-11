@@ -6,7 +6,7 @@
 import React from 'react';
 import { Landmark, CreditCard } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
-import { bankBrand, institutionKind, STATUS_STYLE } from './bankSyncMeta';
+import { bankBrand, institutionKind, STATUS_STYLE, HEALTH_STYLE } from './bankSyncMeta';
 
 // Gradient icon square in the app's house style (see ModernTransactionCard).
 // A credit card company gets the card glyph — it's a categorically different
@@ -28,8 +28,10 @@ export function BankIcon({ source, size = 'md' }) {
 }
 
 // Connection status chip — dot + label, in the app's bordered-badge style.
-export function StatusBadge({ status, t }) {
-  const s = STATUS_STYLE[status] || STATUS_STYLE.paused;
+// `health` (derived, time-aware) wins over the raw `status` column whenever
+// it is available: "active" is not an answer to "is my money up to date?".
+export function StatusBadge({ status, health, t }) {
+  const s = (health && HEALTH_STYLE[health]) || STATUS_STYLE[status] || STATUS_STYLE.paused;
   return (
     <span className={cn(
       'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium border',

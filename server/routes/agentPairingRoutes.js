@@ -22,6 +22,7 @@ const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 const { auth } = require('../middleware/auth');
+const { DEVICE_STALE_HOURS } = require('../services/agentClaimScope');
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I/l
 const CODE_LENGTH = 8;
@@ -208,15 +209,20 @@ router.get('/device-profile', browserLimiter, async (req, res) => {
 });
 
 // ── GET /status ──────────────────────────────────────────────────────────
+// `last_seen_at` is returned deliberately: "paired" alone told the user
+// nothing about whether that machine is still running, and a paired device
+// that stops reporting is the one failure that stops every sync silently.
 router.get('/status', browserLimiter, auth, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT label, created_at AS paired_at FROM agent_devices
+      `SELECT id, label, created_at AS paired_at, last_seen_at,
+              (last_seen_at IS NULL OR last_seen_at < NOW() - ($2 || ' hours')::interval) AS stale
+       FROM agent_devices
        WHERE user_id = $1 AND status = 'active'`,
-      [req.user.id],
+      [req.user.id, String(DEVICE_STALE_HOURS)],
     );
     if (result.rows.length === 0) return res.json({ ok: true, paired: false });
-    res.json({ ok: true, paired: true, ...result.rows[0] });
+    res.json({ ok: true, paired: true, stale_after_hours: DEVICE_STALE_HOURS, ...result.rows[0] });
   } catch (err) {
     logger.error('agent-pairing: status failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to fetch pairing status' });

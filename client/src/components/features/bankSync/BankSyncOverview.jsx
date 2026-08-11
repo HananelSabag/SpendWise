@@ -37,15 +37,34 @@ export default function BankSyncOverview({
     () => buildBankSyncOverview(connections, sources),
     [connections, sources],
   );
+  // "Stalled" is its own headline state on purpose: a queued job nobody picks
+  // up used to render as a permanent "syncing now" spinner, so an account that
+  // had not received a single transaction in weeks still looked healthy.
+  const stalled = overview.stalledCount > 0;
+  const blocked = overview.issueCount > 0;
   const allHealthy = overview.connectionCount > 0
-    && overview.issueCount === 0
+    && !blocked && !stalled
     && overview.workingCount === 0;
-  const HealthIcon = overview.issueCount > 0 ? AlertTriangle : overview.workingCount > 0 ? RefreshCw : CheckCircle2;
-  const healthTitle = overview.issueCount > 0
+  const HealthIcon = blocked || stalled
+    ? AlertTriangle
+    : overview.workingCount > 0 ? RefreshCw : CheckCircle2;
+  const healthTitle = blocked
     ? t('overview.needsAttention')
-    : overview.workingCount > 0
-      ? t('overview.syncingNow')
-      : t('overview.allCurrent');
+    : stalled
+      ? t('overview.notSyncing')
+      : overview.workingCount > 0
+        ? t('overview.syncingNow')
+        : t('overview.allCurrent');
+  const healthBody = blocked
+    ? t('overview.statusBody')
+    : stalled
+      ? t('overview.stalledBody', { count: overview.stalledCount })
+      : allHealthy
+        ? t('overview.healthyBody')
+        : t('overview.statusBody');
+  const staleDays = overview.lastSync
+    ? Math.floor((Date.now() - new Date(overview.lastSync).getTime()) / 86_400_000)
+    : null;
 
   if (!connections.length) {
     return (
@@ -66,23 +85,27 @@ export default function BankSyncOverview({
           <div className="flex min-w-0 items-start gap-3">
             <span className={cn(
               'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-              overview.issueCount > 0
+              blocked
                 ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-300'
-                : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300',
+                : stalled
+                  ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300'
+                  : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300',
             )}>
               <HealthIcon className={cn(
                 'h-5 w-5',
-                overview.issueCount === 0 && overview.workingCount > 0 && 'animate-spin',
+                !blocked && !stalled && overview.workingCount > 0 && 'animate-spin',
               )} />
             </span>
             <div className="min-w-0">
               <p className="text-sm font-black text-gray-950 dark:text-white">{healthTitle}</p>
-              <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                {t(allHealthy ? 'overview.healthyBody' : 'overview.statusBody')}
-              </p>
+              <p className="mt-1 text-xs leading-relaxed text-gray-500">{healthBody}</p>
               {overview.lastSync && (
-                <p className="mt-1.5 text-[11px] text-gray-400">
+                <p className={cn(
+                  'mt-1.5 text-[11px]',
+                  stalled || blocked ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-gray-400',
+                )}>
                   {t('overview.lastSystemSync', { time: formatDateTime(overview.lastSync, currentLanguage) })}
+                  {staleDays > 1 && ` · ${t('overview.daysAgo', { count: staleDays })}`}
                 </p>
               )}
             </div>
@@ -102,9 +125,9 @@ export default function BankSyncOverview({
           />
           <Metric value={overview.newCount} label={t('overview.newImported')} tone="brand" />
           <Metric
-            value={overview.issueCount}
+            value={overview.issueCount + overview.stalledCount}
             label={t('overview.needAttention')}
-            tone={overview.issueCount ? 'warning' : 'default'}
+            tone={overview.issueCount + overview.stalledCount ? 'warning' : 'default'}
           />
         </div>
 
@@ -152,7 +175,7 @@ export default function BankSyncOverview({
                   <p className="truncate text-sm font-bold text-gray-950 dark:text-white">
                     {item.connection.institution_label || t(`bankNames.${item.connection.bank_source}`)}
                   </p>
-                  <StatusBadge status={item.connection.status} t={t} />
+                  <StatusBadge status={item.connection.status} health={item.health} t={t} />
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-gray-500">
                   {item.accountCount

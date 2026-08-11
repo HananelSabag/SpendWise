@@ -33,6 +33,18 @@ describe('normalizeAgentFailure', () => {
     expect(failure).toMatchObject({ code: 'AUTH_INVALID', terminal: true });
   });
 
+  test('an unopenable envelope becomes an actionable re-enter, not a mystery', () => {
+    // Real production text from the agent after the user paired a device while
+    // their connections were still sealed to the shared host's key. Left
+    // unclassified this only auto-paused the connection after three tries.
+    const failure = normalizeAgentFailure({
+      agentError: 'Decryption failed — wrong key or corrupted envelope',
+    });
+
+    expect(failure).toMatchObject({ code: 'CREDENTIALS_KEY_MISMATCH', terminal: true });
+    expect(failure.userMessage).toContain('Re-enter them');
+  });
+
   test('transient declines never disable a connection', () => {
     const failure = normalizeAgentFailure({
       agentError: 'cooldown',

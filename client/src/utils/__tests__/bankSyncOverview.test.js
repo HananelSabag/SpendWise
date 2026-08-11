@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildBankSyncOverview } from '../bankSyncOverview';
 
 describe('buildBankSyncOverview', () => {
+  const NOW = new Date('2026-07-12T10:00:00Z').getTime();
+
   it('summarizes connection health, import results, and enabled account scope', () => {
     const result = buildBankSyncOverview([
       {
@@ -23,7 +25,7 @@ describe('buildBankSyncOverview', () => {
     ], [
       { source: 'leumi', accounts: [{ enabled: true }] },
       { source: 'max', accounts: [{ enabled: true }, { enabled: false }] },
-    ]);
+    ], NOW);
 
     expect(result).toEqual(expect.objectContaining({
       connectionCount: 2,
@@ -41,6 +43,27 @@ describe('buildBankSyncOverview', () => {
       disabledAccountCount: 1,
       isIssue: true,
     }));
+  });
+
+  it('never reports a source that stopped receiving data as healthy', () => {
+    // The production shape that used to render as "a sync is running now",
+    // forever: active status, no error, a pending job that nobody claims, and
+    // no new data for weeks.
+    const result = buildBankSyncOverview([
+      {
+        id: 1,
+        bank_source: 'leumi',
+        status: 'active',
+        sync_health: 'waiting_for_agent',
+        latest_job_status: 'pending',
+        last_sync_at: '2026-06-22T06:32:00Z',
+      },
+    ], [], NOW);
+
+    expect(result.stalledCount).toBe(1);
+    expect(result.workingCount).toBe(0);
+    expect(result.readyCount).toBe(0);
+    expect(result.institutions[0].isStalled).toBe(true);
   });
 
   it('handles a connection before its first account discovery', () => {

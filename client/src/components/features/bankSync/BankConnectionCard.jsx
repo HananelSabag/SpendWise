@@ -24,6 +24,8 @@ const SYNC_ERROR_KEYS = {
   CONNECTION_PAUSED: 'connectionPaused',
   CONNECTION_REQUIRES_ACTION: 'connectionRequiresAction',
   CREDENTIALS_UPDATE_REQUIRED: 'connectionRequiresAction',
+  CREDENTIALS_KEY_MISMATCH: 'healthNeedsCredentials',
+  AGENT_OFFLINE: 'healthAgentOffline',
 };
 
 const CREDENTIAL_ACTION_CODES = new Set([
@@ -32,7 +34,17 @@ const CREDENTIAL_ACTION_CODES = new Set([
   'ACCOUNT_BLOCKED',
   'MFA_REQUIRED',
   'CREDENTIALS_INVALID_FORMAT',
+  'CREDENTIALS_KEY_MISMATCH',
 ]);
+
+// States where nothing is arriving and the spinner would be a lie. Each maps
+// to a plain sentence saying what is actually wrong (see translations).
+const ATTENTION_HEALTH = {
+  waiting_for_agent: { key: 'healthWaitingForAgent', tone: 'amber' },
+  agent_offline: { key: 'healthAgentOffline', tone: 'amber' },
+  stalled: { key: 'healthStalled', tone: 'amber' },
+  needs_credentials: { key: 'healthNeedsCredentials', tone: 'red' },
+};
 
 // Mirrors MANUAL_SYNC_GAP_HOURS in server/routes/bankConnectionsRoutes.js.
 // Used only to show the user WHEN they'll be able to sync again — the
@@ -127,10 +139,19 @@ export default function BankConnectionCard({ conn, stat, t, lang, onEditConnecti
   const { tint } = bankBrand(conn.bank_source);
   const isError = conn.status === 'error';
   const failureCode = conn.latest_job_result?.code;
-  const requiresCredentialAction = conn.latest_job_result?.terminal === true
-    && CREDENTIAL_ACTION_CODES.has(failureCode);
-  const isPending = conn.latest_job_status === 'pending';
-  const isRunning = conn.latest_job_status === 'running';
+  const requiresCredentialAction = (conn.latest_job_result?.terminal === true
+    && CREDENTIAL_ACTION_CODES.has(failureCode))
+    || conn.sync_health === 'needs_credentials';
+  // Server-derived health (time-aware). A job can sit "pending" for weeks when
+  // no agent claims it — that is NOT "syncing", and pretending otherwise is
+  // exactly how an account went 20 days without a single transaction unnoticed.
+  const health = conn.sync_health;
+  const attention = ATTENTION_HEALTH[health];
+  const isRunning = health ? health === 'syncing' : conn.latest_job_status === 'running';
+  const isPending = (health ? health === 'queued' : conn.latest_job_status === 'pending') && !isRunning;
+  const staleDays = conn.last_sync_at
+    ? Math.floor((Date.now() - new Date(conn.last_sync_at).getTime()) / 86_400_000)
+    : null;
   const accounts = stat?.accounts || [];
   const isCreditCard = stat?.kind === 'credit_card';
 
@@ -150,7 +171,7 @@ export default function BankConnectionCard({ conn, stat, t, lang, onEditConnecti
               <p className="font-semibold text-gray-900 dark:text-white truncate">
                 {t(`bankNames.${conn.bank_source}`)}
               </p>
-              <StatusBadge status={conn.status} t={t} />
+              <StatusBadge status={conn.status} health={health} t={t} />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
               {conn.display_name || conn.bank_source}
@@ -183,6 +204,35 @@ export default function BankConnectionCard({ conn, stat, t, lang, onEditConnecti
               </div>
             </motion.div>
           )}
+          {/* Nothing is arriving — say so, with the reason and how long. */}
+          {!isError && attention && (
+            <motion.div
+              key="attention"
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className={cn(
+                'mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-xs',
+                attention.tone === 'red'
+                  ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+                  : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+              )}
+            >
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="font-medium">{t(attention.key)}</p>
+                {staleDays > 0 && (
+                  <p className="mt-0.5 opacity-80">{t('healthStaleFor', { count: staleDays })}</p>
+                )}
+                {attention.tone === 'red' && onEditConnection && (
+                  <button
+                    onClick={() => onEditConnection(conn)}
+                    className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold underline underline-offset-2 hover:opacity-80"
+                  >
+                    <KeyRound className="h-3 w-3" /> {t('updateCredentials')}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          )}
           {isError && (
             <motion.div
               key="error"
@@ -205,7 +255,7 @@ export default function BankConnectionCard({ conn, stat, t, lang, onEditConnecti
               )}
             </motion.div>
           )}
-          {!isError && !isPending && !isRunning && conn.last_error && (
+          {!isError && !attention && !isPending && !isRunning && conn.last_error && (
             <motion.div
               key="lasterr"
               initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -217,7 +267,7 @@ export default function BankConnectionCard({ conn, stat, t, lang, onEditConnecti
           )}
           {/* Proactive cooldown — visible even on mobile (no hover tooltips there),
               so clicking "Sync Now" repeatedly with no feedback can't happen. */}
-          {!isError && !isPending && !isRunning && !conn.last_error && inCooldown && (
+          {!isError && !attention && !isPending && !isRunning && !conn.last_error && inCooldown && (
             <motion.div
               key="cooldown"
               initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -260,7 +310,9 @@ export default function BankConnectionCard({ conn, stat, t, lang, onEditConnecti
 
         {/* Actions */}
         <div className="mt-3 flex gap-2">
-          {isError && requiresCredentialAction ? (
+          {/* A key mismatch is fixable ONLY by re-entering the details, so the
+              primary action becomes that even before the connection errors. */}
+          {requiresCredentialAction ? (
             <button
               onClick={() => onEditConnection?.(conn)}
               className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-white text-xs font-semibold transition-colors bg-red-600 hover:bg-red-700"

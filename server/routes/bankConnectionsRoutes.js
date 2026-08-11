@@ -23,10 +23,35 @@ const { auth } = require('../middleware/auth');
 const { INSTITUTIONS, VALID_SOURCES, institutionKind } = require('../config/institutions');
 const { invalidateCycleDerivedData } = require('../services/cycleService');
 const { invalidateDashboardCache } = require('../services/dashboardService');
+const { DEVICE_STALE_HOURS } = require('../services/agentClaimScope');
+const { deriveSyncHealth, buildAgentContext, HEALTH } = require('../services/bankConnectionHealth');
 
 const MAX_CIPHERTEXT_LEN = 4096;      // sealed box of a creds JSON is well under this
 const MANUAL_SYNCS_PER_DAY = 2;
 const MANUAL_SYNC_GAP_HOURS = 3;
+
+// The user's active sync device, if they paired one. Used both to decide which
+// key new credentials get sealed to and to tell the UI whether that machine is
+// still reporting — a paired device that goes quiet is the single failure that
+// silently blacked out an account for 20 days before this was surfaced.
+async function activeDevice(runner, userId) {
+  const result = await runner.query(
+    `SELECT id, label, last_seen_at FROM agent_devices
+     WHERE user_id = $1 AND status = 'active'`,
+    [userId],
+  );
+  return result.rows[0] || null;
+}
+
+/**
+ * Which agent key a credential envelope written RIGHT NOW is sealed to.
+ * Mirrors GET /public-key exactly — that endpoint decides what the browser
+ * seals to, this records it, and the two must never disagree.
+ */
+async function sealIdentity(runner, userId) {
+  const device = await activeDevice(runner, userId);
+  return device ? `device:${device.id}` : 'default-host';
+}
 
 function validCiphertext(value) {
   return typeof value === 'string'
@@ -74,9 +99,11 @@ router.get('/', async (req, res) => {
     // Include the latest job's status/time so the UI can show live states
     // ("waiting for sync agent", "syncing now") — critical when the user's
     // agent machine is offline and jobs sit pending.
+    const device = await activeDevice(db, req.user.id);
+    const agent = buildAgentContext(device, DEVICE_STALE_HOURS);
     const result = await db.query(
       `SELECT c.id, c.bank_source, c.display_name, c.status, c.consecutive_failures,
-              c.last_sync_at, c.last_error, c.created_at,
+              c.last_sync_at, c.last_error, c.created_at, c.credentials_sealed_to,
               j.status       AS latest_job_status,
               j.trigger      AS latest_job_trigger,
               j.requested_at AS latest_job_requested_at,
@@ -111,12 +138,26 @@ router.get('/', async (req, res) => {
        ORDER BY c.created_at ASC`,
       [req.user.id, MANUAL_SYNC_GAP_HOURS],
     );
+    // Health is DERIVED (time + who can read the credentials), never read off
+    // c.status: an unclaimed job expires as transient and leaves every status
+    // column looking perfectly healthy. See services/bankConnectionHealth.js.
     const connections = result.rows.map((c) => ({
       ...c,
       kind: institutionKind(c.bank_source),
       institution_label: INSTITUTIONS[c.bank_source]?.label || c.bank_source,
+      ...deriveSyncHealth(c, { agent }),
     }));
-    res.json({ ok: true, connections });
+    res.json({
+      ok: true,
+      connections,
+      agent: {
+        paired: agent.paired,
+        label: agent.label || null,
+        last_seen_at: agent.lastSeenAt,
+        stale: agent.deviceStale,
+        stale_after_hours: DEVICE_STALE_HOURS,
+      },
+    });
   } catch (err) {
     logger.error('bank-connections: list failed', { error: err.message, userId: req.user.id });
     res.status(500).json({ error: 'Failed to fetch connections' });
@@ -139,18 +180,21 @@ router.post('/', async (req, res) => {
   const client = await db.getClient();
   try {
     await client.query('BEGIN');
+    const sealedTo = await sealIdentity(client, req.user.id);
     const result = await client.query(
-      `INSERT INTO bank_connections (user_id, bank_source, encrypted_credentials, display_name)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO bank_connections (user_id, bank_source, encrypted_credentials, display_name,
+                                     credentials_sealed_to)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (user_id, bank_source)
        DO UPDATE SET
-         encrypted_credentials = EXCLUDED.encrypted_credentials,
-         display_name          = COALESCE(EXCLUDED.display_name, bank_connections.display_name),
-         status                = 'active',
-         consecutive_failures  = 0,
-         last_error            = NULL
+         encrypted_credentials  = EXCLUDED.encrypted_credentials,
+         display_name           = COALESCE(EXCLUDED.display_name, bank_connections.display_name),
+         credentials_sealed_to  = EXCLUDED.credentials_sealed_to,
+         status                 = 'active',
+         consecutive_failures   = 0,
+         last_error             = NULL
        RETURNING id, bank_source, display_name, status, created_at`,
-      [req.user.id, bank_source, encrypted_credentials, name],
+      [req.user.id, bank_source, encrypted_credentials, name, sealedTo],
     );
     await client.query(
       `UPDATE bank_sync_jobs SET
@@ -224,9 +268,13 @@ router.patch('/:id', async (req, res) => {
     const name = hasDisplayName && typeof display_name === 'string'
       ? display_name.trim().slice(0, 100) || null
       : null;
+    // Replacing the envelope re-seals it to whichever agent key the browser
+    // was handed just now, so the recorded identity must move with it.
+    const sealedTo = hasCredentials ? await sealIdentity(client, req.user.id) : null;
     const result = await client.query(
       `UPDATE bank_connections SET
          encrypted_credentials = CASE WHEN $3 THEN $4 ELSE encrypted_credentials END,
+         credentials_sealed_to = CASE WHEN $3 THEN $8 ELSE credentials_sealed_to END,
          display_name          = CASE WHEN $5 THEN $6 ELSE display_name END,
          status                = CASE WHEN $3 THEN 'active' ELSE COALESCE($7, status) END,
          consecutive_failures  = CASE WHEN $3 OR $7 = 'active' THEN 0 ELSE consecutive_failures END,
@@ -234,7 +282,7 @@ router.patch('/:id', async (req, res) => {
        WHERE id = $1 AND user_id = $2
        RETURNING id, bank_source, display_name, status`,
       [id, req.user.id, hasCredentials, encrypted_credentials ?? null,
-       hasDisplayName, name, status ?? null],
+       hasDisplayName, name, status ?? null, sealedTo],
     );
 
     if (hasCredentials) {
@@ -357,10 +405,30 @@ router.post('/:id/sync', async (req, res) => {
 
   try {
     const conn = await db.query(
-      `SELECT id, status FROM bank_connections WHERE id = $1 AND user_id = $2`,
+      `SELECT id, status, credentials_sealed_to FROM bank_connections
+       WHERE id = $1 AND user_id = $2`,
       [id, req.user.id],
     );
     if (conn.rows.length === 0) return res.status(404).json({ error: 'Connection not found' });
+
+    // Pre-flight: refuse to queue work that provably nobody can execute.
+    // Queueing it anyway is what produced a spinner that ran for three weeks.
+    const device = await activeDevice(db, req.user.id);
+    const agent = buildAgentContext(device, DEVICE_STALE_HOURS);
+    const { sync_health: health } = deriveSyncHealth(conn.rows[0], { agent });
+    if (health === HEALTH.NEEDS_CREDENTIALS) {
+      return res.status(409).json({
+        error: 'These login details are sealed to a different sync agent. Re-enter them.',
+        code: 'CREDENTIALS_KEY_MISMATCH',
+      });
+    }
+    if (health === HEALTH.AGENT_OFFLINE) {
+      return res.status(409).json({
+        error: 'Your paired computer has not reported in. Start the SpendWise Agent, or switch back to the SpendWise host.',
+        code: 'AGENT_OFFLINE',
+      });
+    }
+
     if (conn.rows[0].status !== 'active') {
       const requiresAction = conn.rows[0].status === 'error';
       return res.status(409).json({

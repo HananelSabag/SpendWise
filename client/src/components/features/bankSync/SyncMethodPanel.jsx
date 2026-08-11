@@ -13,10 +13,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Laptop, Server, Check, Loader2, Download, KeyRound, HelpCircle, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Laptop, Server, Check, Loader2, Download, KeyRound, HelpCircle, ShieldCheck, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '../../ui';
 import { useToast } from '../../../hooks/useToast';
+import { cn } from '../../../utils/helpers';
 import agentPairingApi from '../../../api/agentPairing';
 
 // Always points at the newest release — no client change needed per Agent build.
@@ -118,17 +119,47 @@ export default function SyncMethodPanel({ t, hasConnections }) {
       {isLoading ? (
         <div className="h-20 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
       ) : pairing.paired ? (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50">
-          <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+        // "Paired" on its own said nothing about whether that machine is still
+        // running. A device that stops reporting is the single point of failure
+        // that halts every sync for this user, so its liveness is shown here.
+        <div className={cn(
+          'flex items-center gap-3 p-3 rounded-lg border',
+          pairing.stale
+            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50'
+            : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-100 dark:border-emerald-800/50',
+        )}>
+          <div className={cn(
+            'w-9 h-9 rounded-lg flex items-center justify-center shrink-0',
+            pairing.stale
+              ? 'bg-amber-100 dark:bg-amber-900/40'
+              : 'bg-emerald-100 dark:bg-emerald-900/40',
+          )}>
+            {pairing.stale
+              ? <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              : <Check className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+            <p className={cn(
+              'text-sm font-semibold',
+              pairing.stale
+                ? 'text-amber-800 dark:text-amber-200'
+                : 'text-emerald-800 dark:text-emerald-200',
+            )}>
               {t('syncMethodPaired', { label: pairing.label || t('syncMethodOwnTitle') })}
             </p>
-            {pairing.paired_at && (
+            {pairing.stale ? (
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                {pairing.last_seen_at
+                  ? t('syncMethodDeviceSilent', { time: new Date(pairing.last_seen_at).toLocaleString() })
+                  : t('syncMethodDeviceNeverSeen')}
+              </p>
+            ) : (
               <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                {t('syncMethodPairedSince', { date: new Date(pairing.paired_at).toLocaleDateString() })}
+                {pairing.last_seen_at
+                  ? t('syncMethodDeviceSeen', { time: new Date(pairing.last_seen_at).toLocaleTimeString() })
+                  : pairing.paired_at
+                    ? t('syncMethodPairedSince', { date: new Date(pairing.paired_at).toLocaleDateString() })
+                    : null}
               </p>
             )}
           </div>
