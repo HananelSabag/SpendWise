@@ -117,7 +117,7 @@ export default function BankSyncPageV2() {
             <BankConnectionGroup kind="credit_card" items={groupedConnections.cards} sources={sources} t={t} he={he} currentLanguage={currentLanguage} onOpenConnect={openConnect} onOpenEdit={openEdit} />
           </div>
         )}
-        {tab === 'agent' && <div className="mx-auto max-w-3xl"><SyncMethodPanel t={t} hasConnections={connections.length > 0} /></div>}
+        {tab === 'agent' && <div className="mx-auto max-w-3xl"><SyncMethodPanel t={t} hasConnections={connections.length > 0} connections={connections} /></div>}
         {tab === 'help' && <div className="mx-auto max-w-3xl"><HowItWorksPanel t={t} defaultOpen /></div>}
       </main>
 

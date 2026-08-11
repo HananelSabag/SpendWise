@@ -24,7 +24,7 @@ import agentPairingApi from '../../../api/agentPairing';
 const AGENT_DOWNLOAD_URL = 'https://github.com/HananelSabag/spendwise-agent/releases/latest/download/SpendWiseAgent-ForUsers.zip';
 const AGENT_SOURCE_URL = 'https://github.com/HananelSabag/spendwise-agent';
 
-export default function SyncMethodPanel({ t, hasConnections }) {
+export default function SyncMethodPanel({ t, hasConnections, connections = [] }) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [pendingCode, setPendingCode] = useState(null); // { code, expires_at }
@@ -72,6 +72,17 @@ export default function SyncMethodPanel({ t, hasConnections }) {
     if (hasConnections) setConfirmAction('unpair');
     else unpairMutation.mutate();
   };
+
+  // Unpairing only costs something for connections actually sealed to THIS
+  // device's key. Ones still sealed to the shared host carry over untouched —
+  // telling every user they must reconnect everything is simply false, and it
+  // is the kind of vague warning that makes people abandon a fix mid-way.
+  const deviceSealed = connections.filter(
+    (connection) => String(connection.credentials_sealed_to || '').startsWith('device:'),
+  ).length;
+  const unpairBody = deviceSealed === 0 && connections.length > 0
+    ? t('syncMethodUnpairKeepsAll', { count: connections.length })
+    : t('syncMethodUnpairConfirmBody', { label: pairing.label || t('syncMethodOwnTitle') });
 
   const minutesLeft = pendingCode
     ? Math.max(0, Math.round((new Date(pendingCode.expires_at) - Date.now()) / 60_000))
@@ -264,7 +275,7 @@ export default function SyncMethodPanel({ t, hasConnections }) {
         onClose={() => setConfirmAction(null)}
         onConfirm={() => unpairMutation.mutate()}
         title={t('syncMethodUnpairConfirmTitle')}
-        message={t('syncMethodUnpairConfirmBody', { label: pairing.label || t('syncMethodOwnTitle') })}
+        message={unpairBody}
         confirmText={t('syncMethodConfirm')}
         cancelText={t('syncMethodCancel')}
         variant="warning"
