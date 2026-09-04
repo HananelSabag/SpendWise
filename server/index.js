@@ -159,9 +159,16 @@ try {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    // X-Grocery-* are the shared grocery list's edit lease. They must be listed
+    // here or the browser's preflight fails and every list request dies at the
+    // network layer, and X-Grocery-Lease must also be *exposed* or the client
+    // cannot read back the token the server mints when it grants a free lease.
+    allowedHeaders: [
+      'Content-Type', 'Authorization', 'X-Request-ID',
+      'X-Grocery-Session', 'X-Grocery-Lease',
+    ],
     maxAge: 86400,
-    exposedHeaders: ['Content-Disposition']
+    exposedHeaders: ['Content-Disposition', 'X-Grocery-Lease']
   }));
 } catch (error) {
   logger.error(`❌ CORS setup failed: ${error.message}`);

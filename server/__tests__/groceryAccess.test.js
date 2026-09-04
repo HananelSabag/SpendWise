@@ -184,3 +184,28 @@ describe('grocery routes', () => {
     expect(routes).not.toMatch(/router\.get\([^)]*accept/i);
   });
 });
+
+describe('CORS must allow the edit-lease headers', () => {
+  const index = require('fs').readFileSync(
+    require('path').join(__dirname, '..', 'index.js'),
+    'utf8',
+  );
+
+  // Custom request headers turn every list request into a preflighted one. When
+  // they are missing from allowedHeaders the browser refuses before the request
+  // is ever sent, which reads as a network failure with no server log at all.
+  test('X-Grocery-Session and X-Grocery-Lease are allowed on requests', () => {
+    const allowed = index.match(/allowedHeaders:\s*\[([\s\S]*?)\]/);
+    expect(allowed).toBeTruthy();
+    expect(allowed[1]).toMatch(/'X-Grocery-Session'/);
+    expect(allowed[1]).toMatch(/'X-Grocery-Lease'/);
+  });
+
+  // The server mints a lease token and returns it in a header; without an
+  // explicit expose the browser hides it and the implicit-lease flow breaks.
+  test('X-Grocery-Lease is exposed on responses', () => {
+    const exposed = index.match(/exposedHeaders:\s*\[([\s\S]*?)\]/);
+    expect(exposed).toBeTruthy();
+    expect(exposed[1]).toMatch(/'X-Grocery-Lease'/);
+  });
+});

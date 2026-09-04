@@ -149,8 +149,9 @@ const GroceryListPage = () => {
     };
   }, [myInvitations]);
 
-  if (isLoading) return <PageSkeleton page="grocery" />;
-
+  // Error first: a query that keeps failing stays pending across its retry and
+  // poll cycles, so checking isLoading first showed a skeleton that never
+  // resolved instead of telling the user anything.
   if (isError) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
@@ -166,6 +167,8 @@ const GroceryListPage = () => {
       </div>
     );
   }
+
+  if (isLoading) return <PageSkeleton page="grocery" />;
 
   const isEmpty = sections.length === 0 && purchased.length === 0;
   const composerDisabled = lockedByOther;
