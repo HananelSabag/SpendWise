@@ -134,9 +134,11 @@ const uploadToSupabase = async (req, res, next) => {
 };
 
 // Export configured middleware
-// Phone camera photos are a few MB at most; a 10MB ceiling keeps a stray video
-// or a scanned PDF from tying up a Render dyno's memory on the free tier.
-const GROCERY_UPLOAD_LIMIT = 10 * 1024 * 1024;
+// The client shrinks photos to a few hundred KB before they get here, so this is
+// a safety net rather than the real limit — generous enough for a multi-page PDF
+// receipt or an image the browser could not re-encode, tight enough that a stray
+// video can't tie up a Render dyno's memory on the free tier.
+const GROCERY_UPLOAD_LIMIT = 20 * 1024 * 1024;
 
 const groceryUpload = multer({
   storage,

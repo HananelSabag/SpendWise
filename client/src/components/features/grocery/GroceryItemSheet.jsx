@@ -15,6 +15,7 @@ import { useTranslation } from '../../../stores';
 import { useToast } from '../../../hooks/useToast';
 import { api } from '../../../api';
 import { GROCERY_CATEGORIES, DEFAULT_CATEGORY, GROCERY_UNITS } from './groceryCategories';
+import { compressImage, isUploadableImage, ITEM_PHOTO_PRESET } from '../../../utils/imageCompression';
 
 const emptyDraft = {
   name: '',
@@ -92,7 +93,20 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item, seed }) => 
     if (!file) return;
 
     setUploading(true);
-    const result = await api.grocery.uploadItemImage(file);
+    // A phone camera file is 10-20MB and none of it survives a 40px thumbnail.
+    // Shrink it here so the upload never hits a limit and the bucket stays small.
+    const compressed = await compressImage(file, ITEM_PHOTO_PRESET);
+
+    // Compression normalises anything the browser can decode into JPEG or WebP.
+    // If it comes back in an exotic format the browser couldn't read (HEIC on a
+    // desktop, say), say so here rather than letting the server reject it.
+    if (!isUploadableImage(compressed)) {
+      setUploading(false);
+      toast.error(t('errors.GROCERY_IMAGE_FORMAT'));
+      return;
+    }
+
+    const result = await api.grocery.uploadItemImage(compressed);
     setUploading(false);
 
     if (!result.success) {
@@ -282,7 +296,7 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item, seed }) => 
                   <input
                     ref={fileRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/*"
                     onChange={handlePhoto}
                     className="hidden"
                   />

@@ -279,6 +279,7 @@ export default {
     GROCERY_RECEIPT_NOT_FOUND: "No receipt on this trip",
     GROCERY_RECEIPT_UPLOAD_FAILED: "Couldn't save the receipt",
     GROCERY_RECEIPT_UNAVAILABLE: "Couldn't open the receipt",
+    GROCERY_IMAGE_FORMAT: "That image format isn't supported — try a JPEG or PNG",
     GROCERY_IMAGE_UPLOAD_FAILED: "Couldn't save the photo",
     GROCERY_FILE_REQUIRED: "Choose a file first",
     NETWORK_ERROR: "No connection — check your network",

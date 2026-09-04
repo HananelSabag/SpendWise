@@ -279,6 +279,7 @@ export default {
     GROCERY_RECEIPT_NOT_FOUND: "אין קבלה לקנייה הזו",
     GROCERY_RECEIPT_UPLOAD_FAILED: "לא הצלחנו לשמור את הקבלה",
     GROCERY_RECEIPT_UNAVAILABLE: "לא הצלחנו לפתוח את הקבלה",
+    GROCERY_IMAGE_FORMAT: "פורמט התמונה לא נתמך — נסו JPEG או PNG",
     GROCERY_IMAGE_UPLOAD_FAILED: "לא הצלחנו לשמור את התמונה",
     GROCERY_FILE_REQUIRED: "בחרו קובץ קודם",
     NETWORK_ERROR: "אין חיבור — בדקו את הרשת",

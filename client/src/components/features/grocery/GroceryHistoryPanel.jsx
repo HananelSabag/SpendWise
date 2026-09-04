@@ -14,8 +14,10 @@ import {
 } from 'lucide-react';
 import { cn, currency, dateHelpers } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
+import { useToast } from '../../../hooks/useToast';
 import { useGroceryHistory, useGroceryTripDetail, useGroceryTripActions } from '../../../hooks/useGroceryHistory';
 import { CATEGORY_BY_KEY, categoryOrder, DEFAULT_CATEGORY } from './groceryCategories';
+import { compressImage, isUploadableImage, RECEIPT_PRESET } from '../../../utils/imageCompression';
 
 const TripItems = ({ tripId }) => {
   const { t } = useTranslation('grocery');
@@ -71,6 +73,7 @@ const TripItems = ({ tripId }) => {
 
 const TripCard = ({ trip }) => {
   const { t, currentLanguage } = useTranslation('grocery');
+  const toast = useToast();
   const { uploadReceipt, openReceipt, addToSpendWise, busyTripId } = useGroceryTripActions();
   const [expanded, setExpanded] = useState(false);
   const fileRef = useRef(null);
@@ -80,8 +83,19 @@ const TripCard = ({ trip }) => {
   const handleReceipt = useCallback(async (event) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (file) await uploadReceipt(trip.id, file);
-  }, [trip.id, uploadReceipt]);
+    if (!file) return;
+    // Receipts keep more resolution than product photos — the print is small —
+    // but a PDF passes through untouched.
+    const prepared = file.type === 'application/pdf'
+      ? file
+      : await compressImage(file, RECEIPT_PRESET);
+
+    if (prepared.type !== 'application/pdf' && !isUploadableImage(prepared)) {
+      toast.error(t('errors.GROCERY_IMAGE_FORMAT'));
+      return;
+    }
+    await uploadReceipt(trip.id, prepared);
+  }, [trip.id, uploadReceipt, t, toast]);
 
   const handleViewReceipt = useCallback(async () => {
     const url = await openReceipt(trip.id);
@@ -166,7 +180,7 @@ const TripCard = ({ trip }) => {
             <input
               ref={fileRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
+              accept="image/*,application/pdf"
               onChange={handleReceipt}
               className="hidden"
             />
