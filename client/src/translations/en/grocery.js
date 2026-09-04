@@ -190,6 +190,7 @@ export default {
     title: "Grocery list invitation",
     invitedBy: "{{name}} invited you",
     listLine: "{{count}} people are already on this list",
+    viaLink: "You opened a shared invite link",
     accept: "Accept and join",
     accepting: "Joining…",
     decline: "Decline",

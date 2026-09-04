@@ -136,8 +136,13 @@ const groceryShareController = {
       return fail(res, 404, 'GROCERY_INVITE_NOT_FOUND', 'Invitation not found');
     }
 
+    // An open link has no recipient, so it is addressed to whoever opened it.
+    // Missing this is what made a shared link render as "sent to a different
+    // address" and hide the Accept button entirely.
+    const isOpenLink = invitation.invitee_email === null && invitation.invitee_id === null;
     const userEmail = String(req.user.email || '').toLowerCase();
-    const addressedToMe = invitation.invitee_id === req.user.id
+    const addressedToMe = isOpenLink
+      || invitation.invitee_id === req.user.id
       || (invitation.invitee_id === null && invitation.invitee_email === userEmail);
 
     const expired = new Date(invitation.expires_at) <= new Date();
@@ -153,6 +158,7 @@ const groceryShareController = {
         expiresAt: invitation.expires_at,
         expired,
         addressedToMe,
+        isOpenLink,
         alreadyMember,
         inviter: {
           firstName: invitation.inviter_first_name,

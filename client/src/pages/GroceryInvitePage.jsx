@@ -103,12 +103,16 @@ const GroceryInvitePage = () => {
   }
 
   const inviterName = data.inviter.firstName || data.inviter.username;
+
+  // Order matters: expiry and "already in" are true statements about a link
+  // that is otherwise fine, whereas "sent to someone else" only applies to an
+  // addressed invitation. An open link is addressed to whoever opened it.
   const blockedReason = data.alreadyMember
     ? t('invite.alreadyMember')
-    : !data.addressedToMe
-      ? t('invite.notForYou')
-      : data.expired
-        ? t('invite.expired')
+    : data.expired
+      ? t('invite.expired')
+      : !data.addressedToMe
+        ? t('invite.notForYou')
         : data.status !== 'pending'
           ? t('invite.notFound')
           : null;
@@ -126,6 +130,11 @@ const GroceryInvitePage = () => {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           {t('invite.invitedBy', { name: inviterName })}
         </p>
+        {data.isOpenLink && (
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            {t('invite.viaLink')}
+          </p>
+        )}
 
         <div className="mt-4 flex items-center justify-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
           <Users className="h-3.5 w-3.5" />

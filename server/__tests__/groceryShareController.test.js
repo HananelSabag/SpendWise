@@ -256,3 +256,79 @@ describe('membership management', () => {
     expect(notify.mock.calls.map((call) => call[0])).toEqual([44, 45]);
   });
 });
+
+describe('previewing an open share link', () => {
+  const openLink = (overrides = {}) => ({
+    token: 'abc',
+    list_id: 5,
+    // No recipient at all — that is what makes it an open link.
+    invitee_id: null,
+    invitee_email: null,
+    status: 'pending',
+    expires_at: new Date(Date.now() + 10_000).toISOString(),
+    archived_at: null,
+    member_count: 1,
+    list_name: 'Household',
+    inviter_first_name: 'Hananel',
+    ...overrides,
+  });
+
+  // The bug this covers: `addressedToMe` was computed by comparing the invited
+  // email to the viewer's, and an open link has no email — so a perfectly valid
+  // shared link rendered as "sent to a different address" with no Accept button,
+  // and nobody could ever join.
+  test('is addressed to whoever opens it', async () => {
+    jest.spyOn(GroceryInvitation, 'getByToken').mockResolvedValue(openLink());
+    jest.spyOn(GroceryList, 'getMembership').mockResolvedValue(null);
+
+    const res = makeRes();
+    await run(share.preview, makeReq({ params: { token: 'abc' } }), res);
+
+    expect(res.body.data.addressedToMe).toBe(true);
+    expect(res.body.data.isOpenLink).toBe(true);
+    expect(res.body.data.expired).toBe(false);
+  });
+
+  test('a stranger with the link is still addressed', async () => {
+    jest.spyOn(GroceryInvitation, 'getByToken').mockResolvedValue(openLink());
+    jest.spyOn(GroceryList, 'getMembership').mockResolvedValue(null);
+
+    const res = makeRes();
+    await run(
+      share.preview,
+      makeReq({
+        params: { token: 'abc' },
+        user: { id: 49, email: 'nissim@example.com', username: 'nissim' },
+      }),
+      res,
+    );
+
+    expect(res.body.data.addressedToMe).toBe(true);
+  });
+
+  test('an addressed invitation is still marked as not for the wrong person', async () => {
+    jest.spyOn(GroceryInvitation, 'getByToken').mockResolvedValue(
+      openLink({ invitee_email: 'nofar@example.com', invitee_id: 44 })
+    );
+    jest.spyOn(GroceryList, 'getMembership').mockResolvedValue(null);
+
+    const res = makeRes();
+    await run(share.preview, makeReq({ params: { token: 'abc' } }), res);
+
+    expect(res.body.data.addressedToMe).toBe(false);
+    expect(res.body.data.isOpenLink).toBe(false);
+  });
+
+  test('an expired link is reported expired, not mis-addressed', async () => {
+    jest.spyOn(GroceryInvitation, 'getByToken').mockResolvedValue(
+      openLink({ expires_at: new Date(Date.now() - 1000).toISOString() })
+    );
+    jest.spyOn(GroceryList, 'getMembership').mockResolvedValue(null);
+
+    const res = makeRes();
+    await run(share.preview, makeReq({ params: { token: 'abc' } }), res);
+
+    expect(res.body.data.addressedToMe).toBe(true);
+    expect(res.body.data.expired).toBe(true);
+  });
+});

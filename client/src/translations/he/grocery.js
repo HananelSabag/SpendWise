@@ -190,6 +190,7 @@ export default {
     title: "הזמנה לרשימת קניות",
     invitedBy: "{{name}} הזמין/ה אתכם",
     listLine: "{{count}} אנשים כבר ברשימה הזו",
+    viaLink: "פתחתם קישור הזמנה משותף",
     accept: "אשר והצטרף",
     accepting: "מצטרף…",
     decline: "דחה",
