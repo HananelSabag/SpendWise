@@ -33,7 +33,6 @@ import NotificationBell from './NotificationBell';
 
 import { cn } from '../../utils/helpers';
 import { Avatar, LoadingSpinner } from '../ui';
-import ModernOnboardingModal from '../features/onboarding/ModernOnboardingModal';
 import BrandMark from '../common/BrandMark';
 import { openAccessibilityMenu } from '../common/AccessibilityMenuHost';
 
@@ -83,19 +82,13 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    const openOnboarding = () => setActiveModal('onboarding');
-    const closeOnboarding = () => setActiveModal(null);
     const openExchange = () => setActiveModal('exchange');
     const openHelp = () => setActiveModal('help');
 
-    window.addEventListener('open-onboarding', openOnboarding);
-    window.addEventListener('close-onboarding', closeOnboarding);
     window.addEventListener('open-exchange', openExchange);
     window.addEventListener('open-help', openHelp);
 
     return () => {
-      window.removeEventListener('open-onboarding', openOnboarding);
-      window.removeEventListener('close-onboarding', closeOnboarding);
       window.removeEventListener('open-exchange', openExchange);
       window.removeEventListener('open-help', openHelp);
     };
@@ -408,14 +401,6 @@ const Header = () => {
           <ExchangeCalculator
             isOpen={true}
             onClose={closeModal}
-          />
-        )}
-
-        {activeModal === 'onboarding' && (
-          <ModernOnboardingModal
-            isOpen={true}
-            onClose={closeModal}
-            previewOnly={false}
           />
         )}
 

@@ -1,21 +1,66 @@
 /**
  * GroceryItemRow — one line of the active list.
  *
- * Built for a thumb in a supermarket aisle, not for browsing: a 48px check
- * target on the leading edge does the only thing that matters while shopping,
- * and everything else (edit, photo, link) sits behind a second, deliberate tap.
- * No swipe gestures — they fight the horizontal aisle scroller above.
+ * Built for a thumb in a supermarket aisle. The whole row is the purchase
+ * target: while shopping you are checking things off, not editing them, so the
+ * common action gets all 56px and the rare ones sit behind a gesture.
+ *
+ *   tap        → into the cart (or back out of it)
+ *   long-press → actions: edit, or delete
+ *   photo tap  → expand the picture in place
+ *
+ * Long-press rather than swipe because the aisle strip above scrolls
+ * horizontally, and a swipe here would fight it on every drag.
  */
 
-import React, { memo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { Check, Link2, StickyNote } from 'lucide-react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Check, Link2, Pencil, StickyNote, Trash2, X } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
 
-const GroceryItemRow = ({ item, onToggle, onOpen, disabled = false }) => {
+/** Long enough not to fire on a normal tap, short enough not to feel stuck. */
+const LONG_PRESS_MS = 450;
+
+const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) => {
   const { t } = useTranslation('grocery');
   const [showPhoto, setShowPhoto] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const timerRef = useRef(null);
+  const firedRef = useRef(false);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearTimer, [clearTimer]);
+  useEffect(() => { if (!actionsOpen) setConfirmDelete(false); }, [actionsOpen]);
+
+  const startPress = useCallback(() => {
+    if (disabled) return;
+    firedRef.current = false;
+    clearTimer();
+    timerRef.current = setTimeout(() => {
+      firedRef.current = true;
+      setActionsOpen(true);
+      // The only feedback that the gesture registered before the menu paints.
+      try { navigator.vibrate?.(15); } catch { /* unsupported */ }
+    }, LONG_PRESS_MS);
+  }, [disabled, clearTimer]);
+
+  const endPress = useCallback(() => clearTimer(), [clearTimer]);
+
+  /** A press that became a long-press must not also toggle the item. */
+  const handleClick = useCallback(() => {
+    if (firedRef.current) { firedRef.current = false; return; }
+    if (disabled || actionsOpen) return;
+    onToggle(item);
+  }, [disabled, actionsOpen, onToggle, item]);
 
   const purchased = item.is_purchased;
   const quantityLabel = item.quantity
@@ -32,48 +77,43 @@ const GroceryItemRow = ({ item, onToggle, onOpen, disabled = false }) => {
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.16 }}
       className={cn(
-        'group relative flex items-stretch gap-1 rounded-2xl border transition-colors',
+        'group relative flex items-stretch rounded-2xl border transition-colors',
         purchased
           ? 'border-transparent bg-gray-50/70 dark:bg-gray-800/40'
           : 'border-gray-100 bg-white hover:border-gray-200 dark:border-gray-700/70 dark:bg-gray-800/70 dark:hover:border-gray-600'
       )}
     >
-      {/* The one control that matters while walking the aisles. */}
+      {/* The row itself is the check target. */}
       <button
         type="button"
-        onClick={() => onToggle(item)}
+        onClick={handleClick}
+        onPointerDown={startPress}
+        onPointerUp={endPress}
+        onPointerLeave={endPress}
+        onPointerCancel={endPress}
+        onContextMenu={(event) => event.preventDefault()}
         disabled={disabled}
         aria-pressed={purchased}
         aria-label={purchased ? t('item.markNotPurchased') : t('item.markPurchased')}
         className={cn(
-          'flex w-14 shrink-0 items-center justify-center rounded-s-2xl',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1',
-          disabled && 'cursor-not-allowed opacity-40'
-        )}
-      >
-        <span
-          className={cn(
-            'flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all',
-            purchased
-              ? 'border-emerald-500 bg-emerald-500 text-white'
-              : 'border-gray-300 text-transparent group-hover:border-blue-400 dark:border-gray-600'
-          )}
-        >
-          <Check className="h-4 w-4" strokeWidth={3} />
-        </span>
-      </button>
-
-      {/* Body — opens the editor. */}
-      <button
-        type="button"
-        onClick={() => onOpen(item)}
-        disabled={disabled}
-        className={cn(
-          'flex min-h-[56px] flex-1 items-center gap-2 py-2 pe-2 text-start',
+          'flex min-h-[56px] flex-1 select-none items-center gap-2 rounded-2xl py-2 pe-2 text-start',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset',
-          disabled && 'cursor-default'
+          disabled && 'cursor-not-allowed opacity-60'
         )}
       >
+        <span className="flex w-14 shrink-0 items-center justify-center">
+          <span
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all',
+              purchased
+                ? 'border-emerald-500 bg-emerald-500 text-white'
+                : 'border-gray-300 text-transparent group-hover:border-blue-400 dark:border-gray-600'
+            )}
+          >
+            <Check className="h-4 w-4" strokeWidth={3} />
+          </span>
+        </span>
+
         <span className="min-w-0 flex-1">
           <span
             className={cn(
@@ -108,8 +148,8 @@ const GroceryItemRow = ({ item, onToggle, onOpen, disabled = false }) => {
         )}
       </button>
 
-      {/* Photo: a thumbnail that expands in place, so "which exact yogurt" is
-          one tap away without ever pushing the list around. */}
+      {/* Photo: a thumbnail that expands in place, so the exact product is one
+          tap away without pushing the list around. */}
       {item.image_url && (
         <button
           type="button"
@@ -138,6 +178,56 @@ const GroceryItemRow = ({ item, onToggle, onOpen, disabled = false }) => {
           <img src={item.image_url} alt={item.name} className="max-h-64 w-full object-contain" />
         </div>
       )}
+
+      {/* Long-press actions, laid over the row so the list never reflows. */}
+      <AnimatePresence>
+        {actionsOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            className="absolute inset-0 z-30 flex items-center gap-1.5 rounded-2xl bg-white/95 px-2 backdrop-blur-sm dark:bg-gray-800/95"
+          >
+            <button
+              type="button"
+              onClick={() => { setActionsOpen(false); onOpen(item); }}
+              className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-gray-100 text-xs font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+            >
+              <Pencil className="h-4 w-4" />
+              {t('item.edit')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!confirmDelete) { setConfirmDelete(true); return; }
+                setActionsOpen(false);
+                onDelete(item.id);
+              }}
+              aria-label={t('item.delete')}
+              className={cn(
+                'flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors',
+                confirmDelete
+                  ? 'flex-1 bg-red-500 text-white'
+                  : 'w-11 bg-red-50 text-red-500 dark:bg-red-500/15'
+              )}
+            >
+              <Trash2 className="h-4 w-4" />
+              {confirmDelete && t('item.deleteConfirm')}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActionsOpen(false)}
+              aria-label={t('sheet.cancel')}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-400"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.li>
   );
 };

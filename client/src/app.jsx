@@ -24,7 +24,7 @@ import Header from './components/layout/Header';
 import GroceryModeHeader from './components/layout/GroceryModeHeader';
 import Footer from './components/layout/Footer';
 import AccessibilityMenuHost from './components/common/AccessibilityMenuHost.jsx';
-import ModernOnboardingManager from './components/common/ModernOnboardingManager';
+import WelcomeOnboarding from './components/common/WelcomeOnboarding';
 import MobileBottomNav from './components/common/MobileBottomNav';
 
 // ✅ Zustand stores
@@ -147,7 +147,7 @@ const AppContent = () => {
       data-sidebar-side={showDesktopShell ? (isRTL ? 'right' : 'left') : undefined}
     >
       <TopProgressBar visible={isLoading} />
-      {isAuthenticated && <ModernOnboardingManager />}
+      {isAuthenticated && !isShowingPicker && <WelcomeOnboarding />}
 
       {/* Header — the full shell, or grocery mode's slim desktop bar */}
       {showDesktopShell && <Header />}

@@ -1,19 +1,19 @@
 /**
  * GroceryModeHeader — the desktop chrome for grocery-only mode.
  *
- * Grocery mode hides the full SpendWise shell, which previously left desktop
- * users with no header at all and a mobile-only bottom bar — no route to
- * Profile, no notifications, no way back. This is the small, deliberate
- * replacement: it appears only on lg+ (the bottom bar covers mobile) and always
- * offers a way out of the mode.
+ * Grocery mode is its own app, not a section of SpendWise: this header carries
+ * only what belongs to it — the list, Profile, notifications, theme, language.
+ * Which app you open is changed deliberately in Profile → Preferences, so
+ * neither mode leaks a shortcut into the other.
+ *
+ * Appears on lg+ only; the bottom bar covers mobile.
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Moon, Shield, ShoppingCart, Sun, User } from 'lucide-react';
+import { Moon, Shield, ShoppingCart, Sun, User } from 'lucide-react';
 import { cn } from '../../utils/helpers';
 import { useTranslation, useTheme, useIsAdmin } from '../../stores';
-import { APP_MODE, setModeOverride } from '../../utils/appMode';
 import NotificationBell from './NotificationBell';
 
 const GroceryModeHeader = () => {
@@ -23,12 +23,6 @@ const GroceryModeHeader = () => {
   const { t: tg } = useTranslation('grocery');
   const { isDark, setTheme } = useTheme();
   const isAdmin = useIsAdmin();
-
-  /** One-time switch for this tab; the saved default_home is untouched. */
-  const switchToFull = useCallback(() => {
-    setModeOverride(APP_MODE.FULL);
-    navigate('/', { replace: true });
-  }, [navigate]);
 
   const linkClass = (path) => cn(
     'flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold transition-colors',
@@ -85,14 +79,6 @@ const GroceryModeHeader = () => {
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          <button
-            type="button"
-            onClick={switchToFull}
-            className="ms-1 flex h-10 items-center gap-2 rounded-xl border border-gray-200 px-3 text-sm font-semibold text-gray-600 transition-colors hover:border-gray-300 dark:border-gray-700 dark:text-gray-300"
-          >
-            <LayoutDashboard className="h-4 w-4" />
-            {t('nav.dashboard') || 'SpendWise'}
-          </button>
         </div>
       </div>
     </header>

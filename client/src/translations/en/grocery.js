@@ -108,6 +108,7 @@ export default {
   empty: {
     title: "The list is empty",
     description: "Add what you need and it'll be sorted by supermarket section automatically.",
+    gestureHint: "Tip: tap an item to drop it in the cart, long-press to edit or delete.",
     addFirst: "Add the first item",
     readOnly: "Nothing on the list right now.",
   },

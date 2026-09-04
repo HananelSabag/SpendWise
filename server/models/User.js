@@ -15,9 +15,12 @@ const { UserCache } = require('./UserCache');
 const DUMMY_PASSWORD_HASH = '$2b$12$u5ZtuglH5qMV1cK/uu.02O3i1rV9QFOzlFMR1LhHHWQs.Vx19CMfC';
 
 // ✅ Simplified User Model - Core Functionality Only
+/** Only two languages ship; anything else falls back to the Hebrew default. */
+const normalizeLanguage = (value) => (value === 'en' ? 'en' : 'he');
+
 class User {
   // Create user with basic validation
-  static async create(email, username, password, { firstName = null, lastName = null } = {}) {
+  static async create(email, username, password, { firstName = null, lastName = null, language = null } = {}) {
     try {
       // Basic password validation
       if (password.length < 8) {
@@ -44,7 +47,10 @@ class User {
         null,
         firstName || null,
         lastName  || null,
-        'en',
+        // Hebrew unless the sign-up screen said otherwise. This is an
+        // Israeli-market app; defaulting to English made every new account
+        // start in the wrong language.
+        normalizeLanguage(language),
         'ILS',
         'system'
       ];
@@ -526,7 +532,7 @@ class User {
         googleData.picture || null,
         googleData.first_name || '',
         googleData.last_name || '',
-        'en', // language_preference
+        normalizeLanguage(googleData.language), // language_preference
         'ILS', // currency_preference
         'system', // theme_preference
         false // onboarding_completed

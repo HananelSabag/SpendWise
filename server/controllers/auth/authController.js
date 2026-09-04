@@ -97,7 +97,9 @@ const authController = {
       }
 
       // Create user with optimized model
-      const user = await User.create(email, username, password, { firstName, lastName });
+      const user = await User.create(email, username, password, {
+        firstName, lastName, language: req.body.language,
+      });
 
       // Claim any grocery-list invitation that was sent to this address before
       // the account existed. It stays pending — the new user still has to accept.
@@ -452,6 +454,7 @@ const authController = {
         const username = `${usernameBase}_${googleUserId.slice(0, 8)}`;
 
         user = await User.createGoogleOnlyUser(email, username, {
+          language: req.body.language,
           google_id: googleUserId,
           picture: picture,
           first_name: name?.split(' ')[0] || '',

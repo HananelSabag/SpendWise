@@ -26,8 +26,11 @@ describe('auth API route contracts', () => {
 
     const result = await authAPI.processGoogleCredential('header.payload.signature');
 
+    // `language` seeds a brand-new account's language_preference; the server
+    // ignores it for a returning user.
     expect(mockPost).toHaveBeenCalledWith('/users/auth/google', {
       idToken: 'header.payload.signature',
+      language: 'he',
     });
     expect(result).toMatchObject({
       success: true,
@@ -35,6 +38,22 @@ describe('auth API route contracts', () => {
       refreshToken: 'google-refresh',
       user: { id: 1, email: 'person@example.com' },
     });
+  });
+
+  it('sends the language the auth screen is in, so a new account starts there', async () => {
+    mockPost.mockResolvedValue({
+      data: { data: { user: { id: 1 }, accessToken: 'a', tokens: { refreshToken: 'r' } } },
+    });
+
+    // This app is Israeli-market: Hebrew unless the screen was switched.
+    sessionStorage.setItem('spendwise-session-language', 'en');
+    await authAPI.processGoogleCredential('header.payload.signature');
+    expect(mockPost.mock.calls[0][1].language).toBe('en');
+
+    mockPost.mockClear();
+    sessionStorage.clear();
+    await authAPI.processGoogleCredential('header.payload.signature');
+    expect(mockPost.mock.calls[0][1].language).toBe('he');
   });
 
   it('preserves Google server error codes for the login screen', async () => {

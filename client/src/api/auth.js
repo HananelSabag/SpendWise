@@ -11,6 +11,25 @@ import { simpleGoogleAuth } from "../services/simpleGoogleAuth.js";
 import { getRefreshToken, setTokens, clearTokens } from "../auth/tokenStorage.js";
 import { ensureFreshToken, sessionStarted } from "../auth/refreshManager.js";
 
+/**
+ * The language the auth screens are currently showing.
+ *
+ * A brand-new account inherits it, so someone who signs up on the Hebrew screen
+ * lands in a Hebrew app. Read from storage rather than the store to avoid a
+ * circular import between the API layer and the translation store.
+ */
+const currentUiLanguage = () => {
+  try {
+    const session = sessionStorage.getItem('spendwise-session-language');
+    if (session === 'en' || session === 'he') return session;
+    const persisted = JSON.parse(localStorage.getItem('spendwise-translations') || '{}');
+    const stored = persisted?.state?.currentLanguage;
+    return stored === 'en' ? 'en' : 'he';
+  } catch {
+    return 'he';
+  }
+};
+
 // Quiet noisy debug logs in production; keep minimal in dev
 if (import.meta.env.DEV && import.meta.env.VITE_DEBUG_MODE === "true") {
   // silent
@@ -283,6 +302,8 @@ export const authAPI = {
 
       const response = await api.client.post("/users/auth/google", {
         idToken: credential,
+        // Only used when this creates the account; ignored for a returning user.
+        language: currentUiLanguage(),
       });
 
       // Extract response data (server returns data.user and data.accessToken).
@@ -335,6 +356,8 @@ export const authAPI = {
         email: userData.email?.trim().toLowerCase(),
         password: userData.password,
         acceptedTerms: userData.acceptedTerms,
+        // The language the sign-up screen was in becomes the account default.
+        language: currentUiLanguage(),
       });
 
       // ✅ Handle registration response

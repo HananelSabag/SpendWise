@@ -305,6 +305,12 @@ const GroceryListPage = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Taught once, at the top, because a long-press is not a
+                      gesture anyone discovers on their own. */}
+                  <p className="px-1 text-[11px] text-gray-400 dark:text-gray-500">
+                    {t('empty.gestureHint')}
+                  </p>
+
                   {sections.map(({ key, items }) => {
                     const category = CATEGORY_BY_KEY[key] || CATEGORY_BY_KEY[DEFAULT_CATEGORY];
                     const Icon = category.icon;
@@ -329,6 +335,7 @@ const GroceryListPage = () => {
                                 item={item}
                                 onToggle={togglePurchased}
                                 onOpen={openItem}
+                                onDelete={deleteItem}
                                 disabled={!canEdit}
                               />
                             ))}
@@ -381,6 +388,7 @@ const GroceryListPage = () => {
                                 item={item}
                                 onToggle={togglePurchased}
                                 onOpen={openItem}
+                                onDelete={deleteItem}
                                 disabled={!canEdit}
                               />
                             ))}

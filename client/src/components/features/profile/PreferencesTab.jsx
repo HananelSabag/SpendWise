@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth, useTranslation, useTranslationStore } from '../../../stores';
 import { cn } from '../../../utils/helpers';
-import { APP_MODE, preferencesForMode, preferredAppMode, setModeOverride } from '../../../utils/appMode';
+import { APP_MODE, landingPathForMode, preferencesForMode, preferredAppMode, setModeOverride } from '../../../utils/appMode';
 import queryClient from '../../../config/queryClient';
 
 const Row = ({ label, value, onChange, options }) => (
@@ -24,6 +25,7 @@ const Row = ({ label, value, onChange, options }) => (
 export const PreferencesTab = ({ user, authToasts }) => {
   const { updateProfile } = useAuth();
   const { t }             = useTranslation('profile');
+  const navigate          = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
   // The saved account default, independent of any one-time switch the user made
@@ -81,10 +83,17 @@ export const PreferencesTab = ({ user, authToasts }) => {
       } catch (_) {}
 
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
+      const previousHome = original.default_home;
       setOriginal(prefs);
       authToasts.preferencesUpdated?.();
-      // The new default-home preference applies on the next visit — saving a setting should not
-      // yank the user off the profile page they are on.
+
+      // Full SpendWise and the grocery list are separate apps with separate
+      // navigation, and this screen is the only place you move between them —
+      // so changing the mode has to actually take you there. Every other
+      // preference still saves in place without yanking the user off the page.
+      if (default_home !== previousHome) {
+        navigate(landingPathForMode(mode), { replace: true });
+      }
     } catch {
       authToasts.profileUpdateFailed?.();
     } finally {

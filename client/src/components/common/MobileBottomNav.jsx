@@ -21,7 +21,6 @@ import {
   Home, CreditCard, User,
   PlusCircle, MinusCircle, Calculator,
   Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, Wallet, ChevronRight,
-  LayoutDashboard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -32,7 +31,7 @@ import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
 import BrandMark from './BrandMark';
 import { openAccessibilityMenu } from './AccessibilityMenuHost';
-import { APP_MODE, isGroceryMode, setModeOverride } from '../../utils/appMode';
+import { isGroceryMode } from '../../utils/appMode';
 
 // ─── Grocery-only nav ────────────────────────────────────────────────────────
 
@@ -54,13 +53,6 @@ const GroceryModeNav = () => {
     { key: 'profile', icon: User,         label: t('nav.profile') || 'Profile', href: '/profile' },
     ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t('nav.admin') || 'Admin', href: '/admin' }] : []),
   ];
-
-  const switchToFull = useCallback(() => {
-    // One-time switch: this tab moves to full SpendWise, the saved preference
-    // stays exactly as it was.
-    setModeOverride(APP_MODE.FULL);
-    navigate('/', { replace: true });
-  }, [navigate]);
 
   return (
     <nav
@@ -108,17 +100,6 @@ const GroceryModeNav = () => {
         </span>
       </div>
 
-      <button
-        onClick={switchToFull}
-        className="flex flex-col items-center justify-end py-2 flex-1 min-w-0 focus:outline-none"
-      >
-        <div className="relative flex items-center justify-center w-10 h-8">
-          <LayoutDashboard className="w-5 h-5 text-gray-400 dark:text-gray-500" />
-        </div>
-        <span className="text-[10px] font-medium mt-0.5 truncate max-w-full px-1 text-gray-400 dark:text-gray-500">
-          {t('nav.dashboard') || 'SpendWise'}
-        </span>
-      </button>
     </nav>
   );
 };
@@ -129,7 +110,6 @@ const FullNav = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { t, currentLanguage, setLanguage } = useTranslation();
-  const { t: tGrocery } = useTranslation('grocery');
   const { isDark, setTheme } = useTheme();
   const toast    = useToast();
   const isAdmin  = useIsAdmin();
@@ -419,26 +399,6 @@ const FullNav = () => {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{displayName}</p>
               {user?.email && <p className="truncate text-xs text-gray-400 dark:text-gray-500">{user.email}</p>}
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 rtl:rotate-180" />
-          </button>
-
-          {/* ── Grocery list — the shared household list, reachable from
-                 full SpendWise mode too (not only from its own shell). ──── */}
-          <button
-            onClick={() => closeAndGo('/grocery')}
-            className="flex w-full items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-start active:scale-[0.98] transition-all dark:border-emerald-500/25 dark:bg-emerald-500/10"
-          >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
-              <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                {tGrocery('title')}
-              </p>
-              <p className="truncate text-xs text-gray-400 dark:text-gray-500">
-                {tGrocery('subtitle')}
-              </p>
             </div>
             <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 rtl:rotate-180" />
           </button>

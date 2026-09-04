@@ -77,3 +77,25 @@ export const preferencesForMode = (existing, mode) => ({
 });
 
 export const landingPathForMode = (mode) => (mode === APP_MODE.GROCERY ? '/grocery' : '/');
+
+/**
+ * Which modes have shown their welcome screen.
+ *
+ * Tracked per mode rather than with the old single `onboarding_completed` flag,
+ * because the two modes are separate apps: someone who starts in the grocery
+ * list and later switches to full SpendWise should get SpendWise's one-time
+ * intro then, not never.
+ */
+export const ONBOARDING_SEEN = 'onboarding_seen';
+
+export const hasSeenOnboarding = (user, mode) =>
+  (user?.preferences?.[ONBOARDING_SEEN] || {})[mode] === true;
+
+/** The preferences payload that marks one mode's welcome as done. */
+export const preferencesWithOnboardingSeen = (existing, mode) => ({
+  ...(existing || {}),
+  [ONBOARDING_SEEN]: {
+    ...((existing || {})[ONBOARDING_SEEN] || {}),
+    [mode]: true,
+  },
+});
