@@ -34,10 +34,12 @@ export const api = {
     // ✅ Profile picture upload
     async uploadAvatar(formData) {
       try {
+        // Content-Type must be cleared, not set: axios turns FormData into JSON
+        // when the content type says JSON, and a literal 'multipart/form-data'
+        // carries no boundary for the server to split on. Only an absent header
+        // lets the browser write `multipart/form-data; boundary=...`.
         const response = await apiClient.post('/users/upload-profile-picture', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+          headers: { 'Content-Type': undefined }
         });
         
         return {

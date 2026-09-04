@@ -180,3 +180,82 @@ describe('trips', () => {
     expect(result.data.expiresInSeconds).toBe(300);
   });
 });
+
+describe('multipart uploads', () => {
+  // The shared axios instance defaults to Content-Type: application/json, and
+  // axios 1.x reacts to that by running formDataToJSON on a FormData body —
+  // serialising it and throwing the file away. The upload then reached the
+  // server with no file at all. Clearing the header is the only thing that lets
+  // the browser write `multipart/form-data; boundary=...`.
+  it('clears the JSON content type when uploading an item photo', async () => {
+    mockPost.mockResolvedValue(ok({ imageUrl: 'https://cdn/x.png' }));
+    const file = new File(['x'], 'photo.png', { type: 'image/png' });
+
+    await groceryAPI.uploadItemImage(file);
+
+    const [, body, config] = mockPost.mock.calls[0];
+    expect(body).toBeInstanceOf(FormData);
+    expect(config.headers).toHaveProperty('Content-Type', undefined);
+  });
+
+  it('clears it for receipts too', async () => {
+    mockPost.mockResolvedValue(ok({ hasReceipt: true }));
+    const file = new File(['x'], 'receipt.pdf', { type: 'application/pdf' });
+
+    await groceryAPI.uploadReceipt(9, file);
+
+    const [, body, config] = mockPost.mock.calls[0];
+    expect(body).toBeInstanceOf(FormData);
+    expect(config.headers).toHaveProperty('Content-Type', undefined);
+  });
+
+  it('never sends a literal multipart content type — it would carry no boundary', async () => {
+    mockPost.mockResolvedValue(ok({}));
+    await groceryAPI.uploadItemImage(new File(['x'], 'p.png', { type: 'image/png' }));
+
+    const [, , config] = mockPost.mock.calls[0];
+    expect(config.headers['Content-Type']).not.toBe('multipart/form-data');
+  });
+});
+
+describe('failure reporting is honest', () => {
+  it('reports a timeout as a timeout, not as being offline', async () => {
+    mockGet.mockRejectedValue(Object.assign(new Error('timeout of 45000ms exceeded'), {
+      code: 'ECONNABORTED',
+    }));
+
+    const result = await groceryAPI.getState();
+
+    expect(result.error.code).toBe('TIMEOUT');
+    expect(result.status).toBe(0);
+  });
+
+  // Telling someone to check their wifi over a 413 or a proxy error page sent
+  // them looking in entirely the wrong place.
+  it('reports a server response without an error body by its status', async () => {
+    mockPost.mockRejectedValue({ response: { status: 413, data: '<html>too large</html>' } });
+
+    const result = await groceryAPI.uploadItemImage(new File(['x'], 'p.png', { type: 'image/png' }));
+
+    expect(result.status).toBe(413);
+    expect(result.error.code).toBe('HTTP_413');
+  });
+
+  it('still uses the server code when there is one', async () => {
+    mockPost.mockRejectedValue({
+      response: { status: 400, data: { error: { code: 'GROCERY_FILE_REQUIRED' } } },
+    });
+
+    const result = await groceryAPI.uploadItemImage(new File(['x'], 'p.png', { type: 'image/png' }));
+
+    expect(result.error.code).toBe('GROCERY_FILE_REQUIRED');
+  });
+
+  it('only calls it a network error when no response came back at all', async () => {
+    mockGet.mockRejectedValue(new Error('Network Error'));
+
+    const result = await groceryAPI.getState();
+
+    expect(result.error.code).toBe('NETWORK_ERROR');
+  });
+});

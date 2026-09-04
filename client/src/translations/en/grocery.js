@@ -62,6 +62,7 @@ export default {
     name: "Item",
     namePlaceholder: "Milk, tomatoes, bread…",
     category: "Category",
+    categoryGuessed: "Category picked from the name — change it if it's off",
     quantity: "Quantity",
     quantityPlaceholder: "2",
     unit: "Unit",
@@ -279,6 +280,7 @@ export default {
     GROCERY_IMAGE_FORMAT: "That image format isn't supported — try a JPEG or PNG",
     GROCERY_IMAGE_UPLOAD_FAILED: "Couldn't save the photo",
     GROCERY_FILE_REQUIRED: "Choose a file first",
+    TIMEOUT: "The server took too long — try again",
     NETWORK_ERROR: "No connection — check your network",
   },
 

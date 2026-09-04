@@ -62,6 +62,7 @@ export default {
     name: "פריט",
     namePlaceholder: "חלב, עגבניות, לחם…",
     category: "קטגוריה",
+    categoryGuessed: "הקטגוריה זוהתה מהשם — שנו אם לא מדויק",
     quantity: "כמות",
     quantityPlaceholder: "2",
     unit: "יחידה",
@@ -279,6 +280,7 @@ export default {
     GROCERY_IMAGE_FORMAT: "פורמט התמונה לא נתמך — נסו JPEG או PNG",
     GROCERY_IMAGE_UPLOAD_FAILED: "לא הצלחנו לשמור את התמונה",
     GROCERY_FILE_REQUIRED: "בחרו קובץ קודם",
+    TIMEOUT: "השרת לקח יותר מדי זמן — נסו שוב",
     NETWORK_ERROR: "אין חיבור — בדקו את הרשת",
   },
 

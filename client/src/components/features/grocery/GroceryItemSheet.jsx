@@ -12,7 +12,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Link2, Loader2, Trash2, X } from 'lucide-react';
+import { Camera, ChevronDown, Link2, Loader2, Trash2, X } from 'lucide-react';
 import BottomSheet from '../../common/BottomSheet';
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
@@ -37,7 +37,6 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
   const { t: tc } = useTranslation('common');
   const toast = useToast();
   const fileRef = useRef(null);
-  const chipsRef = useRef(null);
 
   const [draft, setDraft] = useState(emptyDraft);
   const [categoryPinned, setCategoryPinned] = useState(false);
@@ -89,13 +88,6 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
     setCategoryPinned(true);
     set('category_key', key);
   }, [set]);
-
-  // Keep the selected chip visible in the horizontal strip when it changes on
-  // its own, otherwise the guess happens off-screen and looks like nothing.
-  useEffect(() => {
-    const active = chipsRef.current?.querySelector('[data-active="true"]');
-    active?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-  }, [draft.category_key]);
 
   const handleSave = useCallback(async () => {
     const name = draft.name.trim();
@@ -160,12 +152,17 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
     toast.success(t('scrape.success'));
   }, [draft.product_url, t, toast]);
 
+  const activeCategory = GROCERY_CATEGORIES.find((c) => c.key === draft.category_key)
+    || GROCERY_CATEGORIES[GROCERY_CATEGORIES.length - 1];
+  const ActiveCategoryIcon = activeCategory.icon;
+
   const field = cn(
     'h-11 w-full rounded-xl border px-3 text-[15px]',
     'border-gray-200 bg-white text-gray-900 placeholder:text-gray-400',
     'focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500',
     'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-50 dark:placeholder:text-gray-500'
   );
+  const label = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500';
 
   return (
     <BottomSheet
@@ -176,55 +173,63 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
       <div className="space-y-3 px-4 pb-6">
 
         {/* Name — the only required field, and the one that drives the guess. */}
-        <input
-          value={draft.name}
-          onChange={(event) => handleName(event.target.value)}
-          maxLength={200}
-          autoFocus={!isEdit}
-          enterKeyHint="done"
-          onKeyDown={(event) => { if (event.key === 'Enter') handleSave(); }}
-          placeholder={t('fields.namePlaceholder')}
-          aria-label={t('fields.name')}
-          className={cn(field, 'h-12 text-base font-medium')}
-        />
+        <div>
+          <label className={label} htmlFor="grocery-name">
+            {t('fields.name')}
+          </label>
+          <input
+            id="grocery-name"
+            value={draft.name}
+            onChange={(event) => handleName(event.target.value)}
+            maxLength={200}
+            autoFocus={!isEdit}
+            enterKeyHint="done"
+            onKeyDown={(event) => { if (event.key === 'Enter') handleSave(); }}
+            placeholder={t('fields.namePlaceholder')}
+            className={cn(field, 'h-12 text-base font-medium')}
+          />
+        </div>
 
-        {/* Category — a single scrolling row rather than a 12-cell grid that
-            pushed everything else below the fold. */}
-        <div
-          ref={chipsRef}
-          className="-mx-4 overflow-x-auto px-4 pb-1"
-          role="radiogroup"
-          aria-label={t('fields.category')}
-        >
-          <div className="flex gap-1.5">
-            {GROCERY_CATEGORIES.map((option) => {
-              const Icon = option.icon;
-              const selected = option.key === draft.category_key;
-              return (
-                <button
-                  key={option.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  data-active={selected}
-                  onClick={() => pickCategory(option.key)}
-                  className={cn(
-                    'flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold transition-colors',
-                    selected
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300'
-                      : 'border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-400'
-                  )}
-                >
-                  <Icon className={cn('h-3.5 w-3.5', selected ? '' : option.tint)} />
-                  {t(`categories.${option.key}`)}
-                </button>
-              );
-            })}
+        {/* Category — a plain select. Twelve fixed options is exactly what a
+            dropdown is for, and it holds still while you type, which a
+            horizontal strip that re-scrolls to the guessed chip did not. */}
+        <div>
+          <label className={label}>{t('fields.category')}</label>
+          <div className="relative">
+          <span
+            className="pointer-events-none absolute inset-y-0 start-3 flex items-center"
+            aria-hidden
+          >
+            <ActiveCategoryIcon className={cn('h-4 w-4', activeCategory.tint)} />
+          </span>
+          <select
+            value={draft.category_key}
+            onChange={(event) => pickCategory(event.target.value)}
+            aria-label={t('fields.category')}
+            className={cn(field, 'appearance-none ps-10 pe-9 font-medium')}
+          >
+            {GROCERY_CATEGORIES.map((option) => (
+              <option key={option.key} value={option.key}>
+                {t(`categories.${option.key}`)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute inset-y-0 end-3 my-auto h-4 w-4 text-gray-400"
+            aria-hidden
+          />
           </div>
+          {!categoryPinned && draft.name.trim() && (
+            <p className="mt-1 text-[11px] text-blue-500 dark:text-blue-400">
+              {t('fields.categoryGuessed')}
+            </p>
+          )}
         </div>
 
         {/* Quantity + unit */}
-        <div className="flex gap-2">
+        <div>
+          <label className={label}>{t('fields.quantity')}</label>
+          <div className="flex gap-2">
           <input
             type="number"
             inputMode="decimal"
@@ -246,21 +251,27 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
             {GROCERY_UNITS.map((unit) => (
               <option key={unit} value={unit}>{t(`units.${unit}`)}</option>
             ))}
-          </select>
+            </select>
+          </div>
         </div>
 
         {/* Note */}
-        <input
-          value={draft.note}
-          onChange={(event) => set('note', event.target.value)}
-          maxLength={500}
-          placeholder={t('fields.notePlaceholder')}
-          aria-label={t('fields.note')}
-          className={field}
-        />
+        <div>
+          <label className={label} htmlFor="grocery-note">{t('fields.note')}</label>
+          <input
+            id="grocery-note"
+            value={draft.note}
+            onChange={(event) => set('note', event.target.value)}
+            maxLength={500}
+            placeholder={t('fields.notePlaceholder')}
+            className={field}
+          />
+        </div>
 
         {/* Product link */}
-        <div className="flex gap-2">
+        <div>
+          <label className={label}>{t('fields.link')}</label>
+          <div className="flex gap-2">
           <input
             type="url"
             dir="ltr"
@@ -278,11 +289,14 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500 disabled:opacity-40 dark:border-gray-700 dark:text-gray-400"
           >
             {fetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-          </button>
+            </button>
+          </div>
         </div>
 
         {/* Photo */}
-        <div className="flex items-center gap-3">
+        <div>
+          <label className={label}>{t('fields.photo')}</label>
+          <div className="flex items-center gap-3">
           {draft.image_url && (
             <div className="relative shrink-0">
               <img
@@ -316,6 +330,7 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
             onChange={handlePhoto}
             className="hidden"
           />
+          </div>
         </div>
 
         {/* Actions */}

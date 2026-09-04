@@ -29,6 +29,19 @@ const sessionId = (() => {
   }
 })();
 
+/**
+ * Required on every FormData request.
+ *
+ * The shared axios instance defaults to `Content-Type: application/json`, and
+ * axios (1.x, `transformRequest`) reacts to a JSON content type by running
+ * `formDataToJSON` — it serialises the FormData and **throws the file away**.
+ * Clearing the header lets the browser set `multipart/form-data` with the
+ * boundary, which is the only form multer can parse. Setting the header to the
+ * literal string 'multipart/form-data' does not work either: without a boundary
+ * the server cannot split the parts.
+ */
+const multipart = { headers: { 'Content-Type': undefined } };
+
 const leaseHeaders = (token) => ({
   [SESSION_HEADER]: sessionId,
   ...(token ? { [LEASE_HEADER]: token } : {}),
@@ -41,11 +54,38 @@ const ok = (response) => ({
   leaseToken: response.headers?.[LEASE_HEADER.toLowerCase()] || null,
 });
 
-const failed = (error) => ({
-  success: false,
-  status: error?.response?.status ?? 0,
-  error: error?.response?.data?.error || { code: 'NETWORK_ERROR', message: error?.message },
-});
+/**
+ * Turn an axios failure into the `{ code }` shape the UI translates.
+ *
+ * Only a request that never got a response is a network problem. Reporting
+ * "no connection" for a server response whose body simply had no `error` field
+ * sent people to check their wifi over a 413 or a proxy error page — say the
+ * status instead, and keep timeouts distinct from being offline.
+ */
+const failed = (error) => {
+  const response = error?.response;
+
+  if (response) {
+    return {
+      success: false,
+      status: response.status,
+      error: response.data?.error
+        || { code: `HTTP_${response.status}`, message: error.message },
+    };
+  }
+
+  const timedOut = error?.code === 'ECONNABORTED'
+    || /timeout/i.test(error?.message || '');
+
+  return {
+    success: false,
+    status: 0,
+    error: {
+      code: timedOut ? 'TIMEOUT' : 'NETWORK_ERROR',
+      message: error?.message,
+    },
+  };
+};
 
 const call = async (fn) => {
   try {
@@ -112,7 +152,7 @@ const groceryAPI = {
   uploadReceipt: (id, file) => {
     const form = new FormData();
     form.append('receipt', file);
-    return call(() => apiClient.client.post(`/grocery/trips/${id}/receipt`, form));
+    return call(() => apiClient.client.post(`/grocery/trips/${id}/receipt`, form, multipart));
   },
 
   linkToSpendWise: (id) =>
@@ -123,7 +163,7 @@ const groceryAPI = {
   uploadItemImage: (file) => {
     const form = new FormData();
     form.append('itemImage', file);
-    return call(() => apiClient.client.post('/grocery/items/image', form));
+    return call(() => apiClient.client.post('/grocery/items/image', form, multipart));
   },
 
   scrapeUrl: (url) =>
