@@ -134,6 +134,16 @@ const groceryAPI = {
 
   // ─── Sharing ──────────────────────────────────────────────────────────────
 
+  // The primary way to share: one recipient-less link, created on demand.
+  createShareLink: () =>
+    call(() => apiClient.client.post('/grocery/invitations/link', {})),
+
+  getShareLink: () =>
+    call(() => apiClient.client.get('/grocery/invitations/link')),
+
+  revokeShareLink: () =>
+    call(() => apiClient.client.delete('/grocery/invitations/link')),
+
   invite: (email) =>
     call(() => apiClient.client.post('/grocery/invitations', { email })),
 

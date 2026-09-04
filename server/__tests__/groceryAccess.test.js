@@ -173,11 +173,50 @@ describe('grocery routes', () => {
     expect(stateLine).not.toMatch(/requireLease/);
   });
 
+  /** Line numbers of route declarations, ignoring any mention in a comment. */
+  const lineOf = (needle) => routes
+    .split('\n')
+    .findIndex((line) => !line.trim().startsWith('//') && line.includes(needle));
+
   test('invitation endpoints work before the caller has a list of their own', () => {
-    const attachIndex = routes.indexOf('router.use(attachList)');
-    expect(routes.indexOf("router.get('/invitations/:token'")).toBeLessThan(attachIndex);
-    expect(routes.indexOf("router.post('/invitations/:token/accept'")).toBeLessThan(attachIndex);
-    expect(routes.indexOf("router.post('/invitations/:token/decline'")).toBeLessThan(attachIndex);
+    const attachLine = lineOf('router.use(attachList);');
+    expect(attachLine).toBeGreaterThan(-1);
+
+    for (const route of [
+      "router.get('/invitations/:token'",
+      "router.post('/invitations/:token/accept'",
+      "router.post('/invitations/:token/decline'",
+    ]) {
+      expect(lineOf(route)).toBeGreaterThan(-1);
+      expect(lineOf(route)).toBeLessThan(attachLine);
+    }
+  });
+
+  // Express matches in declaration order, so a `:token` wildcard declared first
+  // would swallow the literal "link" segment and try to preview an invitation
+  // whose token is the word "link".
+  test('the share-link routes are declared before the :token wildcard', () => {
+    const wildcard = lineOf("router.get('/invitations/:token'");
+    for (const route of [
+      "router.post('/invitations/link'",
+      "router.get('/invitations/link'",
+      "router.delete('/invitations/link'",
+    ]) {
+      expect(lineOf(route)).toBeGreaterThan(-1);
+      expect(lineOf(route)).toBeLessThan(wildcard);
+    }
+  });
+
+  test('the share-link routes still run the list and owner checks', () => {
+    for (const route of [
+      "router.post('/invitations/link'",
+      "router.get('/invitations/link'",
+      "router.delete('/invitations/link'",
+    ]) {
+      const declaration = routes.split('\n')[lineOf(route)];
+      expect(declaration).toMatch(/attachList/);
+      expect(declaration).toMatch(/requireOwner/);
+    }
   });
 
   test('there is no GET route that accepts an invitation', () => {

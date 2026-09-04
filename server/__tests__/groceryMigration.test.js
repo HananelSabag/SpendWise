@@ -78,3 +78,35 @@ describe('grocery list migration', () => {
     expect(migration).toMatch(/ROLLBACK \(destructive/);
   });
 });
+
+describe('open link invitations migration', () => {
+  const linkMigration = fs.readFileSync(
+    path.join(__dirname, '..', 'DB Migrations', '41_grocery_link_invitations.sql'),
+    'utf8',
+  );
+
+  test('runs as one all-or-nothing transaction', () => {
+    expect(linkMigration).toMatch(/^\s*BEGIN;/m);
+    expect(linkMigration).toMatch(/^COMMIT;/m);
+  });
+
+  test('lets an invitation exist without a recipient', () => {
+    expect(linkMigration).toMatch(
+      /ALTER TABLE grocery_list_invitations\s+ALTER COLUMN invitee_email DROP NOT NULL/i,
+    );
+  });
+
+  // Postgres treats NULLs as distinct in the existing (list_id, invitee_email)
+  // index, so without this one a list could accumulate open links and "revoke"
+  // would only kill whichever one it happened to find.
+  test('allows only one open link per list', () => {
+    expect(linkMigration).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS uq_grocery_invitation_open_link[\s\S]*?ON grocery_list_invitations\(list_id\)[\s\S]*?WHERE status = 'pending' AND invitee_email IS NULL/i,
+    );
+  });
+
+  test('documents verification and rollback', () => {
+    expect(linkMigration).toMatch(/VERIFICATION/);
+    expect(linkMigration).toMatch(/ROLLBACK:/);
+  });
+});

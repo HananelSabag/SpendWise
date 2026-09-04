@@ -1,17 +1,18 @@
 /**
  * GroceryListPage — the shared household grocery list.
  *
- * Layout is built around one-handed use in a supermarket: a compact header with
- * progress, a sticky aisle strip to jump between departments, dense rows, and a
- * composer pinned within thumb reach above the bottom navigation. Desktop gets a
- * second column rather than a stretched phone layout.
+ * Vertical space is the scarce resource here. On a phone the bottom navigation
+ * already owns ~60px, so the page keeps its own chrome to a single scrolling
+ * header row and a hairline progress bar: nothing is sticky, because a sticky
+ * header plus a sticky composer plus the nav left less than half the screen for
+ * the list itself. Adding an item is one floating button that opens one sheet.
  */
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ChevronDown, ClipboardList, Flag, ShoppingCart, Users, AlertCircle,
+  AlertCircle, ChevronDown, ClipboardList, Flag, Plus, ShoppingCart, Users,
 } from 'lucide-react';
 import { cn } from '../utils/helpers';
 import { isGroceryMode } from '../utils/appMode';
@@ -21,7 +22,6 @@ import { useGroceryList } from '../hooks/useGroceryList';
 import { useMyGroceryInvitations } from '../hooks/useGrocerySharing';
 import { PageSkeleton, LiquidTabs } from '../components/ui';
 import GroceryItemRow from '../components/features/grocery/GroceryItemRow';
-import GroceryQuickAdd from '../components/features/grocery/GroceryQuickAdd';
 import GroceryItemSheet from '../components/features/grocery/GroceryItemSheet';
 import GroceryLockBanner from '../components/features/grocery/GroceryLockBanner';
 import GroceryFinishSheet from '../components/features/grocery/GroceryFinishSheet';
@@ -30,39 +30,13 @@ import GroceryHistoryPanel from '../components/features/grocery/GroceryHistoryPa
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
 /**
- * How far the composer sits above the bottom navigation.
- *
- * Grocery mode's bar is a flat row. Full SpendWise mode's bar has a raised
- * centre FAB that protrudes about 28px above it, so the composer has to clear
- * that too — this is the collision the old wishlist screen had between its FAB,
- * its sticky total bar and the tab bar.
+ * How high the add button floats above the bottom navigation. Grocery mode's
+ * bar is a flat row; full SpendWise mode's has a centre FAB that protrudes
+ * about 28px above it and would collide with a button sitting any lower.
  */
-const COMPOSER_OFFSET = {
-  grocery: 'calc(60px + env(safe-area-inset-bottom, 0px))',
-  full: 'calc(92px + env(safe-area-inset-bottom, 0px))',
-};
-
-const ProgressBar = ({ progress, pendingCount, purchasedCount }) => {
-  const { t } = useTranslation('grocery');
-  const allDone = pendingCount === 0 && purchasedCount > 0;
-
-  return (
-    <div className="flex items-center gap-3">
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
-        <motion.div
-          className={cn('h-full rounded-full', allDone ? 'bg-emerald-500' : 'bg-blue-500')}
-          animate={{ width: `${progress}%` }}
-          transition={{ type: 'spring', stiffness: 200, damping: 30 }}
-        />
-      </div>
-      <span className={cn(
-        'shrink-0 text-xs font-bold tabular-nums',
-        allDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'
-      )}>
-        {allDone ? t('progress.allDone') : t('progress.remaining', { count: pendingCount })}
-      </span>
-    </div>
-  );
+const FAB_OFFSET = {
+  grocery: 'calc(72px + env(safe-area-inset-bottom, 0px))',
+  full: 'calc(104px + env(safe-area-inset-bottom, 0px))',
 };
 
 const GroceryListPage = () => {
@@ -75,7 +49,7 @@ const GroceryListPage = () => {
 
   const {
     isLoading, isError, refetch,
-    members, pendingInvitations, sections, purchased,
+    members, sections, purchased,
     pendingCount, purchasedCount, progress, role,
     lock, lockedByOther, canEdit, isEditMode, holdsLease,
     requestControl, releaseControl,
@@ -86,7 +60,6 @@ const GroceryListPage = () => {
 
   const [tab, setTab] = useState(searchParams.get('tab') === 'history' ? 'history' : 'list');
   const [sheetItem, setSheetItem] = useState(null);
-  const [sheetSeed, setSheetSeed] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -101,22 +74,8 @@ const GroceryListPage = () => {
     setSearchParams(params, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const handleAdd = useCallback(async (payload) => {
-    const created = await addItem(payload);
-    return !!created;
-  }, [addItem]);
-
-  const handleOpenItem = useCallback((item) => {
-    setSheetItem(item);
-    setSheetSeed(null);
-    setSheetOpen(true);
-  }, []);
-
-  const handleOpenDetails = useCallback((seed) => {
-    setSheetItem(null);
-    setSheetSeed(seed);
-    setSheetOpen(true);
-  }, []);
+  const openAdd = useCallback(() => { setSheetItem(null); setSheetOpen(true); }, []);
+  const openItem = useCallback((item) => { setSheetItem(item); setSheetOpen(true); }, []);
 
   const handleSaveItem = useCallback(async (payload) => {
     const saved = sheetItem
@@ -149,9 +108,9 @@ const GroceryListPage = () => {
     };
   }, [myInvitations]);
 
-  // Error first: a query that keeps failing stays pending across its retry and
-  // poll cycles, so checking isLoading first showed a skeleton that never
-  // resolved instead of telling the user anything.
+  // Error before loading: a query that keeps failing stays pending across its
+  // retry and poll cycles, so checking isLoading first showed a skeleton that
+  // never resolved instead of the error and its retry button.
   if (isError) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
@@ -171,32 +130,40 @@ const GroceryListPage = () => {
   if (isLoading) return <PageSkeleton page="grocery" />;
 
   const isEmpty = sections.length === 0 && purchased.length === 0;
-  const composerDisabled = lockedByOther;
+
+  /** One line of status under the title, instead of a card of its own. */
+  const statusLine = isEmpty
+    ? (members.length > 1 ? t('subtitle') : t('share.alone'))
+    : [
+        t('progress.remaining', { count: pendingCount }),
+        purchasedCount > 0 ? t('progress.done', { count: purchasedCount }) : null,
+      ].filter(Boolean).join(' · ');
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
-      <div className="mx-auto w-full max-w-6xl px-3 pb-4 sm:px-5 lg:px-6">
+    <div
+      dir={isRTL ? 'rtl' : 'ltr'}
+      className="min-h-screen bg-gray-50 pb-28 dark:bg-gray-950 lg:pb-10"
+    >
+      <div className="mx-auto w-full max-w-6xl px-3 sm:px-5 lg:px-6">
 
-        {/* ── Header ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 -mx-3 bg-gray-50/95 px-3 pb-2 pt-3 backdrop-blur-sm sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6 dark:bg-gray-950/95">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
-              <ShoppingCart className="h-5 w-5" />
+        {/* ── Header — scrolls away with the content ─────────────────── */}
+        <header className="pt-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white lg:hidden">
+              <ShoppingCart className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-lg font-extrabold leading-tight text-gray-900 dark:text-gray-50">
+              <h1 className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
                 {t('title')}
               </h1>
-              <p className="truncate text-xs text-gray-400 dark:text-gray-500">
-                {members.length > 1 ? t('subtitle') : t('share.alone')}
-              </p>
+              <p className="truncate text-xs text-gray-400 dark:text-gray-500">{statusLine}</p>
             </div>
 
             <button
               type="button"
               onClick={() => setShareOpen(true)}
               aria-label={t('share.title')}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-colors hover:text-gray-700 lg:hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition-colors hover:text-gray-700 lg:hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
             >
               <Users className="h-4 w-4" />
               {myInvitations.length > 0 && (
@@ -207,11 +174,10 @@ const GroceryListPage = () => {
             </button>
           </div>
 
-          {/* Two tabs stretched across a desktop width read as a banner, not a
-              control — cap them and let the content have the room. */}
-          <div className="mt-2.5 lg:max-w-sm">
+          <div className="mt-2 lg:max-w-sm">
             <LiquidTabs
               fill
+              size="sm"
               tabs={[
                 { id: 'list', label: t('tabs.list'), icon: ClipboardList },
                 { id: 'history', label: t('tabs.history'), icon: Flag },
@@ -220,6 +186,18 @@ const GroceryListPage = () => {
               onChange={changeTab}
             />
           </div>
+
+          {/* Progress as a hairline rather than a card — it was spending 50px to
+              repeat what the status line above already says in words. */}
+          {tab === 'list' && !isEmpty && (
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+              <motion.div
+                className={cn('h-full rounded-full', pendingCount === 0 ? 'bg-emerald-500' : 'bg-blue-500')}
+                animate={{ width: `${progress}%` }}
+                transition={{ type: 'spring', stiffness: 200, damping: 30 }}
+              />
+            </div>
+          )}
         </header>
 
         {tab === 'history' ? (
@@ -231,56 +209,49 @@ const GroceryListPage = () => {
 
             {/* ── Main column ─────────────────────────────────────── */}
             <div className="min-w-0 flex-1">
-              <div className="space-y-2.5">
-                {invitationBanner && (
-                  <button
-                    type="button"
-                    onClick={() => setShareOpen(true)}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-start dark:border-blue-500/30 dark:bg-blue-500/10"
-                  >
-                    <Users className="h-4 w-4 shrink-0 text-blue-500" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-blue-900 dark:text-blue-200">
-                        {t('banner.invitation', { name: invitationBanner.name })}
-                      </span>
-                      {invitationBanner.extra > 0 && (
-                        <span className="block text-xs text-blue-600 dark:text-blue-300">
-                          {t('banner.invitationMore', { count: invitationBanner.extra })}
+              {(invitationBanner || lockedByOther || (isEditMode && holdsLease)) && (
+                <div className="mb-2.5 space-y-2.5">
+                  {invitationBanner && (
+                    <button
+                      type="button"
+                      onClick={() => setShareOpen(true)}
+                      className="flex w-full items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2.5 text-start dark:border-blue-500/30 dark:bg-blue-500/10"
+                    >
+                      <Users className="h-4 w-4 shrink-0 text-blue-500" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-blue-900 dark:text-blue-200">
+                          {t('banner.invitation', { name: invitationBanner.name })}
                         </span>
-                      )}
-                    </span>
-                    <span className="shrink-0 text-xs font-bold text-blue-600 dark:text-blue-300">
-                      {t('banner.view')}
-                    </span>
-                  </button>
-                )}
+                        {invitationBanner.extra > 0 && (
+                          <span className="block text-xs text-blue-600 dark:text-blue-300">
+                            {t('banner.invitationMore', { count: invitationBanner.extra })}
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-xs font-bold text-blue-600 dark:text-blue-300">
+                        {t('banner.view')}
+                      </span>
+                    </button>
+                  )}
 
-                <GroceryLockBanner
-                  lockedByOther={lockedByOther}
-                  lockedBy={lock?.lockedBy}
-                  expiresAt={lock?.expiresAt}
-                  isEditMode={isEditMode}
-                  holdsLease={holdsLease}
-                  onRequestControl={requestControl}
-                  onReleaseControl={releaseControl}
-                />
+                  <GroceryLockBanner
+                    lockedByOther={lockedByOther}
+                    lockedBy={lock?.lockedBy}
+                    expiresAt={lock?.expiresAt}
+                    isEditMode={isEditMode}
+                    holdsLease={holdsLease}
+                    onRequestControl={requestControl}
+                    onReleaseControl={releaseControl}
+                  />
+                </div>
+              )}
 
-                {!isEmpty && (
-                  <div className="rounded-2xl border border-gray-100 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800/60">
-                    <ProgressBar
-                      progress={progress}
-                      pendingCount={pendingCount}
-                      purchasedCount={purchasedCount}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Aisle jump strip */}
+              {/* Aisle jump strip — inline, so it scrolls out of the way once
+                  you are inside a section. */}
               {sections.length > 1 && (
                 <nav
                   aria-label={t('aisles.jumpTo')}
-                  className="sticky top-[104px] z-20 -mx-3 mt-2.5 overflow-x-auto px-3 py-1.5 sm:-mx-5 sm:px-5 lg:static lg:mx-0 lg:px-0"
+                  className="-mx-3 mb-2 overflow-x-auto px-3 pb-1 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0"
                 >
                   <ul className="flex gap-1.5">
                     {sections.map(({ key, items }) => {
@@ -292,7 +263,7 @@ const GroceryListPage = () => {
                             type="button"
                             onClick={() => scrollToSection(key)}
                             className={cn(
-                              'flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-semibold',
+                              'flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold',
                               'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
                               'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
                             )}
@@ -308,23 +279,32 @@ const GroceryListPage = () => {
                 </nav>
               )}
 
-              {/* Sections */}
               {isEmpty ? (
-                <div className="flex flex-col items-center justify-center px-8 py-16 text-center">
-                  <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-gray-300 shadow-sm dark:bg-gray-800 dark:text-gray-600">
-                    <ShoppingCart className="h-8 w-8" strokeWidth={1.5} />
+                <div className="flex flex-col items-center justify-center px-8 py-14 text-center">
+                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-gray-300 shadow-sm dark:bg-gray-800 dark:text-gray-600">
+                    <ShoppingCart className="h-7 w-7" strokeWidth={1.5} />
                   </span>
                   <h2 className="mb-1.5 text-base font-bold text-gray-700 dark:text-gray-200">
                     {lockedByOther ? t('empty.readOnly') : t('empty.title')}
                   </h2>
                   {!lockedByOther && (
-                    <p className="max-w-xs text-sm leading-relaxed text-gray-400 dark:text-gray-500">
-                      {t('empty.description')}
-                    </p>
+                    <>
+                      <p className="mb-5 max-w-xs text-sm leading-relaxed text-gray-400 dark:text-gray-500">
+                        {t('empty.description')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={openAdd}
+                        className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white"
+                      >
+                        <Plus className="h-4 w-4" strokeWidth={2.5} />
+                        {t('empty.addFirst')}
+                      </button>
+                    </>
                   )}
                 </div>
               ) : (
-                <div className="mt-3 space-y-5">
+                <div className="space-y-4">
                   {sections.map(({ key, items }) => {
                     const category = CATEGORY_BY_KEY[key] || CATEGORY_BY_KEY[DEFAULT_CATEGORY];
                     const Icon = category.icon;
@@ -332,11 +312,11 @@ const GroceryListPage = () => {
                       <section
                         key={key}
                         ref={(node) => { sectionRefs.current[key] = node; }}
-                        className="scroll-mt-[150px]"
+                        className="scroll-mt-3"
                       >
                         <h2 className="mb-1.5 flex items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                          <span className={cn('flex h-6 w-6 items-center justify-center rounded-lg', category.chip)}>
-                            <Icon className={cn('h-3.5 w-3.5', category.tint)} />
+                          <span className={cn('flex h-5 w-5 items-center justify-center rounded-md', category.chip)}>
+                            <Icon className={cn('h-3 w-3', category.tint)} />
                           </span>
                           {t(`categories.${key}`)}
                           <span className="tabular-nums font-semibold">{items.length}</span>
@@ -348,7 +328,7 @@ const GroceryListPage = () => {
                                 key={item.id}
                                 item={item}
                                 onToggle={togglePurchased}
-                                onOpen={handleOpenItem}
+                                onOpen={openItem}
                                 disabled={!canEdit}
                               />
                             ))}
@@ -358,20 +338,33 @@ const GroceryListPage = () => {
                     );
                   })}
 
-                  {/* In the cart — collapsed, out of the way, one tap to undo. */}
+                  {/* In the cart — collapsed, with Finish sitting right where you
+                      already look once things start landing in it. */}
                   {purchased.length > 0 && (
                     <section className="pt-1">
-                      <button
-                        type="button"
-                        onClick={() => setCartOpen((open) => !open)}
-                        aria-expanded={cartOpen}
-                        className="flex w-full items-center gap-2 rounded-xl px-1 py-2 text-[11px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400"
-                      >
-                        <motion.span animate={{ rotate: cartOpen ? 180 : 0 }} transition={{ duration: 0.18 }}>
-                          <ChevronDown className="h-4 w-4" />
-                        </motion.span>
-                        {t('sections.inCart', { count: purchased.length })}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCartOpen((open) => !open)}
+                          aria-expanded={cartOpen}
+                          className="flex flex-1 items-center gap-1.5 rounded-xl px-1 py-2 text-[11px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400"
+                        >
+                          <motion.span animate={{ rotate: cartOpen ? 180 : 0 }} transition={{ duration: 0.18 }}>
+                            <ChevronDown className="h-4 w-4" />
+                          </motion.span>
+                          {t('sections.inCart', { count: purchased.length })}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFinishOpen(true)}
+                          disabled={!canEdit}
+                          className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          <Flag className="h-3.5 w-3.5" />
+                          {t('finish.button')}
+                        </button>
+                      </div>
 
                       <AnimatePresence initial={false}>
                         {cartOpen && (
@@ -380,14 +373,14 @@ const GroceryListPage = () => {
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="space-y-1.5 overflow-hidden"
+                            className="space-y-1.5 overflow-hidden pt-1"
                           >
                             {purchased.map((item) => (
                               <GroceryItemRow
                                 key={item.id}
                                 item={item}
                                 onToggle={togglePurchased}
-                                onOpen={handleOpenItem}
+                                onOpen={openItem}
                                 disabled={!canEdit}
                               />
                             ))}
@@ -398,32 +391,19 @@ const GroceryListPage = () => {
                   )}
                 </div>
               )}
-
-              {/* Space for the fixed composer on mobile. */}
-              <div className={cn('lg:hidden', groceryMode ? 'h-24' : 'h-32')} aria-hidden />
             </div>
 
             {/* ── Desktop rail ────────────────────────────────────── */}
-            <aside className="hidden w-80 shrink-0 space-y-3 lg:block xl:w-96">
-              <div className="rounded-2xl border border-gray-100 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800/60">
-                <GroceryQuickAdd
-                  onAdd={handleAdd}
-                  onOpenDetails={handleOpenDetails}
-                  disabled={composerDisabled}
-                />
-              </div>
-
-              {purchasedCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setFinishOpen(true)}
-                  disabled={!canEdit}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 text-sm font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  <Flag className="h-4 w-4" />
-                  {t('finish.button')}
-                </button>
-              )}
+            <aside className="hidden w-72 shrink-0 space-y-3 lg:block xl:w-80">
+              <button
+                type="button"
+                onClick={openAdd}
+                disabled={lockedByOther}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" strokeWidth={2.5} />
+                {t('quickAdd.add')}
+              </button>
 
               <div className="rounded-2xl border border-gray-100 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800/60">
                 <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
@@ -459,41 +439,35 @@ const GroceryListPage = () => {
         )}
       </div>
 
-      {/* ── Mobile composer + finish, pinned above the bottom nav ───── */}
-      {tab === 'list' && (
-        <div
-          className="fixed inset-x-0 z-40 border-t border-gray-100 bg-white/95 px-3 py-2 backdrop-blur-md lg:hidden dark:border-gray-700 dark:bg-gray-900/95"
-          style={{ bottom: COMPOSER_OFFSET[groceryMode ? 'grocery' : 'full'] }}
-        >
-          {purchasedCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setFinishOpen(true)}
-              disabled={!canEdit}
-              className="mb-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white disabled:opacity-50"
-            >
-              <Flag className="h-4 w-4" />
-              {t('finish.button')}
-              <span className="text-xs font-semibold opacity-80">
-                {t('progress.done', { count: purchasedCount })}
-              </span>
-            </button>
+      {/* ── Add button — one floating control, mobile only ──────────── */}
+      {tab === 'list' && !isEmpty && (
+        <motion.button
+          type="button"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          whileTap={{ scale: 0.92 }}
+          onClick={openAdd}
+          disabled={lockedByOther}
+          aria-label={t('quickAdd.aria')}
+          className={cn(
+            'fixed z-40 flex h-14 w-14 items-center justify-center rounded-2xl lg:hidden',
+            isRTL ? 'start-4' : 'end-4',
+            'bg-blue-600 text-white shadow-xl shadow-blue-600/30',
+            'disabled:bg-gray-300 disabled:shadow-none dark:disabled:bg-gray-700'
           )}
-          <GroceryQuickAdd
-            onAdd={handleAdd}
-            onOpenDetails={handleOpenDetails}
-            disabled={composerDisabled}
-          />
-        </div>
+          style={{ bottom: FAB_OFFSET[groceryMode ? 'grocery' : 'full'] }}
+        >
+          <Plus className="h-6 w-6" strokeWidth={2.5} />
+        </motion.button>
       )}
 
       <GroceryItemSheet
         isOpen={sheetOpen}
-        onClose={() => { setSheetOpen(false); setSheetItem(null); setSheetSeed(null); }}
+        onClose={() => { setSheetOpen(false); setSheetItem(null); }}
         onSave={handleSaveItem}
         onDelete={deleteItem}
         item={sheetItem}
-        seed={sheetSeed}
       />
 
       <GroceryFinishSheet
@@ -508,7 +482,6 @@ const GroceryListPage = () => {
         isOpen={shareOpen}
         onClose={() => setShareOpen(false)}
         members={members}
-        pendingInvitations={pendingInvitations}
         role={role}
         currentUserId={user?.id}
       />

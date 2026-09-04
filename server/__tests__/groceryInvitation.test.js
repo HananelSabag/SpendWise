@@ -262,3 +262,127 @@ describe('grocery invitation creation and lifecycle', () => {
     expect(params).toEqual([44, 'nofar@example.com']);
   });
 });
+
+describe('open share links', () => {
+  beforeEach(() => {
+    db.query.mockReset();
+    db.getClient.mockReset();
+  });
+
+  test('reuses the list\'s existing live link instead of minting a new one', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 3, token: 'existing' }] });
+
+    const link = await GroceryInvitation.createLink(5, 1);
+
+    expect(link.token).toBe('existing');
+    expect(db.query).toHaveBeenCalledTimes(1);
+  });
+
+  test('retires a lapsed link before creating the replacement', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })                        // none live
+      .mockResolvedValueOnce({ rowCount: 1 })                     // expire the old one
+      .mockResolvedValueOnce({ rows: [{ id: 4, token: 'fresh' }] });
+
+    const link = await GroceryInvitation.createLink(5, 1);
+
+    expect(link.token).toBe('fresh');
+    expect(db.query.mock.calls[1][0]).toMatch(/SET status = 'expired'/i);
+    // A link has no recipient — that is what makes it shareable.
+    expect(db.query.mock.calls[2][1]).toEqual([5, 1]);
+    expect(db.query.mock.calls[2][0]).toMatch(/VALUES \(\$1, \$2, NULL, NULL\)/);
+  });
+
+  test('revoking cancels the pending link', async () => {
+    db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+    await expect(GroceryInvitation.revokeLink(5)).resolves.toBe(true);
+
+    const [sql] = db.query.mock.calls[0];
+    expect(sql).toMatch(/SET status = 'cancelled'/i);
+    expect(sql).toMatch(/invitee_email IS NULL/);
+  });
+
+  test('the owner\'s pending list excludes the link — it has no one to wait on', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    await GroceryInvitation.getPendingForList(5);
+
+    expect(db.query.mock.calls[0][0]).toMatch(/invitee_email IS NOT NULL/);
+  });
+
+  test('anyone holding the link may redeem it', async () => {
+    const client = makeClient([
+      ['FROM grocery_list_invitations', {
+        rows: [pendingInvitation({ invitee_id: null, invitee_email: null })],
+      }],
+      ['SELECT 1 FROM grocery_list_members', { rows: [] }],
+      ['FROM grocery_list_members m JOIN grocery_lists', { rows: [] }],
+    ]);
+    db.getClient.mockResolvedValue(client);
+
+    const outcome = await GroceryInvitation.accept('tok', { id: 99, email: 'stranger@example.com' });
+
+    expect(outcome.result).toBe(INVITE_RESULT.OK);
+    expect(ran(client, 'INSERT INTO grocery_list_members')).toBe(true);
+  });
+
+  test('redeeming a link does not consume it for the next person', async () => {
+    const client = makeClient([
+      ['FROM grocery_list_invitations', {
+        rows: [pendingInvitation({ invitee_id: null, invitee_email: null })],
+      }],
+      ['SELECT 1 FROM grocery_list_members', { rows: [] }],
+      ['FROM grocery_list_members m JOIN grocery_lists', { rows: [] }],
+    ]);
+    db.getClient.mockResolvedValue(client);
+
+    await GroceryInvitation.accept('tok', { id: 99, email: 'stranger@example.com' });
+
+    expect(ran(client, "SET status = 'accepted'")).toBe(false);
+    expect(ran(client, 'SET responded_at = NOW\(\)')).toBe(true);
+  });
+
+  test('an existing member reopening the link does not burn it either', async () => {
+    const client = makeClient([
+      ['FROM grocery_list_invitations', {
+        rows: [pendingInvitation({ invitee_id: null, invitee_email: null })],
+      }],
+      ['SELECT 1 FROM grocery_list_members', { rows: [{ '?column?': 1 }] }],
+    ]);
+    db.getClient.mockResolvedValue(client);
+
+    const outcome = await GroceryInvitation.accept('tok', { id: 44, email: 'nofar@example.com' });
+
+    expect(outcome.result).toBe(INVITE_RESULT.OK);
+    expect(ran(client, "SET status = 'accepted'")).toBe(false);
+  });
+
+  test('an addressed invitation still refuses the wrong person', async () => {
+    const client = makeClient([
+      ['FROM grocery_list_invitations', { rows: [pendingInvitation({ invitee_id: 44 })] }],
+    ]);
+    db.getClient.mockResolvedValue(client);
+
+    const outcome = await GroceryInvitation.accept('tok', { id: 99, email: 'stranger@example.com' });
+
+    expect(outcome.result).toBe(INVITE_RESULT.WRONG_RECIPIENT);
+  });
+
+  test('an expired link is refused like any other invitation', async () => {
+    const client = makeClient([
+      ['FROM grocery_list_invitations', {
+        rows: [pendingInvitation({
+          invitee_id: null,
+          invitee_email: null,
+          expires_at: new Date(Date.now() - 1000).toISOString(),
+        })],
+      }],
+    ]);
+    db.getClient.mockResolvedValue(client);
+
+    const outcome = await GroceryInvitation.accept('tok', { id: 99, email: 'stranger@example.com' });
+
+    expect(outcome.result).toBe(INVITE_RESULT.EXPIRED);
+  });
+});

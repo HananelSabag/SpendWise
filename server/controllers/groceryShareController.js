@@ -88,6 +88,38 @@ const groceryShareController = {
     });
   }),
 
+  /**
+   * POST /grocery/invitations/link — create or return the list's open link.
+   *
+   * This is the primary way to share a household list: one tap, paste it
+   * wherever, done. It is recipient-less by design, so treat the URL as the
+   * secret — `revokeLink` is how you take it back.
+   */
+  createLink: asyncHandler(async (req, res) => {
+    const invitation = await GroceryInvitation.createLink(req.groceryList.id, req.user.id);
+    res.status(201).json({
+      success: true,
+      data: { inviteUrl: inviteUrlFor(invitation.token), expiresAt: invitation.expires_at },
+    });
+  }),
+
+  /** GET /grocery/invitations/link — the live open link, if there is one. */
+  getLink: asyncHandler(async (req, res) => {
+    const invitation = await GroceryInvitation.getLink(req.groceryList.id);
+    res.json({
+      success: true,
+      data: invitation
+        ? { inviteUrl: inviteUrlFor(invitation.token), expiresAt: invitation.expires_at }
+        : null,
+    });
+  }),
+
+  /** DELETE /grocery/invitations/link — anyone still holding it gets nothing. */
+  revokeLink: asyncHandler(async (req, res) => {
+    const revoked = await GroceryInvitation.revokeLink(req.groceryList.id);
+    res.json({ success: true, data: { revoked } });
+  }),
+
   /** GET /grocery/invitations — pending invitations addressed to me. */
   getMyInvitations: asyncHandler(async (req, res) => {
     const invitations = await GroceryInvitation.getPendingForUser(req.user.id, req.user.email);

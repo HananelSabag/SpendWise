@@ -79,6 +79,63 @@ class GroceryInvitation {
   }
 
   /**
+   * Create (or return) the list's open invite link.
+   *
+   * Deliberately recipient-less: anyone who opens it can join, which is the
+   * point — sharing a household list should cost one tap and a paste into
+   * WhatsApp, not an email address and a working mail provider. Only one is
+   * pending at a time, so revoking actually revokes.
+   */
+  static async createLink(listId, inviterId) {
+    const { rows: existing } = await db.query(
+      `SELECT * FROM grocery_list_invitations
+        WHERE list_id = $1 AND invitee_email IS NULL
+          AND status = 'pending' AND expires_at > NOW()
+        LIMIT 1`,
+      [listId]
+    );
+    if (existing[0]) return existing[0];
+
+    // A lapsed link is retired rather than left to collide with the new one.
+    await db.query(
+      `UPDATE grocery_list_invitations SET status = 'expired'
+        WHERE list_id = $1 AND invitee_email IS NULL AND status = 'pending'`,
+      [listId]
+    );
+
+    const { rows } = await db.query(
+      `INSERT INTO grocery_list_invitations (list_id, inviter_id, invitee_email, invitee_id)
+       VALUES ($1, $2, NULL, NULL)
+       RETURNING *`,
+      [listId, inviterId]
+    );
+    return rows[0];
+  }
+
+  /** Kill the open link. Anyone still holding it gets nothing. */
+  static async revokeLink(listId) {
+    const { rowCount } = await db.query(
+      `UPDATE grocery_list_invitations
+          SET status = 'cancelled', responded_at = NOW()
+        WHERE list_id = $1 AND invitee_email IS NULL AND status = 'pending'`,
+      [listId]
+    );
+    return rowCount > 0;
+  }
+
+  /** The list's live open link, if it has one. */
+  static async getLink(listId) {
+    const { rows } = await db.query(
+      `SELECT * FROM grocery_list_invitations
+        WHERE list_id = $1 AND invitee_email IS NULL
+          AND status = 'pending' AND expires_at > NOW()
+        LIMIT 1`,
+      [listId]
+    );
+    return rows[0] || null;
+  }
+
+  /**
    * Pending invitations addressed to this user — matched by id *or* by email, so
    * an invitation sent before they registered still shows up.
    */
@@ -151,14 +208,19 @@ class GroceryInvitation {
         return { result: INVITE_RESULT.NOT_FOUND };
       }
 
-      const userEmail = String(user.email || '').toLowerCase();
-      if (inv.invitee_id !== null && inv.invitee_id !== user.id) {
-        await client.query('ROLLBACK');
-        return { result: INVITE_RESULT.WRONG_RECIPIENT };
-      }
-      if (inv.invitee_id === null && inv.invitee_email !== userEmail) {
-        await client.query('ROLLBACK');
-        return { result: INVITE_RESULT.WRONG_RECIPIENT };
+      // An open link (no email, no bound user) is redeemable by whoever holds
+      // it. An addressed invitation still has to reach its addressee.
+      const isOpenLink = inv.invitee_email === null && inv.invitee_id === null;
+      if (!isOpenLink) {
+        const userEmail = String(user.email || '').toLowerCase();
+        if (inv.invitee_id !== null && inv.invitee_id !== user.id) {
+          await client.query('ROLLBACK');
+          return { result: INVITE_RESULT.WRONG_RECIPIENT };
+        }
+        if (inv.invitee_id === null && inv.invitee_email !== userEmail) {
+          await client.query('ROLLBACK');
+          return { result: INVITE_RESULT.WRONG_RECIPIENT };
+        }
       }
 
       // Idempotent: accepting twice is a success, not an error.
@@ -167,12 +229,16 @@ class GroceryInvitation {
         [inv.list_id, user.id]
       );
       if (alreadyMember.length) {
-        await client.query(
-          `UPDATE grocery_list_invitations
-              SET status = 'accepted', responded_at = COALESCE(responded_at, NOW()), invitee_id = $2
-            WHERE id = $1 AND status = 'pending'`,
-          [inv.id, user.id]
-        );
+        // Consuming an open link here would burn it for everyone else the
+        // moment one member re-opened their own link.
+        if (!isOpenLink) {
+          await client.query(
+            `UPDATE grocery_list_invitations
+                SET status = 'accepted', responded_at = COALESCE(responded_at, NOW()), invitee_id = $2
+              WHERE id = $1 AND status = 'pending'`,
+            [inv.id, user.id]
+          );
+        }
         await client.query('COMMIT');
         return { result: INVITE_RESULT.OK, listId: inv.list_id, inviterId: inv.inviter_id };
       }
@@ -242,12 +308,21 @@ class GroceryInvitation {
         [inv.list_id, user.id]
       );
 
-      await client.query(
-        `UPDATE grocery_list_invitations
-            SET status = 'accepted', responded_at = NOW(), invitee_id = $2
-          WHERE id = $1`,
-        [inv.id, user.id]
-      );
+      if (isOpenLink) {
+        // Leave the link pending: it stays valid for the next person until it
+        // expires or the owner revokes it.
+        await client.query(
+          `UPDATE grocery_list_invitations SET responded_at = NOW() WHERE id = $1`,
+          [inv.id]
+        );
+      } else {
+        await client.query(
+          `UPDATE grocery_list_invitations
+              SET status = 'accepted', responded_at = NOW(), invitee_id = $2
+            WHERE id = $1`,
+          [inv.id, user.id]
+        );
+      }
 
       await client.query(
         `UPDATE grocery_lists SET version = version + 1 WHERE id = $1`,
@@ -296,6 +371,7 @@ class GroceryInvitation {
       `SELECT id, invitee_email, invitee_id, created_at, expires_at, token
          FROM grocery_list_invitations
         WHERE list_id = $1 AND status = 'pending' AND expires_at > NOW()
+          AND invitee_email IS NOT NULL
         ORDER BY created_at DESC`,
       [listId]
     );
