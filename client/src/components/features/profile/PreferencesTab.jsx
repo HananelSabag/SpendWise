@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth, useTranslation, useTranslationStore } from '../../../stores';
 import { cn } from '../../../utils/helpers';
+import { APP_MODE, preferencesForMode, preferredAppMode, setModeOverride } from '../../../utils/appMode';
 import queryClient from '../../../config/queryClient';
 
 const Row = ({ label, value, onChange, options }) => (
@@ -25,11 +26,10 @@ export const PreferencesTab = ({ user, authToasts }) => {
   const { t }             = useTranslation('profile');
   const [isLoading, setIsLoading] = useState(false);
 
-  const resolveDefaultHome = (u) => {
-    if (u?.preferences?.default_home) return u.preferences.default_home;
-    if (u?.preferences?.shopping_list_as_default_page) return 'shopping';
-    return 'dashboard';
-  };
+  // The saved account default, independent of any one-time switch the user made
+  // in this tab — changing it here is the deliberate, persistent choice.
+  const resolveDefaultHome = (u) =>
+    (preferredAppMode(u) === APP_MODE.GROCERY ? 'grocery' : 'dashboard');
 
   // Currency is deliberately NOT a preference: all synced bank data is ILS,
   // and a display-currency picker that only swaps the symbol shows wrong
@@ -47,7 +47,7 @@ export const PreferencesTab = ({ user, authToasts }) => {
     const p = buildPrefs(user);
     setPrefs(p);
     setOriginal(p);
-  }, [user?.language_preference, user?.theme_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page]);
+  }, [user?.language_preference, user?.theme_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
 
@@ -56,15 +56,15 @@ export const PreferencesTab = ({ user, authToasts }) => {
     setIsLoading(true);
     try {
       const { default_home, ...flatPrefs } = prefs;
+      const mode = default_home === 'grocery' ? APP_MODE.GROCERY : APP_MODE.FULL;
       const result = await updateProfile({
         ...flatPrefs,
-        preferences: {
-          ...(user?.preferences || {}),
-          default_home,
-          home_preference_set: true,
-          shopping_list_as_default_page: default_home === 'shopping',
-        },
+        preferences: preferencesForMode(user?.preferences, mode),
       });
+      // Point this tab at the mode that was just saved. The profile cache is
+      // still stale for a moment, so leaving it to the preference alone would
+      // leave the shell showing the previous mode.
+      setModeOverride(mode);
       if (!result.success) throw new Error(result.error?.message);
 
       if (prefs.theme_preference === 'dark')      document.documentElement.classList.add('dark');
@@ -74,11 +74,10 @@ export const PreferencesTab = ({ user, authToasts }) => {
       if (prefs.language_preference !== user?.language_preference)
         useTranslationStore.getState().actions?.setLanguage?.(prefs.language_preference);
 
-      // Update session flags so nav/header switch immediately (React Query cache is still stale)
+      // Let the once-per-session home redirect run again for the new choice.
       try {
         sessionStorage.removeItem('sw_home_redirect');
         sessionStorage.setItem('sw_picker_done', '1');
-        sessionStorage.setItem('sw_app_mode', default_home);
       } catch (_) {}
 
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
@@ -117,15 +116,19 @@ export const PreferencesTab = ({ user, authToasts }) => {
         />
         {/* Default home picker */}
         <div className="py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t('preferences.defaultHome') || 'Open the app on'}
+          </p>
+          <p className="text-xs leading-relaxed text-gray-400 dark:text-gray-500 mb-2.5">
+            {t('preferences.defaultHomeHint')}
           </p>
           <div className="grid grid-cols-2 gap-3">
             {[
               { id: 'dashboard', emoji: '📊', label: t('preferences.homeOptions.dashboard') || 'Dashboard' },
-              { id: 'shopping',  emoji: '🛒', label: t('preferences.homeOptions.shopping')  || 'Shopping' },
+              { id: 'grocery',   emoji: '🛒', label: t('preferences.homeOptions.grocery')   || 'Grocery List' },
             ].map(opt => {
-              const active = prefs.default_home === opt.id || (opt.id === 'dashboard' && !['shopping'].includes(prefs.default_home));
+              const active = prefs.default_home === opt.id
+                || (opt.id === 'dashboard' && prefs.default_home !== 'grocery');
               return (
                 <button
                   key={opt.id}

@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { LayoutDashboard, ShoppingCart, Check, ChevronLeft } from 'lucide-react';
 import { useAuth, useTranslation } from '../../stores';
 import { cn } from '../../utils/helpers';
+import { APP_MODE, preferencesForMode, setModeOverride } from '../../utils/appMode';
 
 const OPTIONS = [
   {
@@ -27,19 +28,19 @@ const OPTIONS = [
     path: '/',
   },
   {
-    id: 'shopping',
+    id: 'grocery',
     icon: ShoppingCart,
     emoji: '🛒',
     titleHe: 'רשימת קניות',
-    titleEn: 'Shopping List',
-    descHe: 'רק רשימת הקניות',
-    descEn: 'Shopping wishlist only',
-    gradient: 'from-purple-500 to-pink-600',
-    bg: 'bg-purple-50 dark:bg-purple-900/20',
-    border: 'border-purple-200 dark:border-purple-700',
-    activeBorder: 'border-purple-500 dark:border-purple-400',
-    dot: 'bg-purple-500',
-    path: '/shopping',
+    titleEn: 'Grocery List',
+    descHe: 'רשימת הסופר המשותפת בלבד',
+    descEn: 'The shared grocery list only',
+    gradient: 'from-emerald-500 to-teal-600',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    border: 'border-emerald-200 dark:border-emerald-700',
+    activeBorder: 'border-emerald-500 dark:border-emerald-400',
+    dot: 'bg-emerald-500',
+    path: '/grocery',
   },
 ];
 
@@ -58,27 +59,22 @@ const HomePickerScreen = () => {
     const opt = OPTIONS.find(o => o.id === selected);
     if (!opt) return;
 
-    // Set session flags BEFORE any async work so the UI responds instantly
-    // (React Query cache may still be stale when we navigate — these flags prevent loops)
+    const mode = selected === 'grocery' ? APP_MODE.GROCERY : APP_MODE.FULL;
+
+    // Apply the choice to this tab before any async work, so the shell switches
+    // instantly instead of waiting on the profile cache to catch up.
     try {
       sessionStorage.setItem('sw_picker_done', '1');
-      sessionStorage.setItem('sw_app_mode', selected);
       sessionStorage.removeItem('sw_home_redirect');
     } catch (_) {}
+    setModeOverride(mode);
 
     if (remember) {
       setIsSaving(true);
       try {
-        await updateProfile({
-          preferences: {
-            ...(user?.preferences || {}),
-            default_home: selected,
-            home_preference_set: true,
-            shopping_list_as_default_page: selected === 'shopping',
-          },
-        });
+        await updateProfile({ preferences: preferencesForMode(user?.preferences, mode) });
       } catch (_) {
-        // non-fatal — still navigate
+        // non-fatal — the override keeps this session on the right screen
       } finally {
         setIsSaving(false);
       }

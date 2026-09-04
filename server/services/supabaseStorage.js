@@ -131,8 +131,116 @@ const extractFileNameFromUrl = (url) => {
   }
 };
 
+// ─── Grocery receipts ────────────────────────────────────────────────────────
+// Receipts are personal financial documents, so they go to a PRIVATE bucket.
+// Nothing here ever returns a public URL: callers get an object path, and reads
+// go through a short-lived signed URL minted for an authorised list member.
+
+const RECEIPT_BUCKET = process.env.SUPABASE_RECEIPT_BUCKET || 'receipts';
+
+const EXTENSION_BY_MIME = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+};
+
+/**
+ * Store a trip receipt.
+ * @returns {Promise<{path: string, mime: string, size: number}>}
+ */
+const uploadGroceryReceipt = async (file, listId, tripId) => {
+  const extension = EXTENSION_BY_MIME[file.mimetype];
+  if (!extension) {
+    throw new Error(`Unsupported receipt type: ${file.mimetype}`);
+  }
+
+  const path = `grocery/${listId}/${tripId}-${generateShortToken()}.${extension}`;
+  const supabaseClient = getSupabaseClient();
+
+  const { error } = await supabaseClient.storage
+    .from(RECEIPT_BUCKET)
+    .upload(path, file.buffer, {
+      contentType: file.mimetype,
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`Receipt upload failed: ${error.message}`);
+  }
+
+  // Deliberately logs the trip, not the path — a receipt path is a capability.
+  logger.info('[SUPABASE STORAGE] Grocery receipt stored', { listId, tripId, size: file.size });
+
+  return { path, mime: file.mimetype, size: file.size };
+};
+
+// Item photos are a picture of a yogurt tub, not a financial document, and they
+// are re-read on every list refresh — so they live in a public bucket and the
+// list stores a plain URL. Receipts do not; keep the two buckets separate.
+const ITEM_IMAGE_BUCKET = process.env.SUPABASE_GROCERY_BUCKET || 'grocery';
+
+/**
+ * Store a product photo for a grocery item.
+ * @returns {Promise<{publicUrl: string, path: string}>}
+ */
+const uploadGroceryItemImage = async (file, listId) => {
+  const extension = EXTENSION_BY_MIME[file.mimetype];
+  if (!extension || extension === 'pdf') {
+    throw new Error(`Unsupported image type: ${file.mimetype}`);
+  }
+
+  const path = `items/${listId}/${generateShortToken()}.${extension}`;
+  const supabaseClient = getSupabaseClient();
+
+  const { error } = await supabaseClient.storage
+    .from(ITEM_IMAGE_BUCKET)
+    .upload(path, file.buffer, {
+      contentType: file.mimetype,
+      cacheControl: '86400',
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`Item image upload failed: ${error.message}`);
+  }
+
+  const { data } = supabaseClient.storage.from(ITEM_IMAGE_BUCKET).getPublicUrl(path);
+  return { publicUrl: data.publicUrl, path };
+};
+
+/** Short-lived read URL for a stored receipt. Callers must authorise first. */
+const createReceiptSignedUrl = async (path, expiresInSeconds = 300) => {
+  const supabaseClient = getSupabaseClient();
+  const { data, error } = await supabaseClient.storage
+    .from(RECEIPT_BUCKET)
+    .createSignedUrl(path, expiresInSeconds);
+
+  if (error) {
+    throw new Error(`Could not sign receipt URL: ${error.message}`);
+  }
+  return data.signedUrl;
+};
+
+const deleteGroceryReceipt = async (path) => {
+  try {
+    const supabaseClient = getSupabaseClient();
+    await supabaseClient.storage.from(RECEIPT_BUCKET).remove([path]);
+  } catch (error) {
+    logger.warn('[SUPABASE STORAGE] Receipt delete failed:', error.message);
+  }
+};
+
 module.exports = {
   uploadProfilePicture,
   deleteProfilePicture,
-  extractFileNameFromUrl
+  extractFileNameFromUrl,
+  uploadGroceryReceipt,
+  uploadGroceryItemImage,
+  createReceiptSignedUrl,
+  deleteGroceryReceipt,
+  RECEIPT_BUCKET,
+  ITEM_IMAGE_BUCKET,
 }; 

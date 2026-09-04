@@ -15,6 +15,7 @@ const emailService = require('../../services/emailService');
 const { generateVerificationToken } = require('../../utils/tokenGenerator');
 const db = require('../../config/db');
 const { digest, issueSession, rotateSession, revokeSession } = require('../../services/authSessionService');
+const { GroceryInvitation } = require('../../models/GroceryInvitation');
 
 async function assertUserMayAuthenticate(user) {
   if (!user?.is_active) throw { ...errorCodes.ACCOUNT_DEACTIVATED };
@@ -97,6 +98,12 @@ const authController = {
 
       // Create user with optimized model
       const user = await User.create(email, username, password, { firstName, lastName });
+
+      // Claim any grocery-list invitation that was sent to this address before
+      // the account existed. It stays pending — the new user still has to accept.
+      GroceryInvitation.linkForNewUser(user.id, user.email).catch((err) =>
+        logger.warn(`Could not link grocery invitations for user ${user.id}: ${err.message}`)
+      );
 
       // Generate verification token
       const verificationToken = generateVerificationToken();
@@ -452,6 +459,12 @@ const authController = {
         });
         // createGoogleOnlyUser already returns the full row (RETURNING *) plus
         // computed fields — no need to re-fetch it.
+
+        // Same as password registration: bind invitations addressed to this
+        // email before the account existed. They still need explicit acceptance.
+        GroceryInvitation.linkForNewUser(user.id, user.email).catch((err) =>
+          logger.warn(`Could not link grocery invitations for user ${user.id}: ${err.message}`)
+        );
 
         logger.info('✅ New Google user created', {
           userId: user.id,

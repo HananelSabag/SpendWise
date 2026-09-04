@@ -2,7 +2,7 @@
  * Notification Controller
  */
 
-const { Notification } = require('../models/ShoppingShare');
+const { Notification } = require('../models/Notification');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 const notificationController = {
@@ -21,7 +21,7 @@ const notificationController = {
 
   markRead: asyncHandler(async (req, res) => {
     const ok = await Notification.markRead(parseInt(req.params.id, 10), req.user.id);
-    if (!ok) return res.status(404).json({ success: false, error: { message: 'התראה לא נמצאה' } });
+    if (!ok) return res.status(404).json({ success: false, error: { code: 'NOTIFICATION_NOT_FOUND', message: 'Notification not found' } });
     res.json({ success: true });
   }),
 };

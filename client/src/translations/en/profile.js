@@ -7,9 +7,9 @@ export default {
     title: "Profile",
     subtitle: "Manage your account and preferences"
   },
-  shoppingEntry: {
-    title: "Shopping",
-    subtitle: "Your shared shopping lists"
+  groceryEntry: {
+    title: "Grocery List",
+    subtitle: "Your shared household list"
   },
   tabs: {
     personal: "Personal Info",
@@ -98,12 +98,12 @@ export default {
       dayLabel: "Cycle day",
       selected: "Your month starts on day {{day}} and ends the day before day {{day}} of the next month"
     },
-    shoppingDefaultPage: "Open Shopping List on Login",
     defaultHome: "Default App",
+    defaultHomeHint: "What SpendWise opens as. Grocery mode shows only the shared list — you can still switch over at any time.",
     homeOptions: {
       dashboard: "SpendWise",
       transactions: "Expenses",
-      shopping: "Shopping"
+      grocery: "Grocery List"
     },
     themeOptions: {
       system: "System",

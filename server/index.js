@@ -297,9 +297,9 @@ try {
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   logger.debug('✅ Export routes loaded');
 
-  logger.debug('Loading shopping routes...');
-  app.use(`${API_VERSION}/shopping`, require('./routes/shoppingRoutes'));
-  logger.debug('✅ Shopping routes loaded');
+  logger.debug('Loading grocery list routes...');
+  app.use(`${API_VERSION}/grocery`, require('./routes/groceryRoutes'));
+  logger.debug('✅ Grocery list routes loaded');
 
   app.use(`${API_VERSION}/notifications`, require('./routes/notificationRoutes'));
 

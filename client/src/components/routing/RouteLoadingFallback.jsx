@@ -10,7 +10,7 @@ const ROUTE_SKELETON_MAP = {
   transactions: 'transactions',
   analytics: 'analytics',
   profile: 'profile',
-  shopping: 'shopping',
+  grocery: 'grocery',
   'bank sync': 'profile',
   'admin dashboard': 'admin',
   'user management': 'admin',

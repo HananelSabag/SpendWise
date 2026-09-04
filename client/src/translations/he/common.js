@@ -11,6 +11,11 @@ export default {
     thanks: "תודה על הסבלנות."
   },
   appName: "SpendWise",
+  notifications: {
+    title: "התראות",
+    markAllRead: "סמן הכל כנקרא",
+    empty: "אין התראות חדשות",
+  },
   save: "שמור",
   saving: "שומר...",
   cancel: "בטל",

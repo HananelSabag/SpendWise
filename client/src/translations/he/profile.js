@@ -8,9 +8,9 @@ export default {
     title: "פרופיל",
     subtitle: "נהל את החשבון וההעדפות שלך"
   },
-  shoppingEntry: {
-    title: "קניות",
-    subtitle: "רשימות הקניות המשותפות שלך"
+  groceryEntry: {
+    title: "רשימת קניות",
+    subtitle: "הרשימה המשותפת של הבית"
   },
   tabs: {
     personal: "מידע אישי",
@@ -93,12 +93,12 @@ export default {
       dayLabel: "יום המחזור",
       selected: "החודש שלך מתחיל ביום {{day}} ומסתיים יום לפני יום {{day}} בחודש הבא"
     },
-    shoppingDefaultPage: "פתח רשימת קניות בכניסה",
     defaultHome: "אפליקציית ברירת מחדל",
+    defaultHomeHint: "מה נפתח כשנכנסים ל-SpendWise. מצב רשימת קניות מציג רק את הרשימה המשותפת — תמיד אפשר לעבור בין המצבים.",
     homeOptions: {
       dashboard: "SpendWise",
       transactions: "הוצאות",
-      shopping: "קניות"
+      grocery: "רשימת קניות"
     },
     themeOptions: {
       system: "אוטומטי",

@@ -277,7 +277,7 @@ export const useTranslationStore = create(
               'accessibility', 'legal', 'preferences', 'profile', 'admin', 'toast',
               'views', 'pages', 'actions', 'summary', 'search', 'transactions',
               'categories', 'filters', 'exchange', 'empty', 'date', 'recurringManager',
-              'types', 'shopping',
+              'types', 'grocery',
               // Admin screens
               'status', 'roles', 'users', 'table',
               // New modules

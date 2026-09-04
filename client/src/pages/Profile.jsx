@@ -88,10 +88,10 @@ const Profile = () => {
               <Download className="h-5 w-5" />
             </button>
             <button
-              onClick={() => navigate('/shopping')}
+              onClick={() => navigate('/grocery')}
               className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-emerald-600 dark:hover:bg-gray-800"
-              aria-label={t('shoppingEntry.title', 'Shopping')}
-              title={t('shoppingEntry.title', 'Shopping')}
+              aria-label={t('groceryEntry.title', 'Grocery List')}
+              title={t('groceryEntry.title', 'Grocery List')}
             >
               <ShoppingCart className="h-5 w-5" />
             </button>

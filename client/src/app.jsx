@@ -21,6 +21,7 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 // Core UI components
 import TopProgressBar from './components/common/TopProgressBar.jsx';
 import Header from './components/layout/Header';
+import GroceryModeHeader from './components/layout/GroceryModeHeader';
 import Footer from './components/layout/Footer';
 import AccessibilityMenuHost from './components/common/AccessibilityMenuHost.jsx';
 import ModernOnboardingManager from './components/common/ModernOnboardingManager';
@@ -51,6 +52,7 @@ import { AppRoutes } from './components/routing/AppRoutes';
 import queryClient from './config/queryClient';
 import { shouldPersistQuery } from './config/queryPersistence';
 import { getSessionFlag } from './utils/sessionFlags';
+import { hasChosenHome, isGroceryMode } from './utils/appMode';
 
 // 🟢 Persister for offline-survives-reload. localStorage is fine here:
 // - It's already used for auth tokens, so the user has implicit consent.
@@ -128,19 +130,16 @@ const AppContent = () => {
     }
   }, [location.pathname, isAuthenticated, isLoading, navigate]);
 
-  // Detect shopping-only mode and home picker state to conditionally hide chrome.
-  // Use sessionStorage flags in addition to prefs so the UI responds immediately
-  // after the user picks (before React Query refreshes the profile cache).
-  const prefs          = user?.preferences || {};
-  const sessionMode    = getSessionFlag('sw_app_mode');    // 'shopping' | 'dashboard' | null
-  const pickerDone     = !!getSessionFlag('sw_picker_done');
-  const isShoppingMode = prefs.default_home === 'shopping' ||
-                         prefs.shopping_list_as_default_page === true ||
-                         sessionMode === 'shopping';
+  // Which shell to render. `resolveAppMode` is the single source of truth for
+  // full-vs-grocery (a per-tab override beats the saved preference); the picker
+  // flag only suppresses chrome while the first-run choice is on screen.
+  const pickerDone      = !!getSessionFlag('sw_picker_done');
+  const groceryMode     = isGroceryMode(user);
   const isShowingPicker = isAuthenticated && !isLoading && user &&
-    !prefs.home_preference_set && !prefs.default_home && !prefs.shopping_list_as_default_page &&
-    !user?.isAdmin && !pickerDone;
-  const showDesktopShell = isAuthenticated && !isQuickExpensePage && !isShoppingMode && !isShowingPicker;
+    !hasChosenHome(user) && !user?.isAdmin && !pickerDone;
+  const showDesktopShell = isAuthenticated && !isQuickExpensePage && !groceryMode && !isShowingPicker;
+  // Grocery mode gets its own slim desktop header rather than no header at all.
+  const showGroceryShell = isAuthenticated && !isQuickExpensePage && groceryMode && !isShowingPicker;
 
   return (
     <div
@@ -150,10 +149,11 @@ const AppContent = () => {
       <TopProgressBar visible={isLoading} />
       {isAuthenticated && <ModernOnboardingManager />}
 
-      {/* Header — hidden in shopping mode and while home picker is on screen */}
+      {/* Header — the full shell, or grocery mode's slim desktop bar */}
       {showDesktopShell && <Header />}
+      {showGroceryShell && <GroceryModeHeader />}
 
-      {/* Bottom nav — always rendered (ShoppingModeNav / FullNav); hidden only during home picker */}
+      {/* Bottom nav — always rendered (GroceryModeNav / FullNav); hidden only during home picker */}
       {isAuthenticated && !isQuickExpensePage && !isShowingPicker && <MobileBottomNav />}
 
       <main className="flex-grow lg:pb-0 pb-20">

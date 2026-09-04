@@ -122,16 +122,30 @@ export const AppRoutes = ({ isAuthenticated }) => (
       </ProtectedRoute>
     } />
 
-    {/* ✅ Shopping Wishlist Route */}
-    <Route path="/shopping" element={
+    {/* ✅ Shared grocery list */}
+    <Route path="/grocery" element={
       <ProtectedRoute>
-        <RouteErrorBoundary routeName="Shopping">
-          <Suspense fallback={<RouteLoadingFallback route="shopping" />}>
-            <LazyComponents.ShoppingWishlistPage />
+        <RouteErrorBoundary routeName="Grocery">
+          <Suspense fallback={<RouteLoadingFallback route="grocery" />}>
+            <LazyComponents.GroceryListPage />
           </Suspense>
         </RouteErrorBoundary>
       </ProtectedRoute>
     } />
+
+    {/* Invitation preview — read-only; joining needs an explicit Accept */}
+    <Route path="/grocery/invite/:token" element={
+      <ProtectedRoute>
+        <RouteErrorBoundary routeName="GroceryInvite">
+          <Suspense fallback={<RouteLoadingFallback route="grocery" />}>
+            <LazyComponents.GroceryInvitePage />
+          </Suspense>
+        </RouteErrorBoundary>
+      </ProtectedRoute>
+    } />
+
+    {/* Old wishlist path — keep bookmarks and shipped invite emails working */}
+    <Route path="/shopping" element={<Navigate to="/grocery" replace />} />
 
     {/* ✅ Bank Sync Route */}
     <Route path="/bank-sync" element={

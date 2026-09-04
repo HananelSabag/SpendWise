@@ -30,17 +30,31 @@ const fileFilter = (req, file, cb) => {
     }
   } else if (file.fieldname === 'receipt') {
     // Allow images and PDFs for receipts
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+
     if (allowedTypes.includes(file.mimetype)) {
       const ext = file.originalname.split('.').pop().toLowerCase();
-      if (['jpg', 'jpeg', 'png', 'pdf'].includes(ext)) {
+      if (['jpg', 'jpeg', 'png', 'webp', 'pdf'].includes(ext)) {
         cb(null, true);
       } else {
         cb(new Error('Invalid file extension'), false);
       }
     } else {
       cb(new Error('Invalid file type. Only images and PDFs are allowed for receipts'), false);
+    }
+  } else if (file.fieldname === 'itemImage') {
+    // Grocery item product photos — images only, never PDFs
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      const ext = file.originalname.split('.').pop().toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file extension'), false);
+      }
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG and WebP are allowed for item photos'), false);
     }
   } else {
     cb(new Error('Unexpected field'), false);
@@ -120,6 +134,16 @@ const uploadToSupabase = async (req, res, next) => {
 };
 
 // Export configured middleware
+// Phone camera photos are a few MB at most; a 10MB ceiling keeps a stray video
+// or a scanned PDF from tying up a Render dyno's memory on the free tier.
+const GROCERY_UPLOAD_LIMIT = 10 * 1024 * 1024;
+
+const groceryUpload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: GROCERY_UPLOAD_LIMIT, files: 1 },
+});
+
 module.exports = {
   uploadProfilePicture: [
     upload.single('profilePicture'),
@@ -127,5 +151,7 @@ module.exports = {
     uploadToSupabase
   ],
   uploadReceipt: upload.single('receipt'),
+  uploadGroceryReceipt: groceryUpload.single('receipt'),
+  uploadGroceryItemImage: groceryUpload.single('itemImage'),
   upload // Raw multer instance if needed
 };

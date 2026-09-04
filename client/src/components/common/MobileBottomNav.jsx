@@ -21,6 +21,7 @@ import {
   Home, CreditCard, User,
   PlusCircle, MinusCircle, Calculator,
   Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, Wallet, ChevronRight,
+  LayoutDashboard,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../utils/helpers';
@@ -31,20 +32,35 @@ import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
 import BrandMark from './BrandMark';
 import { openAccessibilityMenu } from './AccessibilityMenuHost';
+import { APP_MODE, isGroceryMode, setModeOverride } from '../../utils/appMode';
 
-// ─── Shopping-only 2-tab nav ──────────────────────────────────────────────────
+// ─── Grocery-only nav ────────────────────────────────────────────────────────
 
-const ShoppingModeNav = () => {
+/**
+ * The whole bottom bar in grocery mode. It carries its own notification bell —
+ * a grocery invitation must be reachable here, not only from the full-app shell —
+ * and an explicit way back to SpendWise, so this mode is never a dead end.
+ */
+const GroceryModeNav = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { t }     = useTranslation();
+  const { t: tg } = useTranslation('grocery');
   const isAdmin   = useIsAdmin();
+  const { unreadCount } = useNotifications();
 
   const tabs = [
-    { key: 'shopping', icon: ShoppingCart, label: t('shopping.title') || 'Shopping', href: '/shopping' },
-    { key: 'profile',  icon: User,         label: t('nav.profile')    || 'Profile',  href: '/profile'  },
+    { key: 'grocery', icon: ShoppingCart, label: tg('title'), href: '/grocery' },
+    { key: 'profile', icon: User,         label: t('nav.profile') || 'Profile', href: '/profile' },
     ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t('nav.admin') || 'Admin', href: '/admin' }] : []),
   ];
+
+  const switchToFull = useCallback(() => {
+    // One-time switch: this tab moves to full SpendWise, the saved preference
+    // stays exactly as it was.
+    setModeOverride(APP_MODE.FULL);
+    navigate('/', { replace: true });
+  }, [navigate]);
 
   return (
     <nav
@@ -52,7 +68,7 @@ const ShoppingModeNav = () => {
         'lg:hidden fixed bottom-0 left-0 right-0 z-[100]',
         'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',
         'border-t border-gray-200/80 dark:border-gray-700/80',
-        'flex items-end justify-around px-8',
+        'flex items-end justify-around px-4',
       )}
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
     >
@@ -68,18 +84,41 @@ const ShoppingModeNav = () => {
             <div className="relative flex items-center justify-center w-10 h-8">
               {active && (
                 <motion.div
-                  layoutId="shopping-tab-indicator"
-                  className="absolute inset-x-1 top-0 h-0.5 rounded-full bg-purple-600"
+                  layoutId="grocery-tab-indicator"
+                  className="absolute inset-x-1 top-0 h-0.5 rounded-full bg-blue-600"
                 />
               )}
-              <Icon className={cn('w-5 h-5 transition-colors', active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500')} />
+              <Icon className={cn('w-5 h-5 transition-colors', active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500')} />
             </div>
-            <span className={cn('text-[10px] font-medium mt-0.5 truncate max-w-full px-1', active ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500')}>
+            <span className={cn('text-[10px] font-medium mt-0.5 truncate max-w-full px-1', active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500')}>
               {tab.label}
             </span>
           </button>
         );
       })}
+
+      {/* Notifications — grocery invitations have to be reachable from here. */}
+      <div className="flex flex-col items-center justify-end py-2 flex-1 min-w-0">
+        <div className="relative flex items-center justify-center w-10 h-8">
+          <NotificationBell />
+        </div>
+        <span className="text-[10px] font-medium mt-0.5 truncate max-w-full px-1 text-gray-400 dark:text-gray-500">
+          {t('common.notifications.title', { fallback: 'Alerts' })}
+          {unreadCount > 0 ? ` (${unreadCount})` : ''}
+        </span>
+      </div>
+
+      <button
+        onClick={switchToFull}
+        className="flex flex-col items-center justify-end py-2 flex-1 min-w-0 focus:outline-none"
+      >
+        <div className="relative flex items-center justify-center w-10 h-8">
+          <LayoutDashboard className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+        </div>
+        <span className="text-[10px] font-medium mt-0.5 truncate max-w-full px-1 text-gray-400 dark:text-gray-500">
+          {t('nav.dashboard') || 'SpendWise'}
+        </span>
+      </button>
     </nav>
   );
 };
@@ -90,6 +129,7 @@ const FullNav = () => {
   const navigate  = useNavigate();
   const location  = useLocation();
   const { t, currentLanguage, setLanguage } = useTranslation();
+  const { t: tGrocery } = useTranslation('grocery');
   const { isDark, setTheme } = useTheme();
   const toast    = useToast();
   const isAdmin  = useIsAdmin();
@@ -100,15 +140,14 @@ const FullNav = () => {
   const avatarUrl = user?.avatar || user?.profile_picture_url || user?.profilePicture;
   const initial = String(displayName).charAt(0).toUpperCase();
 
-  const { notifications, unreadCount, markAllRead } = useNotifications();
+  const { unreadCount } = useNotifications();
 
   // Re-run memos when translations finish loading
   const loadedModulesCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
 
-  // Shopping is a profile-gated mini-app — its invitations live in the shopping
-  // page, not the main nav. The FAB badge reflects only non-shopping unread.
-  const nonInviteUnread = notifications.filter(n => !String(n.type || '').startsWith('shopping') && !n.is_read).length;
-  const totalBadge = nonInviteUnread;
+  // Every unread notification counts, grocery invitations included — hiding them
+  // here is what made an invitation invisible in full SpendWise mode.
+  const totalBadge = unreadCount;
   const [menuOpen, setMenuOpen] = useState(false);
 
   // ── Settings helpers ──────────────────────────────────────────────────────
@@ -132,10 +171,9 @@ const FullNav = () => {
 
   // Close the sheet (and optionally navigate after the BottomSheet
   // history.back() cleanup has had time to complete).
-  const handleClose = useCallback(() => {
-    setMenuOpen(false);
-    if (nonInviteUnread > 0) markAllRead();
-  }, [nonInviteUnread, markAllRead]);
+  // Closing the sheet is not "I read those" — the bell has an explicit
+  // mark-all-read button for that.
+  const handleClose = useCallback(() => setMenuOpen(false), []);
 
   // Navigation that waits for history.back() to finish
   const closeAndGo = useCallback((href) => {
@@ -385,6 +423,26 @@ const FullNav = () => {
             <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 rtl:rotate-180" />
           </button>
 
+          {/* ── Grocery list — the shared household list, reachable from
+                 full SpendWise mode too (not only from its own shell). ──── */}
+          <button
+            onClick={() => closeAndGo('/grocery')}
+            className="flex w-full items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-start active:scale-[0.98] transition-all dark:border-emerald-500/25 dark:bg-emerald-500/10"
+          >
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
+              <ShoppingCart className="h-5 w-5" strokeWidth={1.75} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                {tGrocery('title')}
+              </p>
+              <p className="truncate text-xs text-gray-400 dark:text-gray-500">
+                {tGrocery('subtitle')}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 rtl:rotate-180" />
+          </button>
+
           {/* ── Finance — 2 col (neutral cards, colored icon chips) ──── */}
           <div className="grid grid-cols-2 gap-3">
             {financeActions.map((action, i) => {
@@ -453,13 +511,9 @@ const FullNav = () => {
 
 const MobileBottomNav = () => {
   const { user } = useAuth();
-  // Also check sessionStorage so the nav switches immediately after
-  // HomePickerScreen or Profile saves (before getProfile overwrites Zustand).
-  const sessionMode = (() => { try { return sessionStorage.getItem('sw_app_mode'); } catch { return null; } })();
-  const isShoppingMode = user?.preferences?.default_home === 'shopping' ||
-                         user?.preferences?.shopping_list_as_default_page === true ||
-                         sessionMode === 'shopping';
-  return isShoppingMode ? <ShoppingModeNav /> : <FullNav />;
+  // One resolver for the whole app (see utils/appMode) — a per-tab override
+  // wins over the saved preference, and nothing else gets a vote.
+  return isGroceryMode(user) ? <GroceryModeNav /> : <FullNav />;
 };
 
 export default MobileBottomNav;

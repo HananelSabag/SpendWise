@@ -5,6 +5,14 @@
 
 const logger = require('../utils/logger');
 
+/** Display names reach these templates from user input — never interpolate raw. */
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
 // ─── Resend sender ──────────────────────────────────────────────────────────
 
 class ResendSender {
@@ -94,7 +102,16 @@ class EmailService {
       const keyStatus = process.env.RESEND_API_KEY
         ? `key=${process.env.RESEND_API_KEY.slice(0, 8)}...`
         : 'RESEND_API_KEY=NOT SET';
-      logger.error(`❌ Email send failed [${this._sender?.constructor?.name}] ${keyStatus} — ${err.message}`);
+
+      // The single most common cause, and one no amount of retrying fixes:
+      // Resend's shared sandbox sender only delivers to the address that owns
+      // the Resend account. Verify a domain and set FROM_EMAIL to it.
+      const sandboxSender = (process.env.FROM_EMAIL || '').endsWith('@resend.dev');
+      const hint = sandboxSender
+        ? ' — FROM_EMAIL is the Resend sandbox sender (@resend.dev), which can only deliver to the Resend account owner. Verify a domain and set FROM_EMAIL to an address on it.'
+        : '';
+
+      logger.error(`❌ Email send failed [${this._sender?.constructor?.name}] ${keyStatus} — ${err.message}${hint}`);
       return false;
     }
   }
@@ -128,13 +145,28 @@ class EmailService {
     });
   }
 
-  async sendShoppingInvite(inviterName, inviteeEmail, token) {
-    const acceptUrl = `${process.env.CLIENT_URL}/shopping?invite=${token}`;
+  /**
+   * Shared grocery list invitation.
+   *
+   * The link opens a *preview* — it never joins anything on its own. When the
+   * recipient has no account yet the copy says so, and the same link works after
+   * they sign up with that address.
+   *
+   * Returns false (never throws) when delivery fails, so the caller can tell the
+   * inviter the truth and fall back to the shareable link.
+   */
+  async sendGroceryInvite(inviterName, inviteeEmail, token, { isRegistered = true } = {}) {
+    const inviteUrl = `${process.env.CLIENT_URL}/grocery/invite/${token}`;
+    const name = escapeHtml(inviterName);
     return this._send({
       to: inviteeEmail,
       subject: `${inviterName} הזמין אותך לרשימת קניות משותפת ב-SpendWise`,
-      html: this._shoppingInviteHtml(inviterName, acceptUrl),
-      text: `${inviterName} הזמין אותך לרשימת קניות משותפת.\n\nלאישור: ${acceptUrl}\n\nההזמנה תפוג תוך 7 ימים.`,
+      html: this._groceryInviteHtml(name, inviteUrl, isRegistered),
+      text: `${inviterName} הזמין אותך לרשימת קניות משותפת ב-SpendWise.\n\n`
+        + (isRegistered
+            ? `לצפייה ולאישור: ${inviteUrl}\n\n`
+            : `כדי להצטרף, הירשם ל-SpendWise עם כתובת המייל הזו ואז פתח: ${inviteUrl}\n\n`)
+        + `ההזמנה תפוג תוך 14 ימים.`,
     });
   }
 
@@ -204,16 +236,21 @@ class EmailService {
     );
   }
 
-  _shoppingInviteHtml(inviterName, acceptUrl) {
+  _groceryInviteHtml(inviterName, inviteUrl, isRegistered) {
+    const callToAction = isRegistered
+      ? '<p class="msg">הקישור פותח מסך אישור — ההצטרפות מתבצעת רק אחרי שתאשר.</p>'
+      : '<p class="msg">עדיין אין לך חשבון SpendWise? הירשם עם כתובת המייל הזו, ואז פתח שוב את הקישור כדי להצטרף.</p>';
+
     return this._wrap(
       'linear-gradient(135deg,#4F46E5,#3B82F6)',
-      '<h1>הזמנה לרשימת קניות</h1><p>SpendWise — ניהול פיננסי חכם</p>',
+      '<h1>הזמנה לרשימת קניות משותפת</h1><p>SpendWise</p>',
       `<p class="msg">היי!</p>
        <p class="msg"><strong>${inviterName}</strong> הזמין אותך לרשימת קניות משותפת ב-SpendWise.</p>
-       <div class="btn-wrap"><a href="${acceptUrl}" class="btn">הצטרף לרשימה</a></div>
+       ${callToAction}
+       <div class="btn-wrap"><a href="${inviteUrl}" class="btn">לצפייה בהזמנה</a></div>
        <p class="msg">או העתק קישור:</p>
-       <div class="url">${acceptUrl}</div>
-       <p class="note">ההזמנה תפוג תוך 7 ימים. אם לא ציפית להזמנה זו, התעלם מהמייל.</p>`
+       <div class="url">${inviteUrl}</div>
+       <p class="note">ההזמנה תפוג תוך 14 ימים. אם לא ציפית להזמנה זו, התעלם מהמייל.</p>`
     );
   }
 }

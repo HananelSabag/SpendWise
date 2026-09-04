@@ -1,0 +1,80 @@
+const fs = require('fs');
+const path = require('path');
+
+const migration = fs.readFileSync(
+  path.join(__dirname, '..', 'DB Migrations', '40_grocery_lists.sql'),
+  'utf8',
+);
+
+const { CATEGORY_KEYS } = require('../services/groceryCategories');
+
+describe('grocery list migration', () => {
+  test('runs as one all-or-nothing transaction', () => {
+    expect(migration).toMatch(/^\s*BEGIN;/m);
+    expect(migration).toMatch(/^COMMIT;/m);
+  });
+
+  test('creates the list-centric tables', () => {
+    for (const table of [
+      'grocery_lists',
+      'grocery_list_members',
+      'grocery_list_invitations',
+      'grocery_trips',
+      'grocery_items',
+    ]) {
+      expect(migration).toMatch(new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`, 'i'));
+    }
+  });
+
+  test('allows exactly one active trip per list', () => {
+    expect(migration).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS uq_grocery_trips_active[\s\S]*?ON grocery_trips\(list_id\) WHERE status = 'active'/i,
+    );
+  });
+
+  test('allows at most one pending invitation per list + email', () => {
+    expect(migration).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS uq_grocery_invitation_pending[\s\S]*?WHERE status = 'pending'/i,
+    );
+  });
+
+  test('a trip can back at most one SpendWise expense', () => {
+    expect(migration).toMatch(
+      /CREATE UNIQUE INDEX IF NOT EXISTS uq_grocery_trips_transaction[\s\S]*?ON grocery_trips\(transaction_id\) WHERE transaction_id IS NOT NULL/i,
+    );
+  });
+
+  test('category keys in the CHECK constraint match the server list exactly', () => {
+    const match = migration.match(/category_key IN \(([\s\S]*?)\)\)/);
+    expect(match).toBeTruthy();
+
+    const inMigration = [...match[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
+    expect(inMigration.sort()).toEqual([...CATEGORY_KEYS].sort());
+  });
+
+  test('purchase state and timestamp cannot disagree', () => {
+    expect(migration).toMatch(/chk_grocery_item_purchase/);
+    expect(migration).toMatch(/is_purchased = false AND purchased_at IS NULL/);
+    expect(migration).toMatch(/is_purchased = true\s+AND purchased_at IS NOT NULL/);
+  });
+
+  test('the edit lease columns can only be set or cleared together', () => {
+    expect(migration).toMatch(/chk_grocery_lists_lock_pairing/);
+  });
+
+  test('invitation emails are stored lowercased', () => {
+    expect(migration).toMatch(/CHECK \(invitee_email = LOWER\(invitee_email\)\)/i);
+  });
+
+  test('retires the superseded wishlist tables and its Hebrew notifications', () => {
+    expect(migration).toMatch(/DROP TABLE IF EXISTS shopping_invitations CASCADE/i);
+    expect(migration).toMatch(/DROP TABLE IF EXISTS shopping_shares\s+CASCADE/i);
+    expect(migration).toMatch(/DROP TABLE IF EXISTS shopping_items\s+CASCADE/i);
+    expect(migration).toMatch(/DELETE FROM notifications WHERE type LIKE 'shopping%'/i);
+  });
+
+  test('documents verification and rollback', () => {
+    expect(migration).toMatch(/VERIFICATION/);
+    expect(migration).toMatch(/ROLLBACK \(destructive/);
+  });
+});

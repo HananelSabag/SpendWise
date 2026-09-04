@@ -7,7 +7,7 @@ const db = require('../../config/db');
 const { asyncHandler } = require('../../middleware/errorHandler');
 const { hasRole, canManageUser, clearUserCache } = require('../../middleware/auth');
 const logger = require('../../utils/logger');
-const { Notification } = require('../../models/ShoppingShare');
+const { Notification } = require('../../models/Notification');
 
 const adminUsersController = {
   /**

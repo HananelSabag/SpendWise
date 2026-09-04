@@ -5,7 +5,7 @@
  *   import PageSkeleton from '@components/ui/PageSkeleton';
  *   if (isLoading && !data) return <PageSkeleton page="dashboard" />;
  *
- * Supported pages: dashboard | transactions | analytics | profile | shopping | admin
+ * Supported pages: dashboard | transactions | analytics | profile | grocery | admin
  *
  * Design rules:
  *  • Pure Tailwind — no custom CSS class dependencies
@@ -269,28 +269,38 @@ const ProfileSkeleton = () => (
   </Shell>
 );
 
-// ─── Shopping ─────────────────────────────────────────────────────────────────
+// ─── Grocery list ─────────────────────────────────────────────────────────────
 
-const ShoppingSkeleton = () => (
+// Mirrors the real screen: header, tabs, progress, then dense category rows —
+// so the layout doesn't visibly jump when the data lands.
+const GrocerySkeleton = () => (
   <Shell>
-    <div className="max-w-2xl mx-auto px-4 pt-4 pb-32 space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <T className="h-7 w-36" />
-        <S className="h-9 w-24 rounded-xl" />
+    <div className="mx-auto w-full max-w-6xl px-3 pb-32 pt-3 sm:px-5 lg:px-6">
+      <div className="flex items-center gap-3">
+        <S className="h-10 w-10 shrink-0 rounded-2xl" />
+        <div className="flex-1 space-y-1.5">
+          <T className="h-4 w-32" />
+          <T className="h-3 w-24" />
+        </div>
+        <S className="h-10 w-10 shrink-0 rounded-2xl" />
       </div>
 
-      {/* Share / members bar */}
-      <S className="h-14 rounded-2xl" />
+      <S className="mt-2.5 h-10 rounded-2xl" />
+      <S className="mt-3 h-12 rounded-2xl" />
 
-      {/* Item rows */}
-      {[0, 1, 2, 3, 4, 5].map(i => (
-        <Card key={i} className="flex items-center gap-3 p-4">
-          <S className="w-5 h-5 rounded shrink-0" />
-          <T className="h-4 flex-1" />
-          <T className="h-4 w-16 shrink-0" />
-        </Card>
-      ))}
+      <div className="mt-4 space-y-5">
+        {[0, 1].map(section => (
+          <div key={section} className="space-y-1.5">
+            <T className="h-3 w-28" />
+            {[0, 1, 2].map(row => (
+              <Card key={row} className="flex items-center gap-3 p-3">
+                <S className="h-7 w-7 shrink-0 rounded-full" />
+                <T className="h-4 flex-1" />
+              </Card>
+            ))}
+          </div>
+        ))}
+      </div>
     </div>
   </Shell>
 );
@@ -351,13 +361,13 @@ const SKELETONS = {
   transactions: TransactionsSkeleton,
   analytics:    AnalyticsSkeleton,
   profile:      ProfileSkeleton,
-  shopping:     ShoppingSkeleton,
+  grocery:      GrocerySkeleton,
   admin:        AdminSkeleton,
 };
 
 /**
  * PageSkeleton
- * @param {'dashboard'|'financial-cycle'|'transactions'|'analytics'|'profile'|'shopping'|'admin'} page
+ * @param {'dashboard'|'financial-cycle'|'transactions'|'analytics'|'profile'|'grocery'|'admin'} page
  */
 const PageSkeleton = ({ page = 'dashboard' }) => {
   const Comp = SKELETONS[page] ?? DashboardSkeleton;

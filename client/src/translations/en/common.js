@@ -11,6 +11,11 @@ export default {
   },
   recommended: "Recommended",
   appName: "SpendWise",
+  notifications: {
+    title: "Notifications",
+    markAllRead: "Mark all as read",
+    empty: "No new notifications",
+  },
   save: "Save",
   saving: "Saving...",
   cancel: "Cancel",
