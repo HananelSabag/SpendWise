@@ -207,7 +207,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
               }}
               aria-label={t('item.delete')}
               className={cn(
-                'flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors',
+                'flex h-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition-colors',
                 confirmDelete
                   ? 'flex-1 bg-red-500 text-white'
                   : 'w-11 bg-red-50 text-red-500 dark:bg-red-500/15'
@@ -221,7 +221,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
               type="button"
               onClick={() => setActionsOpen(false)}
               aria-label={t('sheet.cancel')}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-gray-400"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-gray-400"
             >
               <X className="h-4 w-4" />
             </button>
