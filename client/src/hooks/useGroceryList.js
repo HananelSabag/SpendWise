@@ -206,7 +206,11 @@ export function useGroceryList() {
       patchCache((old) => ({
         ...old,
         list: { ...old.list, version: data.version ?? old.list.version },
-        items: [...old.items, data.item],
+        // A poll can land between the request and this patch and already carry
+        // the new row — appending blindly would show it twice.
+        items: old.items.some((item) => item.id === data.item.id)
+          ? old.items.map((item) => (item.id === data.item.id ? data.item : item))
+          : [...old.items, data.item],
       }));
     }
     return data?.item ?? null;

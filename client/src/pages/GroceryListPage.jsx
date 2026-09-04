@@ -14,6 +14,7 @@ import {
   ChevronDown, ClipboardList, Flag, ShoppingCart, Users, AlertCircle,
 } from 'lucide-react';
 import { cn } from '../utils/helpers';
+import { isGroceryMode } from '../utils/appMode';
 import { useTranslation, useAuth } from '../stores';
 import { useToast } from '../hooks/useToast';
 import { useGroceryList } from '../hooks/useGroceryList';
@@ -28,8 +29,18 @@ import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet'
 import GroceryHistoryPanel from '../components/features/grocery/GroceryHistoryPanel';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
-/** Bottom nav height + the phone's own inset, so the composer never sits under it. */
-const COMPOSER_OFFSET = 'calc(60px + env(safe-area-inset-bottom, 0px))';
+/**
+ * How far the composer sits above the bottom navigation.
+ *
+ * Grocery mode's bar is a flat row. Full SpendWise mode's bar has a raised
+ * centre FAB that protrudes about 28px above it, so the composer has to clear
+ * that too — this is the collision the old wishlist screen had between its FAB,
+ * its sticky total bar and the tab bar.
+ */
+const COMPOSER_OFFSET = {
+  grocery: 'calc(60px + env(safe-area-inset-bottom, 0px))',
+  full: 'calc(92px + env(safe-area-inset-bottom, 0px))',
+};
 
 const ProgressBar = ({ progress, pendingCount, purchasedCount }) => {
   const { t } = useTranslation('grocery');
@@ -58,6 +69,7 @@ const GroceryListPage = () => {
   const { t, isRTL } = useTranslation('grocery');
   const { t: tc } = useTranslation('common');
   const { user } = useAuth();
+  const groceryMode = isGroceryMode(user);
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -383,7 +395,7 @@ const GroceryListPage = () => {
               )}
 
               {/* Space for the fixed composer on mobile. */}
-              <div className="h-24 lg:hidden" aria-hidden />
+              <div className={cn('lg:hidden', groceryMode ? 'h-24' : 'h-32')} aria-hidden />
             </div>
 
             {/* ── Desktop rail ────────────────────────────────────── */}
@@ -446,7 +458,7 @@ const GroceryListPage = () => {
       {tab === 'list' && (
         <div
           className="fixed inset-x-0 z-40 border-t border-gray-100 bg-white/95 px-3 py-2 backdrop-blur-md lg:hidden dark:border-gray-700 dark:bg-gray-900/95"
-          style={{ bottom: COMPOSER_OFFSET }}
+          style={{ bottom: COMPOSER_OFFSET[groceryMode ? 'grocery' : 'full'] }}
         >
           {purchasedCount > 0 && (
             <button
