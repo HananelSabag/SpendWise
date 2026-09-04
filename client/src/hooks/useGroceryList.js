@@ -1,27 +1,31 @@
 /**
- * useGroceryList — the shared grocery list's live state, edit lease and mutations.
+ * useGroceryList — the shared grocery list's live state and mutations.
  *
- * Live collaboration model
- * ------------------------
+ * Live collaboration
+ * ------------------
  * The server keeps a monotonic `version` on the list and bumps it on every
- * change, including someone taking or dropping the edit lease. This hook polls
- * `/grocery/state?version=<known>`; when nothing moved the server answers with a
- * tiny `{ unchanged: true }` body and we keep the exact same object, so a
- * few-second interval costs almost nothing and never re-renders the list.
- * Polling pauses when the tab is in the background.
+ * change. This hook polls `/grocery/state?version=<known>`; when nothing moved
+ * the server answers with a tiny `{ unchanged: true }` body and we keep the
+ * exact same object, so the interval costs almost nothing and never re-renders
+ * the list. Polling pauses when the tab is in the background.
  *
- * Editing model
- * -------------
- * Only one participant may write at a time. Rather than making that a mode the
- * user has to enter, the first mutation implicitly takes a free lease and the
- * server hands the token back in a response header. A heartbeat keeps it alive
- * while you are actually doing things, and it is released after a short idle
- * period so the other person isn't locked out of a list nobody is touching.
- * Everything is enforced server-side — the disabled buttons here are courtesy,
- * not security.
+ * Concurrency
+ * -----------
+ * There is deliberately no list-level lock. Two people adding different items,
+ * or checking off different items, cannot conflict — freezing the whole list to
+ * defend against that made the app feel broken for the person who wasn't
+ * editing. The one genuine collision is two people editing the same item's
+ * fields, and that is handled where it happens:
+ *
+ *   * opening an item's editor claims THAT item (advisory, ~90s, released on
+ *     close or on save)
+ *   * every edit carries the item's `version`, so a write that lost the race is
+ *     rejected with 409 rather than silently overwriting
+ *
+ * Everything else is free for everyone, all the time.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import useAuthStore from '../stores/authStore';
@@ -29,26 +33,7 @@ import { useToast } from './useToast';
 import { useTranslation } from '../stores';
 import { categoryOrder } from '../components/features/grocery/groceryCategories';
 
-// While someone holds the edit lease their changes are landing right now, so
-// poll tightly; otherwise back off. The app-wide rate limiter is 100 req/min
-// across every endpoint, and a fixed 4s poll would spend a fifth of it idling.
-const POLL_ACTIVE_MS = 4000;
-const POLL_IDLE_MS = 9000;
-const HEARTBEAT_MS = 20000;
-/** Hand the lease back after this long without a change, so nobody waits on an idle tab. */
-const IDLE_RELEASE_MS = 45000;
-
-const leaseStorageKey = (listId) => `sw_grocery_lease_${listId}`;
-
-const readStoredLease = (listId) => {
-  try { return sessionStorage.getItem(leaseStorageKey(listId)); } catch { return null; }
-};
-const writeStoredLease = (listId, token) => {
-  try {
-    if (token) sessionStorage.setItem(leaseStorageKey(listId), token);
-    else sessionStorage.removeItem(leaseStorageKey(listId));
-  } catch { /* private mode — the lease simply won't survive a refresh */ }
-};
+const POLL_INTERVAL_MS = 5000;
 
 export function useGroceryList() {
   const queryClient = useQueryClient();
@@ -57,16 +42,7 @@ export function useGroceryList() {
   const { t } = useTranslation('grocery');
 
   const QUERY_KEY = useMemo(() => ['grocery', 'state', userId], [userId]);
-
-  const [leaseToken, setLeaseToken] = useState(null);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [lockConflict, setLockConflict] = useState(null);
-  const lastActivityRef = useRef(0);
-  const editModeRef = useRef(false);
-  const leaseRef = useRef(null);
-
-  useEffect(() => { editModeRef.current = isEditMode; }, [isEditMode]);
-  useEffect(() => { leaseRef.current = leaseToken; }, [leaseToken]);
+  const claimedItemRef = useRef(null);
 
   // ─── State query + polling ────────────────────────────────────────────────
 
@@ -84,7 +60,7 @@ export function useGroceryList() {
       if (result.data?.unchanged && previous) return previous;
       return result.data;
     },
-    refetchInterval: (query) => (query.state.data?.lock?.isLocked ? POLL_ACTIVE_MS : POLL_IDLE_MS),
+    refetchInterval: POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     staleTime: 0,
@@ -93,33 +69,8 @@ export function useGroceryList() {
   });
 
   const state = query.data;
-  const listId = state?.list?.id ?? null;
-
-  // Adopt a lease stored by an earlier render of this tab (e.g. after a refresh).
-  useEffect(() => {
-    if (!listId) return;
-    const stored = readStoredLease(listId);
-    if (stored && !leaseRef.current) setLeaseToken(stored);
-  }, [listId]);
-
-  const rememberLease = useCallback((token) => {
-    if (!token) return;
-    setLeaseToken(token);
-    lastActivityRef.current = Date.now();
-    if (listId) writeStoredLease(listId, token);
-  }, [listId]);
-
-  const forgetLease = useCallback(() => {
-    setLeaseToken(null);
-    setIsEditMode(false);
-    if (listId) writeStoredLease(listId, null);
-  }, [listId]);
 
   // ─── Derived view state ───────────────────────────────────────────────────
-
-  const lock = state?.lock;
-  const lockedByOther = !!lock?.isLocked && lock.lockedBy?.userId !== userId;
-  const canEdit = !lockedByOther;
 
   const { sections, purchased, pendingCount, purchasedCount, progress } = useMemo(() => {
     const items = state?.items ?? [];
@@ -161,72 +112,52 @@ export function useGroceryList() {
     queryClient.invalidateQueries({ queryKey: QUERY_KEY });
   }, [queryClient, QUERY_KEY]);
 
-  /**
-   * Shared failure path. A 409 from the lease means someone else took over: drop
-   * the optimistic change, surface who, and resync — never silently retry.
-   */
-  const handleFailure = useCallback((result, rollback) => {
+  const reportFailure = useCallback((result, rollback) => {
     rollback?.();
-
     const code = result.error?.code;
-    if (code === 'GROCERY_LOCKED' || code === 'GROCERY_LEASE_LOST') {
-      forgetLease();
-      setLockConflict({
-        lockedBy: result.error?.lockedBy || null,
-        expiresAt: result.error?.expiresAt || null,
-      });
-      const name = result.error?.lockedBy?.firstName
-        || result.error?.lockedBy?.username
-        || t('lock.someone');
-      toast.error(t('lock.takenBy', { name }));
-      refresh();
-      return;
-    }
 
-    toast.error(t(`errors.${code}`, { fallback: t('errors.generic') }));
+    if (code === 'GROCERY_ITEM_BUSY') {
+      toast.error(t('item.busy', { name: result.error?.editingBy || t('lock.someone') }));
+    } else if (code === 'GROCERY_ITEM_STALE') {
+      toast.error(t('errors.GROCERY_ITEM_STALE'));
+    } else {
+      toast.error(t(`errors.${code}`, { fallback: t('errors.generic') }));
+    }
     refresh();
-  }, [forgetLease, refresh, t, toast]);
-
-  const runMutation = useCallback(async (fn, rollback) => {
-    const result = await fn(leaseRef.current);
-    if (!result.success) {
-      handleFailure(result, rollback);
-      return null;
-    }
-    if (result.leaseToken) rememberLease(result.leaseToken);
-    lastActivityRef.current = Date.now();
-    return result.data;
-  }, [handleFailure, rememberLease]);
+  }, [refresh, t, toast]);
 
   // ─── Item actions ─────────────────────────────────────────────────────────
 
   const addItem = useCallback(async (payload) => {
-    const data = await runMutation((token) => api.grocery.addItem(payload, token));
-    if (data?.item) {
-      patchCache((old) => ({
-        ...old,
-        list: { ...old.list, version: data.version ?? old.list.version },
-        // A poll can land between the request and this patch and already carry
-        // the new row — appending blindly would show it twice.
-        items: old.items.some((item) => item.id === data.item.id)
-          ? old.items.map((item) => (item.id === data.item.id ? data.item : item))
-          : [...old.items, data.item],
-      }));
-    }
-    return data?.item ?? null;
-  }, [runMutation, patchCache]);
+    const result = await api.grocery.addItem(payload);
+    if (!result.success) { reportFailure(result); return null; }
 
-  const updateItem = useCallback(async (id, payload) => {
-    const data = await runMutation((token) => api.grocery.updateItem(id, payload, token));
-    if (data?.item) {
-      patchCache((old) => ({
-        ...old,
-        list: { ...old.list, version: data.version ?? old.list.version },
-        items: old.items.map((item) => (item.id === id ? data.item : item)),
-      }));
-    }
-    return data?.item ?? null;
-  }, [runMutation, patchCache]);
+    const { item, version } = result.data;
+    patchCache((old) => ({
+      ...old,
+      list: { ...old.list, version: version ?? old.list.version },
+      // A poll can land between the request and this patch and already carry
+      // the new row — appending blindly would show it twice.
+      items: old.items.some((existing) => existing.id === item.id)
+        ? old.items.map((existing) => (existing.id === item.id ? item : existing))
+        : [...old.items, item],
+    }));
+    return item;
+  }, [patchCache, reportFailure]);
+
+  /** Edits always send the item's version, so a lost update is refused. */
+  const updateItem = useCallback(async (id, payload, version) => {
+    const result = await api.grocery.updateItem(id, { ...payload, version });
+    if (!result.success) { reportFailure(result); return null; }
+
+    const { item, version: listVersion } = result.data;
+    patchCache((old) => ({
+      ...old,
+      list: { ...old.list, version: listVersion ?? old.list.version },
+      items: old.items.map((existing) => (existing.id === id ? item : existing)),
+    }));
+    return item;
+  }, [patchCache, reportFailure]);
 
   /**
    * The one-tap action of the whole screen: flip locally first so the row moves
@@ -248,101 +179,66 @@ export function useGroceryList() {
         : current)),
     }));
 
-    const rollback = () => queryClient.setQueryData(QUERY_KEY, snapshot);
-    const data = await runMutation(
-      (token) => api.grocery.setPurchased(item.id, next, token),
-      rollback
-    );
-
-    if (data?.item) {
-      patchCache((old) => ({
-        ...old,
-        list: { ...old.list, version: data.version ?? old.list.version },
-        items: old.items.map((current) => (current.id === item.id ? data.item : current)),
-      }));
+    const result = await api.grocery.setPurchased(item.id, next);
+    if (!result.success) {
+      reportFailure(result, () => queryClient.setQueryData(QUERY_KEY, snapshot));
+      return;
     }
-  }, [queryClient, QUERY_KEY, patchCache, runMutation, userId]);
+
+    const { item: saved, version } = result.data;
+    patchCache((old) => ({
+      ...old,
+      list: { ...old.list, version: version ?? old.list.version },
+      items: old.items.map((current) => (current.id === item.id ? saved : current)),
+    }));
+  }, [queryClient, QUERY_KEY, patchCache, reportFailure, userId]);
 
   const deleteItem = useCallback(async (id) => {
     const snapshot = queryClient.getQueryData(QUERY_KEY);
     patchCache((old) => ({ ...old, items: old.items.filter((item) => item.id !== id) }));
 
-    const rollback = () => queryClient.setQueryData(QUERY_KEY, snapshot);
-    await runMutation((token) => api.grocery.deleteItem(id, token), rollback);
-  }, [queryClient, QUERY_KEY, patchCache, runMutation]);
-
-  // ─── Explicit lease control ───────────────────────────────────────────────
-
-  /** "Take over" / "Start shopping" — asks for the lease and stays in edit mode. */
-  const requestControl = useCallback(async () => {
-    const result = await api.grocery.acquireLock();
+    const result = await api.grocery.deleteItem(id);
     if (!result.success) {
-      setLockConflict({
-        lockedBy: result.error?.lockedBy || null,
-        expiresAt: result.error?.expiresAt || null,
-      });
-      const name = result.error?.lockedBy?.firstName
-        || result.error?.lockedBy?.username
-        || t('lock.someone');
-      toast.error(t('lock.takenBy', { name }));
-      refresh();
+      reportFailure(result, () => queryClient.setQueryData(QUERY_KEY, snapshot));
+    }
+  }, [queryClient, QUERY_KEY, patchCache, reportFailure]);
+
+  // ─── Per-item edit claim ──────────────────────────────────────────────────
+
+  /** Called when the editor opens. Returns false when someone else has it. */
+  const claimItem = useCallback(async (id) => {
+    const result = await api.grocery.claimItem(id);
+    if (!result.success) {
+      reportFailure(result);
       return false;
     }
-
-    rememberLease(result.data.token);
-    setIsEditMode(true);
-    setLockConflict(null);
-    refresh();
+    claimedItemRef.current = id;
     return true;
-  }, [rememberLease, refresh, t, toast]);
+  }, [reportFailure]);
 
-  const releaseControl = useCallback(async () => {
-    const token = leaseRef.current;
-    forgetLease();
-    if (token) await api.grocery.releaseLock(token);
+  const releaseItem = useCallback(async (id) => {
+    const target = id ?? claimedItemRef.current;
+    if (!target) return;
+    claimedItemRef.current = null;
+    await api.grocery.releaseItem(target);
     refresh();
-  }, [forgetLease, refresh]);
+  }, [refresh]);
 
-  // Heartbeat while we hold the lease; hand it back once we go quiet.
-  useEffect(() => {
-    if (!leaseToken) return undefined;
-
-    const tick = async () => {
-      const idleFor = Date.now() - lastActivityRef.current;
-      if (!editModeRef.current && idleFor > IDLE_RELEASE_MS) {
-        const token = leaseRef.current;
-        forgetLease();
-        if (token) await api.grocery.releaseLock(token);
-        refresh();
-        return;
-      }
-
-      const result = await api.grocery.heartbeatLock(leaseRef.current);
-      if (!result.success) forgetLease();
-    };
-
-    const timer = setInterval(tick, HEARTBEAT_MS);
-    return () => clearInterval(timer);
-  }, [leaseToken, forgetLease, refresh]);
-
-  // Leaving the screen should not hold the list hostage for the full lease TTL.
+  // Leaving the screen must not leave an item claimed behind you.
   useEffect(() => () => {
-    const token = leaseRef.current;
-    if (token) api.grocery.releaseLock(token).catch(() => {});
+    if (claimedItemRef.current) {
+      api.grocery.releaseItem(claimedItemRef.current).catch(() => {});
+    }
   }, []);
 
   // ─── Trip completion ──────────────────────────────────────────────────────
 
   const completeTrip = useCallback(async ({ storeName, totalIls }) => {
-    const result = await api.grocery.completeTrip({ storeName, totalIls }, leaseRef.current);
-    if (!result.success) {
-      handleFailure(result);
-      return null;
-    }
-    if (result.leaseToken) rememberLease(result.leaseToken);
+    const result = await api.grocery.completeTrip({ storeName, totalIls });
+    if (!result.success) { reportFailure(result); return null; }
     refresh();
     return result.data;
-  }, [handleFailure, rememberLease, refresh]);
+  }, [reportFailure, refresh]);
 
   return {
     // Data
@@ -365,22 +261,13 @@ export function useGroceryList() {
     refetch: query.refetch,
     refresh,
 
-    // Lock
-    lock,
-    lockedByOther,
-    canEdit,
-    isEditMode,
-    lockConflict,
-    dismissLockConflict: () => setLockConflict(null),
-    holdsLease: !!leaseToken,
-    requestControl,
-    releaseControl,
-
     // Actions
     addItem,
     updateItem,
     togglePurchased,
     deleteItem,
+    claimItem,
+    releaseItem,
     completeTrip,
   };
 }

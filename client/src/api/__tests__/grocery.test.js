@@ -46,7 +46,7 @@ describe('live state polling', () => {
   });
 });
 
-describe('edit lease headers', () => {
+describe('per-item claiming', () => {
   it('carries a stable per-tab session id on every call', async () => {
     mockGet.mockResolvedValue(ok({}));
     mockPost.mockResolvedValue(ok({}));
@@ -54,36 +54,58 @@ describe('edit lease headers', () => {
     await groceryAPI.getState();
     await groceryAPI.addItem({ name: 'Milk' });
 
-    const stateHeaders = mockGet.mock.calls[0][1].headers;
-    const addHeaders = mockPost.mock.calls[0][2].headers;
-
-    expect(stateHeaders['X-Grocery-Session']).toBe(groceryAPI.sessionId);
-    expect(addHeaders['X-Grocery-Session']).toBe(groceryAPI.sessionId);
+    expect(mockGet.mock.calls[0][1].headers['X-Grocery-Session']).toBe(groceryAPI.sessionId);
+    expect(mockPost.mock.calls[0][2].headers['X-Grocery-Session']).toBe(groceryAPI.sessionId);
   });
 
-  it('attaches the lease token to mutations and not to reads', async () => {
-    mockGet.mockResolvedValue(ok({}));
+  // The list-level lease is gone: adding and checking off are free for everyone
+  // at once, so no mutation carries a lock token any more.
+  it('sends no lock token with ordinary mutations', async () => {
     mockPost.mockResolvedValue(ok({}));
+    mockPatch.mockResolvedValue(ok({}));
 
-    await groceryAPI.getState();
-    await groceryAPI.setPurchased(3, true, 'lease-token');
+    await groceryAPI.addItem({ name: 'Milk' });
+    await groceryAPI.setPurchased(3, true);
+    await groceryAPI.updateItem(3, { name: 'Milk' });
 
-    expect(mockGet.mock.calls[0][1].headers['X-Grocery-Lease']).toBeUndefined();
-    expect(mockPost.mock.calls[0][2].headers['X-Grocery-Lease']).toBe('lease-token');
+    for (const call of [...mockPost.mock.calls, ...mockPatch.mock.calls]) {
+      const headers = call[2]?.headers || {};
+      expect(headers['X-Grocery-Lease']).toBeUndefined();
+    }
   });
 
-  it('picks up a lease the server minted on an implicit acquire', async () => {
-    mockPost.mockResolvedValue(ok({ item: { id: 1 } }, { 'x-grocery-lease': 'fresh-token' }));
+  it('claims and releases a single item', async () => {
+    mockPost.mockResolvedValue(ok({ expiresAt: 'later' }));
+    mockDelete.mockResolvedValue(ok({}));
 
-    const result = await groceryAPI.addItem({ name: 'Milk' });
+    await groceryAPI.claimItem(7);
+    await groceryAPI.releaseItem(7);
 
-    expect(result.leaseToken).toBe('fresh-token');
+    expect(mockPost.mock.calls[0][0]).toBe('/grocery/items/7/claim');
+    expect(mockDelete.mock.calls[0][0]).toBe('/grocery/items/7/claim');
   });
 
-  it('reports no token when the server did not send one', async () => {
-    mockPost.mockResolvedValue(ok({ item: { id: 1 } }));
-    const result = await groceryAPI.addItem({ name: 'Milk' });
-    expect(result.leaseToken).toBeNull();
+  it('surfaces who holds an item when the claim is refused', async () => {
+    mockPost.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { error: { code: 'GROCERY_ITEM_BUSY', editingBy: 'Nofar' } },
+      },
+    });
+
+    const result = await groceryAPI.claimItem(7);
+
+    expect(result.success).toBe(false);
+    expect(result.error.code).toBe('GROCERY_ITEM_BUSY');
+    expect(result.error.editingBy).toBe('Nofar');
+  });
+
+  it('sends the item version so a lost update is refused, not applied', async () => {
+    mockPatch.mockResolvedValue(ok({ item: { id: 3 } }));
+
+    await groceryAPI.updateItem(3, { name: 'Milk', version: 4 });
+
+    expect(mockPatch.mock.calls[0][1]).toMatchObject({ version: 4 });
   });
 });
 
@@ -147,16 +169,13 @@ describe('invitation endpoints', () => {
 });
 
 describe('trips', () => {
-  it('completes the trip through the lease-guarded endpoint', async () => {
+  it('completes the trip without needing any lock', async () => {
     mockPost.mockResolvedValue(ok({ trip: { id: 9 } }));
 
-    await groceryAPI.completeTrip({ storeName: 'Rami Levy', totalIls: 312.4 }, 'tok');
+    await groceryAPI.completeTrip({ storeName: 'Rami Levy', totalIls: 312.4 });
 
-    expect(mockPost).toHaveBeenCalledWith(
-      '/grocery/trips/complete',
-      { storeName: 'Rami Levy', totalIls: 312.4 },
-      expect.objectContaining({ headers: expect.objectContaining({ 'X-Grocery-Lease': 'tok' }) }),
-    );
+    expect(mockPost.mock.calls[0][0]).toBe('/grocery/trips/complete');
+    expect(mockPost.mock.calls[0][1]).toEqual({ storeName: 'Rami Levy', totalIls: 312.4 });
   });
 
   it('uploads a receipt as multipart form data', async () => {

@@ -44,8 +44,14 @@ describe('grocery list migration', () => {
     );
   });
 
-  test('category keys in the CHECK constraint match the server list exactly', () => {
-    const match = migration.match(/category_key IN \(([\s\S]*?)\)\)/);
+  // Migration 42 widened this list; assert against the migration that owns it
+  // now, so the server's keys and the live CHECK constraint cannot drift apart.
+  test('the effective category CHECK matches the server list exactly', () => {
+    const aisles = fs.readFileSync(
+      path.join(__dirname, '..', 'DB Migrations', '42_grocery_aisles_and_item_locks.sql'),
+      'utf8',
+    );
+    const match = aisles.match(/category_key IN \(([\s\S]*?)\)\)/);
     expect(match).toBeTruthy();
 
     const inMigration = [...match[1].matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
@@ -108,5 +114,46 @@ describe('open link invitations migration', () => {
   test('documents verification and rollback', () => {
     expect(linkMigration).toMatch(/VERIFICATION/);
     expect(linkMigration).toMatch(/ROLLBACK:/);
+  });
+});
+
+describe('aisles + per-item locking migration', () => {
+  const aisles = fs.readFileSync(
+    path.join(__dirname, '..', 'DB Migrations', '42_grocery_aisles_and_item_locks.sql'),
+    'utf8',
+  );
+
+  test('runs as one all-or-nothing transaction', () => {
+    expect(aisles).toMatch(/^\s*BEGIN;/m);
+    expect(aisles).toMatch(/^COMMIT;/m);
+  });
+
+  test('adds the two aisles Israeli supermarkets actually shelve separately', () => {
+    expect(aisles).toMatch(/'alcohol'/);
+    expect(aisles).toMatch(/'disposables'/);
+  });
+
+  test('adds a per-item edit claim', () => {
+    expect(aisles).toMatch(/ADD COLUMN IF NOT EXISTS editing_user_id/i);
+    expect(aisles).toMatch(/ADD COLUMN IF NOT EXISTS editing_until/i);
+  });
+
+  // The whole point of the change: one person editing must not freeze the list.
+  test('retires the list-level lease columns', () => {
+    for (const column of [
+      'lock_user_id', 'lock_session_id', 'lock_token',
+      'lock_acquired_at', 'lock_expires_at',
+    ]) {
+      expect(aisles).toMatch(new RegExp(`DROP COLUMN IF EXISTS ${column}`, 'i'));
+    }
+  });
+
+  test('keeps `version`, which live polling depends on', () => {
+    expect(aisles).not.toMatch(/DROP COLUMN IF EXISTS version/i);
+  });
+
+  test('documents verification and rollback', () => {
+    expect(aisles).toMatch(/VERIFICATION/);
+    expect(aisles).toMatch(/ROLLBACK:/);
   });
 });

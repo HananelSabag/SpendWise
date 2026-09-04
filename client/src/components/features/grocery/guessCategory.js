@@ -1,99 +1,224 @@
 /**
- * Guess a supermarket category from what the user typed.
+ * Guess a supermarket aisle from what the user typed.
  *
  * Purely a convenience: adding an item should cost one field, so we pick the
- * aisle for you and leave the chip one tap away if the guess is wrong. Never
- * blocks or corrects the user, and an unknown word simply lands in "other".
+ * aisle for you and leave the dropdown one tap away if the guess is wrong. It
+ * never blocks, and an unknown word lands in "other".
  *
- * Hebrew first, because that's what gets typed here in practice. Matching is on
- * whole words (or a prefix, for Hebrew's attached prefixes like "ה"/"ו"), so
- * "בשר" doesn't match inside an unrelated longer word.
+ * Matching is SCORED, not first-substring-wins. Hebrew stems are short and
+ * overlap badly: "שוק" (a chicken drumstick) is a prefix of "שוקו", which used
+ * to file chocolate milk under meat. A whole-word match therefore beats a
+ * prefix match, a prefix match beats a mid-word substring, and a prefix that
+ * leaves a long tail is penalised — so the longer, more specific term wins.
+ *
+ * Vocabulary is Hebrew-first because that is what gets typed here, and is
+ * organised by the aisles Israeli supermarkets actually use.
  */
+
+/** One-letter Hebrew prefixes that glue onto a noun: הלחם, וחלב, בשקית. */
+const HEBREW_PREFIXES = /^[הובלמשכ]/;
 
 const KEYWORDS = {
   produce: [
-    'עגבני', 'מלפפון', 'חסה', 'גזר', 'בצל', 'שום', 'תפוח', 'בננ', 'תפוז', 'לימון',
-    'אבוקדו', 'פלפל', 'תות', 'ענב', 'אבטיח', 'מלון', 'תרד', 'ברוקולי', 'כרוב',
-    'קישוא', 'חציל', 'בטטה', 'תפוד', 'פטרוזיל', 'כוסבר', 'נענע', 'בזיליקום', 'פטרי',
-    'ירק', 'פירות', 'סלרי', 'צנון', 'דלעת', 'אפרסק', 'אגס', 'שזיף', 'רימון', 'מנגו',
-    'tomato', 'cucumber', 'lettuce', 'carrot', 'onion', 'garlic', 'apple', 'banana',
-    'orange', 'lemon', 'avocado', 'pepper', 'strawberr', 'grape', 'watermelon',
-    'melon', 'spinach', 'broccoli', 'cabbage', 'zucchini', 'eggplant', 'potato',
-    'parsley', 'cilantro', 'mint', 'basil', 'mushroom', 'salad', 'fruit', 'veg',
+    // ירקות
+    'עגבני', 'עגבניה', 'מלפפון', 'חסה', 'גזר', 'בצל', 'שום', 'פלפל', 'פלפלים',
+    'קישוא', 'חציל', 'בטטה', 'תפוח אדמה', 'תפוד', 'תפוא', 'ברוקולי', 'כרובית',
+    'כרוב', 'תרד', 'סלרי', 'צנון', 'צנונית', 'דלעת', 'דלורית', 'קולורבי',
+    'שעועית ירוקה', 'אפונה טרי', 'תירס טרי', 'בצל ירוק', 'שמיר', 'פטרוזיל',
+    'כוסבר', 'נענע', 'בזיליקום', 'רוקט', 'בייבי', 'חסת', 'ארטישוק', 'לפת',
+    'פטרי', 'שמפיניון', 'נבטים', 'זיתים טרי', 'לימונים',
+    // פירות
+    'תפוח', 'תפוחים', 'בננ', 'תפוז', 'קלמנטינ', 'מנדרינ', 'אשכולית', 'לימון',
+    'אבוקדו', 'תות', 'ענב', 'אבטיח', 'מלון', 'אפרסק', 'נקטרינ', 'שזיף', 'אגס',
+    'רימון', 'מנגו', 'קיווי', 'אננס', 'תמר', 'תאנ', 'משמש', 'דובדבן', 'ליצ',
+    'פסיפלור', 'קרמבול', 'פומלה', 'אפרסמון',
+    'ירק', 'ירקות', 'פירות', 'סלט',
+    // English
+    'tomato', 'cucumber', 'lettuce', 'carrot', 'onion', 'garlic', 'apple',
+    'banana', 'orange', 'lemon', 'avocado', 'pepper', 'strawberr', 'grape',
+    'watermelon', 'melon', 'spinach', 'broccoli', 'cauliflower', 'cabbage',
+    'zucchini', 'eggplant', 'potato', 'sweet potato', 'parsley', 'cilantro',
+    'mint', 'basil', 'mushroom', 'salad', 'fruit', 'veg', 'lime', 'peach',
+    'pear', 'plum', 'mango', 'kiwi', 'pineapple', 'date', 'fig',
   ],
+
   bakery: [
-    'לחם', 'פית', 'חלה', 'לחמני', 'בגט', 'קרואסון', 'עוג', 'בורק', 'מאפה', 'טורטי',
-    'באגט', 'רוגלך', 'פוקאצ',
-    'bread', 'pita', 'challah', 'roll', 'baguette', 'croissant', 'cake', 'pastry',
-    'tortilla', 'bun', 'bagel',
+    'לחם', 'לחמני', 'פית', 'פיתה', 'חלה', 'בגט', 'באגט', 'קרואסון', 'רוגלך',
+    'בורק', 'מאפה', 'מאפים', 'טורטיה', 'טורטיל', 'לאפה', 'פוקאצ', 'ציאבט',
+    'בייגל', 'ביסקוויט שמרים', 'עוגת שמרים', 'קרקר לחם', 'מצות', 'קובה',
+    'פרוסות', 'שיפון', 'כוסמין', 'דגנים לחם',
+    'bread', 'pita', 'challah', 'roll', 'baguette', 'croissant', 'pastry',
+    'tortilla', 'bun', 'bagel', 'focaccia', 'ciabatta',
   ],
+
   dairy_eggs: [
-    'חלב', 'גבינ', 'קוטג', 'יוגורט', 'שמנת', 'חמאה', 'ביצ', 'לבן', 'מעדן', 'צהוב',
-    'מוצרלה', 'פטה', 'בולגרית', 'ריקוט', 'טופו',
+    'חלב', 'שוקו', 'גבינה', 'גבינת', 'גבינות', 'קוטג', 'יוגורט', 'יוגורטים',
+    'שמנת', 'חמאה', 'ביצה', 'ביצים', 'לבן', 'אשל', 'מעדן', 'מילקי', 'דנונה',
+    'צהובה', 'מוצרלה', 'פטה', 'בולגרית', 'ריקוטה', 'מסקרפונה', 'קממבר',
+    'גאודה', 'עמק', 'תנובה', 'טרה', 'יטבתה', 'שמנת חמוצה', 'לברנה', 'כשקד',
+    'משקה סויה', 'חלב שקדים', 'חלב שיבולת', 'טופו', 'קרם גבינה', 'ממרח גבינה',
     'milk', 'cheese', 'cottage', 'yogurt', 'yoghurt', 'cream', 'butter', 'egg',
-    'mozzarella', 'feta', 'ricotta', 'tofu',
+    'mozzarella', 'feta', 'ricotta', 'tofu', 'gouda', 'camembert', 'kefir',
   ],
+
   meat_fish: [
-    'בשר', 'עוף', 'הודו', 'שניצל', 'קציצ', 'נקניק', 'סלמון', 'טונה', 'דג', 'טחון',
-    'אנטריקוט', 'כבד', 'פרגית', 'חזה', 'כנפי', 'שוק', 'המבורגר', 'קבב', 'דניס',
-    'meat', 'chicken', 'turkey', 'schnitzel', 'sausage', 'salmon', 'tuna', 'fish',
-    'beef', 'steak', 'lamb', 'burger', 'mince',
+    'בשר', 'עוף', 'הודו', 'שניצל', 'קציצ', 'נקניק', 'נקניקי', 'סלמון', 'טונה טרי',
+    'דג', 'דגים', 'טחון', 'אנטריקוט', 'סינטה', 'פילה', 'כבד', 'פרגית', 'חזה עוף',
+    'כנפיים', 'שוקיים', 'שוק עוף', 'המבורגר', 'קבב', 'דניס', 'לברק', 'מושט',
+    'בקלה', 'אמנון', 'שווארמה', 'אסאדו', 'צלעות', 'לשון', 'כתף', 'צלי', 'סטייק',
+    'עוף שלם', 'ירכיים', 'פסטרמה', 'סלמי', 'מרגז',
+    'meat', 'chicken', 'turkey', 'schnitzel', 'sausage', 'salmon', 'fish',
+    'beef', 'steak', 'lamb', 'burger', 'mince', 'liver', 'brisket', 'ribs',
   ],
+
   pantry: [
-    'אורז', 'פסטה', 'ספגטי', 'קמח', 'סוכר', 'מלח', 'שמן', 'חומץ', 'רוטב', 'קטשופ',
-    'מיונז', 'חרדל', 'טחינה', 'חומוס', 'שימור', 'תירס', 'קטני', 'עדש', 'שעועית',
-    'קוסקוס', 'בורגול', 'קינוא', 'שקד', 'אגוז', 'דבש', 'ריב', 'תבלין', 'פתית',
-    'שוקולד למריחה', 'קפה', 'תה', 'סוכריות טחינה',
-    'rice', 'pasta', 'spaghetti', 'flour', 'sugar', 'salt', 'oil', 'vinegar',
-    'sauce', 'ketchup', 'mayo', 'mustard', 'tahini', 'hummus', 'canned', 'corn',
-    'lentil', 'bean', 'couscous', 'quinoa', 'almond', 'nut', 'honey', 'jam',
-    'spice', 'cereal', 'coffee', 'tea',
+    'אורז', 'פסטה', 'ספגטי', 'פנה', 'נודלס', 'קמח', 'סוכר', 'מלח', 'פלפל שחור',
+    'שמן', 'שמן זית', 'חומץ', 'רוטב', 'קטשופ', 'מיונז', 'חרדל', 'טחינה',
+    'חומוס', 'שימור', 'שימורים', 'תירס', 'אפונה', 'קטניות', 'עדש', 'שעועית',
+    'גרגירי', 'קוסקוס', 'בורגול', 'קינואה', 'פתיתים', 'שקד', 'אגוז', 'צימוק',
+    'דבש', 'ריבה', 'תבלין', 'תבלינים', 'פפריקה', 'כמון', 'כורכום', 'אבקת מרק',
+    'שקדי מרק', 'קפה', 'נס קפה', 'תה', 'סוכרזית', 'שמרים', 'אבקת אפייה',
+    'סודה לשתייה', 'קורנפלור', 'רסק', 'פסטו', 'סילאן', 'ממרח', 'שוקולד למריחה',
+    'נוטלה', 'חלבה', 'גרנולה', 'קורנפלקס', 'דגני בוקר', 'שיבולת שועל', 'קוואקר',
+    'שמן קנולה', 'קוקוס', 'סירופ',
+    'rice', 'pasta', 'spaghetti', 'flour', 'sugar', 'salt', 'oil', 'olive oil',
+    'vinegar', 'sauce', 'ketchup', 'mayo', 'mustard', 'tahini', 'hummus',
+    'canned', 'corn', 'lentil', 'bean', 'chickpea', 'couscous', 'quinoa',
+    'almond', 'walnut', 'nut', 'raisin', 'honey', 'jam', 'spice', 'cereal',
+    'coffee', 'tea', 'oats', 'granola', 'syrup', 'yeast',
   ],
+
   frozen: [
-    'קפוא', 'גליד', 'מלאווח', 'ג׳חנון', 'צ׳יפס', 'שקדי מרק', 'פיצה קפואה',
-    'frozen', 'ice cream', 'icecream', 'fries', 'pizza',
+    'קפוא', 'קפואים', 'גלידה', 'גלידת', 'ארטיק', 'קרטיב', 'מלאווח', 'ג׳חנון',
+    'ג\'חנון', 'בורקס קפוא', 'פיצה קפואה', 'צ׳יפס קפוא', 'שניצל קפוא',
+    'ירקות קפואים', 'אפונה קפואה', 'קרח',
+    'frozen', 'ice cream', 'icecream', 'popsicle', 'fries',
   ],
+
   snacks_sweets: [
-    'חטיף', 'ביסלי', 'במב', 'שוקולד', 'סוכרי', 'עוגי', 'ופל', 'צ׳יפס תפוחי',
-    'קרקר', 'פיצוח', 'גרעינ', 'מסטיק', 'ממתק',
+    'חטיף', 'חטיפים', 'ביסלי', 'במבה', 'דוריטוס', 'צ׳יטוס', 'אפרופו', 'שוקולד',
+    'סוכרי', 'ממתק', 'ממתקים', 'עוגי', 'עוגיות', 'ופל', 'ופלים', 'קרקר',
+    'קרקרים', 'פיצוחים', 'גרעינים', 'בוטנים', 'פיסטוק', 'מסטיק', 'טופי',
+    'מרשמלו', 'קליק', 'פסק זמן', 'מקופלת', 'תות במבה', 'חטיף אנרגיה', 'חלבון',
+    'צ׳יפס', 'תפוצ׳יפס', 'פרינגלס', 'נשנוש',
     'snack', 'chocolate', 'candy', 'cookie', 'biscuit', 'wafer', 'chips',
-    'cracker', 'gum', 'sweets',
+    'cracker', 'gum', 'sweets', 'peanut', 'pistachio', 'popcorn',
   ],
+
   beverages: [
-    'מים', 'קול', 'משק', 'מיץ', 'סודה', 'בירה', 'יין', 'תרכיז', 'שתי', 'ספרייט',
-    'water', 'cola', 'coke', 'juice', 'soda', 'beer', 'wine', 'drink', 'sprite',
+    'מים', 'מים מינרלים', 'סודה', 'קולה', 'קוקה', 'פפסי', 'ספרייט', 'פאנטה',
+    'מיץ', 'תרכיז', 'משקה', 'משקאות', 'אנרגיה', 'איס טי', 'נביעות', 'עין גדי',
+    'פריגת', 'פרימור', 'טמפו', 'שוופס', 'סן פלגרינו', 'לימונענע', 'קפה קר',
+    'water', 'cola', 'coke', 'pepsi', 'sprite', 'juice', 'soda', 'drink',
+    'lemonade', 'iced tea', 'energy drink',
   ],
+
+  alcohol: [
+    'בירה', 'בירות', 'יין', 'יינות', 'ערק', 'וודקה', 'ויסקי', 'רום', 'ג׳ין',
+    'טקילה', 'ליקר', 'קוניאק', 'ברנדי', 'שמפניה', 'פרוסקו', 'קברנה', 'מרלו',
+    'שרדונה', 'גולדסטאר', 'טובורג', 'הייניקן', 'קורונה', 'מכבי בירה',
+    'beer', 'wine', 'vodka', 'whiskey', 'whisky', 'rum', 'gin', 'tequila',
+    'liqueur', 'champagne', 'prosecco', 'arak',
+  ],
+
   baby: [
-    'חיתול', 'מגבונ', 'תינוק', 'מטרנ', 'סימילק', 'פורמול', 'מוצץ',
-    'diaper', 'nappy', 'wipe', 'baby', 'formula', 'pacifier',
+    'חיתול', 'חיתולים', 'מגבונים', 'תינוק', 'תינוקות', 'מטרנה', 'סימילק',
+    'נוטרילון', 'פורמולה', 'מוצץ', 'בקבוק תינוק', 'מחית', 'גרבר', 'דייסה',
+    'בייבי סיטר', 'משחת החתלה', 'שמיניות',
+    'diaper', 'nappy', 'wipe', 'baby', 'formula', 'pacifier', 'puree',
   ],
+
   household: [
-    'ניקוי', 'אקונומיק', 'סבון כלים', 'כביס', 'מרכך', 'נייר טואלט', 'מגבת נייר',
-    'שקית', 'אשפה', 'ספוג', 'מטהר', 'נוזל כלים', 'רצפ', 'סמרטוט',
+    'ניקוי', 'אקונומיקה', 'סבון כלים', 'נוזל כלים', 'כביסה', 'אבקת כביסה',
+    'מרכך כביסה', 'נייר טואלט', 'מגבות נייר', 'מגבוני ניקוי', 'שקיות אשפה',
+    'אשפה', 'ספוג', 'ספוגים', 'מטהר', 'ריח', 'סמרטוט', 'מגב', 'מטליות',
+    'אבקת ריצוף', 'סנו', 'ניקול', 'בדין', 'אג׳קס', 'טאץ', 'נייר סופג',
+    'שקיות', 'ניילון נצמד', 'נייר אפייה', 'אלומיניום',
     'clean', 'bleach', 'dish soap', 'laundry', 'softener', 'toilet paper',
-    'paper towel', 'garbage', 'trash', 'sponge', 'detergent',
+    'paper towel', 'garbage', 'trash', 'sponge', 'detergent', 'foil',
   ],
+
+  disposables: [
+    'חד פעמי', 'חד-פעמי', 'צלחות', 'כוסות', 'סכום', 'מזלגות', 'סכינים חד',
+    'כפיות', 'מפיות', 'קשיות', 'מגשים', 'כוסות חד', 'צלחות חד',
+    'disposable', 'plates', 'cups', 'napkin', 'cutlery', 'straw',
+  ],
+
   personal_care: [
-    'שמפו', 'מרכך שיער', 'סבון', 'משחת שיניים', 'מברשת שיניים', 'דאודורנט',
-    'תחבוש', 'קרם', 'גילוח', 'אקמול', 'ויטמין',
-    'shampoo', 'conditioner', 'soap', 'toothpaste', 'toothbrush', 'deodorant',
-    'pad', 'tampon', 'cream', 'shave', 'vitamin',
+    'שמפו', 'מרכך שיער', 'סבון', 'סבון גוף', 'משחת שיניים', 'מברשת שיניים',
+    'חוט דנטלי', 'דאודורנט', 'תחבושות', 'טמפונים', 'קרם', 'קרם גוף', 'גילוח',
+    'סכיני גילוח', 'אפטר שייב', 'בושם', 'לק', 'אקמול', 'נורופן', 'ויטמין',
+    'אדוויל', 'פלסטר', 'מקלוני אוזניים', 'ג׳ל רחצה', 'קרם הגנה', 'ניר לחות',
+    'shampoo', 'conditioner', 'soap', 'toothpaste', 'toothbrush', 'floss',
+    'deodorant', 'pad', 'tampon', 'cream', 'shave', 'razor', 'vitamin',
+    'sunscreen', 'lotion', 'perfume',
   ],
 };
 
-// Longest keyword first so "סבון כלים" wins over "סבון".
+/** Flattened once at module load. Longer keywords are more specific. */
 const ENTRIES = Object.entries(KEYWORDS)
   .flatMap(([category, words]) => words.map((word) => ({ category, word })))
   .sort((a, b) => b.word.length - a.word.length);
+
+const normalize = (value) => String(value || '').toLowerCase().trim();
+
+/** Drop a single attached Hebrew prefix so "הלחם" still matches "לחם". */
+const stripPrefix = (word) =>
+  (word.length > 3 && HEBREW_PREFIXES.test(word) ? word.slice(1) : word);
+
+/**
+ * How well one keyword matches one word. Higher is better, 0 is no match.
+ *
+ * The tiers are what stop a short stem from hijacking a longer word:
+ * an exact word beats a prefix, and a prefix that leaves a long tail is
+ * worth less than one that leaves none.
+ */
+const scoreWord = (word, keyword) => {
+  if (!word || !keyword) return 0;
+  if (word === keyword) return 1000 + keyword.length;
+
+  const bare = stripPrefix(word);
+  if (bare === keyword) return 900 + keyword.length;
+
+  if (bare.startsWith(keyword)) {
+    const tail = bare.length - keyword.length;
+    // Hebrew inflections are short (ים, ות, י). A long tail means a different word.
+    return tail <= 3 ? 600 + keyword.length - tail * 40 : 0;
+  }
+
+  // Mid-word matches are only trustworthy for long, distinctive keywords.
+  if (keyword.length >= 5 && bare.includes(keyword)) return 200 + keyword.length;
+
+  return 0;
+};
 
 /**
  * @param {string} name what the user typed
  * @returns {string|null} a category key, or null when nothing looks like a match
  */
 export function guessCategory(name) {
-  const text = String(name || '').toLowerCase().trim();
+  const text = normalize(name);
   if (text.length < 2) return null;
 
-  const match = ENTRIES.find(({ word }) => text.includes(word));
-  return match ? match.category : null;
+  // Multi-word keywords ("שמן זית", "olive oil") are checked against the whole
+  // phrase; single words against each word of it.
+  const words = text.split(/[\s,./-]+/).filter(Boolean);
+
+  let best = { score: 0, category: null };
+
+  for (const { category, word: keyword } of ENTRIES) {
+    let score = 0;
+
+    if (keyword.includes(' ')) {
+      if (text.includes(keyword)) score = 1200 + keyword.length;
+    } else {
+      for (const word of words) {
+        score = Math.max(score, scoreWord(word, keyword));
+      }
+    }
+
+    if (score > best.score) best = { score, category };
+  }
+
+  return best.category;
 }

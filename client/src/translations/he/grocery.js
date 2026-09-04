@@ -40,6 +40,7 @@ export default {
     purchasedBy: "נלקח על ידי {{name}}",
     openLink: "פתח את דף המוצר",
     hasPhoto: "יש תמונה",
+    busy: "{{name}} עורך/ת את הפריט הזה",
   },
 
   sections: {
@@ -100,8 +101,10 @@ export default {
     frozen: "קפואים",
     snacks_sweets: "חטיפים ומתוקים",
     beverages: "משקאות",
+    alcohol: "יין ואלכוהול",
     baby: "תינוקות",
     household: "כלי בית וניקיון",
+    disposables: "חד פעמי",
     personal_care: "טיפוח והיגיינה",
     other: "אחר",
   },
@@ -254,6 +257,7 @@ export default {
     GROCERY_IMAGE_URL_INVALID: "קישור לתמונה חייב להתחיל ב-https://",
     GROCERY_PRODUCT_URL_INVALID: "קישור חייב להתחיל ב-https://",
     GROCERY_ITEM_NOT_FOUND: "הפריט כבר לא ברשימה",
+    GROCERY_ITEM_BUSY: "מישהו אחר עורך את הפריט הזה",
     GROCERY_ITEM_STALE: "מישהו שינה את הפריט — מרענן",
     GROCERY_TRIP_ARCHIVED: "אי אפשר לשנות קנייה שהושלמה",
     GROCERY_TRIP_EMPTY: "סמנו קודם לפחות פריט אחד כנלקח",

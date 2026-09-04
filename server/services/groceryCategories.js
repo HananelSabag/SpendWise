@@ -18,8 +18,10 @@ const CATEGORY_KEYS = [
   'frozen',
   'snacks_sweets',
   'beverages',
+  'alcohol',
   'baby',
   'household',
+  'disposables',
   'personal_care',
   'other',
 ];

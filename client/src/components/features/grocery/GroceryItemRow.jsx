@@ -7,7 +7,11 @@
  *
  *   tap        → into the cart (or back out of it)
  *   long-press → actions: edit, or delete
- *   photo tap  → expand the picture in place
+ *   photo tap  → opens the picture in a modal
+ *
+ * A row goes inert only while another member has THAT item's editor open — the
+ * rest of the list stays fully usable, which is the whole point of claiming per
+ * item instead of locking the list.
  *
  * Long-press rather than swipe because the aisle strip above scrolls
  * horizontally, and a swipe here would fight it on every drag.
@@ -15,14 +19,15 @@
 
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Link2, Pencil, StickyNote, Trash2, X } from 'lucide-react';
+import { Check, ExternalLink, Lock, Pencil, StickyNote, Trash2, X } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
+import GroceryPhotoModal from './GroceryPhotoModal';
 
 /** Matches the iOS/Android long-press convention. Shorter fired on slow taps. */
 const LONG_PRESS_MS = 500;
 
-const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) => {
+const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, currentUserId }) => {
   const { t } = useTranslation('grocery');
   const [showPhoto, setShowPhoto] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
@@ -31,6 +36,10 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
   const rowRef = useRef(null);
   const timerRef = useRef(null);
   const firedRef = useRef(false);
+
+  // Only THIS row is held, and only while someone has its editor open.
+  const editedByOther = !!item.editing_by_name && item.editing_user_id !== currentUserId;
+  const disabled = editedByOther;
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -170,10 +179,21 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
           )}
         </span>
 
-        {item.product_url && (
-          <Link2 className="h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600" aria-hidden />
-        )}
       </button>
+
+      {/* The product link used to be a decorative icon with no way to open it. */}
+      {item.product_url && (
+        <a
+          href={item.product_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(event) => event.stopPropagation()}
+          aria-label={t('item.openLink')}
+          className="flex w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-500"
+        >
+          <ExternalLink className="h-4 w-4" />
+        </a>
+      )}
 
       {/* Photo: a thumbnail that expands in place, so the exact product is one
           tap away without pushing the list around. */}
@@ -197,13 +217,20 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
         </button>
       )}
 
-      {showPhoto && item.image_url && (
-        <div
-          className="absolute inset-x-2 top-full z-20 mt-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800"
-          onClick={() => setShowPhoto(false)}
-        >
-          <img src={item.image_url} alt={item.name} className="max-h-64 w-full object-contain" />
-        </div>
+      <GroceryPhotoModal
+        isOpen={showPhoto}
+        onClose={() => setShowPhoto(false)}
+        src={item.image_url}
+        title={item.name}
+        link={item.product_url}
+      />
+
+      {/* Someone has this one item open. Everything else on the list stays live. */}
+      {editedByOther && (
+        <span className="me-2 flex shrink-0 items-center gap-1 self-center rounded-lg bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+          <Lock className="h-3 w-3" />
+          {item.editing_by_name}
+        </span>
       )}
 
       {/* Long-press actions, laid over the row so the list never reflows. */}

@@ -297,10 +297,8 @@ describe('SpendWise linkage stays manual and single-shot', () => {
 });
 
 describe('live polling', () => {
-
   test('an unchanged version answers without loading the list', async () => {
-    jest.spyOn(GroceryList, 'clearExpiredLease').mockResolvedValue(false);
-    jest.spyOn(GroceryList, 'getLeaseState').mockResolvedValue({ version: 12, isLocked: false });
+    jest.spyOn(GroceryList, 'getVersion').mockResolvedValue(12);
     const getItems = jest.spyOn(GroceryTrip, 'getItems');
     const res = makeRes();
 
@@ -310,9 +308,8 @@ describe('live polling', () => {
     expect(getItems).not.toHaveBeenCalled();
   });
 
-  test('a lapsed lease is swept before the unchanged check, so viewers learn it is free', async () => {
-    const sweep = jest.spyOn(GroceryList, 'clearExpiredLease').mockResolvedValue(true);
-    jest.spyOn(GroceryList, 'getLeaseState').mockResolvedValue({ version: 13, isLocked: false });
+  test('a changed version returns the whole list', async () => {
+    jest.spyOn(GroceryList, 'getVersion').mockResolvedValue(13);
     jest.spyOn(GroceryList, 'getMembers').mockResolvedValue([]);
     jest.spyOn(GroceryTrip, 'getActive').mockResolvedValue({ id: 9, created_at: 'x' });
     jest.spyOn(GroceryTrip, 'getItems').mockResolvedValue([]);
@@ -320,16 +317,28 @@ describe('live polling', () => {
 
     await run(groceryController.getState, makeReq({ query: { version: '12' } }), res);
 
-    expect(sweep).toHaveBeenCalledWith(5);
     expect(res.body.data.unchanged).toBeUndefined();
+    expect(res.body.data.list.version).toBe(13);
+  });
+
+  // The state payload no longer carries a list-wide lock at all.
+  test('the payload has no list-level lock', async () => {
+    jest.spyOn(GroceryList, 'getVersion').mockResolvedValue(3);
+    jest.spyOn(GroceryList, 'getMembers').mockResolvedValue([]);
+    jest.spyOn(GroceryTrip, 'getActive').mockResolvedValue({ id: 9, created_at: 'x' });
+    jest.spyOn(GroceryTrip, 'getItems').mockResolvedValue([]);
+    const res = makeRes();
+
+    await run(groceryController.getState, makeReq(), res);
+
+    expect(res.body.data.lock).toBeUndefined();
   });
 
   test('members see the list but not who else was invited', async () => {
-    jest.spyOn(GroceryList, 'clearExpiredLease').mockResolvedValue(false);
+    jest.spyOn(GroceryList, 'getVersion').mockResolvedValue(3);
     jest.spyOn(GroceryList, 'getMembers').mockResolvedValue([{ user_id: 7 }]);
     jest.spyOn(GroceryTrip, 'getActive').mockResolvedValue({ id: 9, created_at: 'x' });
     jest.spyOn(GroceryTrip, 'getItems').mockResolvedValue([]);
-    jest.spyOn(GroceryList, 'getLeaseState').mockResolvedValue({ version: 3, isLocked: false });
     const { GroceryInvitation } = require('../models/GroceryInvitation');
     jest.spyOn(GroceryInvitation, 'getPendingForList')
       .mockResolvedValue([{ id: 1, invitee_email: 'someone@example.com' }]);
@@ -342,5 +351,52 @@ describe('live polling', () => {
     );
 
     expect(res.body.data.pendingInvitations).toEqual([]);
+  });
+});
+
+describe('per-item edit claim', () => {
+  test('claims a free item', async () => {
+    jest.spyOn(GroceryTrip, 'getItemById').mockResolvedValue({ id: 3, list_id: 5 });
+    jest.spyOn(GroceryTrip, 'claimItem').mockResolvedValue({ id: 3, editing_until: 'later' });
+    const res = makeRes();
+
+    await run(groceryController.claimItem, makeReq({ params: { id: '3' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.expiresAt).toBe('later');
+  });
+
+  test('refuses a claim held by someone else, and names them', async () => {
+    jest.spyOn(GroceryTrip, 'getItemById').mockResolvedValue({ id: 3, list_id: 5 });
+    jest.spyOn(GroceryTrip, 'claimItem').mockResolvedValue(null);
+    jest.spyOn(GroceryTrip, 'getItemClaim').mockResolvedValue({ editing_by_name: 'Nofar' });
+    const res = makeRes();
+
+    await run(groceryController.claimItem, makeReq({ params: { id: '3' } }), res);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.error.code).toBe('GROCERY_ITEM_BUSY');
+    expect(res.body.error.editingBy).toBe('Nofar');
+  });
+
+  test('an item on another list cannot be claimed', async () => {
+    jest.spyOn(GroceryTrip, 'getItemById').mockResolvedValue({ id: 3, list_id: 99 });
+    const claim = jest.spyOn(GroceryTrip, 'claimItem');
+    const res = makeRes();
+
+    await run(groceryController.claimItem, makeReq({ params: { id: '3' } }), res);
+
+    expect(res.statusCode).toBe(404);
+    expect(claim).not.toHaveBeenCalled();
+  });
+
+  test('releasing is idempotent and never fails the caller', async () => {
+    const release = jest.spyOn(GroceryTrip, 'releaseItem').mockResolvedValue(undefined);
+    const res = makeRes();
+
+    await run(groceryController.releaseItem, makeReq({ params: { id: '3' } }), res);
+
+    expect(res.statusCode).toBe(200);
+    expect(release).toHaveBeenCalledWith(3, 7);
   });
 });

@@ -23,7 +23,6 @@ import { useMyGroceryInvitations } from '../hooks/useGrocerySharing';
 import { PageSkeleton, LiquidTabs } from '../components/ui';
 import GroceryItemRow from '../components/features/grocery/GroceryItemRow';
 import GroceryItemSheet from '../components/features/grocery/GroceryItemSheet';
-import GroceryLockBanner from '../components/features/grocery/GroceryLockBanner';
 import GroceryFinishSheet from '../components/features/grocery/GroceryFinishSheet';
 import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet';
 import GroceryHistoryPanel from '../components/features/grocery/GroceryHistoryPanel';
@@ -51,9 +50,8 @@ const GroceryListPage = () => {
     isLoading, isError, refetch,
     members, sections, purchased,
     pendingCount, purchasedCount, progress, role,
-    lock, lockedByOther, canEdit, isEditMode, holdsLease,
-    requestControl, releaseControl,
-    addItem, updateItem, togglePurchased, deleteItem, completeTrip,
+    addItem, updateItem, togglePurchased, deleteItem,
+    claimItem, releaseItem, completeTrip,
   } = useGroceryList();
 
   const { invitations: myInvitations } = useMyGroceryInvitations();
@@ -75,11 +73,23 @@ const GroceryListPage = () => {
   }, [searchParams, setSearchParams]);
 
   const openAdd = useCallback(() => { setSheetItem(null); setSheetOpen(true); }, []);
-  const openItem = useCallback((item) => { setSheetItem(item); setSheetOpen(true); }, []);
+
+  /** Editing one item claims it, so two people can't type into it at once. */
+  const openItem = useCallback(async (item) => {
+    if (!(await claimItem(item.id))) return;
+    setSheetItem(item);
+    setSheetOpen(true);
+  }, [claimItem]);
+
+  const closeSheet = useCallback(() => {
+    setSheetOpen(false);
+    if (sheetItem) releaseItem(sheetItem.id);
+    setSheetItem(null);
+  }, [sheetItem, releaseItem]);
 
   const handleSaveItem = useCallback(async (payload) => {
     const saved = sheetItem
-      ? await updateItem(sheetItem.id, payload)
+      ? await updateItem(sheetItem.id, payload, sheetItem.version)
       : await addItem(payload);
     return !!saved;
   }, [sheetItem, updateItem, addItem]);
@@ -209,9 +219,9 @@ const GroceryListPage = () => {
 
             {/* ── Main column ─────────────────────────────────────── */}
             <div className="min-w-0 flex-1">
-              {(invitationBanner || lockedByOther || (isEditMode && holdsLease)) && (
-                <div className="mb-2.5 space-y-2.5">
-                  {invitationBanner && (
+              {invitationBanner && (
+                <div className="mb-2.5">
+                  {(
                     <button
                       type="button"
                       onClick={() => setShareOpen(true)}
@@ -233,16 +243,6 @@ const GroceryListPage = () => {
                       </span>
                     </button>
                   )}
-
-                  <GroceryLockBanner
-                    lockedByOther={lockedByOther}
-                    lockedBy={lock?.lockedBy}
-                    expiresAt={lock?.expiresAt}
-                    isEditMode={isEditMode}
-                    holdsLease={holdsLease}
-                    onRequestControl={requestControl}
-                    onReleaseControl={releaseControl}
-                  />
                 </div>
               )}
 
@@ -285,23 +285,19 @@ const GroceryListPage = () => {
                     <ShoppingCart className="h-7 w-7" strokeWidth={1.5} />
                   </span>
                   <h2 className="mb-1.5 text-base font-bold text-gray-700 dark:text-gray-200">
-                    {lockedByOther ? t('empty.readOnly') : t('empty.title')}
+                    {t('empty.title')}
                   </h2>
-                  {!lockedByOther && (
-                    <>
-                      <p className="mb-5 max-w-xs text-sm leading-relaxed text-gray-400 dark:text-gray-500">
-                        {t('empty.description')}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={openAdd}
-                        className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white"
-                      >
-                        <Plus className="h-4 w-4" strokeWidth={2.5} />
-                        {t('empty.addFirst')}
-                      </button>
-                    </>
-                  )}
+                  <p className="mb-5 max-w-xs text-sm leading-relaxed text-gray-400 dark:text-gray-500">
+                    {t('empty.description')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={openAdd}
+                    className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white"
+                  >
+                    <Plus className="h-4 w-4" strokeWidth={2.5} />
+                    {t('empty.addFirst')}
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -336,7 +332,7 @@ const GroceryListPage = () => {
                                 onToggle={togglePurchased}
                                 onOpen={openItem}
                                 onDelete={deleteItem}
-                                disabled={!canEdit}
+                                currentUserId={user?.id}
                               />
                             ))}
                           </AnimatePresence>
@@ -365,7 +361,6 @@ const GroceryListPage = () => {
                         <button
                           type="button"
                           onClick={() => setFinishOpen(true)}
-                          disabled={!canEdit}
                           className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                         >
                           <Flag className="h-3.5 w-3.5" />
@@ -389,7 +384,7 @@ const GroceryListPage = () => {
                                 onToggle={togglePurchased}
                                 onOpen={openItem}
                                 onDelete={deleteItem}
-                                disabled={!canEdit}
+                                currentUserId={user?.id}
                               />
                             ))}
                           </motion.ul>
@@ -406,7 +401,6 @@ const GroceryListPage = () => {
               <button
                 type="button"
                 onClick={openAdd}
-                disabled={lockedByOther}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
               >
                 <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -456,13 +450,11 @@ const GroceryListPage = () => {
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           whileTap={{ scale: 0.92 }}
           onClick={openAdd}
-          disabled={lockedByOther}
           aria-label={t('quickAdd.aria')}
           className={cn(
             'fixed z-40 flex h-14 w-14 items-center justify-center rounded-2xl lg:hidden',
             isRTL ? 'start-4' : 'end-4',
-            'bg-blue-600 text-white shadow-xl shadow-blue-600/30',
-            'disabled:bg-gray-300 disabled:shadow-none dark:disabled:bg-gray-700'
+            'bg-blue-600 text-white shadow-xl shadow-blue-600/30'
           )}
           style={{ bottom: FAB_OFFSET[groceryMode ? 'grocery' : 'full'] }}
         >
@@ -472,7 +464,7 @@ const GroceryListPage = () => {
 
       <GroceryItemSheet
         isOpen={sheetOpen}
-        onClose={() => { setSheetOpen(false); setSheetItem(null); }}
+        onClose={closeSheet}
         onSave={handleSaveItem}
         onDelete={deleteItem}
         item={sheetItem}

@@ -12,7 +12,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, ChevronDown, Link2, Loader2, Trash2, X } from 'lucide-react';
+import { Camera, ChevronDown, ExternalLink, Link2, Loader2, Trash2, X } from 'lucide-react';
 import BottomSheet from '../../common/BottomSheet';
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
@@ -290,6 +290,17 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
           >
             {fetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
             </button>
+            {/^https:\/\//i.test(draft.product_url.trim()) && (
+              <a
+                href={draft.product_url.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t('item.openLink')}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-400"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            )}
           </div>
         </div>
 

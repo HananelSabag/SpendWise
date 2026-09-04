@@ -1,5 +1,5 @@
 /**
- * Grocery list controller — active list, items, edit lease, trips and history.
+ * Grocery list controller — active list, items, trips and history.
  *
  * Every user-facing string is a stable `code`; the client owns the wording in
  * `translations/{en,he}/grocery.js`. `message` is an English developer fallback
@@ -12,8 +12,8 @@
 const db = require('../config/db');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { fail } = require('../middleware/groceryAccess');
-const { GroceryList, LEASE_TTL_SECONDS } = require('../models/GroceryList');
-const { GroceryTrip } = require('../models/GroceryTrip');
+const { GroceryList } = require('../models/GroceryList');
+const { GroceryTrip, EDIT_CLAIM_SECONDS } = require('../models/GroceryTrip');
 const { GroceryInvitation } = require('../models/GroceryInvitation');
 const { Transaction } = require('../models/Transaction');
 const { Notification } = require('../models/Notification');
@@ -95,10 +95,10 @@ const parseItemFields = (body, { requireName }) => {
 
 /** Full list payload. One shape for the initial load and for every poll hit. */
 const buildState = async (list, userId) => {
-  const [members, activeTrip, lease, pendingInvites] = await Promise.all([
+  const [members, activeTrip, version, pendingInvites] = await Promise.all([
     GroceryList.getMembers(list.id),
     GroceryTrip.getActive(list.id),
-    GroceryList.getLeaseState(list.id),
+    GroceryList.getVersion(list.id),
     GroceryInvitation.getPendingForList(list.id),
   ]);
 
@@ -110,7 +110,7 @@ const buildState = async (list, userId) => {
       name: list.name,
       ownerId: list.owner_id,
       role: list.role,
-      version: lease?.version ?? Number(list.version),
+      version: version ?? Number(list.version),
     },
     members,
     // Only the owner manages membership, so only the owner sees invited addresses.
@@ -120,13 +120,6 @@ const buildState = async (list, userId) => {
       createdAt: activeTrip.created_at,
     },
     items,
-    lock: {
-      isLocked: lease?.isLocked ?? false,
-      lockedBy: lease?.lockedBy ?? null,
-      expiresAt: lease?.expiresAt ?? null,
-      heldByMe: !!lease?.isLocked && lease.lockedBy?.userId === userId,
-      ttlSeconds: LEASE_TTL_SECONDS,
-    },
   };
 };
 
@@ -142,16 +135,10 @@ const groceryController = {
     const list = req.groceryList;
     const since = req.query.version !== undefined ? Number(req.query.version) : null;
 
-    // Retire a lapsed lease here rather than in a cron job — the poll that
-    // notices it is exactly the moment someone wants the list back.
-    await GroceryList.clearExpiredLease(list.id);
-
     if (since !== null && Number.isFinite(since)) {
-      const lease = await GroceryList.getLeaseState(list.id);
-      // Acquiring and releasing the lease bump `version` too, so this one number
-      // covers "did anything change" — including who is editing.
-      if (lease && lease.version === since) {
-        return res.json({ success: true, data: { unchanged: true, version: lease.version } });
+      const version = await GroceryList.getVersion(list.id);
+      if (version !== null && version === since) {
+        return res.json({ success: true, data: { unchanged: true, version } });
       }
     }
 
@@ -243,63 +230,44 @@ const groceryController = {
     res.json({ success: true, data: { version } });
   }),
 
-  // ─── Edit lease ───────────────────────────────────────────────────────────
+  // ─── Per-item edit claim ──────────────────────────────────────────────────
 
-  acquireLock: asyncHandler(async (req, res) => {
-    const sessionId = String(req.body.sessionId || req.get('X-Grocery-Session') || '').slice(0, 64)
-      || `session-${req.user.id}`;
+  /**
+   * POST /grocery/items/:id/claim
+   *
+   * Taken when someone opens the edit sheet, so two people don't type into the
+   * same item at once. Advisory: `version` is what actually rejects a lost
+   * update. Nothing else on the list is blocked while it is held.
+   */
+  claimItem: asyncHandler(async (req, res) => {
+    const itemId = Number(req.params.id);
+    if (!Number.isInteger(itemId)) return fail(res, 400, 'GROCERY_ITEM_ID_INVALID', 'Invalid item id');
 
-    const acquired = await GroceryList.acquireLease(
-      req.groceryList.id, req.user.id, sessionId, LEASE_TTL_SECONDS
-    );
+    const existing = await GroceryTrip.getItemById(itemId);
+    if (!existing || existing.list_id !== req.groceryList.id) {
+      return fail(res, 404, 'GROCERY_ITEM_NOT_FOUND', 'Item not found');
+    }
 
-    if (!acquired) {
-      const state = await GroceryList.getLeaseState(req.groceryList.id);
-      return fail(res, 409, 'GROCERY_LOCKED', 'Another member is editing this list', {
-        lockedBy: state?.lockedBy || null,
-        expiresAt: state?.expiresAt || null,
+    const claimed = await GroceryTrip.claimItem(itemId, req.user.id);
+    if (!claimed) {
+      const holder = await GroceryTrip.getItemClaim(itemId);
+      return fail(res, 409, 'GROCERY_ITEM_BUSY', 'Someone else is editing this item', {
+        editingBy: holder?.editing_by_name || null,
       });
     }
 
     res.json({
       success: true,
-      data: {
-        token: acquired.lock_token,
-        expiresAt: acquired.lock_expires_at,
-        ttlSeconds: LEASE_TTL_SECONDS,
-        version: Number(acquired.version),
-      },
+      data: { expiresAt: claimed.editing_until, ttlSeconds: EDIT_CLAIM_SECONDS },
     });
   }),
 
-  heartbeatLock: asyncHandler(async (req, res) => {
-    const token = req.get('X-Grocery-Lease') || req.body.token;
-    if (!token) return fail(res, 400, 'GROCERY_LEASE_TOKEN_REQUIRED', 'Lease token required');
+  /** DELETE /grocery/items/:id/claim */
+  releaseItem: asyncHandler(async (req, res) => {
+    const itemId = Number(req.params.id);
+    if (!Number.isInteger(itemId)) return fail(res, 400, 'GROCERY_ITEM_ID_INVALID', 'Invalid item id');
 
-    const held = await GroceryList.heartbeatLease(
-      req.groceryList.id, req.user.id, token, LEASE_TTL_SECONDS
-    );
-    if (!held) {
-      const state = await GroceryList.getLeaseState(req.groceryList.id);
-      return fail(res, 409, 'GROCERY_LEASE_LOST', 'Your edit session expired', {
-        lockedBy: state?.lockedBy || null,
-      });
-    }
-
-    res.json({
-      success: true,
-      data: { expiresAt: held.lock_expires_at, version: Number(held.version) },
-    });
-  }),
-
-  releaseLock: asyncHandler(async (req, res) => {
-    const token = req.get('X-Grocery-Lease') || req.body.token;
-    if (token) {
-      await GroceryList.releaseLease(req.groceryList.id, req.user.id, token);
-    } else if (req.groceryRole === 'owner') {
-      // Owner escape hatch for a lease stuck on a device they no longer have.
-      await GroceryList.forceReleaseLease(req.groceryList.id);
-    }
+    await GroceryTrip.releaseItem(itemId, req.user.id);
     res.json({ success: true });
   }),
 

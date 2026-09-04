@@ -15,8 +15,17 @@ const ITEM_COLUMNS = `
   i.id, i.trip_id, i.name, i.category_key, i.quantity, i.unit, i.note,
   i.image_url, i.product_url, i.sort_order, i.is_purchased,
   i.added_by, i.purchased_by, i.purchased_at, i.version,
-  i.created_at, i.updated_at
+  i.created_at, i.updated_at,
+  CASE WHEN i.editing_until > NOW() THEN i.editing_user_id END AS editing_user_id
 `;
+
+/**
+ * How long an edit claim survives without being refreshed.
+ *
+ * Only long enough to cover someone actually typing in the sheet — a stale
+ * claim from a closed tab must not keep the item hostage.
+ */
+const EDIT_CLAIM_SECONDS = 90;
 
 class GroceryTrip {
   /** The list's active trip, creating one if the previous was just completed. */
@@ -53,15 +62,67 @@ class GroceryTrip {
               adder.first_name     AS added_by_first_name,
               adder.username       AS added_by_username,
               buyer.first_name     AS purchased_by_first_name,
-              buyer.username       AS purchased_by_username
+              buyer.username       AS purchased_by_username,
+              CASE WHEN i.editing_until > NOW()
+                   THEN COALESCE(editor.first_name, editor.username) END AS editing_by_name
          FROM grocery_items i
-    LEFT JOIN users adder ON adder.id = i.added_by
-    LEFT JOIN users buyer ON buyer.id = i.purchased_by
+    LEFT JOIN users adder  ON adder.id  = i.added_by
+    LEFT JOIN users buyer  ON buyer.id  = i.purchased_by
+    LEFT JOIN users editor ON editor.id = i.editing_user_id
         WHERE i.trip_id = $1
         ORDER BY i.sort_order ASC, i.id ASC`,
       [tripId]
     );
     return rows;
+  }
+
+  /**
+   * Claim an item for editing.
+   *
+   * Advisory only — `version` is what actually prevents a lost update. This
+   * just stops two people typing into the same item at once, and it is scoped
+   * to ONE item rather than the whole list, because adding or checking off
+   * different items cannot collide.
+   *
+   * Atomic: succeeds when the item is unclaimed, the claim lapsed, or it is
+   * already yours. Returns null when someone else holds it.
+   */
+  static async claimItem(itemId, userId) {
+    const { rows } = await db.query(
+      `UPDATE grocery_items
+          SET editing_user_id = $2,
+              editing_until   = NOW() + ($3 || ' seconds')::interval
+        WHERE id = $1
+          AND (editing_user_id IS NULL
+               OR editing_user_id = $2
+               OR editing_until <= NOW())
+      RETURNING id, editing_until`,
+      [itemId, userId, String(EDIT_CLAIM_SECONDS)]
+    );
+    return rows[0] || null;
+  }
+
+  /** Who is editing this item right now, if anyone. */
+  static async getItemClaim(itemId) {
+    const { rows } = await db.query(
+      `SELECT i.editing_user_id,
+              COALESCE(u.first_name, u.username) AS editing_by_name
+         FROM grocery_items i
+    LEFT JOIN users u ON u.id = i.editing_user_id
+        WHERE i.id = $1 AND i.editing_until > NOW()`,
+      [itemId]
+    );
+    return rows[0] || null;
+  }
+
+  /** Give the item back. Idempotent — releasing one you don't hold is a no-op. */
+  static async releaseItem(itemId, userId) {
+    await db.query(
+      `UPDATE grocery_items
+          SET editing_user_id = NULL, editing_until = NULL
+        WHERE id = $1 AND editing_user_id = $2`,
+      [itemId, userId]
+    );
   }
 
   static async getItemById(itemId) {
@@ -141,6 +202,8 @@ class GroceryTrip {
     if (assignments.length === 0) return { item: null, conflict: false };
 
     assignments.push('version = version + 1');
+    // Saving ends the edit session; no separate release round-trip.
+    assignments.push('editing_user_id = NULL', 'editing_until = NULL');
 
     let versionGuard = '';
     if (expectedVersion !== null) {
@@ -343,4 +406,4 @@ class GroceryTrip {
   }
 }
 
-module.exports = { GroceryTrip };
+module.exports = { GroceryTrip, EDIT_CLAIM_SECONDS };

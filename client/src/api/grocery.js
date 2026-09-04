@@ -6,15 +6,14 @@
  * 1. Errors come back as `{ code, message, ...context }`. The `code` is stable
  *    and the UI translates it; `message` is an English developer fallback and is
  *    never shown to a user.
- * 2. Mutations carry the edit lease in `X-Grocery-Lease`. The server may mint a
- *    fresh one (when the list was free) and returns it in the same header, which
- *    `useGroceryList` picks up — so a first tap never needs an explicit "Edit".
+ * 2. There is no list-level lock. Adding and checking off items are free for
+ *    everyone at once; only editing ONE item is claimed, and a lost update on
+ *    it is rejected by the item's `version`.
  */
 
 import apiClient from './client.js';
 
 const SESSION_HEADER = 'X-Grocery-Session';
-const LEASE_HEADER = 'X-Grocery-Lease';
 
 /** One id per browser tab, so two tabs of the same user don't fight over a lease. */
 const sessionId = (() => {
@@ -42,16 +41,12 @@ const sessionId = (() => {
  */
 const multipart = { headers: { 'Content-Type': undefined } };
 
-const leaseHeaders = (token) => ({
-  [SESSION_HEADER]: sessionId,
-  ...(token ? { [LEASE_HEADER]: token } : {}),
-});
+/** Identifies this tab in server logs; carries no authority. */
+const sessionHeaders = () => ({ [SESSION_HEADER]: sessionId });
 
 const ok = (response) => ({
   success: true,
   data: response.data?.data,
-  // A mutation that implicitly took the lease hands the token back here.
-  leaseToken: response.headers?.[LEASE_HEADER.toLowerCase()] || null,
 });
 
 /**
@@ -107,38 +102,35 @@ const groceryAPI = {
    */
   getState: (version) => call(() => apiClient.client.get('/grocery/state', {
     params: version != null ? { version } : {},
-    headers: leaseHeaders(),
+    headers: sessionHeaders(),
   })),
 
   // ─── Items ────────────────────────────────────────────────────────────────
 
-  addItem: (data, leaseToken) =>
-    call(() => apiClient.client.post('/grocery/items', data, { headers: leaseHeaders(leaseToken) })),
+  addItem: (data) =>
+    call(() => apiClient.client.post('/grocery/items', data, { headers: sessionHeaders() })),
 
-  updateItem: (id, data, leaseToken) =>
-    call(() => apiClient.client.patch(`/grocery/items/${id}`, data, { headers: leaseHeaders(leaseToken) })),
+  updateItem: (id, data) =>
+    call(() => apiClient.client.patch(`/grocery/items/${id}`, data, { headers: sessionHeaders() })),
 
-  setPurchased: (id, purchased, leaseToken) =>
-    call(() => apiClient.client.post(`/grocery/items/${id}/purchase`, { purchased }, { headers: leaseHeaders(leaseToken) })),
+  setPurchased: (id, purchased) =>
+    call(() => apiClient.client.post(`/grocery/items/${id}/purchase`, { purchased }, { headers: sessionHeaders() })),
 
-  deleteItem: (id, leaseToken) =>
-    call(() => apiClient.client.delete(`/grocery/items/${id}`, { headers: leaseHeaders(leaseToken) })),
+  deleteItem: (id) =>
+    call(() => apiClient.client.delete(`/grocery/items/${id}`, { headers: sessionHeaders() })),
 
-  // ─── Edit lease ───────────────────────────────────────────────────────────
+  // ─── Per-item edit claim ──────────────────────────────────────────────────
 
-  acquireLock: () =>
-    call(() => apiClient.client.post('/grocery/lock', { sessionId }, { headers: leaseHeaders() })),
+  claimItem: (id) =>
+    call(() => apiClient.client.post(`/grocery/items/${id}/claim`, {})),
 
-  heartbeatLock: (leaseToken) =>
-    call(() => apiClient.client.post('/grocery/lock/heartbeat', {}, { headers: leaseHeaders(leaseToken) })),
-
-  releaseLock: (leaseToken) =>
-    call(() => apiClient.client.delete('/grocery/lock', { headers: leaseHeaders(leaseToken) })),
+  releaseItem: (id) =>
+    call(() => apiClient.client.delete(`/grocery/items/${id}/claim`)),
 
   // ─── Trips ────────────────────────────────────────────────────────────────
 
-  completeTrip: (payload, leaseToken) =>
-    call(() => apiClient.client.post('/grocery/trips/complete', payload, { headers: leaseHeaders(leaseToken) })),
+  completeTrip: (payload) =>
+    call(() => apiClient.client.post('/grocery/trips/complete', payload, { headers: sessionHeaders() })),
 
   getHistory: (params = {}) =>
     call(() => apiClient.client.get('/grocery/trips', { params })),

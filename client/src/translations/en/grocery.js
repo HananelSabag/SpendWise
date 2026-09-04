@@ -40,6 +40,7 @@ export default {
     purchasedBy: "Picked up by {{name}}",
     openLink: "Open product page",
     hasPhoto: "Has a photo",
+    busy: "{{name}} is editing this item",
   },
 
   sections: {
@@ -100,8 +101,10 @@ export default {
     frozen: "Frozen",
     snacks_sweets: "Snacks & Sweets",
     beverages: "Beverages",
+    alcohol: "Wine & Spirits",
     baby: "Baby",
     household: "Household & Cleaning",
+    disposables: "Disposables",
     personal_care: "Personal Care",
     other: "Other",
   },
@@ -254,6 +257,7 @@ export default {
     GROCERY_IMAGE_URL_INVALID: "Image links must start with https://",
     GROCERY_PRODUCT_URL_INVALID: "Links must start with https://",
     GROCERY_ITEM_NOT_FOUND: "That item is no longer on the list",
+    GROCERY_ITEM_BUSY: "Someone else is editing this item",
     GROCERY_ITEM_STALE: "Someone changed this item — reloading",
     GROCERY_TRIP_ARCHIVED: "Completed trips can't be changed",
     GROCERY_TRIP_EMPTY: "Mark at least one item as picked up first",

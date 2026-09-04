@@ -43,33 +43,82 @@ describe('aisle ordering', () => {
 });
 
 describe('category guessing', () => {
+  // The reported miss: "שוק" (a chicken drumstick) is a prefix of "שוקו", so a
+  // first-substring-wins matcher filed chocolate milk under meat.
+  it('does not let a short stem hijack a longer word', () => {
+    expect(guessCategory('שוקו')).toBe('dairy_eggs');
+    expect(guessCategory('שוק עוף')).toBe('meat_fish');
+    expect(guessCategory('שוקולד')).toBe('snacks_sweets');
+  });
+
   it('places common Hebrew groceries in their aisle', () => {
-    expect(guessCategory('מלפפון')).toBe('produce');
-    expect(guessCategory('עגבניות שרי')).toBe('produce');
-    expect(guessCategory('חלב 3%')).toBe('dairy_eggs');
-    expect(guessCategory('יוגורט יווני')).toBe('dairy_eggs');
-    expect(guessCategory('לחם אחיד')).toBe('bakery');
-    expect(guessCategory('חזה עוף')).toBe('meat_fish');
-    expect(guessCategory('אורז בסמטי')).toBe('pantry');
-    expect(guessCategory('חיתולים')).toBe('baby');
+    const cases = {
+      'מלפפון': 'produce',
+      'עגבניות שרי': 'produce',
+      'אבוקדו': 'produce',
+      'חלב 3%': 'dairy_eggs',
+      'יוגורט יווני': 'dairy_eggs',
+      'ביצים L': 'dairy_eggs',
+      'לחם אחיד': 'bakery',
+      'פיתות': 'bakery',
+      'חזה עוף': 'meat_fish',
+      'סלמון': 'meat_fish',
+      'אורז בסמטי': 'pantry',
+      'שמן זית': 'pantry',
+      'קפה': 'pantry',
+      'גלידה': 'frozen',
+      'במבה': 'snacks_sweets',
+      'קוקה קולה': 'beverages',
+      'מים מינרלים': 'beverages',
+      'בירה': 'alcohol',
+      'יין אדום': 'alcohol',
+      'חיתולים': 'baby',
+      'נייר טואלט': 'household',
+      'אבקת כביסה': 'household',
+      'צלחות חד פעמי': 'disposables',
+      'משחת שיניים': 'personal_care',
+      'שמפו': 'personal_care',
+    };
+    for (const [input, expected] of Object.entries(cases)) {
+      expect([input, guessCategory(input)]).toEqual([input, expected]);
+    }
+  });
+
+  it('handles an attached Hebrew prefix', () => {
+    expect(guessCategory('הלחם')).toBe('bakery');
+    expect(guessCategory('וחלב')).toBe('dairy_eggs');
   });
 
   it('handles English just as well', () => {
     expect(guessCategory('Greek yogurt')).toBe('dairy_eggs');
     expect(guessCategory('toilet paper')).toBe('household');
     expect(guessCategory('sparkling water')).toBe('beverages');
+    expect(guessCategory('red wine')).toBe('alcohol');
     expect(guessCategory('Toothpaste')).toBe('personal_care');
   });
 
-  it('prefers the more specific phrase when two keywords overlap', () => {
+  it('prefers the more specific multi-word phrase', () => {
     expect(guessCategory('סבון כלים')).toBe('household');
     expect(guessCategory('סבון')).toBe('personal_care');
+    expect(guessCategory('שמן זית')).toBe('pantry');
   });
 
   it('returns null rather than guessing wildly', () => {
     expect(guessCategory('')).toBeNull();
     expect(guessCategory('x')).toBeNull();
     expect(guessCategory('זרנוק גינה')).toBeNull();
+  });
+
+  it('never returns a key the schema would reject', () => {
+    const valid = new Set(GROCERY_CATEGORIES.map((c) => c.key));
+    const samples = [
+      'שוקו', 'חלב', 'לחם', 'בירה', 'צלחות חד פעמי', 'מלפפון',
+      'toothpaste', 'beer', 'nonsense zzz', '',
+    ];
+    for (const sample of samples) {
+      const guess = guessCategory(sample);
+      if (guess !== null) expect(valid.has(guess)).toBe(true);
+    }
   });
 });
 

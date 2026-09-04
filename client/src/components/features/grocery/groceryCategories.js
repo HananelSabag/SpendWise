@@ -11,7 +11,7 @@
 
 import {
   Apple, Croissant, Milk, Fish, Wheat, Snowflake,
-  Candy, CupSoda, Baby, SprayCan, Sparkles, Package,
+  Candy, CupSoda, Wine, Baby, SprayCan, Utensils, Sparkles, Package,
 } from 'lucide-react';
 
 export const GROCERY_CATEGORIES = [
@@ -23,8 +23,10 @@ export const GROCERY_CATEGORIES = [
   { key: 'frozen',        icon: Snowflake, tint: 'text-cyan-600 dark:text-cyan-400',       chip: 'bg-cyan-50 dark:bg-cyan-500/10' },
   { key: 'snacks_sweets', icon: Candy,     tint: 'text-pink-600 dark:text-pink-400',       chip: 'bg-pink-50 dark:bg-pink-500/10' },
   { key: 'beverages',     icon: CupSoda,   tint: 'text-indigo-600 dark:text-indigo-400',   chip: 'bg-indigo-50 dark:bg-indigo-500/10' },
+  { key: 'alcohol',       icon: Wine,      tint: 'text-purple-600 dark:text-purple-400',   chip: 'bg-purple-50 dark:bg-purple-500/10' },
   { key: 'baby',          icon: Baby,      tint: 'text-violet-600 dark:text-violet-400',   chip: 'bg-violet-50 dark:bg-violet-500/10' },
   { key: 'household',     icon: SprayCan,  tint: 'text-teal-600 dark:text-teal-400',       chip: 'bg-teal-50 dark:bg-teal-500/10' },
+  { key: 'disposables',   icon: Utensils,  tint: 'text-lime-600 dark:text-lime-400',       chip: 'bg-lime-50 dark:bg-lime-500/10' },
   { key: 'personal_care', icon: Sparkles,  tint: 'text-fuchsia-600 dark:text-fuchsia-400', chip: 'bg-fuchsia-50 dark:bg-fuchsia-500/10' },
   { key: 'other',         icon: Package,   tint: 'text-gray-500 dark:text-gray-400',       chip: 'bg-gray-100 dark:bg-gray-700/40' },
 ];

@@ -2,16 +2,19 @@
  * Shared grocery list routes — /api/v1/grocery
  *
  * Layering, in order: authenticate → resolve the caller's list membership
- * (`attachList`) → owner check or edit-lease check where the action needs one.
- * A route that mutates list content MUST go through `requireLease`; that is the
- * only thing standing between two shoppers and a lost update.
+ * (`attachList`) → owner check where the action needs one.
+ *
+ * There is no list-level lock: two shoppers adding or checking off different
+ * items cannot conflict. A lost update on the SAME item is prevented by
+ * `grocery_items.version` (409 on stale), and the claim endpoints below stop
+ * two people typing into one item at the same time.
  */
 
 const express = require('express');
 const router = express.Router();
 
 const { auth } = require('../middleware/auth');
-const { attachList, requireOwner, requireLease } = require('../middleware/groceryAccess');
+const { attachList, requireOwner } = require('../middleware/groceryAccess');
 const { uploadGroceryReceipt, uploadGroceryItemImage } = require('../middleware/upload');
 const grocery = require('../controllers/groceryController');
 const share = require('../controllers/groceryShareController');
@@ -40,19 +43,18 @@ router.use(attachList);
 // State + live polling
 router.get('/state',                          grocery.getState);
 
-// Items — all lease-guarded
-router.post('/items',                         requireLease, grocery.addItem);
-router.patch('/items/:id',                    requireLease, grocery.updateItem);
-router.post('/items/:id/purchase',            requireLease, grocery.setPurchased);
-router.delete('/items/:id',                   requireLease, grocery.deleteItem);
+// Items
+router.post('/items',                         grocery.addItem);
+router.patch('/items/:id',                    grocery.updateItem);
+router.post('/items/:id/purchase',            grocery.setPurchased);
+router.delete('/items/:id',                   grocery.deleteItem);
 
-// Edit lease
-router.post('/lock',                          grocery.acquireLock);
-router.post('/lock/heartbeat',                grocery.heartbeatLock);
-router.delete('/lock',                        grocery.releaseLock);
+// Per-item edit claim — advisory, so two people don't type into one item
+router.post('/items/:id/claim',               grocery.claimItem);
+router.delete('/items/:id/claim',             grocery.releaseItem);
 
 // Trips + history
-router.post('/trips/complete',                requireLease, grocery.completeTrip);
+router.post('/trips/complete',                grocery.completeTrip);
 router.get('/trips',                          grocery.getHistory);
 router.get('/trips/:id',                      grocery.getTripDetail);
 router.post('/trips/:id/receipt',             uploadGroceryReceipt, grocery.uploadReceipt);
