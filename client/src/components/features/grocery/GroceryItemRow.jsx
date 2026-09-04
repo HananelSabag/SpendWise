@@ -19,8 +19,8 @@ import { Check, Link2, Pencil, StickyNote, Trash2, X } from 'lucide-react';
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
 
-/** Long enough not to fire on a normal tap, short enough not to feel stuck. */
-const LONG_PRESS_MS = 450;
+/** Matches the iOS/Android long-press convention. Shorter fired on slow taps. */
+const LONG_PRESS_MS = 500;
 
 const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) => {
   const { t } = useTranslation('grocery');
@@ -28,6 +28,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
   const [actionsOpen, setActionsOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  const rowRef = useRef(null);
   const timerRef = useRef(null);
   const firedRef = useRef(false);
 
@@ -41,6 +42,27 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
   useEffect(() => clearTimer, [clearTimer]);
   useEffect(() => { if (!actionsOpen) setConfirmDelete(false); }, [actionsOpen]);
 
+  // Dismiss on a tap anywhere else, on scroll, or on Escape. Without this an
+  // accidental long-press traps you until you find the small close button.
+  useEffect(() => {
+    if (!actionsOpen) return undefined;
+
+    const closeIfOutside = (event) => {
+      if (!rowRef.current?.contains(event.target)) setActionsOpen(false);
+    };
+    const close = () => setActionsOpen(false);
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setActionsOpen(false); };
+
+    document.addEventListener('pointerdown', closeIfOutside, true);
+    window.addEventListener('scroll', close, { passive: true, capture: true });
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeIfOutside, true);
+      window.removeEventListener('scroll', close, { capture: true });
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [actionsOpen]);
+
   const startPress = useCallback(() => {
     if (disabled) return;
     firedRef.current = false;
@@ -49,7 +71,11 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
       firedRef.current = true;
       setActionsOpen(true);
       // The only feedback that the gesture registered before the menu paints.
-      try { navigator.vibrate?.(15); } catch { /* unsupported */ }
+      // Chrome *logs* rather than throws when the frame has had no user gesture
+      // yet, so a try/catch alone would still spam the console.
+      if (navigator.userActivation?.hasBeenActive !== false) {
+        try { navigator.vibrate?.(15); } catch { /* unsupported */ }
+      }
     }, LONG_PRESS_MS);
   }, [disabled, clearTimer]);
 
@@ -71,6 +97,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, disabled = false }) 
 
   return (
     <motion.li
+      ref={rowRef}
       layout="position"
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
