@@ -298,7 +298,7 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
                 aria-label={t('item.openLink')}
                 className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-500 dark:border-gray-700 dark:text-gray-400"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 rtl:-scale-x-100" />
               </a>
             )}
           </div>

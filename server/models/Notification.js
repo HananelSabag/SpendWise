@@ -59,6 +59,20 @@ class Notification {
   }
 
   /**
+   * Delete everything this user has already read.
+   *
+   * The notification centre had no way to empty itself, so months of resolved
+   * alerts sat on top of anything new. Unread ones are never touched.
+   */
+  static async clearRead(userId) {
+    const { rowCount } = await db.query(
+      `DELETE FROM notifications WHERE user_id = $1 AND is_read = true`,
+      [userId]
+    );
+    return rowCount;
+  }
+
+  /**
    * Mark exactly the notifications that carry a given data key/value — used to
    * retire the invitation notification the user just answered, without touching
    * anything else they haven't read.

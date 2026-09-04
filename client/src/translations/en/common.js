@@ -14,6 +14,11 @@ export default {
   notifications: {
     title: "Notifications",
     markAllRead: "Mark all as read",
+    clearRead: "Clear read",
+    groups: {
+      grocery: "Grocery List",
+      spendwise: "SpendWise",
+    },
     empty: "No new notifications",
   },
   save: "Save",

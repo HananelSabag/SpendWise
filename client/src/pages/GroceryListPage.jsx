@@ -34,8 +34,8 @@ import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocer
  * about 28px above it and would collide with a button sitting any lower.
  */
 const FAB_OFFSET = {
-  grocery: 'calc(72px + env(safe-area-inset-bottom, 0px))',
-  full: 'calc(104px + env(safe-area-inset-bottom, 0px))',
+  grocery: 'calc(84px + env(safe-area-inset-bottom, 0px))',
+  full: 'calc(112px + env(safe-area-inset-bottom, 0px))',
 };
 
 const GroceryListPage = () => {
@@ -152,7 +152,7 @@ const GroceryListPage = () => {
   return (
     <div
       dir={isRTL ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-gray-50 pb-28 dark:bg-gray-950 lg:pb-10"
+      className="min-h-screen bg-gray-50 pb-36 dark:bg-gray-950 lg:pb-10"
     >
       <div className="mx-auto w-full max-w-6xl px-3 sm:px-5 lg:px-6">
 
@@ -160,7 +160,7 @@ const GroceryListPage = () => {
         <header className="pt-3">
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white lg:hidden">
-              <ShoppingCart className="h-4 w-4" />
+              <ShoppingCart className="h-4 w-4 rtl:-scale-x-100" />
             </span>
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
@@ -282,7 +282,7 @@ const GroceryListPage = () => {
               {isEmpty ? (
                 <div className="flex flex-col items-center justify-center px-8 py-14 text-center">
                   <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-gray-300 shadow-sm dark:bg-gray-800 dark:text-gray-600">
-                    <ShoppingCart className="h-7 w-7" strokeWidth={1.5} />
+                    <ShoppingCart className="h-7 w-7 rtl:-scale-x-100" strokeWidth={1.5} />
                   </span>
                   <h2 className="mb-1.5 text-base font-bold text-gray-700 dark:text-gray-200">
                     {t('empty.title')}
@@ -363,7 +363,7 @@ const GroceryListPage = () => {
                           onClick={() => setFinishOpen(true)}
                           className="flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white transition-colors hover:bg-emerald-700 disabled:opacity-50"
                         >
-                          <Flag className="h-3.5 w-3.5" />
+                          <Flag className="h-3.5 w-3.5 rtl:-scale-x-100" />
                           {t('finish.button')}
                         </button>
                       </div>
@@ -452,9 +452,10 @@ const GroceryListPage = () => {
           onClick={openAdd}
           aria-label={t('quickAdd.aria')}
           className={cn(
-            'fixed z-40 flex h-14 w-14 items-center justify-center rounded-2xl lg:hidden',
+            'fixed z-40 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl lg:hidden',
             isRTL ? 'start-4' : 'end-4',
-            'bg-blue-600 text-white shadow-xl shadow-blue-600/30'
+            'bg-blue-600 text-white shadow-xl shadow-blue-600/30',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2'
           )}
           style={{ bottom: FAB_OFFSET[groceryMode ? 'grocery' : 'full'] }}
         >

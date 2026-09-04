@@ -19,6 +19,11 @@ const notificationController = {
     res.json({ success: true });
   }),
 
+  clearRead: asyncHandler(async (req, res) => {
+    const removed = await Notification.clearRead(req.user.id);
+    res.json({ success: true, data: { removed } });
+  }),
+
   markRead: asyncHandler(async (req, res) => {
     const ok = await Notification.markRead(parseInt(req.params.id, 10), req.user.id);
     if (!ok) return res.status(404).json({ success: false, error: { code: 'NOTIFICATION_NOT_FOUND', message: 'Notification not found' } });

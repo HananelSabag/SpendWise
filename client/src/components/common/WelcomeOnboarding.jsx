@@ -29,6 +29,8 @@ import {
 const CONTENT = {
   [APP_MODE.GROCERY]: {
     icon: ShoppingCart,
+    // A cart glyph is drawn handle-left; mirror it in Hebrew.
+    mirrorIcon: true,
     accent: 'bg-blue-600',
     points: [
       { icon: ListChecks, key: 'grocery.aisles' },
@@ -85,7 +87,7 @@ const WelcomeOnboarding = () => {
 
   if (!user || dismissed || (alreadySeen && !replaying)) return null;
 
-  const { icon: Icon, accent, points } = CONTENT[mode];
+  const { icon: Icon, accent, points, mirrorIcon } = CONTENT[mode];
 
   return (
     <motion.div
@@ -108,7 +110,7 @@ const WelcomeOnboarding = () => {
           'mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white',
           accent
         )}>
-          <Icon className="h-7 w-7" strokeWidth={1.75} />
+          <Icon className={cn('h-7 w-7', mirrorIcon && 'rtl:-scale-x-100')} strokeWidth={1.75} />
         </span>
 
         <h1

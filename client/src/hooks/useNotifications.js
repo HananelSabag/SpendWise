@@ -49,6 +49,16 @@ export function useNotifications() {
     },
   });
 
+  const clearReadMutation = useMutation({
+    mutationFn: () => api.notifications.clearRead(),
+    onSuccess: () => {
+      queryClient.setQueryData(QUERY_KEY, (old) => (old ? {
+        ...old,
+        notifications: old.notifications.filter((n) => !n.is_read),
+      } : old));
+    },
+  });
+
   return {
     notifications: query.data?.notifications ?? [],
     unreadCount: query.data?.unreadCount ?? 0,
@@ -56,5 +66,6 @@ export function useNotifications() {
     refetch: query.refetch,
     markAllRead: () => markAllReadMutation.mutate(),
     markRead: (id) => markReadMutation.mutate(id),
+    clearRead: () => clearReadMutation.mutate(),
   };
 }

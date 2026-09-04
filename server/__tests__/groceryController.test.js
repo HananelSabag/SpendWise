@@ -400,3 +400,27 @@ describe('per-item edit claim', () => {
     expect(release).toHaveBeenCalledWith(3, 7);
   });
 });
+
+describe('notification cleanup', () => {
+  const { Notification } = require('../models/Notification');
+
+  // The centre had no way to empty itself, so months of resolved alerts sat on
+  // top of anything new.
+  test('clearing removes only what has been read', async () => {
+    db.query.mockResolvedValue({ rowCount: 6 });
+
+    const removed = await Notification.clearRead(7);
+
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/DELETE FROM notifications/i);
+    expect(sql).toMatch(/is_read = true/);
+    expect(params).toEqual([7]);
+    expect(removed).toBe(6);
+  });
+
+  test('it is scoped to the caller', async () => {
+    db.query.mockResolvedValue({ rowCount: 0 });
+    await Notification.clearRead(7);
+    expect(db.query.mock.calls[0][0]).toMatch(/user_id = \$1/);
+  });
+});

@@ -121,7 +121,7 @@ const GroceryInvitePage = () => {
     <Shell isRTL={isRTL}>
       <div className="text-center">
         <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/25">
-          <ShoppingCart className="h-8 w-8" strokeWidth={1.5} />
+          <ShoppingCart className="h-8 w-8 rtl:-scale-x-100" strokeWidth={1.5} />
         </span>
 
         <h1 className="mb-1 text-lg font-extrabold text-gray-900 dark:text-gray-50">

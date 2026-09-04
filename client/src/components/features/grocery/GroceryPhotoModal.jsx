@@ -86,7 +86,7 @@ const GroceryPhotoModal = ({ isOpen, onClose, src, title, link }) => {
                 rel="noopener noreferrer"
                 className="flex h-11 items-center gap-2 rounded-xl bg-white/15 px-4 text-sm font-bold text-white transition-colors hover:bg-white/25"
               >
-                <ExternalLink className="h-4 w-4" />
+                <ExternalLink className="h-4 w-4 rtl:-scale-x-100" />
                 {t('item.openLink')}
               </a>
             )}

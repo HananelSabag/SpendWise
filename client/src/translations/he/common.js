@@ -14,6 +14,11 @@ export default {
   notifications: {
     title: "התראות",
     markAllRead: "סמן הכל כנקרא",
+    clearRead: "נקה שנקראו",
+    groups: {
+      grocery: "רשימת קניות",
+      spendwise: "SpendWise",
+    },
     empty: "אין התראות חדשות",
   },
   save: "שמור",

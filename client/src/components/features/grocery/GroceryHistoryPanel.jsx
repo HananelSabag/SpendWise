@@ -107,7 +107,7 @@ const TripCard = ({ trip }) => {
     <li className="rounded-2xl border border-gray-100 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800/60">
       <div className="flex items-start gap-3">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
-          <Receipt className="h-5 w-5" />
+          <Receipt className="h-5 w-5 rtl:-scale-x-100" />
         </span>
 
         <div className="min-w-0 flex-1">

@@ -35,7 +35,7 @@ const GroceryModeHeader = () => {
     <header className="hidden border-b border-gray-100 bg-white/95 backdrop-blur-md lg:block dark:border-gray-800 dark:bg-gray-900/95">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-6">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-          <ShoppingCart className="h-4.5 w-4.5" />
+          <ShoppingCart className="h-4.5 w-4.5 rtl:-scale-x-100" />
         </span>
         <span className="me-4 text-base font-extrabold text-gray-900 dark:text-gray-50">
           {tg('title')}
@@ -43,7 +43,7 @@ const GroceryModeHeader = () => {
 
         <nav className="flex items-center gap-1">
           <button type="button" onClick={() => navigate('/grocery')} className={linkClass('/grocery')}>
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4 rtl:-scale-x-100" />
             {tg('tabs.list')}
           </button>
           <button type="button" onClick={() => navigate('/profile')} className={linkClass('/profile')}>

@@ -191,7 +191,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, currentUserId }) => 
           aria-label={t('item.openLink')}
           className="flex w-11 shrink-0 items-center justify-center text-gray-400 transition-colors hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-500"
         >
-          <ExternalLink className="h-4 w-4" />
+          <ExternalLink className="h-4 w-4 rtl:-scale-x-100" />
         </a>
       )}
 

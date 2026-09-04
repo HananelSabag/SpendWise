@@ -304,7 +304,7 @@ const GroceryShareSheet = ({ isOpen, onClose, members, role, currentUserId }) =>
                   : 'border border-gray-200 text-red-500 dark:border-gray-700'
               )}
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4 rtl:-scale-x-100" />
               {confirming === 'leave' ? t('share.leaveConfirm') : t('share.leave')}
             </button>
           )}

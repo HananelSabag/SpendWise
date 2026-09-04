@@ -48,8 +48,10 @@ const GroceryModeNav = () => {
   const isAdmin   = useIsAdmin();
   const { unreadCount } = useNotifications();
 
+  // `mirror` marks glyphs that carry a direction. A shopping cart's handle is
+  // drawn on the left; in Hebrew it has to face the other way.
   const tabs = [
-    { key: 'grocery', icon: ShoppingCart, label: tg('title'), href: '/grocery' },
+    { key: 'grocery', icon: ShoppingCart, mirror: true, label: tg('title'), href: '/grocery' },
     { key: 'profile', icon: User,         label: t('nav.profile') || 'Profile', href: '/profile' },
     ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t('nav.admin') || 'Admin', href: '/admin' }] : []),
   ];
@@ -80,7 +82,11 @@ const GroceryModeNav = () => {
                   className="absolute inset-x-1 top-0 h-0.5 rounded-full bg-blue-600"
                 />
               )}
-              <Icon className={cn('w-5 h-5 transition-colors', active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500')} />
+              <Icon className={cn(
+                'w-5 h-5 transition-colors',
+                tab.mirror && 'rtl:-scale-x-100',
+                active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500',
+              )} />
             </div>
             <span className={cn('text-[10px] font-medium mt-0.5 truncate max-w-full px-1', active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500')}>
               {tab.label}

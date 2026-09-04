@@ -17,6 +17,16 @@ const notificationsAPI = {
       return { success: false, error: e?.response?.data?.error || e };
     }
   },
+  /** Delete everything already read. Unread notifications are untouched. */
+  async clearRead() {
+    try {
+      const r = await apiClient.client.delete('/notifications/read');
+      return { success: true, data: r.data?.data };
+    } catch (e) {
+      return { success: false, error: e?.response?.data?.error || e };
+    }
+  },
+
   async markRead(id) {
     try {
       await apiClient.client.patch(`/notifications/${id}/read`);
