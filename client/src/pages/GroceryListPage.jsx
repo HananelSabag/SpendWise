@@ -174,11 +174,11 @@ const GroceryListPage = () => {
   const composerDisabled = lockedByOther;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-full bg-gray-50/60 dark:bg-gray-900">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
       <div className="mx-auto w-full max-w-6xl px-3 pb-4 sm:px-5 lg:px-6">
 
         {/* ── Header ─────────────────────────────────────────────────── */}
-        <header className="sticky top-0 z-30 -mx-3 bg-gray-50/95 px-3 pb-2 pt-3 backdrop-blur-sm sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6 dark:bg-gray-900/95">
+        <header className="sticky top-0 z-30 -mx-3 bg-gray-50/95 px-3 pb-2 pt-3 backdrop-blur-sm sm:-mx-5 sm:px-5 lg:-mx-6 lg:px-6 dark:bg-gray-950/95">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
               <ShoppingCart className="h-5 w-5" />
@@ -196,7 +196,7 @@ const GroceryListPage = () => {
               type="button"
               onClick={() => setShareOpen(true)}
               aria-label={t('share.title')}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-colors hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-gray-200 bg-white text-gray-500 transition-colors hover:text-gray-700 lg:hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
             >
               <Users className="h-4 w-4" />
               {myInvitations.length > 0 && (
@@ -207,7 +207,9 @@ const GroceryListPage = () => {
             </button>
           </div>
 
-          <div className="mt-2.5">
+          {/* Two tabs stretched across a desktop width read as a banner, not a
+              control — cap them and let the content have the room. */}
+          <div className="mt-2.5 lg:max-w-sm">
             <LiquidTabs
               fill
               tabs={[
@@ -402,7 +404,7 @@ const GroceryListPage = () => {
             </div>
 
             {/* ── Desktop rail ────────────────────────────────────── */}
-            <aside className="hidden w-80 shrink-0 space-y-3 lg:block">
+            <aside className="hidden w-80 shrink-0 space-y-3 lg:block xl:w-96">
               <div className="rounded-2xl border border-gray-100 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800/60">
                 <GroceryQuickAdd
                   onAdd={handleAdd}
