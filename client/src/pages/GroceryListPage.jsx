@@ -139,7 +139,15 @@ const GroceryListPage = () => {
   // Error before loading: a query that keeps failing stays pending across its
   // retry and poll cycles, so checking isLoading first showed a skeleton that
   // never resolved instead of the error and its retry button.
-  if (isError) {
+  //
+  // `&& !list` matters as much. A poll failing while a list is already on
+  // screen is routine — a sleeping free-tier dyno takes half a minute to wake,
+  // and mobile data drops — and replacing a perfectly good list with a full
+  // error page over one timed-out background request is the wrong trade. It
+  // also used to be actively destructive: swapping the page out unmounted any
+  // open bottom sheet mid-use, which is how "open manage list and the page
+  // goes" happened. Poll failures now stay quiet and the next one recovers.
+  if (isError && !list) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center px-8 text-center">
         <AlertCircle className="mb-3 h-10 w-10 text-red-400" strokeWidth={1.5} />
