@@ -8,7 +8,7 @@
  * the list itself. Adding an item is one floating button that opens one sheet.
  */
 
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -27,6 +27,7 @@ import GroceryFinishSheet from '../components/features/grocery/GroceryFinishShee
 import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet';
 import GroceryHistoryPanel from '../components/features/grocery/GroceryHistoryPanel';
 import GroceryListSwitcher, { listLabel } from '../components/features/grocery/GroceryListSwitcher';
+import { hasLearnedGesture, onGestureLearned } from '../components/features/grocery/gestureHint';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
 /**
@@ -66,7 +67,10 @@ const GroceryListPage = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [listsOpen, setListsOpen] = useState(false);
   const [switchingTo, setSwitchingTo] = useState(null);
+  const [showGestureHint, setShowGestureHint] = useState(() => !hasLearnedGesture());
   const sectionRefs = useRef({});
+
+  useEffect(() => onGestureLearned(() => setShowGestureHint(false)), []);
 
   const activeListId = list?.id ?? null;
   const activeList = lists.find((entry) => String(entry.id) === String(activeListId));
@@ -332,11 +336,15 @@ const GroceryListPage = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {/* Taught once, at the top, because a long-press is not a
-                      gesture anyone discovers on their own. */}
-                  <p className="px-1 text-[11px] text-gray-400 dark:text-gray-500">
-                    {t('empty.gestureHint')}
-                  </p>
+                  {/* Taught at the top, because a long-press is not a gesture
+                      anyone discovers on their own — and retired the first time
+                      they use it, because a permanent tip is just clutter on the
+                      screen with the least room to spare. */}
+                  {showGestureHint && (
+                    <p className="px-1 text-[11px] text-gray-400 dark:text-gray-500">
+                      {t('empty.gestureHint')}
+                    </p>
+                  )}
 
                   {sections.map(({ key, items }) => {
                     const category = CATEGORY_BY_KEY[key] || CATEGORY_BY_KEY[DEFAULT_CATEGORY];

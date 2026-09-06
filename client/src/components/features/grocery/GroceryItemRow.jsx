@@ -23,6 +23,7 @@ import { Check, ExternalLink, Lock, Pencil, StickyNote, Trash2, X } from 'lucide
 import { cn } from '../../../utils/helpers';
 import { useTranslation } from '../../../stores';
 import GroceryPhotoModal from './GroceryPhotoModal';
+import { markGestureLearned } from './gestureHint';
 
 /** Matches the iOS/Android long-press convention. Shorter fired on slow taps. */
 const LONG_PRESS_MS = 500;
@@ -79,6 +80,8 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, currentUserId }) => 
     timerRef.current = setTimeout(() => {
       firedRef.current = true;
       setActionsOpen(true);
+      // They know the gesture now; the tip at the top of the list can go.
+      markGestureLearned();
       // The only feedback that the gesture registered before the menu paints.
       // Chrome *logs* rather than throws when the frame has had no user gesture
       // yet, so a try/catch alone would still spam the console.

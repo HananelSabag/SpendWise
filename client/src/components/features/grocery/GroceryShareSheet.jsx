@@ -266,7 +266,9 @@ const GroceryShareSheet = ({ isOpen, onClose, members, role, currentUserId }) =>
           )}
         </section>
 
-        {/* Leave / disband */}
+        {/* Leave / disband — nothing to render for the owner of a list nobody
+            else is on, and an empty bordered section is a visible seam. */}
+        {(!isOwner || members.length > 1) && (
         <section className="border-t border-gray-100 pt-4 dark:border-gray-700">
           {isOwner ? (
             members.length > 1 && (
@@ -309,6 +311,7 @@ const GroceryShareSheet = ({ isOpen, onClose, members, role, currentUserId }) =>
             </button>
           )}
         </section>
+        )}
       </div>
     </BottomSheet>
   );
