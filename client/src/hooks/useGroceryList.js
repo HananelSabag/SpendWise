@@ -44,6 +44,10 @@ export function useGroceryList() {
   const QUERY_KEY = useMemo(() => ['grocery', 'state', userId], [userId]);
   const claimedItemRef = useRef(null);
 
+  // Which list this client is showing. Every request carries it, so the server
+  // never has to guess between the several lists a person may belong to.
+  const activeListRef = useRef(null);
+
   // ─── State query + polling ────────────────────────────────────────────────
 
   const query = useQuery({
@@ -51,7 +55,15 @@ export function useGroceryList() {
     enabled: !!userId,
     queryFn: async () => {
       const previous = queryClient.getQueryData(QUERY_KEY);
-      const known = previous?.list?.version;
+
+      // The version is only a valid question about the SAME list. After a
+      // switch the cached version belongs to the list we just left, and two
+      // lists can easily sit on the same number — asking would get back
+      // "unchanged" and leave the old list on screen. Ask for everything.
+      const cachedListId = previous?.list?.id == null ? null : String(previous.list.id);
+      const sameList = cachedListId !== null
+        && (activeListRef.current === null || activeListRef.current === cachedListId);
+      const known = sameList ? previous?.list?.version : undefined;
 
       const result = await api.grocery.getState(known);
       if (!result.success) throw new Error(result.error?.code || 'GROCERY_STATE_FAILED');
@@ -69,6 +81,15 @@ export function useGroceryList() {
   });
 
   const state = query.data;
+
+  // Keep the API layer pointed at the list currently on screen. Done in an
+  // effect rather than inside the query so a cached read updates it too.
+  useEffect(() => {
+    const id = state?.list?.id == null ? null : String(state.list.id);
+    if (activeListRef.current === id) return;
+    activeListRef.current = id;
+    api.grocery.setActiveList(id);
+  }, [state?.list?.id]);
 
   // ─── Derived view state ───────────────────────────────────────────────────
 
@@ -240,6 +261,28 @@ export function useGroceryList() {
     return result.data;
   }, [reportFailure, refresh]);
 
+  /**
+   * Open a different one of this user's lists.
+   *
+   * The cached state is dropped rather than invalidated: it describes the list
+   * being left, and keeping it would show the wrong items for one render and
+   * make the next poll ask a version question about the wrong list.
+   */
+  const switchList = useCallback(async (listId) => {
+    if (!listId || String(listId) === String(activeListRef.current)) return true;
+
+    const result = await api.grocery.openList(listId);
+    if (!result.success) { reportFailure(result); return false; }
+
+    activeListRef.current = String(listId);
+    api.grocery.setActiveList(listId);
+
+    queryClient.removeQueries({ queryKey: QUERY_KEY });
+    queryClient.invalidateQueries({ queryKey: ['grocery', 'lists', userId] });
+    queryClient.invalidateQueries({ queryKey: ['grocery', 'history', userId] });
+    return true;
+  }, [queryClient, QUERY_KEY, reportFailure, userId]);
+
   return {
     // Data
     state,
@@ -269,5 +312,6 @@ export function useGroceryList() {
     claimItem,
     releaseItem,
     completeTrip,
+    switchList,
   };
 }

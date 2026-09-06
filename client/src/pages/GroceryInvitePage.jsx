@@ -13,10 +13,9 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { AlertCircle, ArrowLeft, Check, Loader2, ShoppingCart, Users, X } from 'lucide-react';
 import { api } from '../api';
-import { cn } from '../utils/helpers';
 import { useTranslation } from '../stores';
 import { useToast } from '../hooks/useToast';
-import { useGrocerySharing } from '../hooks/useGrocerySharing';
+import { useGroceryLists, useGrocerySharing } from '../hooks/useGrocerySharing';
 
 const Shell = ({ children, isRTL }) => (
   <div
@@ -39,6 +38,7 @@ const GroceryInvitePage = () => {
   const { t, isRTL } = useTranslation('grocery');
   const toast = useToast();
   const { respond } = useGrocerySharing();
+  const { lists } = useGroceryLists();
   const [busy, setBusy] = useState(null);
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -151,12 +151,20 @@ const GroceryInvitePage = () => {
               onClick={() => navigate('/grocery', { replace: true })}
               className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-bold text-white"
             >
-              <ArrowLeft className={cn('h-4 w-4', isRTL && 'rotate-180')} />
+              <ArrowLeft className="h-4 w-4 rtl:-scale-x-100" />
               {t('invite.goToList')}
             </button>
           </div>
         ) : (
           <div className="mt-6 space-y-2">
+            {/* The question anyone with a list already asks before pressing
+                Accept. It used to be a fair worry: joining was refused unless
+                you emptied or closed your own list first. */}
+            {lists.length > 0 && (
+              <p className="mb-1 rounded-xl bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-500 dark:bg-gray-700/40 dark:text-gray-400">
+                {t('invite.joinsAlongside')}
+              </p>
+            )}
             <button
               type="button"
               onClick={handleAccept}

@@ -166,6 +166,18 @@ export default {
     collapse: "Hide items",
   },
 
+  /** The list switcher — only ever shown when there is more than one list. */
+  lists: {
+    title: "Your lists",
+    mine: "My list",
+    someones: "{{name}}'s list",
+    switchTo: "Switch list",
+    empty: "Nothing on it",
+    openItems: "{{count}} to buy",
+    members: "{{count}} people",
+    switched: "Switched list",
+  },
+
   share: {
     title: "Sharing",
     description: "Everyone on the list can add, edit and check off items.",
@@ -204,6 +216,7 @@ export default {
     expired: "This invitation has expired.",
     notForYou: "This invitation was sent to a different email address.",
     alreadyMember: "You're already on this list.",
+    joinsAlongside: "Your current list stays exactly as it is — this one is added next to it.",
     goToList: "Open the list",
     back: "Back",
     notFound: "We couldn't find that invitation.",

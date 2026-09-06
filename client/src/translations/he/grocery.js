@@ -166,6 +166,18 @@ export default {
     collapse: "הסתר פריטים",
   },
 
+  /** The list switcher — only ever shown when there is more than one list. */
+  lists: {
+    title: "הרשימות שלכם",
+    mine: "הרשימה שלי",
+    someones: "הרשימה של {{name}}",
+    switchTo: "החלפת רשימה",
+    empty: "אין בה כלום",
+    openItems: "{{count}} לקנות",
+    members: "{{count}} אנשים",
+    switched: "עברתם רשימה",
+  },
+
   share: {
     title: "שיתוף",
     description: "כל מי שברשימה יכול להוסיף, לערוך ולסמן פריטים.",
@@ -204,6 +216,7 @@ export default {
     expired: "תוקף ההזמנה פג.",
     notForYou: "ההזמנה נשלחה לכתובת מייל אחרת.",
     alreadyMember: "אתם כבר ברשימה הזו.",
+    joinsAlongside: "הרשימה הנוכחית שלכם נשארת בדיוק כמו שהיא — זו נוספת לצידה.",
     goToList: "פתח את הרשימה",
     back: "חזרה",
     notFound: "לא מצאנו את ההזמנה.",

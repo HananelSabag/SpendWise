@@ -19,13 +19,14 @@ import { isGroceryMode } from '../utils/appMode';
 import { useTranslation, useAuth } from '../stores';
 import { useToast } from '../hooks/useToast';
 import { useGroceryList } from '../hooks/useGroceryList';
-import { useMyGroceryInvitations } from '../hooks/useGrocerySharing';
+import { useGroceryLists, useMyGroceryInvitations } from '../hooks/useGrocerySharing';
 import { PageSkeleton, LiquidTabs } from '../components/ui';
 import GroceryItemRow from '../components/features/grocery/GroceryItemRow';
 import GroceryItemSheet from '../components/features/grocery/GroceryItemSheet';
 import GroceryFinishSheet from '../components/features/grocery/GroceryFinishSheet';
 import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet';
 import GroceryHistoryPanel from '../components/features/grocery/GroceryHistoryPanel';
+import GroceryListSwitcher, { listLabel } from '../components/features/grocery/GroceryListSwitcher';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
 /**
@@ -48,13 +49,14 @@ const GroceryListPage = () => {
 
   const {
     isLoading, isError, refetch,
-    members, sections, purchased,
+    list, members, sections, purchased,
     pendingCount, purchasedCount, progress, role,
     addItem, updateItem, togglePurchased, deleteItem,
-    claimItem, releaseItem, completeTrip,
+    claimItem, releaseItem, completeTrip, switchList,
   } = useGroceryList();
 
   const { invitations: myInvitations } = useMyGroceryInvitations();
+  const { lists, hasMultiple } = useGroceryLists();
 
   const [tab, setTab] = useState(searchParams.get('tab') === 'history' ? 'history' : 'list');
   const [sheetItem, setSheetItem] = useState(null);
@@ -62,7 +64,19 @@ const GroceryListPage = () => {
   const [shareOpen, setShareOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [listsOpen, setListsOpen] = useState(false);
+  const [switchingTo, setSwitchingTo] = useState(null);
   const sectionRefs = useRef({});
+
+  const activeListId = list?.id ?? null;
+  const activeList = lists.find((entry) => String(entry.id) === String(activeListId));
+
+  const handleSwitchList = useCallback(async (id) => {
+    setSwitchingTo(id);
+    const switched = await switchList(id);
+    setSwitchingTo(null);
+    if (switched) setListsOpen(false);
+  }, [switchList]);
 
   const changeTab = useCallback((next) => {
     setTab(next);
@@ -163,9 +177,26 @@ const GroceryListPage = () => {
               <ShoppingCart className="h-4 w-4 rtl:-scale-x-100" />
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
-                {t('title')}
-              </h1>
+              {/* With one list the title is just a title. With two it is the
+                  only place a switch belongs — right where you read which list
+                  you are on. */}
+              {hasMultiple ? (
+                <button
+                  type="button"
+                  onClick={() => setListsOpen(true)}
+                  aria-label={t('lists.switchTo')}
+                  className="flex max-w-full items-center gap-1 text-start"
+                >
+                  <span className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
+                    {activeList ? listLabel(activeList, t) : t('title')}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+                </button>
+              ) : (
+                <h1 className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
+                  {t('title')}
+                </h1>
+              )}
               <p className="truncate text-xs text-gray-400 dark:text-gray-500">{statusLine}</p>
             </div>
 
@@ -485,6 +516,15 @@ const GroceryListPage = () => {
         members={members}
         role={role}
         currentUserId={user?.id}
+      />
+
+      <GroceryListSwitcher
+        isOpen={listsOpen}
+        onClose={() => setListsOpen(false)}
+        lists={lists}
+        activeListId={activeListId}
+        onSwitch={handleSwitchList}
+        busyId={switchingTo}
       />
     </div>
   );

@@ -37,5 +37,7 @@ export default {
   alerts: "התראות",
   notifications: "התראות",
   tools: "כלים",
+  language: "שפה",
+  theme: "ערכת נושא",
   unread: "לא נקראו"
 };

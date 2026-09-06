@@ -37,5 +37,7 @@ export default {
   alerts: "Alerts",
   notifications: "Notifications",
   tools: "Tools",
+  language: "Language",
+  theme: "Theme",
   unread: "unread"
 };

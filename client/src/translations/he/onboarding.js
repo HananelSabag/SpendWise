@@ -2,6 +2,22 @@ export default {
   start: "יאללה, מתחילים",
   switchHint: "אפשר לעבור בין SpendWise לרשימת הקניות בכל רגע דרך פרופיל ← העדפות.",
 
+  /** First-run picker — which of the two apps this account opens as. */
+  picker: {
+    title: "ברוכים השבים!",
+    subtitle: "על מה תרצו לפתוח את האפליקציה?",
+    remember: "זכרו את הבחירה שלי",
+    continue: "המשך",
+    full: {
+      title: "SpendWise מלא",
+      description: "לוח בקרה, הוצאות, אנליטיקס",
+    },
+    grocery: {
+      title: "רשימת קניות",
+      description: "רשימת הסופר המשותפת בלבד",
+    },
+  },
+
   grocery: {
     title: "רשימת הקניות המשותפת שלכם",
     subtitle: "בנויה לסופר, לא לאקסל.",

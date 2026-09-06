@@ -2,6 +2,22 @@ export default {
   start: "Let's go",
   switchHint: "You can switch between SpendWise and the Grocery List any time in Profile → Preferences.",
 
+  /** First-run picker — which of the two apps this account opens as. */
+  picker: {
+    title: "Welcome back!",
+    subtitle: "What would you like to open first?",
+    remember: "Remember my choice",
+    continue: "Continue",
+    full: {
+      title: "Full SpendWise",
+      description: "Dashboard, expenses, analytics",
+    },
+    grocery: {
+      title: "Grocery List",
+      description: "The shared grocery list only",
+    },
+  },
+
   grocery: {
     title: "Your shared grocery list",
     subtitle: "Built for the supermarket, not for a spreadsheet.",

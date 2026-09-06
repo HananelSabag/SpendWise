@@ -14,6 +14,7 @@
 import apiClient from './client.js';
 
 const SESSION_HEADER = 'X-Grocery-Session';
+const LIST_HEADER = 'X-Grocery-List';
 
 /** One id per browser tab, so two tabs of the same user don't fight over a lease. */
 const sessionId = (() => {
@@ -39,10 +40,37 @@ const sessionId = (() => {
  * literal string 'multipart/form-data' does not work either: without a boundary
  * the server cannot split the parts.
  */
-const multipart = { headers: { 'Content-Type': undefined } };
+const multipartFor = () => ({
+  headers: { ...groceryHeaders(), 'Content-Type': undefined },
+});
 
-/** Identifies this tab in server logs; carries no authority. */
-const sessionHeaders = () => ({ [SESSION_HEADER]: sessionId });
+/**
+ * Which of the user's lists this client is showing.
+ *
+ * A person can be on more than one list, and the server would otherwise have to
+ * guess from "most recently opened" — which is wrong the moment two tabs are on
+ * two different lists. `useGroceryList` sets this from whatever `/state` last
+ * returned, so requests always name the list the user can actually see.
+ *
+ * It is a hint, not authority: the server resolves it through membership and
+ * falls back to the caller's own list.
+ */
+let activeListId = null;
+
+const setActiveList = (id) => { activeListId = id == null ? null : String(id); };
+
+/**
+ * Headers for every request that operates on a list.
+ *
+ * Both are custom `X-` headers, which makes these requests preflighted — they
+ * must stay listed in the server's CORS `allowedHeaders` or the browser fails
+ * them with status 0 and no server log at all.
+ */
+const groceryHeaders = (extra = {}) => ({
+  [SESSION_HEADER]: sessionId,
+  ...(activeListId ? { [LIST_HEADER]: activeListId } : {}),
+  ...extra,
+});
 
 const ok = (response) => ({
   success: true,
@@ -92,6 +120,7 @@ const call = async (fn) => {
 
 const groceryAPI = {
   sessionId,
+  setActiveList,
 
   // ─── State ────────────────────────────────────────────────────────────────
 
@@ -102,85 +131,95 @@ const groceryAPI = {
    */
   getState: (version) => call(() => apiClient.client.get('/grocery/state', {
     params: version != null ? { version } : {},
-    headers: sessionHeaders(),
+    headers: groceryHeaders(),
   })),
 
   // ─── Items ────────────────────────────────────────────────────────────────
 
   addItem: (data) =>
-    call(() => apiClient.client.post('/grocery/items', data, { headers: sessionHeaders() })),
+    call(() => apiClient.client.post('/grocery/items', data, { headers: groceryHeaders() })),
 
   updateItem: (id, data) =>
-    call(() => apiClient.client.patch(`/grocery/items/${id}`, data, { headers: sessionHeaders() })),
+    call(() => apiClient.client.patch(`/grocery/items/${id}`, data, { headers: groceryHeaders() })),
 
   setPurchased: (id, purchased) =>
-    call(() => apiClient.client.post(`/grocery/items/${id}/purchase`, { purchased }, { headers: sessionHeaders() })),
+    call(() => apiClient.client.post(`/grocery/items/${id}/purchase`, { purchased }, { headers: groceryHeaders() })),
 
   deleteItem: (id) =>
-    call(() => apiClient.client.delete(`/grocery/items/${id}`, { headers: sessionHeaders() })),
+    call(() => apiClient.client.delete(`/grocery/items/${id}`, { headers: groceryHeaders() })),
 
   // ─── Per-item edit claim ──────────────────────────────────────────────────
 
   claimItem: (id) =>
-    call(() => apiClient.client.post(`/grocery/items/${id}/claim`, {})),
+    call(() => apiClient.client.post(`/grocery/items/${id}/claim`, {}, { headers: groceryHeaders() })),
 
   releaseItem: (id) =>
-    call(() => apiClient.client.delete(`/grocery/items/${id}/claim`)),
+    call(() => apiClient.client.delete(`/grocery/items/${id}/claim`, { headers: groceryHeaders() })),
 
   // ─── Trips ────────────────────────────────────────────────────────────────
 
   completeTrip: (payload) =>
-    call(() => apiClient.client.post('/grocery/trips/complete', payload, { headers: sessionHeaders() })),
+    call(() => apiClient.client.post('/grocery/trips/complete', payload, { headers: groceryHeaders() })),
 
   getHistory: (params = {}) =>
-    call(() => apiClient.client.get('/grocery/trips', { params })),
+    call(() => apiClient.client.get('/grocery/trips', { params, headers: groceryHeaders() })),
 
   getTripDetail: (id) =>
-    call(() => apiClient.client.get(`/grocery/trips/${id}`)),
+    call(() => apiClient.client.get(`/grocery/trips/${id}`, { headers: groceryHeaders() })),
 
   getReceiptUrl: (id) =>
-    call(() => apiClient.client.get(`/grocery/trips/${id}/receipt`)),
+    call(() => apiClient.client.get(`/grocery/trips/${id}/receipt`, { headers: groceryHeaders() })),
 
   uploadReceipt: (id, file) => {
     const form = new FormData();
     form.append('receipt', file);
-    return call(() => apiClient.client.post(`/grocery/trips/${id}/receipt`, form, multipart));
+    return call(() => apiClient.client.post(`/grocery/trips/${id}/receipt`, form, multipartFor()));
   },
 
   linkToSpendWise: (id) =>
-    call(() => apiClient.client.post(`/grocery/trips/${id}/spendwise`, {})),
+    call(() => apiClient.client.post(`/grocery/trips/${id}/spendwise`, {}, { headers: groceryHeaders() })),
 
   // ─── Item photo + product link ────────────────────────────────────────────
 
   uploadItemImage: (file) => {
     const form = new FormData();
     form.append('itemImage', file);
-    return call(() => apiClient.client.post('/grocery/items/image', form, multipart));
+    return call(() => apiClient.client.post('/grocery/items/image', form, multipartFor()));
   },
 
   scrapeUrl: (url) =>
-    call(() => apiClient.client.post('/grocery/scrape-url', { url })),
+    call(() => apiClient.client.post('/grocery/scrape-url', { url }, { headers: groceryHeaders() })),
 
   parseHtml: (html, url) =>
-    call(() => apiClient.client.post('/grocery/parse-html', { html, url })),
+    call(() => apiClient.client.post('/grocery/parse-html', { html, url }, { headers: groceryHeaders() })),
 
   // ─── Sharing ──────────────────────────────────────────────────────────────
 
   // The primary way to share: one recipient-less link, created on demand.
   createShareLink: () =>
-    call(() => apiClient.client.post('/grocery/invitations/link', {})),
+    call(() => apiClient.client.post('/grocery/invitations/link', {}, { headers: groceryHeaders() })),
 
   getShareLink: () =>
-    call(() => apiClient.client.get('/grocery/invitations/link')),
+    call(() => apiClient.client.get('/grocery/invitations/link', { headers: groceryHeaders() })),
 
   revokeShareLink: () =>
-    call(() => apiClient.client.delete('/grocery/invitations/link')),
+    call(() => apiClient.client.delete('/grocery/invitations/link', { headers: groceryHeaders() })),
 
   invite: (email) =>
-    call(() => apiClient.client.post('/grocery/invitations', { email })),
+    call(() => apiClient.client.post('/grocery/invitations', { email }, { headers: groceryHeaders() })),
 
   cancelInvite: (email) =>
-    call(() => apiClient.client.delete('/grocery/invitations', { data: { email } })),
+    call(() => apiClient.client.delete('/grocery/invitations', { data: { email }, headers: groceryHeaders() })),
+
+  // ─── The lists this person can open ───────────────────────────────────────
+  // Neither is list-scoped: `getLists` is about the person, and `openList` has
+  // to work while the list being switched away from is still the current one.
+
+  getLists: () =>
+    call(() => apiClient.client.get('/grocery/lists')),
+
+  openList: (id) =>
+    call(() => apiClient.client.post(`/grocery/lists/${id}/open`, {})),
 
   getMyInvitations: () =>
     call(() => apiClient.client.get('/grocery/invitations')),
@@ -195,16 +234,16 @@ const groceryAPI = {
     call(() => apiClient.client.post(`/grocery/invitations/${token}/decline`, {})),
 
   getMembers: () =>
-    call(() => apiClient.client.get('/grocery/members')),
+    call(() => apiClient.client.get('/grocery/members', { headers: groceryHeaders() })),
 
   removeMember: (userId) =>
-    call(() => apiClient.client.delete(`/grocery/members/${userId}`)),
+    call(() => apiClient.client.delete(`/grocery/members/${userId}`, { headers: groceryHeaders() })),
 
   leave: () =>
-    call(() => apiClient.client.post('/grocery/leave', {})),
+    call(() => apiClient.client.post('/grocery/leave', {}, { headers: groceryHeaders() })),
 
   disband: () =>
-    call(() => apiClient.client.delete('/grocery/members')),
+    call(() => apiClient.client.delete('/grocery/members', { headers: groceryHeaders() })),
 };
 
 export default groceryAPI;

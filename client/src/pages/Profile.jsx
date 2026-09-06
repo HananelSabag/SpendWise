@@ -93,7 +93,7 @@ const Profile = () => {
               aria-label={t('groceryEntry.title', 'Grocery List')}
               title={t('groceryEntry.title', 'Grocery List')}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5 rtl:-scale-x-100" />
             </button>
             <button
               onClick={() => logout(true)}
@@ -101,7 +101,7 @@ const Profile = () => {
               aria-label={tc('common.logout', 'Logout')}
               title={tc('common.logout', 'Logout')}
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-5 w-5 rtl:-scale-x-100" />
             </button>
           </div>
 

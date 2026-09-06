@@ -162,9 +162,56 @@ describe('invitation endpoints', () => {
 
     await groceryAPI.cancelInvite('nofar@example.com');
 
-    expect(mockDelete).toHaveBeenCalledWith('/grocery/invitations', {
-      data: { email: 'nofar@example.com' },
-    });
+    const [url, config] = mockDelete.mock.calls[0];
+    expect(url).toBe('/grocery/invitations');
+    expect(config.data).toEqual({ email: 'nofar@example.com' });
+  });
+});
+
+describe('list scoping', () => {
+  it('names the list the client is showing on every list-scoped request', async () => {
+    groceryAPI.setActiveList(12);
+    mockGet.mockResolvedValue(ok({ items: [] }));
+
+    await groceryAPI.getState();
+
+    expect(mockGet.mock.calls[0][1].headers['X-Grocery-List']).toBe('12');
+    groceryAPI.setActiveList(null);
+  });
+
+  it('sends no list header before the first state response has named one', async () => {
+    groceryAPI.setActiveList(null);
+    mockGet.mockResolvedValue(ok({ items: [] }));
+
+    await groceryAPI.getState();
+
+    expect(mockGet.mock.calls[0][1].headers['X-Grocery-List']).toBeUndefined();
+  });
+
+  // A file upload's Content-Type must stay cleared, or axios serialises the
+  // FormData and throws the file away — the list header must not reintroduce it.
+  it('keeps Content-Type cleared on uploads while still naming the list', async () => {
+    groceryAPI.setActiveList(12);
+    mockPost.mockResolvedValue(ok({ imageUrl: 'https://x' }));
+
+    await groceryAPI.uploadItemImage(new File(['x'], 'a.jpg', { type: 'image/jpeg' }));
+
+    const config = mockPost.mock.calls[0][2];
+    expect(config.headers['Content-Type']).toBeUndefined();
+    expect('Content-Type' in config.headers).toBe(true);
+    expect(config.headers['X-Grocery-List']).toBe('12');
+    groceryAPI.setActiveList(null);
+  });
+
+  it('does not scope the endpoints that are about the person, not a list', async () => {
+    groceryAPI.setActiveList(12);
+    mockGet.mockResolvedValue(ok([]));
+
+    await groceryAPI.getLists();
+
+    expect(mockGet.mock.calls[0][0]).toBe('/grocery/lists');
+    expect(mockGet.mock.calls[0][1]).toBeUndefined();
+    groceryAPI.setActiveList(null);
   });
 });
 
@@ -195,7 +242,7 @@ describe('trips', () => {
 
     const result = await groceryAPI.getReceiptUrl(9);
 
-    expect(mockGet).toHaveBeenCalledWith('/grocery/trips/9/receipt');
+    expect(mockGet.mock.calls[0][0]).toBe('/grocery/trips/9/receipt');
     expect(result.data.expiresInSeconds).toBe(300);
   });
 });

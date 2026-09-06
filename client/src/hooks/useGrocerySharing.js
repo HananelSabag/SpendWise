@@ -40,6 +40,40 @@ export function useMyGroceryInvitations() {
   };
 }
 
+/**
+ * The lists this user can open.
+ *
+ * Usually one. A second appears when someone shares theirs — which used to be
+ * refused outright, so this is the hook that turns that refusal into a choice.
+ * Read-only: switching lives in `useGroceryList.switchList`, next to the state
+ * cache it has to clear.
+ */
+export function useGroceryLists() {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  const query = useQuery({
+    queryKey: ['grocery', 'lists', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const result = await api.grocery.getLists();
+      if (!result.success) throw new Error(result.error?.code || 'GROCERY_LISTS_FAILED');
+      return result.data;
+    },
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
+
+  const lists = query.data ?? [];
+
+  return {
+    lists,
+    // One list is the normal case and needs no switcher at all.
+    hasMultiple: lists.length > 1,
+    isLoading: query.isLoading,
+  };
+}
+
 export function useGrocerySharing() {
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -49,6 +83,9 @@ export function useGrocerySharing() {
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['grocery', 'state', userId] });
     queryClient.invalidateQueries({ queryKey: ['grocery', 'my-invitations', userId] });
+    // Accepting, leaving and disbanding all change WHICH lists exist for this
+    // user, not just what is on one of them.
+    queryClient.invalidateQueries({ queryKey: ['grocery', 'lists', userId] });
     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
   }, [queryClient, userId]);
 
@@ -67,6 +104,17 @@ export function useGrocerySharing() {
     onSuccess: invalidate,
   });
 
+  /**
+   * Anything that changes WHICH list you are on has to stop the client naming
+   * the old one. The server already moved you; the cached state and the header
+   * the API layer sends would otherwise keep pointing at the list you left.
+   */
+  const forgetCurrentList = useCallback(() => {
+    api.grocery.setActiveList(null);
+    queryClient.removeQueries({ queryKey: ['grocery', 'state', userId] });
+    queryClient.removeQueries({ queryKey: ['grocery', 'history', userId] });
+  }, [queryClient, userId]);
+
   const respondMutation = useMutation({
     mutationFn: async ({ token, action }) => {
       const result = action === 'accept'
@@ -75,7 +123,11 @@ export function useGrocerySharing() {
       if (!result.success) throw result;
       return result.data;
     },
-    onSuccess: invalidate,
+    onSuccess: (_data, variables) => {
+      // Accepting lands you on the list you just joined.
+      if (variables?.action === 'accept') forgetCurrentList();
+      invalidate();
+    },
   });
 
   // These four differ only in the call they make, but each still needs its own
@@ -104,7 +156,7 @@ export function useGrocerySharing() {
       if (!result.success) throw result;
       return result.data;
     },
-    onSuccess: invalidate,
+    onSuccess: () => { forgetCurrentList(); invalidate(); },
   });
 
   const disbandMutation = useMutation({

@@ -83,9 +83,9 @@ export const useTranslationStore = create(
     persist(
       immer((set, get) => ({
         // ✅ Language State
-        currentLanguage: 'en',
+        currentLanguage: 'he',
         availableLanguages: SUPPORTED_LANGUAGES,
-        isRTL: false,
+        isRTL: true,
         
         // ✅ Translation State
         loadedModules: {},
@@ -578,13 +578,26 @@ export const translationSelectors = {
   loadingModules: (state) => state.loadingModules
 };
 
-// ✅ Main translation hook (replaces useLanguage)
-// Uses individual stable selectors so the returned object is memoized —
-// components only re-render when currentLanguage or isRTL actually changes,
-// and the `t` function reference stays stable between renders.
+/**
+ * Main translation hook (replaces useLanguage).
+ *
+ * It subscribes to individual slices so the returned object stays memoized and
+ * components don't re-render on unrelated store activity. One of those slices
+ * has to be "how many modules have landed", and for a long time it wasn't:
+ * subscribing to only `currentLanguage` and `isRTL` meant a component that
+ * rendered BEFORE its module finished loading kept whatever `t()` gave it at
+ * that moment — the raw key, or the English fallback — and never re-rendered
+ * when the Hebrew arrived. Which strings were affected depended on load timing,
+ * which is why it looked like random screens "weren't translated".
+ *
+ * `Object.keys(...).length` returns a primitive, so Zustand's `Object.is`
+ * comparison keeps this as cheap as any other scalar subscription; it changes
+ * only when a module is actually registered.
+ */
 export const useTranslation = (module = null) => {
   const currentLanguage = useTranslationStore((s) => s.currentLanguage);
   const isRTL = useTranslationStore((s) => s.isRTL);
+  const loadedCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
   const translate = useTranslationStore((s) => s.actions.translate);
   const autoLoadForKey = useTranslationStore((s) => s.actions.autoLoadForKey);
   const setLanguage = useTranslationStore((s) => s.actions.setLanguage);
@@ -593,10 +606,11 @@ export const useTranslation = (module = null) => {
   const clearCache = useTranslationStore((s) => s.actions.clearCache);
   const getCacheStats = useTranslationStore((s) => s.actions.getCacheStats);
 
-  // Stable sync t — recreates only when currentLanguage or module changes
+  // Recreated when the language changes OR when a module lands, so text that
+  // first rendered as a key is re-read once its translations exist.
   const tSync = useCallback((key, options = {}) => {
     return translate(key, { ...options, module });
-  }, [translate, module, currentLanguage]); // currentLanguage so cache re-reads after lang switch
+  }, [translate, module, currentLanguage, loadedCount]);
 
   // Stable async t — recreates only when currentLanguage or module changes
   const tAsync = useCallback(async (key, options = {}) => {
@@ -676,20 +690,34 @@ export const useCommonTranslation = () => useTranslation('common');
 export const useErrorTranslation = () => useTranslation('errors');
 export const useNavTranslation = () => useTranslation('nav');
 
-// ✅ Initialize translation store
-if (typeof window !== 'undefined') {
-  // ✅ FIXED: Prefer session override first, then localStorage, default to English
-  let savedLanguage = 'en';
+/**
+ * The language to boot in when nobody has chosen yet.
+ *
+ * Hebrew, deliberately. This is an Israeli-market app and the server has said so
+ * since `normalizeLanguage` landed in `models/User.js` — but the client kept
+ * defaulting to English, so a first-time visitor saw an English LTR sign-up
+ * screen and the account was then created *as English*. Two real accounts were
+ * created that way. English is one visible tap away on every auth screen, and a
+ * saved choice always wins over this.
+ */
+export const DEFAULT_LANGUAGE = 'he';
+
+export const resolveInitialLanguage = () => {
   try {
     const sessionLang = sessionStorage.getItem('spendwise-session-language');
-    if (sessionLang) {
-      savedLanguage = sessionLang;
-    } else {
-      savedLanguage = localStorage.getItem('spendwise-language') || 'en';
-    }
+    if (sessionLang) return sessionLang;
+  } catch (_) { /* private mode — fall through to localStorage */ }
+
+  try {
+    return localStorage.getItem('spendwise-language') || DEFAULT_LANGUAGE;
   } catch (_) {
-    savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+    return DEFAULT_LANGUAGE;
   }
+};
+
+// ✅ Initialize translation store
+if (typeof window !== 'undefined') {
+  const savedLanguage = resolveInitialLanguage();
   
   // ✅ DEBUG: Log translation initialization
   const store = useTranslationStore.getState();

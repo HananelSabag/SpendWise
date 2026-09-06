@@ -25,7 +25,8 @@ import useTranslationStore, {
   useCommonTranslation,
   useErrorTranslation,
   useNavTranslation,
-  SUPPORTED_LANGUAGES 
+  SUPPORTED_LANGUAGES,
+  resolveInitialLanguage
 } from './translationStore.js';
 
 import useAppStore, {
@@ -56,9 +57,11 @@ class StoreManager {
       // Initialize auth store
       await useAuthStore.getState().actions.initialize();
       
-      // Initialize translation store with localStorage first (works immediately)
-      // ✅ FIXED: Force English as default to avoid Hebrew/English module mismatch
-      const savedLanguage = localStorage.getItem('spendwise-language') || 'en';
+      // Initialize translation store with localStorage first (works immediately).
+      // The default is Hebrew (see `resolveInitialLanguage`); English is still
+      // always loaded first as the fallback dictionary, so there is no
+      // Hebrew/English module mismatch to defend against here.
+      const savedLanguage = resolveInitialLanguage();
       
       // ✅ DEBUG: Log language detection for troubleshooting
       if (import.meta.env.DEV) {
