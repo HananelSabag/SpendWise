@@ -24,10 +24,16 @@ export const normalizeUserData = (user) => {
     firstName: user.first_name || user.firstName || user.username || '',
     lastName: user.last_name || user.lastName || '',
     
-    // ✅ Role & Permissions  
+    // ✅ Role & Permissions
     role: user.role || 'user',
     isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
     isSuperAdmin: (user.role || 'user') === 'super_admin',
+
+    // Family Hub membership, computed by the server. This whitelist REBUILDS the
+    // user object, so any server-side flag missing from it is silently dropped —
+    // which is exactly how the Family Hub nav entry failed to appear even though
+    // the API was answering `familyHub: true`. Add new server flags here too.
+    familyHub: user.familyHub === true,
     
     // ✅ Verification Status
     email_verified: user.email_verified || user.emailVerified || false,
