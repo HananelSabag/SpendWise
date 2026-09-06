@@ -29,15 +29,30 @@ const BottomSheet = ({
 
   // Android back-gesture / hardware back button: push a history entry when the
   // sheet opens so the gesture hits that entry instead of leaving the app.
+  //
+  // The retraction is deliberately narrow. This effect's cleanup runs on ANY
+  // unmount, not just a deliberate close — a parent that switches to an error
+  // branch, a route change, a conditional render — and an unconditional
+  // `history.back()` there walked the browser off the page under the user. On a
+  // phone that reads as the page crashing, which is exactly what was reported
+  // for the grocery list's share sheet. So the entry is tagged, and it is only
+  // retracted while it is still the entry the browser is actually on; anything
+  // else leaves history alone (one stale entry beats teleporting the user).
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
 
-    // Track whether close was triggered by the back gesture (popstate) or
-    // programmatically (X button / backdrop). Only in the latter case do we
-    // need to pop the entry we pushed.
+    // Distinguishes a close triggered by the back gesture (popstate — the entry
+    // is already gone) from a programmatic one (X button / backdrop).
     let closedByPop = false;
+    const entryId = `sheet_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
-    history.pushState({ bottomSheet: true }, '');
+    try {
+      history.pushState({ bottomSheet: entryId }, '');
+    } catch (_) {
+      // Some in-app browsers rate-limit pushState. The sheet still works; the
+      // back gesture just won't be intercepted.
+      return undefined;
+    }
 
     const handlePop = () => {
       closedByPop = true;
@@ -48,8 +63,9 @@ const BottomSheet = ({
 
     return () => {
       window.removeEventListener('popstate', handlePop);
-      // Programmatic close — remove the history entry we pushed
-      if (!closedByPop) history.back();
+      if (closedByPop) return;
+      if (window.history.state?.bottomSheet !== entryId) return;
+      history.back();
     };
   }, [isOpen]); // intentionally omit onClose — we use the ref
 
