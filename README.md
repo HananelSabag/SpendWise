@@ -272,8 +272,8 @@ This is a portfolio project, but feedback and suggestions are welcome:
 
 ## Contact
 
-**Hananel Sabag** — [@HananelSabag](https://github.com/HananelSabag) — hananel12345@gmail.com  
-**Yuda Sabag** — yudasabag@gmail.com
+**Hananel Sabag** — [@HananelSabag](https://github.com/HananelSabag)  
+Support: spendwise.verifiction@gmail.com
 
 ---
 
