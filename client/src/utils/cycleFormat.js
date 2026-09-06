@@ -27,8 +27,8 @@ export function signedCurrency(value, formatCurrency, { signPositive = false } =
 }
 
 /**
- * A readable salary-to-salary window. The end is exclusive, so a closed cycle shows its real last
- * day (end − 1) while a running cycle keeps the projected next-salary date. The year is shown only
+ * A readable billing window. The end is exclusive, so a closed cycle shows its real last
+ * day (end − 1) while a running cycle keeps the next reset date. The year is shown only
  * when the window straddles two of them, so a same-year window stays short ("9 Jul – 9 Aug").
  */
 export function formatCycleWindow(window, language = 'en') {
@@ -46,7 +46,13 @@ export function formatCycleWindow(window, language = 'en') {
 }
 
 // Short, loud card brands — the number is the information, the logo is quiet.
-const CARD_SHORT_NAME = { max: 'MAX', visa_cal: 'CAL', isracard: 'Isracard', amex: 'Amex', leumi: 'Leumi' };
+const CARD_SHORT_NAME = {
+  max: 'MAX',
+  visa_cal: 'CAL',
+  isracard: 'Isracard',
+  amex: 'Amex',
+  leumi: 'Leumi',
+};
 
 /** Brand short code for a card/bank source ("MAX", "CAL"), falling back to the upper-cased source. */
 export function cardShortName(source) {

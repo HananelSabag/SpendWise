@@ -6,7 +6,6 @@ import { useAuth, useTranslation } from '../stores';
 import apiClient from '../api/client';
 import bankConnectionsApi from '../api/bankConnections';
 import { cn } from '../utils/helpers';
-import BrandMark from '../components/common/BrandMark';
 import { LiquidTabs } from '../components/ui';
 import BankConnectionGroup from '../components/features/bankSync/BankConnectionGroup';
 import BankSyncOverview from '../components/features/bankSync/BankSyncOverview';
@@ -78,9 +77,8 @@ export default function BankSyncPageV2() {
     <div className="min-h-screen bg-gray-50 pb-24 dark:bg-gray-950 lg:pb-10">
       <header className="sticky top-0 z-30 border-b border-gray-200/70 bg-white/90 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 lg:px-8">
-          <BrandMark size="md" />
+          <h1 className="sr-only">{t('title')}</h1>
           <div className="min-w-0 flex-1">
-            <h1 className="font-bold text-gray-950 dark:text-white">{t('title')}</h1>
             <p className="truncate text-xs text-gray-500">{t(auto.tomorrow ? 'nextAutoSyncTomorrow' : 'nextAutoSync', { time: auto.time })}</p>
           </div>
           <button onClick={refresh} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('refresh')}><RefreshCw className={cn('h-4 w-4', (connectionsQuery.isFetching || statsQuery.isFetching) && 'animate-spin')} /></button>

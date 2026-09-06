@@ -1,109 +1,402 @@
-import React, { useState } from 'react';
-import { Check, ChevronDown, CreditCard, Settings2, Zap } from 'lucide-react';
-
+import React, { useMemo, useState } from 'react';
+import { Check, ChevronDown, CreditCard, Link2, Settings2, Zap } from 'lucide-react';
+import { useCycles } from '../../../hooks/useCycles';
 import { cn } from '../../../utils/helpers';
-import { cardShortName, last4, signedCurrency } from '../../../utils/cycleFormat';
+import { cardShortName, last4 } from '../../../utils/cycleFormat';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { CycleMoney, cycleButton, cycleSurface } from './CyclePrimitives';
+import CycleTransactionList from './CycleTransactionList';
+import RecurringTransactionPicker from './RecurringTransactionPicker';
 
-function amountForCard(events, card) {
-  return (events || [])
-    .filter((event) => event.source === card.source && String(event.accountNumber) === String(card.accountNumber))
-    .reduce((sum, event) => sum + Number(event.total || 0), 0);
-}
+const isCard = (item, card) =>
+  item.source === card.source && String(item.accountNumber) === String(card.accountNumber);
 
-function TransactionList({ transactions, formatCurrency, language, t }) {
-  if (!transactions?.length) return <p className="py-4 text-center text-xs text-slate-500">{t('cycleV2.noCardTransactions')}</p>;
+function CardSettings({ card, day, passthrough, onChange, isSaving, formatCurrency, language, t }) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  // The large control query is requested only after someone opens these settings.
+  const details = useCycles({ enabled: !passthrough });
+  const candidates = useMemo(
+    () =>
+      (details.decisions || []).filter(
+        (item) =>
+          Number(item.amount) < 0 &&
+          !['max', 'visa_cal', 'isracard', 'amex'].includes(item.source) &&
+          item.classification !== 'pending',
+      ),
+    [details.decisions],
+  );
+  const linkedId = card.setting?.linkedTransactionId;
+  const linked = candidates.find((item) => Number(item.transactionId) === Number(linkedId));
+  const change = (patch) =>
+    onChange({ source: card.source, accountNumber: card.accountNumber, ...patch });
   return (
-    <div className="divide-y divide-slate-100 dark:divide-slate-800">
-      {transactions.map((transaction) => (
-        <div key={transaction.id} className="flex items-center gap-3 py-2.5">
-          <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">{transaction.description || '—'}</p><p className="mt-0.5 text-[10px] text-slate-400">{formatCycleDay(transaction.processedDate || transaction.date, language)}</p></div>
-          <strong className="shrink-0 whitespace-nowrap text-xs tabular-nums text-slate-900 dark:text-white">{signedCurrency(Number(transaction.amount), formatCurrency)}</strong>
-        </div>
-      ))}
+    <div className="border-t border-slate-100 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+        {t('cycleV2.cardSettings')}
+      </p>
+      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+        {t(passthrough ? 'cycleV2.directSettingsHint' : 'cycleV2.cardSettingsHint')}
+      </p>
+      <label className="mt-4 flex min-h-11 cursor-pointer items-center justify-between gap-3 text-sm font-medium text-slate-700 dark:text-slate-200">
+        <span>{t('cycleV2.includeCard')}</span>
+        <input
+          type="checkbox"
+          checked={card.included !== false}
+          disabled={isSaving}
+          onChange={(event) => change({ included: event.target.checked })}
+          className="h-5 w-5 shrink-0 accent-indigo-600"
+        />
+      </label>
+      {!passthrough && (
+        <>
+          <label className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">
+            <span>{t('cycleV2.billingDay')}</span>
+            <select
+              value={day || ''}
+              disabled={isSaving}
+              onChange={(event) => change({ statementDay: Number(event.target.value) })}
+              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900"
+            >
+              <option value="" disabled>
+                {t('cycleV2.chooseDay')}
+              </option>
+              {Array.from({ length: 31 }, (_, index) => index + 1).map((value) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            disabled={isSaving || details.isLoading || details.isError}
+            className={cn(
+              cycleButton,
+              'mt-4 flex w-full items-center justify-center gap-2 border border-slate-200 bg-white text-indigo-700 dark:border-slate-700 dark:bg-slate-900 dark:text-indigo-300',
+            )}
+          >
+            <Link2 className="h-4 w-4" />
+            {t(
+              details.isLoading
+                ? 'cycleV2.loadingTransactions'
+                : linkedId
+                  ? 'cycleV2.changeLinkedCharge'
+                  : 'cycleV2.chooseBankCharge',
+            )}
+          </button>
+          {details.isError && (
+            <button
+              type="button"
+              onClick={() => details.refetch()}
+              className={`${cycleButton} mt-2 text-rose-700 dark:text-rose-300`}
+            >
+              {t('cycleV2.tryAgain')}
+            </button>
+          )}
+          {linkedId && (
+            <p
+              role="status"
+              className="mt-3 flex items-start gap-2 text-xs leading-5 text-emerald-700 dark:text-emerald-400"
+            >
+              <Check className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                {t('cycleV2.bankChargeLinked')}
+                {linked && (
+                  <span className="mt-1 block text-slate-500 dark:text-slate-400">
+                    {linked.description} ·{' '}
+                    {formatCycleDay(linked.processedDate || linked.date, language)}
+                  </span>
+                )}
+              </span>
+            </p>
+          )}
+          {pickerOpen && (
+            <RecurringTransactionPicker
+              isOpen
+              onClose={() => setPickerOpen(false)}
+              candidates={candidates}
+              lockedDirection="expense"
+              title={t('cycleV2.linkBankCharge')}
+              hint={t('cycleV2.cardLinkPickerHint')}
+              onSelect={(item) => change({ linkedTransactionId: item.transactionId })}
+              formatCurrency={formatCurrency}
+              language={language}
+              t={t}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-export default function CycleCardsPanelV2({
-  cycle,
-  useEstimates = true,
+function CardDetail({
+  card,
+  events,
+  forecast,
+  useEstimates,
   formatCurrency,
   language,
   t,
   onChange,
   isSaving,
 }) {
-  const [openCard, setOpenCard] = useState(null);
-  const [settingsCard, setSettingsCard] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedView, setSelectedView] = useState('upcoming');
+  const passthrough = card.settlement?.mode === 'passthrough';
+  const day =
+    card.setting?.statementDay ?? (card.statementDay?.certain ? card.statementDay.day : null);
+  const included = card.included !== false;
+  const settled = events.filter((event) => !event.future && !event.accruing);
+  const paidAmount = -settled.reduce((sum, event) => sum + Number(event.total || 0), 0);
+  const known = forecast ? Number(forecast.knownAmount) : null;
+  const previous = forecast?.historyCount ? Number(forecast.lastStatementAmount) : null;
+  const estimated = forecast ? Number(forecast.estimatedAmount) : null;
+  const view = passthrough ? 'paid' : selectedView;
+  const name = `${cardShortName(card.source)} · ${last4(card.accountNumber)}`;
+  const knownTransactions = forecast?.knownTxns || [];
+  const count =
+    view === 'paid'
+      ? settled.reduce((sum, event) => sum + (event.txns?.length || 0), 0)
+      : knownTransactions.length;
+  return (
+    <article className={cn(cycleSurface, 'overflow-hidden', !included && 'border-dashed')}>
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span
+            className={cn(
+              'rounded-xl p-2.5',
+              passthrough
+                ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                : 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300',
+            )}
+          >
+            {passthrough ? <Zap className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base font-semibold text-slate-950 dark:text-white">
+              <bdi>{name}</bdi>
+            </h3>
+            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+              {t(passthrough ? 'cycleV2.directCardLabel' : 'cycleV2.monthlyCardLabel')}
+              {!passthrough && day ? ` · ${t('cycleV2.billsOn')} ${day}` : ''}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((open) => !open)}
+            aria-expanded={settingsOpen}
+            aria-label={`${t('cycleV2.cardSettings')} ${name}`}
+            className={cn(
+              cycleButton,
+              '-me-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800',
+            )}
+          >
+            <Settings2 className="h-4 w-4" />
+          </button>
+        </div>
+        {!included && (
+          <p className="mt-3 rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {t('cycleV2.cardExcluded')}
+          </p>
+        )}
+        <dl className="mt-5 grid grid-cols-2 gap-3">
+          <div className="min-w-0">
+            <dt className="text-xs text-slate-500 dark:text-slate-400">
+              {t(passthrough ? 'cycleV2.alreadyFromBalance' : 'cycleV2.knownNextCharge')}
+            </dt>
+            <dd className="mt-1">
+              <CycleMoney
+                value={passthrough ? paidAmount : known}
+                formatCurrency={formatCurrency}
+                className="text-xl text-slate-950 dark:text-white"
+              />
+            </dd>
+          </div>
+          <div className="min-w-0 border-s border-slate-100 ps-3 dark:border-slate-800">
+            <dt className="text-xs text-slate-500 dark:text-slate-400">
+              {t(passthrough ? 'cycleV2.transactionsCount' : 'cycleV2.previousBill')}
+            </dt>
+            <dd className="mt-1">
+              {passthrough ? (
+                <span className="text-xl font-semibold text-slate-950 dark:text-white">
+                  {count}
+                </span>
+              ) : (
+                <CycleMoney
+                  value={previous}
+                  formatCurrency={formatCurrency}
+                  className="text-xl text-slate-600 dark:text-slate-300"
+                />
+              )}
+            </dd>
+          </div>
+        </dl>
+        <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          {passthrough
+            ? t('cycleV2.directSettingsHint')
+            : forecast
+              ? t('cycleV2.nextChargeDate', { date: formatCycleDay(forecast.chargeDate, language) })
+              : t('cycleV2.noCardDueInCycle')}
+        </p>
+        {!passthrough && useEstimates && forecast && (
+          <div className="mt-3 rounded-xl bg-amber-50 px-3 py-2.5 dark:bg-amber-950/20">
+            <div className="flex items-center justify-between gap-3 text-sm text-amber-900 dark:text-amber-200">
+              <span>{t('cycleV2.cardForecast')}</span>
+              <CycleMoney value={estimated} formatCurrency={formatCurrency} />
+            </div>
+            <p className="mt-1 text-xs leading-5 text-amber-800 dark:text-amber-300">
+              {t(
+                forecast.historyCount >= 3
+                  ? 'cycleV2.cardForecastMedian'
+                  : forecast.historyCount === 2
+                    ? 'cycleV2.cardForecastCapped'
+                    : 'cycleV2.cardForecastKnown',
+                { count: forecast.historyCount },
+              )}
+            </p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          aria-expanded={expanded}
+          className={cn(
+            cycleButton,
+            'mt-3 flex w-full items-center justify-between gap-2 text-indigo-700 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/30',
+          )}
+        >
+          <span>{t('cycleV2.openCardBreakdown')}</span>
+          <ChevronDown className={cn('h-4 w-4 transition', expanded && 'rotate-180')} />
+        </button>
+        {expanded && (
+          <div className="mt-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+            {!passthrough && (
+              <div
+                role="group"
+                aria-label={t('cycleV2.cardBreakdownLabel')}
+                className="mb-2 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-950"
+              >
+                {['upcoming', 'paid'].map((id) => (
+                  <button
+                    type="button"
+                    key={id}
+                    aria-pressed={view === id}
+                    onClick={() => setSelectedView(id)}
+                    className={cn(
+                      cycleButton,
+                      'text-xs',
+                      view === id
+                        ? 'bg-white text-indigo-700 shadow-sm dark:bg-slate-800 dark:text-indigo-300'
+                        : 'text-slate-500 dark:text-slate-400',
+                    )}
+                  >
+                    {t(id === 'paid' ? 'cycleV2.paidThisCycle' : 'cycleV2.upcomingCard')}
+                  </button>
+                ))}
+              </div>
+            )}
+            {view === 'upcoming' ? (
+              <CycleTransactionList
+                key="upcoming"
+                transactions={knownTransactions}
+                formatCurrency={formatCurrency}
+                language={language}
+                t={t}
+              />
+            ) : (
+              <>
+                <div className="my-3 flex items-center justify-between gap-3 text-sm">
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {t('cycleV2.paidThisCycle')}
+                  </span>
+                  <CycleMoney
+                    value={paidAmount}
+                    formatCurrency={formatCurrency}
+                    className="text-slate-950 dark:text-white"
+                  />
+                </div>
+                {settled.map((event, index) => (
+                  <details
+                    key={`${event.chargeDate}-${index}`}
+                    className="group border-t border-slate-100 dark:border-slate-800"
+                  >
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-xs [&::-webkit-details-marker]:hidden">
+                      <span className="flex-1 text-slate-600 dark:text-slate-300">
+                        {formatCycleDay(event.chargeDate, language)} · {event.txns?.length || 0}{' '}
+                        {t('cycleV2.transactionsShort')}
+                      </span>
+                      <CycleMoney
+                        value={-Number(event.total)}
+                        formatCurrency={formatCurrency}
+                        className="text-slate-900 dark:text-white"
+                      />
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </summary>
+                    <CycleTransactionList
+                      transactions={event.txns}
+                      formatCurrency={formatCurrency}
+                      language={language}
+                      t={t}
+                    />
+                    {event.bankTransaction && (
+                      <p className="mb-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {t('cycleV2.matchedBankEvidence')} · {event.bankTransaction.description}
+                      </p>
+                    )}
+                  </details>
+                ))}
+                {!settled.length && (
+                  <p className="py-4 text-sm text-slate-500 dark:text-slate-400">
+                    {t('cycleV2.noSettledCard')}
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      {settingsOpen && (
+        <CardSettings
+          card={card}
+          day={day}
+          passthrough={passthrough}
+          onChange={onChange}
+          isSaving={isSaving}
+          formatCurrency={formatCurrency}
+          language={language}
+          t={t}
+        />
+      )}
+    </article>
+  );
+}
+
+export default function CycleCardsPanelV2({ cycle, useEstimates = true, ...props }) {
+  const { t } = props;
   const cards = cycle?.cards || [];
-  const events = cycle?.expenses?.events || [];
-  const bills = cycle?.nextCardForecast?.bills || [];
-
   if (!cards.length) return null;
-
   return (
     <section>
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <div><p className="text-xs font-black uppercase tracking-[0.16em] text-violet-600 dark:text-violet-400">{t('cycleV2.cardsEyebrow')}</p><h2 className="mt-1 text-xl font-black text-slate-950 dark:text-white">{t('cycleV2.cardsOverviewTitle')}</h2></div>
-        {isSaving && <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">{t('cycleV2.saving')}</span>}
-      </div>
-
-      <div className="grid gap-3 lg:grid-cols-2">
-        {cards.map((card) => {
-          const key = `${card.source}-${card.accountNumber}`;
-          const forecast = bills.find((bill) => bill.source === card.source && String(bill.accountNumber) === String(card.accountNumber));
-          const cardEvents = events.filter((event) => event.source === card.source && String(event.accountNumber) === String(card.accountNumber));
-          const currentSpend = Math.abs(amountForCard(events, card));
-          const statementDay = card.setting?.statementDay ?? (card.statementDay?.certain ? card.statementDay.day : null);
-          const passthrough = card.settlement?.mode === 'passthrough';
-          const included = card.included !== false;
-          const observedCharges = cardEvents.filter((event) => event.bankTransaction?.id);
-          const linkedId = Number(card.setting?.linkedTransactionId) || '';
-          const knownTransactions = passthrough
-            ? cardEvents.flatMap((event) => event.txns || [])
-            : (forecast?.knownTxns || []);
-          const knownAmount = passthrough ? currentSpend : (Number(forecast?.knownAmount) || 0);
-          const estimatedAmount = passthrough ? knownAmount : (Number(forecast?.estimatedAmount) || knownAmount);
-          const extraEstimate = Math.max(0, estimatedAmount - knownAmount);
-
-          return (
-            <article key={key} className={cn('overflow-hidden rounded-3xl border bg-white transition dark:bg-slate-900', included ? 'border-slate-200 dark:border-slate-800' : 'border-dashed border-slate-300 opacity-60 dark:border-slate-700')}>
-              <div className="p-4">
-                <div className="flex items-start gap-3">
-                  <span className={cn('rounded-2xl p-2.5', passthrough ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-violet-100 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300')}>{passthrough ? <Zap className="h-5 w-5" /> : <CreditCard className="h-5 w-5" />}</span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-black text-slate-950 dark:text-white">{cardShortName(card.source)} ••••{last4(card.accountNumber)}</h3>
-                    <p className="mt-0.5 text-[11px] text-slate-500">{passthrough ? t('cycleV2.directCardClear') : statementDay ? t('cycleV2.monthlyCardClear', { day: statementDay }) : t('cycleV2.dayUnknown')}</p>
-                  </div>
-                  <button type="button" onClick={() => setSettingsCard((value) => value === key ? null : key)} aria-expanded={settingsCard === key} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" aria-label={t('cycleV2.cardSettings')}><Settings2 className="h-4 w-4" /></button>
-                </div>
-
-                <button type="button" onClick={() => setOpenCard((value) => value === key ? null : key)} aria-expanded={openCard === key} className={cn('mt-4 grid w-full grid-cols-2 gap-2 text-start', !passthrough && useEstimates && 'sm:grid-cols-3')}>
-                  <div className="rounded-2xl bg-emerald-50 p-3 dark:bg-emerald-950/25"><p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300">{passthrough ? t('cycleV2.alreadyFromBalance') : t('cycleV2.knownNextCharge')}</p><p className="mt-1 text-sm font-black tabular-nums text-slate-950 dark:text-white">{formatCurrency(knownAmount)}</p></div>
-                  {!passthrough && useEstimates && <div className="rounded-2xl bg-amber-50 p-3 dark:bg-amber-950/25"><p className="text-[10px] font-bold text-amber-700 dark:text-amber-300">{t('cycleV2.forecastExtra')}</p><p className="mt-1 text-sm font-black tabular-nums text-slate-950 dark:text-white">{formatCurrency(extraEstimate)}</p></div>}
-                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-3 dark:bg-slate-800/70"><div><p className="text-[10px] font-bold text-slate-400">{t('cycleV2.transactionsCount')}</p><p className="mt-1 text-sm font-black text-slate-950 dark:text-white">{knownTransactions.length}</p></div><ChevronDown className={cn('h-4 w-4 text-slate-400 transition', openCard === key && 'rotate-180')} /></div>
-                </button>
-
-                {openCard === key && <div className="mt-3 rounded-2xl border border-slate-200 px-3 dark:border-slate-800"><TransactionList transactions={knownTransactions} formatCurrency={formatCurrency} language={language} t={t} /></div>}
-              </div>
-
-              {settingsCard === key && (
-                <div className="border-t border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/35">
-                  <p className="text-xs font-black text-slate-900 dark:text-white">{t('cycleV2.cardSettings')}</p>
-                  <p className="mt-1 text-[11px] text-slate-500">{passthrough ? t('cycleV2.directSettingsHint') : t('cycleV2.cardSettingsHint')}</p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <label className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold dark:border-slate-700 dark:bg-slate-900">{t('cycleV2.include')}<input type="checkbox" checked={included} onChange={(event) => onChange({ source: card.source, accountNumber: card.accountNumber, included: event.target.checked, statementDay })} className="h-4 w-4 accent-indigo-600" /></label>
-                    {!passthrough && <label className="text-xs font-bold text-slate-600 dark:text-slate-300">{t('cycleV2.billingDay')}<select value={statementDay || ''} onChange={(event) => onChange({ source: card.source, accountNumber: card.accountNumber, included, statementDay: Number(event.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"><option value="" disabled>—</option>{Array.from({ length: 31 }, (_, index) => index + 1).map((day) => <option key={day} value={day}>{day}</option>)}</select></label>}
-                    {!passthrough && (observedCharges.length > 0 || linkedId) && <label className="text-xs font-bold text-slate-600 dark:text-slate-300 sm:col-span-2">{t('cycleV2.linkBankCharge')}<select value={linkedId} onChange={(event) => event.target.value && onChange({ source: card.source, accountNumber: card.accountNumber, included, statementDay, linkedTransactionId: Number(event.target.value) })} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-900"><option value="">{t('cycleV2.chooseBankCharge')}</option>{linkedId && !observedCharges.some((event) => Number(event.bankTransaction.id) === Number(linkedId)) && <option value={linkedId}>{t('cycleV2.previouslyLinkedCharge')}</option>}{observedCharges.map((event) => <option key={event.bankTransaction.id} value={event.bankTransaction.id}>{formatCycleDay(event.bankTransaction.processedDate || event.chargeDate, language)} · {event.bankTransaction.description || t('cycleV2.bankCharge')} · {formatCurrency(Math.abs(event.bankTransaction.amount))}</option>)}</select></label>}
-                    {!passthrough && !observedCharges.length && !linkedId && <p className="rounded-xl bg-white p-3 text-[11px] text-slate-500 dark:bg-slate-900 sm:col-span-2">{t('cycleV2.noBankChargeToLink')}</p>}
-                  </div>
-                  {linkedId && <p className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600"><Check className="h-3.5 w-3.5" />{t('cycleV2.bankChargeLinked')}</p>}
-                </div>
-              )}
-            </article>
-          );
-        })}
+      <h2 className="text-xl font-semibold text-slate-950 dark:text-white">
+        {t('cycleV2.cardsOverviewTitle')}
+      </h2>
+      <p className="mb-4 mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+        {t('cycleV2.cardsOverviewHint')}
+      </p>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {cards.map((card) => (
+          <CardDetail
+            key={`${card.source}-${card.accountNumber}`}
+            card={card}
+            events={(cycle.expenses?.events || []).filter((event) => isCard(event, card))}
+            forecast={(cycle.nextCardForecast?.bills || []).find((bill) => isCard(bill, card))}
+            useEstimates={useEstimates}
+            {...props}
+          />
+        ))}
       </div>
     </section>
   );

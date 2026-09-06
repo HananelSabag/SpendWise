@@ -59,14 +59,11 @@ export default function YearlyReviewPage() {
           <button type="button" onClick={() => navigate('/financial-cycle')} className="rounded-xl p-2 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label={t('insightsPage.back', { fallback: 'Back' })}>
             <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
           </button>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-base font-black text-gray-950 dark:text-white">{t('cycle.yearlyTitle', { fallback: 'Yearly review' })}</h1>
-            <p className="text-xs text-gray-500">{t('cycle.yearlyHint', { fallback: 'Salary-cycle results, month by month' })}</p>
-          </div>
+          <h1 className="sr-only">{t('cycle.yearlyTitle')}</h1>
           <select
             value={year}
             onChange={(event) => navigate(`/financial-cycle/yearly/${event.target.value}`)}
-            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-800"
+            className="ms-auto min-h-11 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold dark:border-gray-700 dark:bg-gray-800"
             aria-label={t('cycle.pickYear', { fallback: 'Choose year' })}
           >
             {availableYears.map((candidate) => <option key={candidate} value={candidate}>{candidate}</option>)}

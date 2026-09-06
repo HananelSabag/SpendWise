@@ -744,6 +744,9 @@ function projectUpcoming({
   const items = [];
 
   for (const loan of loans) {
+    // A final lump sum must not repeat. Principal minus gross repayments alone
+    // does NOT prove closure: interest-bearing loans can legitimately cross zero.
+    if (hasFinalLoanRepayment(loan)) continue;
     const date = nextOccurrence(loan.paymentDay, today);
     if (date && inWindow(date, window)) {
       items.push({ kind: 'loan', date, amount: -Math.abs(loan.lastPaymentAmount), label: loan.description || 'loan', identifier: loan.identifier, certainty: 'proven' });
@@ -752,13 +755,23 @@ function projectUpcoming({
 
   for (const series of recurring) {
     // Each distinct day this series recurs on is its own rhythm.
-    const dayCounts = new Map();
+    const dayMonths = new Map();
     for (const d of series.dates) {
       const day = Number(d.slice(8, 10));
-      dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
+      if (!dayMonths.has(day)) dayMonths.set(day, new Set());
+      dayMonths.get(day).add(d.slice(0, 7));
     }
-    for (const [day, count] of dayCounts) {
-      if (count < 2 && !series.manuallyConfirmed) continue;
+    // A confirmed monthly pattern is not one payment for every day it ever
+    // drifted onto. Keep proven repeated days (e.g. 1st AND 10th); otherwise
+    // project a single occurrence on its most recently observed payment day.
+    const repeatedDays = [...dayMonths].filter(([, months]) => months.size >= 2);
+    const concurrentDays = repeatedDays.filter(([day, months]) => repeatedDays.some(([other, otherMonths]) => (
+      day !== other && [...months].filter((month) => otherMonths.has(month)).length >= 2
+    )));
+    const paymentDays = series.manuallyConfirmed && !concurrentDays.length
+      ? [[series.paymentDay || Number(series.lastDate?.slice(8, 10)), 1]]
+      : (series.manuallyConfirmed ? concurrentDays : repeatedDays);
+    for (const [day] of paymentDays) {
       const date = nextOccurrence(day, today);
       if (date && inWindow(date, window)) {
         const amount = series.manuallyConfirmed && Number.isFinite(Number(series.signedAmount))
@@ -822,7 +835,9 @@ function statementDateOnOrAfter(day, boundary) {
  * floor; two bills can add at most 25%, and three or more use a median of up to six complete bills.
  * Debit/passthrough cards are excluded because they have no monthly bill.
  */
-function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), historySize = 6 } = {}) {
+function estimateNextCardBills(cardViews, {
+  afterDate, throughDate = null, settledEvents = [], asOf = new Date(), historySize = 6,
+} = {}) {
   const today = ilDate(asOf);
   const bills = [];
 
@@ -832,20 +847,25 @@ function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), histor
     if (view.settlement?.mode === SETTLEMENT_MODES.PASSTHROUGH) continue;
     if (!view.statementDay?.certain || !view.statementDay.day) continue;
 
-    const chargeDate = statementDateOnOrAfter(view.statementDay.day, afterDate);
+    let chargeDate = statementDateOnOrAfter(view.statementDay.day, afterDate);
     if (!chargeDate) continue;
+    if (settledEvents.some((event) => event.source === card.source
+      && String(event.accountNumber) === String(card.accountNumber)
+      && event.chargeDate === chargeDate)) chargeDate = addMonths(chargeDate, 1);
+    if (throughDate && chargeDate > throughDate) continue;
     const statements = (view.events || []).filter((event) => event.class === 'statement');
     const knownEvent = statements.find((event) => event.chargeDate === chargeDate);
-    const knownAmount = round2(Math.abs(Number(knownEvent?.total || 0)));
+    // Outflow is positive here; a net provider refund must remain negative.
+    const knownAmount = round2(-Number(knownEvent?.total || 0));
     const history = statements
       .filter((event) => !event.partial && event.chargeDate < chargeDate && event.chargeDate <= today)
       .sort((a, b) => b.chargeDate.localeCompare(a.chargeDate))
       .slice(0, historySize);
     const historicalAverage = history.length
-      ? round2(history.reduce((sum, event) => sum + Math.abs(Number(event.total || 0)), 0) / history.length)
+      ? round2(history.reduce((sum, event) => sum - Number(event.total || 0), 0) / history.length)
       : 0;
     const sortedHistory = history
-      .map((event) => Math.abs(Number(event.total || 0)))
+      .map((event) => -Number(event.total || 0))
       .sort((a, b) => a - b);
     const middle = Math.floor(sortedHistory.length / 2);
     const historicalTypical = !sortedHistory.length ? 0 : round2(sortedHistory.length % 2
@@ -855,7 +875,7 @@ function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), histor
     // the known floor by at most 25%; only three or more earn the uncapped robust median.
     const historicalForecast = history.length >= 3
       ? historicalTypical
-      : (history.length === 2 ? Math.min(historicalTypical, knownAmount * 1.25) : 0);
+      : (history.length === 2 && knownAmount > 0 ? Math.min(historicalTypical, knownAmount * 1.25) : knownAmount);
     const estimatedAmount = round2(Math.max(
       knownAmount,
       historicalForecast,
@@ -876,7 +896,7 @@ function estimateNextCardBills(cardViews, { afterDate, asOf = new Date(), histor
       knownTxns: knownEvent?.txns || [],
       historicalAverage,
       historicalTypical,
-      lastStatementAmount: history.length ? round2(Math.abs(Number(history[0].total || 0))) : 0,
+      lastStatementAmount: history.length ? round2(-Number(history[0].total || 0)) : 0,
       historyCount: history.length,
       estimatedAmount,
       certainty: estimatedAmount > knownAmount ? 'estimated' : 'known',
@@ -913,8 +933,19 @@ function buildIdentifierFamilies(txns) {
   return families;
 }
 
+/** Avoid repeating a final lump sum without mistaking interest for loan closure. */
+function hasFinalLoanRepayment(loan) {
+  if (loan.outstanding == null || Number(loan.outstanding) > 0) return false;
+  const amounts = (loan.payments || []).map((payment) => Math.abs(Number(payment.amount)));
+  const last = amounts.at(-1) || 0;
+  if (amounts.length === 1) return last >= Number(loan.principal) && Number(loan.principal) > 0;
+  const previous = amounts.slice(0, -1).sort((a, b) => a - b);
+  const typical = previous[Math.floor(previous.length / 2)];
+  return last >= Number(loan.principal) / 2 && last >= typical * 1.5;
+}
+
 /**
- * Derive real loans straight from the scraped data — no manual entry, no scraper changes.
+ * Derive possible loan series from the scraped data — no manual entry, no scraper changes.
  * A loan is an identifier family holding a disbursement (money in) plus repayments (money
  * out) of the same series, so principal, amount repaid and what is still outstanding are all
  * arithmetic. Proven: identifier 2158001 = ₪25,000 drawn 21/04 with 3 repayments ⇒ ~₪21,914.65
@@ -1025,7 +1056,12 @@ function deriveManualRecurring(txns, transactionOverrides = [], { excludeTxns = 
   const rules = [];
   for (const group of groups.values()) {
     const override = group.overrides[0];
-    const matches = txns.filter((txn) => !skip.has(txn) && group.identities.has(recurringIdentity(txn)))
+    const direction = ['recurring_income', 'salary'].includes(override.recurrenceKind) ? 1 : -1;
+    // A loan disbursement may share an identifier with its repayments. Never
+    // average that incoming principal into the user's recurring expense rule.
+    const matches = txns.filter((txn) => !skip.has(txn)
+      && Math.sign(Number(txn.amount)) === direction
+      && group.identities.has(recurringIdentity(txn)))
       .sort((a, b) => ilDate(a.processedDate || a.date).localeCompare(ilDate(b.processedDate || b.date)));
     const last = matches[matches.length - 1] || override;
     const recentAmounts = matches.slice(-3).map((item) => Number(item.amount)).filter(Number.isFinite);
@@ -1163,11 +1199,16 @@ function prepareCycleData({
   ], transactionOverrides, {
     excludeTxns: suppressed,
     cardSources: cards.map((card) => card.source),
-  }).filter((series) => !(
-    series.recurrenceKind === 'loan_repayment'
-      && loans.some((loan) => String(loan.identifier) === String(series.identifier))
-  ));
-  const manualIdentities = new Set(manualRecurring.flatMap((series) => series.matchIdentities || [series.identity]));
+  });
+  // A paused/removed user rule must not sneak back through automatic detection.
+  const manualIdentities = new Set(transactionOverrides
+    .filter((override) => override.recurrenceKind)
+    .map(recurringIdentity)
+    .filter(Boolean));
+  // Keep the historical loan series for inspection, but let an explicit rule
+  // (including a paused or removed one) own its future projection completely.
+  const projectedLoans = loans.filter((loan) => !(loan.payments || [])
+    .some((payment) => manualIdentities.has(recurringIdentity(payment.txn))));
   const automaticRecurring = deriveRecurringCharges(bankTxns, {
     knownLoanIds: loans.map((loan) => loan.identifier),
     excludeTxns: suppressed,
@@ -1189,6 +1230,7 @@ function prepareCycleData({
     reversals,
     direct,
     loans,
+    projectedLoans,
     suggestedFinancing,
     financingTxns,
     review,
@@ -1487,7 +1529,12 @@ function buildCycle({
     ? {
         salaryDate: salaryTracking?.expectedNext || window.end,
         salaryAmount: round2(salaryTracking?.typicalAmount || window.salary.amount || 0),
-        ...estimateNextCardBills(cardViews, { afterDate: accountingWindow.end, asOf }),
+        ...estimateNextCardBills(cardViews, {
+          afterDate: cashFlowWindow ? ilDate(asOf) : accountingWindow.end,
+          throughDate: cashFlowWindow ? accountingWindow.end : null,
+          settledEvents: matched.map((match) => match.event),
+          asOf,
+        }),
       }
     : null;
 
@@ -1705,7 +1752,7 @@ function buildCycle({
     const upcoming = projectUpcoming({
       window: accountingWindow,
       asOf,
-      loans,
+      loans: prepared.projectedLoans || loans,
       recurring: projectedRecurring,
       futureCardEvents: allEvents.filter((event) => event.future),
       salaryTracking,
@@ -1737,10 +1784,10 @@ function buildCycle({
       ? sumAmounts(fundingStreams, (stream) => stream.expectedAmount)
       : (projection?.estimatedSalary || 0));
     const knownCardOut = round2(nextCardForecast?.knownTotal || 0);
-    const historicalCardOut = round2(nextCardForecast?.estimatedTotal || knownCardOut);
+    const historicalCardOut = round2(nextCardForecast?.estimatedTotal ?? knownCardOut);
     const baseCompletionDate = (nextCardForecast?.bills || []).reduce(
       (latest, bill) => (!latest || bill.chargeDate > latest ? bill.chargeDate : latest),
-      remainingFundingEnd || window.end,
+      cashFlowWindow ? accountingWindow.end : (remainingFundingEnd || window.end),
     );
     // A joint account can receive the primary salary before a second salary or the card bills.
     // Forecast fixed debits through the *last* reset stage, not merely through the first salary.
@@ -1752,7 +1799,7 @@ function buildCycle({
     const forwardFixed = projectUpcoming({
       window: forwardWindow,
       asOf,
-      loans,
+      loans: prepared.projectedLoans || loans,
       recurring: projectedRecurring,
       futureCardEvents: [],
       salaryTracking: null,
@@ -1798,7 +1845,7 @@ function buildCycle({
     ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const completionDate = stages.reduce(
       (latest, stage) => (!latest || stage.date > latest ? stage.date : latest),
-      remainingFundingEnd || window.end,
+      baseCompletionDate,
     );
     return {
       mode: window.mode || 'automatic',
@@ -1814,8 +1861,7 @@ function buildCycle({
       // Fixed obligations and purchases already accumulated on cards are known future outflow.
       // The estimate switch only adds uncertain income and possible statement growth.
       knownNetChange: round2(-knownCardOut - fixedOut),
-      // Expected income is a separate, visible stage. Switching historical card estimates off
-      // must not silently remove linked salaries from the projection.
+      // Compatibility field: expected income with known expenses, not the known-only UI mode.
       expectedNetChange: round2(allExpectedIncoming - knownCardOut - fixedOut),
       estimatedNetChange: round2(allExpectedIncoming - estimatedCardOut - estimatedFixedOut),
       stages,

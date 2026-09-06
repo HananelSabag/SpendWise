@@ -1,5 +1,28 @@
 # SpendWise — Roadmap & Decisions
 
+## 2026-09-07 — Clearer copy and quieter page headers
+
+- Financial-cycle and overdraft copy distinguishes recorded activity, unpaid known charges, and
+  estimated expenses/income, with explicit data limitations in Hebrew and English.
+- Removed redundant visible titles from the main navigation pages; accessible page headings and
+  useful section labels remain. Grocery controls now use a compact toolbar with list switching,
+  sharing, status and progress preserved. Family Hub remains untouched.
+- Removed the unused greeting component and obsolete salary-anchor/greeting translation entries.
+
+## 2026-09-06 — Financial-cycle V8 refresh
+
+- Shared dashboard/detail scenario summary: checking balance, known deductions, forecast income and
+  uncertain expenses with the same equation and a date-ordered explanation. EN/HE, light/dark, RTL.
+- Four focused tabs: overview (including expandable cards), recurring rules with searchable evidence
+  picker, detected loan series with explicit estimate caveats, and household cycle settings.
+- Billing/manual forecast horizon fixed; already-paid bills and final lump sums are not repeated.
+  Shifted monthly dates do not create duplicate payments; provider refunds retain their sign.
+- Management queries remain lazy. Mutations update both views immediately and invalidate inactive
+  caches. Removed the unused projection implementation, duplicate position panel, and 80 obsolete
+  translation keys per language. No schema changes or raw-transaction changes.
+- Current cycle rules are in `FINANCIAL_CYCLE_SPEC.md` V8; older decisions below are historical.
+- Family Hub is intentionally outside this refresh.
+
 > **2026-07-13 final simplification decision (supersedes the older models below):**
 > Dashboard shows calendar-month activity on each movement's real local date.
 > Connected-card itemization is included, and a bank card debit is reduced only by

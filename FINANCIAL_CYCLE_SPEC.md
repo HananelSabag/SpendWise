@@ -6,17 +6,28 @@
 > read this before touching any cycle/accounting/reconciliation code. Keep the fixture numbers as the
 > regression oracle.
 
-## V6 BILLING-CYCLE CONTRACT (supersedes salary-anchor rules below)
+## V8 BILLING-CYCLE CONTRACT (supersedes salary-anchor rules below)
 
 - Automatic windows run from the **latest included aggregated card statement day** to the same day
   next month. A user may override the day per card, exclude a card, or select one manual household
   reset day. Salary never defines or splits the window.
 - Every received salary and other operating income whose bank date is inside `[start, end)` is
   counted. This includes one, two, or more salaries in a joint account.
-- The current-balance presentation separates: real checking balance now; balance after known income,
-  known accumulated card spend, and confirmed fixed obligations; and a conservative card forecast.
-  `use_estimates` controls only possible card-bill growth. It never removes expected linked income or
-  confirmed recurring obligations.
+- Dashboard and detail page share one projection contract (`client/src/utils/cycleProjection.js`).
+  **Known only** is the current checking balance minus accumulated unpaid card charges and confirmed
+  fixed obligations. **With forecast** additionally includes expected salaries/recurring income and
+  uncertain expenses. Unreceived income is never presented as known cash. Confirmed recurring dates
+  and amounts remain expectations based on linked evidence, not bank guarantees.
+- Running billing/manual forecasts end at the displayed cycle boundary, including its closing card
+  bill. An earlier-day card cannot extend that horizon into another month; a bill already matched
+  to today's bank movement is not deducted again. Net card refunds retain their sign.
+- A confirmed monthly payment drifting between days creates one future occurrence on its latest
+  observed day. Multiple monthly rhythms require repeated evidence of both days within the same
+  months. Pausing/removing a rule also suppresses automatic re-inference of that identity.
+- A final lump-sum repayment is not repeated when observed payments cover the disbursement and
+  the final payment is materially larger than previous ones. Gross repayments exceeding principal
+  alone do not prove closure: regular payments can include interest. Detected loan balances are
+  arithmetic estimates from transaction history, never bank-supplied payoff balances.
 - Card history is context, not truth. One historical bill cannot inflate a forecast. Two complete
   bills may raise known spend by at most 25%; with at least three, the engine uses the median of up
   to six. It never projects below accumulated purchases. Each card shows known, last, and forecast.
@@ -26,7 +37,14 @@
 - `financial_card_settings` stores per-card statement day, include/exclude state, and optional linked
   evidence transaction. `cycle_transaction_overrides` stores recurring group/label/forecast fields.
 - The older salary-attribution fixture remains a compatibility oracle for legacy explicit windows;
-  it is not the v6 product boundary model.
+  it is not the v8 product boundary model. V8 is a code/cache-version bump, with no schema migration.
+
+### V8 verification (2026-09-06)
+
+Read-only, 26-month source audit for the single-account and joint-account fixtures: independent bank
+movement reconciles exactly in both. UI interaction checks use synthetic data only in the dev-only
+`client/preview.html` entry, which is excluded from production builds. Inactive query caches are
+invalidated after cycle writes and revalidated when their panels mount; controls share mutation state.
 
 ## 1. FOUNDATION — one field rules everything: `processedDate`
 Every scraped transaction (israeli-bank-scrapers, all providers) carries:

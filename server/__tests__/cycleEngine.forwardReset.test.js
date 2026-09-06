@@ -14,6 +14,31 @@ function income(id, amount, date, description) {
 }
 
 describe('forward reset cycle primitives', () => {
+  test('does not repeat a final lump sum, but keeps regular payments that include interest', () => {
+    const result = engine.projectUpcoming({
+      window: { start: '2026-09-06', end: '2026-10-10' },
+      asOf: new Date('2026-09-06T12:00:00+03:00'),
+      loans: [
+        { identifier: 'paid', principal: 18000, outstanding: 0, paymentDay: 14, lastPaymentAmount: -18000, payments: [{ amount: -18000 }] },
+        { identifier: 'overpaid', principal: 9000, outstanding: -100, paymentDay: 12, lastPaymentAmount: -8000, payments: [{ amount: -1100 }, { amount: -8000 }] },
+        { identifier: 'open', outstanding: 20000, paymentDay: 11, lastPaymentAmount: -1000 },
+        { identifier: 'interest', principal: 3000, outstanding: -300, paymentDay: 13, lastPaymentAmount: -1100, payments: [{ amount: -1100 }, { amount: -1100 }, { amount: -1100 }] },
+      ],
+    });
+    expect(result.items.map((item) => item.amount)).toEqual([-1000, -1100]);
+  });
+
+  test('manual forecast includes obligations after the last expected salary through the cycle end', () => {
+    const txn = { ...income(1, -300, '2026-08-08', 'Insurance'), identifier: 'insurance' };
+    const cycle = engine.buildCycle({
+      bankTxns: [txn], cards: [],
+      window: { start: '2026-08-10', end: '2026-09-10', running: true, mode: 'manual', anchorDay: 10, salary: { amount: 0, txn: null } },
+      asOf: new Date('2026-09-06T12:00:00+03:00'),
+      fundingForecast: { streams: [{ expectedDate: '2026-09-07', expectedAmount: 5000 }] },
+      transactionOverrides: [{ ...txn, transactionId: 1, classification: 'expense', recurrenceEnabled: true, recurrenceKind: 'insurance', recurrenceIncludeEstimate: true }],
+    });
+    expect(cycle.forwardReset).toMatchObject({ completionDate: '2026-09-10', knownFixedOut: 300, expectedIncoming: 5000 });
+  });
   test('automatic billing windows use the latest monthly statement day', () => {
     const anchorDay = engine.latestStatementDay([
       { view: { settlement: { mode: 'aggregated' }, statementDay: { day: 2, certain: true } } },

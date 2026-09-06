@@ -12,7 +12,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  AlertCircle, ChevronDown, ClipboardList, Flag, Plus, ShoppingCart, Users,
+  AlertCircle, ChevronDown, Flag, Plus, ShoppingCart, Users,
 } from 'lucide-react';
 import { cn } from '../utils/helpers';
 import { isGroceryMode } from '../utils/appMode';
@@ -20,7 +20,8 @@ import { useTranslation, useAuth } from '../stores';
 import { useToast } from '../hooks/useToast';
 import { useGroceryList } from '../hooks/useGroceryList';
 import { useGroceryLists, useMyGroceryInvitations } from '../hooks/useGrocerySharing';
-import { PageSkeleton, LiquidTabs } from '../components/ui';
+import { PageSkeleton } from '../components/ui';
+import GroceryToolbar from '../components/features/grocery/GroceryToolbar';
 import GroceryItemRow from '../components/features/grocery/GroceryItemRow';
 import GroceryItemSheet from '../components/features/grocery/GroceryItemSheet';
 import GroceryFinishSheet from '../components/features/grocery/GroceryFinishSheet';
@@ -167,7 +168,7 @@ const GroceryListPage = () => {
 
   const isEmpty = sections.length === 0 && purchased.length === 0;
 
-  /** One line of status under the title, instead of a card of its own. */
+  /** A compact count beside the list controls. */
   const statusLine = isEmpty
     ? (members.length > 1 ? t('subtitle') : t('share.alone'))
     : [
@@ -182,76 +183,18 @@ const GroceryListPage = () => {
     >
       <div className="mx-auto w-full max-w-6xl px-3 sm:px-5 lg:px-6">
 
-        {/* ── Header — scrolls away with the content ─────────────────── */}
-        <header className="pt-3">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white lg:hidden">
-              <ShoppingCart className="h-4 w-4 rtl:-scale-x-100" />
-            </span>
-            <div className="min-w-0 flex-1">
-              {/* With one list the title is just a title. With two it is the
-                  only place a switch belongs — right where you read which list
-                  you are on. */}
-              {hasMultiple ? (
-                <button
-                  type="button"
-                  onClick={() => setListsOpen(true)}
-                  aria-label={t('lists.switchTo')}
-                  className="flex max-w-full items-center gap-1 text-start"
-                >
-                  <span className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
-                    {activeList ? listLabel(activeList, t) : t('title')}
-                  </span>
-                  <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
-                </button>
-              ) : (
-                <h1 className="truncate text-base font-extrabold leading-tight text-gray-900 dark:text-gray-50">
-                  {t('title')}
-                </h1>
-              )}
-              <p className="truncate text-xs text-gray-400 dark:text-gray-500">{statusLine}</p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              aria-label={t('share.title')}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-500 transition-colors hover:text-gray-700 lg:hidden dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
-            >
-              <Users className="h-4 w-4" />
-              {myInvitations.length > 0 && (
-                <span className="absolute -end-1 -top-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-extrabold text-white">
-                  {myInvitations.length}
-                </span>
-              )}
-            </button>
-          </div>
-
-          <div className="mt-2 lg:max-w-sm">
-            <LiquidTabs
-              fill
-              size="sm"
-              tabs={[
-                { id: 'list', label: t('tabs.list'), icon: ClipboardList },
-                { id: 'history', label: t('tabs.history'), icon: Flag },
-              ]}
-              active={tab}
-              onChange={changeTab}
-            />
-          </div>
-
-          {/* Progress as a hairline rather than a card — it was spending 50px to
-              repeat what the status line above already says in words. */}
-          {tab === 'list' && !isEmpty && (
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
-              <motion.div
-                className={cn('h-full rounded-full', pendingCount === 0 ? 'bg-emerald-500' : 'bg-blue-500')}
-                animate={{ width: `${progress}%` }}
-                transition={{ type: 'spring', stiffness: 200, damping: 30 }}
-              />
-            </div>
-          )}
-        </header>
+        <GroceryToolbar
+          activeListLabel={activeList ? listLabel(activeList, t) : t('title')}
+          onSwitchList={hasMultiple ? () => setListsOpen(true) : undefined}
+          onShare={() => setShareOpen(true)}
+          invitationCount={myInvitations.length}
+          tab={tab}
+          onTabChange={changeTab}
+          statusLine={statusLine}
+          progress={progress}
+          showProgress={!isEmpty}
+          t={t}
+        />
 
         {tab === 'history' ? (
           <div className="pt-3">

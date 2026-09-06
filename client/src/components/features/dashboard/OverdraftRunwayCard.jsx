@@ -1,18 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  CheckCircle2,
-  Gauge,
-  Loader2,
-  Pencil,
-  Save,
-  ShieldAlert,
-  Sparkles,
-} from 'lucide-react';
+import { CheckCircle2, Gauge, Loader2, Pencil, Save, ShieldAlert, Sparkles } from 'lucide-react';
 
 import { cn } from '../../../utils/helpers';
 import { useBankBalance } from '../../../hooks/useBankBalance';
 import { getCycleProjection } from '../../../utils/cycleProjection';
 import { getOverdraftRunway } from '../../../utils/overdraftRunway';
+import { CycleMoney } from '../financialCycleV2/CyclePrimitives';
 
 const TONES = {
   safe: {
@@ -56,16 +49,18 @@ function statusText(runway, formatCurrency, t) {
 
 function ScenarioRow({ label, balance, runway, active, formatCurrency, t, icon: Icon }) {
   return (
-    <div className={cn(
-      'rounded-2xl border p-3 transition',
-      active
-        ? 'border-indigo-200 bg-white shadow-sm dark:border-indigo-700/60 dark:bg-slate-900'
-        : 'border-slate-200/80 bg-white/60 dark:border-slate-800 dark:bg-slate-900/50',
-    )}>
-      <div className="flex items-center justify-between gap-2">
+    <div
+      className={cn(
+        'min-w-0 rounded-2xl border p-3 transition',
+        active
+          ? 'border-indigo-200 bg-white shadow-sm dark:border-indigo-700/60 dark:bg-slate-900'
+          : 'border-slate-200/80 bg-white/60 dark:border-slate-800 dark:bg-slate-900/50',
+      )}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-200">
           <Icon className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
-          <span className="truncate">{label}</span>
+          <span>{label}</span>
         </span>
         {active && (
           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] font-black text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
@@ -73,13 +68,15 @@ function ScenarioRow({ label, balance, runway, active, formatCurrency, t, icon: 
           </span>
         )}
       </div>
-      <p className={cn(
-        'mt-2 whitespace-nowrap text-lg font-black tabular-nums',
-        runway.status === 'exceeded'
-          ? 'text-rose-600 dark:text-rose-300'
-          : 'text-slate-950 dark:text-white',
-      )}>
-        {formatCurrency(balance)}
+      <p
+        className={cn(
+          'mt-2 whitespace-nowrap text-lg font-black tabular-nums',
+          runway.status === 'exceeded'
+            ? 'text-rose-600 dark:text-rose-300'
+            : 'text-slate-950 dark:text-white',
+        )}
+      >
+        <CycleMoney value={balance} formatCurrency={formatCurrency} />
       </p>
       <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
         {runway.status === 'exceeded'
@@ -100,7 +97,7 @@ export default function OverdraftRunwayCard({
 }) {
   const { hasRealBalance, totalRealBalance, multiAccount } = useBankBalance();
   const configured = settings?.overdraftLimit !== null && settings?.overdraftLimit !== undefined;
-  const [editing, setEditing] = useState(!configured);
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(configured ? String(settings.overdraftLimit) : '');
 
   useEffect(() => {
@@ -108,10 +105,11 @@ export default function OverdraftRunwayCard({
   }, [configured, editing, settings?.overdraftLimit]);
 
   const projection = useMemo(
-    () => getCycleProjection(
-      cycle?.forwardReset || {},
-      hasRealBalance ? Number(totalRealBalance) : null,
-    ),
+    () =>
+      getCycleProjection(
+        cycle?.forwardReset || {},
+        hasRealBalance ? Number(totalRealBalance) : null,
+      ),
     [cycle?.forwardReset, hasRealBalance, totalRealBalance],
   );
   const knownRunway = getOverdraftRunway(projection.afterKnown, settings?.overdraftLimit);
@@ -128,7 +126,7 @@ export default function OverdraftRunwayCard({
   const save = async (event) => {
     event.preventDefault();
     const value = Number(draft);
-    if (!Number.isFinite(value) || value < 0 || value > 10_000_000) return;
+    if (draft.trim() === '' || !Number.isFinite(value) || value < 0 || value > 10_000_000) return;
     try {
       await onSaveLimit(value);
       setEditing(false);
@@ -162,14 +160,16 @@ export default function OverdraftRunwayCard({
               type="number"
               min="0"
               max="10000000"
-              step="100"
+              step="0.01"
               inputMode="decimal"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               placeholder={t('overdraft.limitPlaceholder')}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 pe-10 text-base font-black tabular-nums text-slate-950 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
-            <span className="pointer-events-none absolute end-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">₪</span>
+            <span className="pointer-events-none absolute end-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
+              ₪
+            </span>
           </label>
           <button
             type="submit"
@@ -198,9 +198,11 @@ export default function OverdraftRunwayCard({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <span className={cn('rounded-2xl p-2.5', tone.icon)}>
-            {activeRunway.status === 'exceeded' || activeRunway.status === 'warning'
-              ? <ShieldAlert className="h-5 w-5" />
-              : <CheckCircle2 className="h-5 w-5" />}
+            {activeRunway.status === 'exceeded' || activeRunway.status === 'warning' ? (
+              <ShieldAlert className="h-5 w-5" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5" />
+            )}
           </span>
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
@@ -218,7 +220,10 @@ export default function OverdraftRunwayCard({
         </div>
         <button
           type="button"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            setDraft(String(settings.overdraftLimit));
+            setEditing(true);
+          }}
           className="shrink-0 rounded-xl p-2 text-slate-500 transition hover:bg-white/70 hover:text-indigo-700 dark:hover:bg-slate-800"
           aria-label={t('overdraft.edit')}
         >
@@ -228,7 +233,10 @@ export default function OverdraftRunwayCard({
 
       <div className="mt-4">
         <div className="h-2 overflow-hidden rounded-full bg-white/80 shadow-inner dark:bg-slate-900/70">
-          <div className={cn('h-full rounded-full transition-[width] duration-500', tone.bar)} style={{ width: `${progress}%` }} />
+          <div
+            className={cn('h-full rounded-full transition-[width] duration-500', tone.bar)}
+            style={{ width: `${progress}%` }}
+          />
         </div>
         <div className="mt-1.5 flex justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400">
           <span>{t('overdraft.used', { amount: formatCurrency(activeRunway.used) })}</span>
@@ -260,6 +268,7 @@ export default function OverdraftRunwayCard({
       <p className="mt-3 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
         {t('overdraft.disclaimer')}
       </p>
+      {multiAccount && <p className="mt-2 text-xs leading-5 text-amber-800 dark:text-amber-300">{t('overdraft.multiAccountWarning')}</p>}
     </section>
   );
 }

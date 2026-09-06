@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useIsMutating, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import cyclesApi from '../api/cycles';
 import { useAuthUser, useIsAuthenticated } from '../stores/authStore';
@@ -6,13 +6,8 @@ import { useTranslation } from '../stores';
 import { useToast } from './useToast';
 import { queryConfigs } from '../config/queryClient';
 
-export const CYCLE_QUERY_VERSION = 7;
-export const currentCycleQueryKey = (userId) => [
-  'cycles',
-  userId,
-  'current',
-  CYCLE_QUERY_VERSION,
-];
+export const CYCLE_QUERY_VERSION = 8;
+export const currentCycleQueryKey = (userId) => ['cycles', userId, 'current', CYCLE_QUERY_VERSION];
 const DEFAULT_SETTINGS = {
   engineMode: 'automatic',
   manualAnchorDay: null,
@@ -20,8 +15,16 @@ const DEFAULT_SETTINGS = {
   overdraftLimit: null,
 };
 const EMPTY = {
-  status: 'loading', cycles: [], decisions: [], loans: [], totalOutstanding: 0, recurring: [],
-  recurringGroups: [], salaryTracking: null, salaryChange: null, signatures: [],
+  status: 'loading',
+  cycles: [],
+  decisions: [],
+  loans: [],
+  totalOutstanding: 0,
+  recurring: [],
+  recurringGroups: [],
+  salaryTracking: null,
+  salaryChange: null,
+  signatures: [],
   settings: DEFAULT_SETTINGS,
   fundingForecast: { streams: [], expectedTotal: 0, start: null, end: null },
 };
@@ -36,13 +39,20 @@ function patchCardInCycle(cycle, source, accountNumber, patch) {
   return {
     ...cycle,
     cards: (cycle.cards || []).map((card) => {
-      if (card.source !== source || String(card.accountNumber) !== String(accountNumber)) return card;
+      if (card.source !== source || String(card.accountNumber) !== String(accountNumber))
+        return card;
       return {
         ...card,
         included: patch.included ?? card.included,
-        statementDay: patch.statementDay == null
-          ? card.statementDay
-          : { ...(card.statementDay || {}), day: patch.statementDay, certain: true, source: 'user' },
+        statementDay:
+          patch.statementDay == null
+            ? card.statementDay
+            : {
+                ...(card.statementDay || {}),
+                day: patch.statementDay,
+                certain: true,
+                source: 'user',
+              },
         setting: { ...(card.setting || {}), ...patch },
       };
     }),
@@ -57,21 +67,27 @@ export function applyCardSettingsPatch(data, { source, accountNumber, ...patch }
   return {
     ...data,
     cycle: patchCardInCycle(data.cycle, source, accountNumber, patch),
-    cycles: (data.cycles || []).map((cycle) => patchCardInCycle(cycle, source, accountNumber, patch)),
+    cycles: (data.cycles || []).map((cycle) =>
+      patchCardInCycle(cycle, source, accountNumber, patch),
+    ),
   };
 }
 
 export function applyRecurringGroupPatch(data, { groupId, ...patch }) {
   return {
     ...data,
-    recurringGroups: (data.recurringGroups || []).map((group) => group.id === groupId
-      ? {
-          ...group,
-          label: patch.label ?? group.label,
-          includeInEstimate: patch.includeInEstimate ?? group.includeInEstimate,
-          active: patch.active ?? group.active,
-        }
-      : group),
+    recurringGroups: (data.recurringGroups || [])
+      .filter((group) => !(group.id === groupId && patch.active === false))
+      .map((group) =>
+        group.id === groupId
+          ? {
+              ...group,
+              label: patch.label ?? group.label,
+              includeInEstimate: patch.includeInEstimate ?? group.includeInEstimate,
+              active: patch.active ?? group.active,
+            }
+          : group,
+      ),
   };
 }
 
@@ -82,10 +98,15 @@ export function useCycleControls() {
   const toast = useToast();
   const { t } = useTranslation('dashboard');
   const prefix = ['cycles', user?.id];
+  const mutationKey = ['cycleWrites', user?.id];
+  const pendingWrites = useIsMutating({ mutationKey });
 
-  const notifyFailure = () => toast.error(t('cycle.updateFailed', {
-    fallback: 'Could not save your change — please try again',
-  }));
+  const notifyFailure = () =>
+    toast.error(
+      t('cycle.updateFailed', {
+        fallback: 'Could not save your change — please try again',
+      }),
+    );
 
   const snapshotAndPatch = async (update) => {
     await queryClient.cancelQueries({ queryKey: prefix });
@@ -100,41 +121,49 @@ export function useCycleControls() {
   };
 
   const refreshActive = async () => {
-    await queryClient.refetchQueries({ queryKey: prefix, type: 'active' });
+    await queryClient.invalidateQueries({ queryKey: prefix, refetchType: 'active' });
   };
 
   const settings = useMutation({
+    mutationKey,
     mutationFn: (patch) => cyclesApi.updateSettings(patch),
     onMutate: (patch) => snapshotAndPatch((data) => applyCycleSettingsPatch(data, patch)),
     onSuccess: (result) => {
       if (!result?.data) return;
-      queryClient.setQueriesData({ queryKey: prefix }, (cached) => patchEnvelope(cached, (data) => ({
-        ...data,
-        settings: { ...(data.settings || DEFAULT_SETTINGS), ...result.data },
-      })));
+      queryClient.setQueriesData({ queryKey: prefix }, (cached) =>
+        patchEnvelope(cached, (data) => ({
+          ...data,
+          settings: { ...(data.settings || DEFAULT_SETTINGS), ...result.data },
+        })),
+      );
     },
     onError: (_error, _variables, context) => restore(context),
     onSettled: refreshActive,
   });
 
   const cards = useMutation({
-    mutationFn: ({ source, accountNumber, ...patch }) => cyclesApi.updateCardSettings(source, accountNumber, patch),
+    mutationKey,
+    mutationFn: ({ source, accountNumber, ...patch }) =>
+      cyclesApi.updateCardSettings(source, accountNumber, patch),
     onMutate: (patch) => snapshotAndPatch((data) => applyCardSettingsPatch(data, patch)),
     onError: (_error, _variables, context) => restore(context),
     onSettled: refreshActive,
   });
 
   const recurring = useMutation({
+    mutationKey,
     mutationFn: ({ groupId, ...patch }) => cyclesApi.updateRecurringGroup(groupId, patch),
     onMutate: (patch) => snapshotAndPatch((data) => applyRecurringGroupPatch(data, patch)),
     onSuccess: (result, variables) => {
       if (!result?.data) return;
-      queryClient.setQueriesData({ queryKey: prefix }, (cached) => patchEnvelope(cached, (data) => ({
-        ...data,
-        recurringGroups: (data.recurringGroups || []).map((group) => (
-          group.id === variables.groupId ? { ...group, ...result.data } : group
-        )),
-      })));
+      queryClient.setQueriesData({ queryKey: prefix }, (cached) =>
+        patchEnvelope(cached, (data) => ({
+          ...data,
+          recurringGroups: (data.recurringGroups || []).map((group) =>
+            group.id === variables.groupId ? { ...group, ...result.data } : group,
+          ),
+        })),
+      );
     },
     onError: (_error, _variables, context) => restore(context),
     onSettled: refreshActive,
@@ -143,39 +172,44 @@ export function useCycleControls() {
   return {
     updateCycleSettings: settings.mutate,
     updateCycleSettingsAsync: settings.mutateAsync,
-    isUpdatingSettings: settings.isPending,
+    isUpdatingSettings: settings.isPending || pendingWrites > 0,
     updateCardSettings: cards.mutate,
-    isUpdatingCard: cards.isPending,
+    isUpdatingCard: cards.isPending || pendingWrites > 0,
     updateRecurringGroup: recurring.mutate,
-    isUpdatingRecurring: recurring.isPending,
+    isUpdatingRecurring: recurring.isPending || pendingWrites > 0,
   };
 }
 
-export function useCycles() {
+export function useCycles({ enabled = true } = {}) {
   const isAuthenticated = useIsAuthenticated();
   const user = useAuthUser();
   const queryClient = useQueryClient();
   const toast = useToast();
   const { t } = useTranslation('dashboard');
   const controls = useCycleControls();
-  const notifyFailure = () => toast.error(t('cycle.updateFailed', {
-    fallback: 'Could not save your change — please try again',
-  }));
+  const notifyFailure = () =>
+    toast.error(
+      t('cycle.updateFailed', {
+        fallback: 'Could not save your change — please try again',
+      }),
+    );
 
   const query = useQuery({
     queryKey: ['cycles', user?.id, 'control', CYCLE_QUERY_VERSION],
     queryFn: () => cyclesApi.control(),
-    enabled: Boolean(isAuthenticated && user?.id),
+    enabled: Boolean(enabled && isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
     staleTime: 5 * 60_000,
-    refetchOnMount: false,
+    refetchOnMount: true,
   });
 
   const classification = useMutation({
-    mutationFn: ({ transactionId, ...payload }) => cyclesApi.classifyTransaction(transactionId, payload),
+    mutationKey: ['cycleWrites', user?.id],
+    mutationFn: ({ transactionId, ...payload }) =>
+      cyclesApi.classifyTransaction(transactionId, payload),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['cycles', user?.id], type: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['cycles', user?.id], refetchType: 'active' }),
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
       ]);
     },
@@ -183,10 +217,11 @@ export function useCycles() {
   });
 
   const resetClassification = useMutation({
+    mutationKey: ['cycleWrites', user?.id],
     mutationFn: ({ transactionId }) => cyclesApi.resetTransactionClassification(transactionId),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.refetchQueries({ queryKey: ['cycles', user?.id], type: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['cycles', user?.id], refetchType: 'active' }),
         queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] }),
       ]);
     },
@@ -205,13 +240,15 @@ export function useCycles() {
     error: query.error,
     refetch: query.refetch,
     classifyTransaction: classification.mutate,
+    classifyTransactionAsync: classification.mutateAsync,
     resetTransactionClassification: resetClassification.mutate,
     isUpdatingDecision: classification.isPending || resetClassification.isPending,
-    updatingTransactionId: (classification.isPending
-      ? classification.variables?.transactionId
-      : resetClassification.isPending
-        ? resetClassification.variables?.transactionId
-        : null) || null,
+    updatingTransactionId:
+      (classification.isPending
+        ? classification.variables?.transactionId
+        : resetClassification.isPending
+          ? resetClassification.variables?.transactionId
+          : null) || null,
     ...controls,
   };
 }
@@ -225,14 +262,19 @@ export function useCurrentCycle() {
     enabled: Boolean(isAuthenticated && user?.id),
     ...queryConfigs.dashboard,
     staleTime: 2 * 60_000,
-    refetchOnMount: false,
+    refetchOnMount: true,
   });
   const data = query.data?.data || {};
   return {
     status: data.status,
     cycle: data.cycle || null,
     salaryTracking: data.salaryTracking || null,
-    fundingForecast: data.fundingForecast || { streams: [], expectedTotal: 0, start: null, end: null },
+    fundingForecast: data.fundingForecast || {
+      streams: [],
+      expectedTotal: 0,
+      start: null,
+      end: null,
+    },
     settings: data.settings || DEFAULT_SETTINGS,
     recurringGroups: data.recurringGroups || [],
     totalOutstanding: data.totalOutstanding || 0,
@@ -261,7 +303,11 @@ export function useCycleYears() {
     enabled: Boolean(isAuthenticated && user?.id),
     staleTime: 10 * 60_000,
   });
-  return { years: query.data?.data?.years || [], isLoading: query.isLoading, isError: query.isError };
+  return {
+    years: query.data?.data?.years || [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+  };
 }
 
 export function useYearlyReview(year) {

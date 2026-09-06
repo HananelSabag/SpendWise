@@ -14,7 +14,8 @@ const HISTORY_YEARS = 2;
 const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 200;
-const CALCULATION_VERSION = 7;
+// V8 bounds the running forecast to the billing window and fixes repeated payment inference.
+const CALCULATION_VERSION = 8;
 const resultCache = new Map();
 const cacheInvalidationEpochs = new Map();
 
@@ -613,6 +614,8 @@ function buildRecurringGroups(transactionOverrides = []) {
       description: item.description || '',
       source: item.source || null,
       accountLast4: item.accountNumber == null ? null : String(item.accountNumber).slice(-4),
+      amount: item.amount,
+      date: item.date,
     });
   }
   return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label));
@@ -663,27 +666,7 @@ function effectiveSalaryAnchors(signatures) {
   return anchors.length ? anchors : signatures;
 }
 
-function findSalaryWindows(bankTxns, signatures, asOf, salaryClassifications = []) {
-  const classifications = new Map(salaryClassifications.map((item) => [
-    Number(item.transactionId), item.classification,
-  ]));
-  const anchors = effectiveSalaryAnchors(signatures);
-  // A household has one reporting boundary. Additional linked salaries remain income streams;
-  // treating every salary as an anchor creates four-day "months" in joint accounts.
-  const primary = anchors[0] || null;
-  const events = primary
-    ? engine.findSalaryEvents(bankTxns, primary)
-      .filter((event) => {
-        const reviewed = classifications.get(Number(event.txn.id));
-        return !reviewed || reviewed === 'salary';
-      })
-      .map((event) => ({ ...event, signature: primary }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-    : [];
-  return { anchors, primary, events, windows: engine.buildWindows(events, { asOf }) };
-}
-
-function resolveCycleWindows({ bankTxns, signatures, settings, asOf, months, salaryClassifications, preparedData }) {
+function resolveCycleWindows({ signatures, settings, asOf, months, preparedData }) {
   if (settings.engineMode === 'manual') {
     return {
       anchors: effectiveSalaryAnchors(signatures),

@@ -197,12 +197,14 @@ function Preview() {
     document.documentElement.classList.toggle('dark', dark);
   }, [dark]);
 
-  useEffect(() => {
-    fixture.state = fresh ? FRESH_STATE : STATE;
-    fixture.invitations = !fresh;
-    fixture.multiList = multi;
+  const changeFixture = (nextFresh, nextMulti) => {
+    fixture.state = nextFresh ? FRESH_STATE : STATE;
+    fixture.invitations = !nextFresh;
+    fixture.multiList = nextMulti;
     queryClient.clear();
-  }, [fresh, multi]);
+    setFresh(nextFresh);
+    setMulti(nextMulti);
+  };
 
   // The welcome screen renders only while its mode is unseen.
   useEffect(() => {
@@ -224,16 +226,16 @@ function Preview() {
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter
-        key={screen}
+        key={`${screen}:${fresh}:${multi}`}
         initialEntries={['/grocery', '/grocery/invite/preview-token']}
         initialIndex={screen === 'invite' ? 1 : 0}
       >
         <div className={dark ? 'dark' : ''}>
-          <div className="fixed start-2 top-2 z-[300] flex gap-1.5">
+          <div className="fixed inset-x-2 top-2 z-[300] flex flex-wrap gap-1.5 sm:end-auto">
             <button onClick={() => setLang(lang === 'he' ? 'en' : 'he')} className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-white">{lang.toUpperCase()}</button>
             <button onClick={() => setDark(!dark)} className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-white">{dark ? 'dark' : 'light'}</button>
-            <button onClick={() => setFresh(!fresh)} className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-white">{fresh ? 'new user' : 'full'}</button>
-            <button onClick={() => setMulti(!multi)} className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-white">{multi ? '2 lists' : '1 list'}</button>
+            <button onClick={() => changeFixture(!fresh, multi)} className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-white">{fresh ? 'new user' : 'full'}</button>
+            <button onClick={() => changeFixture(fresh, !multi)} className="rounded-lg bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-white">{multi ? '2 lists' : '1 list'}</button>
             {SCREENS.map((id) => (
               <button
                 key={id}
@@ -245,7 +247,7 @@ function Preview() {
             ))}
           </div>
 
-          <div className="pt-10">
+          <div className="pt-20 sm:pt-10">
             {screen === 'picker' && <HomePickerScreen />}
             {screen === 'welcome' && <WelcomeOnboarding />}
             <GroceryModeHeader />

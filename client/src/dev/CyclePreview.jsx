@@ -1,191 +1,233 @@
-/**
- * Dev-only visual harness for the financial cycle UI.
- *
- * The dashboard sits behind Google auth, so the components cannot be driven headlessly.
- * This mounts them standalone with the exact payload GET /api/v1/cycles returns, which makes
- * layout, RTL and dark mode reviewable without anyone's credentials. Served from
- * /preview.html and never part of the app bundle (Vite only builds index.html).
- *
- * It now imports the REAL en/he dashboard translations (not a hand-kept subset), so a missing
- * or English-leaking key shows up here exactly as it would in the app.
- *
- * The fixture is synthetic and contains no credentials or private user data.
- */
-
+// Dev-only visual and interaction harness. Never loads an authenticated account.
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-
 import '../index.css';
-import enDash from '../translations/en/dashboard';
-import heDash from '../translations/he/dashboard';
+import en from '../translations/en/dashboard';
+import he from '../translations/he/dashboard';
+import { useTranslationStore } from '../stores/translationStore';
+import {
+  currentCycleQueryKey,
+  CYCLE_QUERY_VERSION,
+  useCurrentCycleWorkspace,
+} from '../hooks/useCycles';
+import cyclesApi from '../api/cycles';
+import apiClient from '../api/client';
+import useAuthStore from '../stores/authStore';
+import { FinancialCycleWorkspaceView } from '../pages/FinancialCyclePageV2';
 import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
 import OverdraftRunwayCard from '../components/features/dashboard/OverdraftRunwayCard';
-import CyclePositionPanelV2 from '../components/features/financialCycleV2/CyclePositionPanelV2';
-import CycleCardsPanelV2 from '../components/features/financialCycleV2/CycleCardsPanelV2';
-import CycleKnownExpensesPanelV2 from '../components/features/financialCycleV2/CycleKnownExpensesPanelV2';
-// Captured verbatim from GET /api/v1/cycles/current against the real database, so what
-// renders here is the actual end of the chain rather than numbers typed by hand.
+import { CYCLE, SETTINGS, GROUPS, DECISIONS, LOANS } from './cycleFixture';
 
-const formatCurrency = (value) => `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const previewQueryClient = new QueryClient({
+const client = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
 });
-previewQueryClient.setQueryData(['merchantWatches'], { rules: [], matches: [] });
-// Seed the shared bank-balance query so the dashboard card can render its projected end-of-cycle
-// balance here (the harness has no authenticated user, so the key ends with `undefined`).
-previewQueryClient.setQueryData(['bankSyncStats', undefined], [
-  { source: 'leumi', kind: 'bank', last_sync: '2026-07-19T10:00:00Z', accounts: [{ account_number: '797-43483', balance: 12150.32, enabled: true }] },
-]);
-
-/** Resolve a dotted key against the real translation tree and interpolate {{count}} etc. */
-function makeT(dict) {
-  return (key, opts = {}) => {
-    const node = key.split('.').reduce((acc, part) => (acc == null ? acc : acc[part]), dict);
-    let value = typeof node === 'string' ? node : (opts.fallback != null ? opts.fallback : key);
-    if (typeof value === 'string') value = value.replace(/\{\{(\w+)\}\}/g, (_, k) => (opts[k] != null ? opts[k] : ''));
-    return value;
-  };
-}
-
-const mkTxns = (rows) => rows.map(([id, date, description, amount, extra = {}]) => ({ id, date, processedDate: date, description, amount, pending: false, currency: null, installments: null, ...extra }));
-
-/** The real running cycle for user 1 as the API returns it, now with card events + provenance. */
-const CYCLE = {
-  window: { index: 0, start: '2026-07-09', end: '2026-08-09', running: true, projectedEnd: true, salary: { date: '2026-07-09', amount: 13327.75, description: 'הורייזן טכנו-י' } },
-  income: { salary: 13327.75, other: 0, total: 13327.75, items: mkTxns([[900, '2026-07-09', 'הורייזן טכנולוגיות משכורת', 13327.75]]) },
-  expenses: {
-    cards: 15618.41,
-    direct: 2209.38,
-    total: 17827.79,
-    events: [
-      { chargeDate: '2026-07-10', total: -12805.22, count: 81, class: 'statement', source: 'max', accountNumber: '2254', partial: false, future: false, txns: mkTxns([
-        [11, '2026-07-05', 'שופרסל דיל גילה', -247.90], [12, '2026-07-06', 'רמי לוי', -389.20], [13, '2026-07-04', 'ALIEXPRESS', -384.95, { currency: 'USD' }],
-        [14, '2026-07-03', 'פז יעלים', -300.00], [15, '2026-07-02', 'נטפליקס', -55.90, { installments: { number: 1, total: 12 } }],
-      ]) },
-      { chargeDate: '2026-07-08', total: -147.99, count: 3, class: 'immediate', source: 'max', accountNumber: '2254', partial: false, future: false, txns: mkTxns([
-        [21, '2026-07-08', 'Google Cloud', -62.32, { currency: 'USD' }], [22, '2026-07-08', 'OpenAI', -32.00, { currency: 'USD' }], [23, '2026-07-08', 'Anthropic', -53.67, { currency: 'USD' }],
-      ]) },
-      { chargeDate: '2026-07-10', total: -2665.20, count: 20, class: 'statement', source: 'visa_cal', accountNumber: '9962', partial: false, future: false, txns: mkTxns([
-        [31, '2026-07-01', 'סופר פארם', -132.40], [32, '2026-07-03', 'ארומה', -46.00], [33, '2026-07-05', 'דלק', -300.00],
-      ]) },
-      { chargeDate: '2026-07-02', total: -1200.00, count: 7, class: 'immediate', source: 'max', accountNumber: '8345', partial: false, future: false, txns: mkTxns([
-        [41, '2026-07-02', 'שופרסל דיל', -320.00], [42, '2026-07-02', 'קפה', -18.00], [43, '2026-07-02', 'החזר', 61.41], [44, '2026-07-02', 'ALIEXPRESS', -140.20, { currency: 'USD' }],
-      ]) },
-    ],
-    directItems: mkTxns([[51, '2026-07-11', 'פרעון הלוואה', -1046.45], [52, '2026-07-10', 'טפחות ס.ביטו-י', -73.01], [53, '2026-07-06', 'משיכת מזומן', -1089.92]]),
+// Match the paint-cache identity without changing login state or loading its data.
+const previewUserId = useAuthStore.getState().user?.id;
+const currentKey = currentCycleQueryKey(previewUserId);
+const controlKey = ['cycles', previewUserId, 'control', CYCLE_QUERY_VERSION];
+const bankSources = [
+  {
+    source: 'leumi',
+    kind: 'bank',
+    accounts: [{ account_number: '4444', enabled: true, balance: 3400 }],
   },
-  operatingNet: -5483.42,
-  financing: { total: 12805.22, count: 1 },
-  bankMovement: 7321.8,
-  projection: {
-    upcoming: [
-      { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה', certainty: 'estimated' },
-      { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י', certainty: 'estimated' },
-    ],
-    upcomingTotal: -1171.86,
-    projectedOperatingNet: -6655.28,
-    estimate: true,
-  },
-  needsReview: [], reversals: [], partials: [],
-  unreconciledCardEvents: [],
-  // The running cycle is a forward reset: what still has to enter/leave before the household
-  // reset completes. Captured shape from GET /api/v1/cycles/current (migration 33+).
-  forwardReset: {
-    mode: 'automatic', status: 'open', completionDate: '2026-08-10',
-    expectedIncoming: 13327.75, knownCardOut: 2823.79, estimatedCardOut: 15470.42,
-    fixedOut: 1171.86, knownNetChange: -3995.65, estimatedNetChange: -3314.53,
-    stages: [
-      { kind: 'recurring', date: '2026-07-26', amount: -1098.85, label: 'פרעון הלוואה' },
-      { kind: 'recurring', date: '2026-08-01', amount: -73.01, label: 'טפחות ס.ביטו-י' },
-      { kind: 'income', date: '2026-08-09', amount: 13327.75, label: 'הורייזן טכנו', primary: true },
-      { kind: 'card', date: '2026-08-10', amount: -2823.79, estimatedAmount: -15470.42, label: 'MAX ••••2254' },
-      { kind: 'card', date: '2026-08-10', amount: -1200.00, estimatedAmount: -2665.20, label: 'CAL ••••9962', primary: false },
-    ],
-  },
-  nextCardForecast: {
-    salaryAmount: 13327.75, knownTotal: 2823.79, estimatedTotal: 15470.42,
-    bills: [
-      { source: 'max', accountNumber: '2254', chargeDate: '2026-08-10', knownAmount: 1823.79, estimatedAmount: 12805.22, historyCount: 3 },
-      { source: 'visa_cal', accountNumber: '9962', chargeDate: '2026-08-10', knownAmount: 1000.00, estimatedAmount: 2665.20, historyCount: 3 },
-    ],
-  },
-  cards: [
-    { source: 'max', accountNumber: '2254', settlement: { mode: 'aggregated' }, statementDay: { certain: true, day: 10 } },
-    { source: 'visa_cal', accountNumber: '9962', settlement: { mode: 'aggregated' }, statementDay: { certain: true, day: 10 } },
-    { source: 'max', accountNumber: '8345', settlement: { mode: 'passthrough' }, statementDay: { certain: false } },
-  ],
-};
-
-function Panel({ title, children, width = 'max-w-md' }) {
-  return (
-    <div className={`w-full ${width}`}>
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400">{title}</p>
-      {children}
-    </div>
+];
+client.setQueryData(['bankSyncStats', previewUserId], bankSources);
+// Even a manual refresh or stale balance query must remain entirely synthetic.
+apiClient.client.defaults.adapter = async (config) => {
+  if (config.url === '/bank-sync/stats') {
+    return {
+      data: { sources: bankSources },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    };
+  }
+  throw new Error(
+    `Synthetic cycle preview blocked an unsupported request: ${config.url}`,
   );
-}
+};
+client.setQueryData(currentKey, {
+  data: {
+    status: 'ok',
+    cycle: CYCLE,
+    settings: SETTINGS,
+    recurringGroups: GROUPS,
+  },
+});
+client.setQueryData(controlKey, {
+  data: {
+    status: 'ok',
+    decisions: DECISIONS,
+    loans: LOANS,
+    recurring: [],
+    totalOutstanding: 10000,
+    settings: SETTINGS,
+    recurringGroups: GROUPS,
+  },
+});
+const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
+const update = (fn) =>
+  client.setQueriesData({ queryKey: ['cycles', previewUserId] }, (cached) =>
+    cached?.data ? { data: fn(cached.data) } : cached,
+  );
+cyclesApi.updateSettings = async (patch) => {
+  await pause();
+  update((data) => ({ ...data, settings: { ...data.settings, ...patch } }));
+  return { data: client.getQueryData(currentKey).data.settings };
+};
+cyclesApi.updateCardSettings = async () => {
+  await pause();
+  return { data: {} };
+};
+cyclesApi.updateRecurringGroup = async (id, patch) => {
+  await pause();
+  update((data) => ({
+    ...data,
+    recurringGroups: data.recurringGroups
+      .filter((group) => !(group.id === id && patch.active === false))
+      .map((group) => (group.id === id ? { ...group, ...patch } : group)),
+  }));
+  return {
+    data: client
+      .getQueryData(currentKey)
+      .data.recurringGroups.find((group) => group.id === id) || {
+      id,
+      active: false,
+    },
+  };
+};
+cyclesApi.classifyTransaction = async (transactionId, payload) => {
+  await pause();
+  const tx = DECISIONS.find((item) => item.transactionId === transactionId);
+  const matcher = {
+    transactionId,
+    description: tx.description,
+    source: tx.source,
+    accountLast4: tx.accountNumber,
+    amount: tx.amount,
+    date: tx.date,
+  };
+  update((data) => ({
+    ...data,
+    decisions: data.decisions?.filter(
+      (item) => item.transactionId !== transactionId,
+    ),
+    recurringGroups: payload.recurrenceGroupId
+      ? data.recurringGroups.map((group) =>
+          group.id === payload.recurrenceGroupId
+            ? { ...group, matchers: [...group.matchers, matcher] }
+            : group,
+        )
+      : [
+          ...data.recurringGroups,
+          {
+            id: `sample-${transactionId}`,
+            label: payload.recurrenceLabel,
+            recurrenceKind: payload.classification,
+            includeInEstimate: true,
+            matchers: [matcher],
+          },
+        ],
+  }));
+  return { data: {} };
+};
+cyclesApi.current = async () => client.getQueryData(currentKey);
+cyclesApi.control = async () => client.getQueryData(controlKey);
+const formatCurrency = (value) =>
+  `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const makeT =
+  (dict) =>
+  (key, values = {}) => {
+    const value = key.split('.').reduce((node, part) => node?.[part], dict);
+    return typeof value === 'string'
+      ? value.replace(/\{\{(\w+)\}\}/g, (_, name) => values[name] ?? '')
+      : key;
+  };
 
 function Preview() {
   const [lang, setLang] = useState('he');
   const [dark, setDark] = useState(false);
-  const [cycleSettings, setCycleSettings] = useState({
-    engineMode: 'automatic',
-    manualAnchorDay: null,
-    useEstimates: true,
-    overdraftLimit: 5000,
-  });
-  const t = makeT(lang === 'he' ? heDash : enDash);
-
+  const [page, setPage] = useState('dashboard');
+  const [tab, setTab] = useState('overview');
+  const workspace = useCurrentCycleWorkspace();
+  const t = makeT(lang === 'he' ? he : en);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
-  }, [dark]);
-
+    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    useTranslationStore.setState({
+      currentLanguage: lang,
+      isRTL: lang === 'he',
+      loadedModules: { 'he.dashboard': he, 'en.dashboard': en },
+    });
+  }, [dark, lang]);
   return (
-    <div className={dark ? 'dark' : ''}>
-      <div dir={lang === 'he' ? 'rtl' : 'ltr'} className="min-h-screen bg-gray-100 p-6 dark:bg-gray-950">
-        <div className="mx-auto max-w-6xl">
-          <div className="mb-6 flex gap-2">
-            <button onClick={() => setLang(lang === 'he' ? 'en' : 'he')} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white">{lang === 'he' ? 'EN' : 'עברית'}</button>
-            <button onClick={() => setDark(!dark)} className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-bold text-white dark:bg-gray-200 dark:text-gray-900">{dark ? 'Light' : 'Dark'}</button>
-          </div>
-          <div className="flex flex-wrap gap-6">
-            <Panel title="V2 — NEW DASHBOARD" width="max-w-2xl">
-              <div className="space-y-4">
-                <FinancialCycleSnapshotV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} language={lang} onOpen={() => {}} />
-                <OverdraftRunwayCard
-                  cycle={CYCLE}
-                  settings={cycleSettings}
-                  formatCurrency={formatCurrency}
-                  t={t}
-                  onSaveLimit={async (overdraftLimit) => setCycleSettings((current) => ({ ...current, overdraftLimit }))}
-                />
-              </div>
-            </Panel>
-            <Panel title="V2 — NEW CYCLE OVERVIEW" width="max-w-6xl">
-              <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
-                <CyclePositionPanelV2 cycle={CYCLE} settings={cycleSettings} formatCurrency={formatCurrency} t={t} onEstimateChange={(enabled) => setCycleSettings((current) => ({ ...current, useEstimates: enabled }))} />
-                <div className="mt-4"><CycleKnownExpensesPanelV2 cycle={CYCLE} formatCurrency={formatCurrency} language={lang} t={t} /></div>
-              </div>
-            </Panel>
-            <Panel title="V2 — NEW CARD CONTROL" width="max-w-6xl">
-              <div className="rounded-[2rem] bg-slate-50 p-4 dark:bg-slate-950">
-                <CycleCardsPanelV2 cycle={CYCLE} formatCurrency={formatCurrency} t={t} language={lang} onChange={() => {}} />
-              </div>
-            </Panel>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50 font-sans dark:bg-slate-950">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2 p-4 text-xs text-slate-500 dark:text-slate-400">
+        <span className="me-auto">Synthetic preview · no live account</span>
+        <button
+          className="rounded-lg bg-slate-200 p-2 dark:bg-slate-800"
+          onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
+        >
+          {lang === 'he' ? 'English' : 'עברית'}
+        </button>
+        <button
+          className="rounded-lg bg-slate-200 p-2 dark:bg-slate-800"
+          onClick={() => setDark(!dark)}
+        >
+          {dark ? 'Light' : 'Dark'}
+        </button>
       </div>
+      {page === 'dashboard' ? (
+        <div className="mx-auto max-w-6xl space-y-4 px-4 py-4">
+          <FinancialCycleSnapshotV2
+            {...workspace}
+            language={lang}
+            formatCurrency={formatCurrency}
+            t={t}
+            onOpen={() => setPage('cycle')}
+            onEstimateChange={(useEstimates) =>
+              workspace.updateCycleSettings({ useEstimates })
+            }
+            isSaving={workspace.isUpdatingSettings}
+          />
+          <OverdraftRunwayCard
+            cycle={workspace.cycle}
+            settings={workspace.settings}
+            formatCurrency={formatCurrency}
+            t={t}
+            onSaveLimit={(overdraftLimit) =>
+              workspace.updateCycleSettingsAsync({ overdraftLimit })
+            }
+            isSaving={workspace.isUpdatingSettings}
+          />
+        </div>
+      ) : (
+        <FinancialCycleWorkspaceView
+          workspace={workspace}
+          tab={tab}
+          onTabChange={setTab}
+          onBack={() => setPage('dashboard')}
+          onConnect={() => {}}
+          formatCurrency={formatCurrency}
+          language={lang}
+          t={t}
+        />
+      )}
     </div>
   );
 }
 
-const previewRoot = globalThis.__spendWiseCyclePreviewRoot
-  || createRoot(document.getElementById('preview-root'));
-globalThis.__spendWiseCyclePreviewRoot = previewRoot;
-previewRoot.render(
-  <QueryClientProvider client={previewQueryClient}>
+const root =
+  globalThis.__spendWiseCyclePreviewRoot ||
+  createRoot(document.getElementById('preview-root'));
+globalThis.__spendWiseCyclePreviewRoot = root;
+root.render(
+  <QueryClientProvider client={client}>
     <Preview />
   </QueryClientProvider>,
 );

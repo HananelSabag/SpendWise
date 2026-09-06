@@ -34,7 +34,7 @@ const QuickExpensePage = () => {
         >
           {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
         </button>
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h1 className="sr-only">
           {t('quickActions.title', 'Quick Actions')}
         </h1>
       </div>

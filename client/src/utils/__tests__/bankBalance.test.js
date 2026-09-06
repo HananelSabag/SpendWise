@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeBankBalance, projectBalanceAfterNextBills } from '../bankBalance';
+import { computeBankBalance } from '../bankBalance';
 
 describe('computeBankBalance', () => {
   it('sums only enabled bank accounts and excludes credit-card companies', () => {
@@ -61,41 +61,5 @@ describe('computeBankBalance', () => {
     expect(result.totalRealBalance).toBe(-250);
     expect(result.someBalancesUnavailable).toBe(true);
     expect(result.multiAccount).toBe(true);
-  });
-});
-
-describe('projectBalanceAfterNextBills', () => {
-  it('uses the complete multi-stage reset contract when available', () => {
-    expect(projectBalanceAfterNextBills(10000, {
-      window: { running: true },
-      forwardReset: { estimatedNetChange: 8201.08, expectedNetChange: 7039.29, knownNetChange: -1960.71 },
-    })).toBe(18201.08);
-    expect(projectBalanceAfterNextBills(10000, {
-      window: { running: true },
-      forwardReset: { estimatedNetChange: 8201.08, expectedNetChange: 7039.29, knownNetChange: -1960.71 },
-    }, false)).toBe(17039.29);
-  });
-
-  it('uses only future movements and does not subtract an already-settled card bill again', () => {
-    const cycle = {
-      window: { running: true },
-      projection: { upcomingTotal: -1000 },
-      nextCardForecast: {
-        salaryAmount: 13000,
-        knownTotal: 300,
-        estimatedTotal: 15000,
-        bills: [{ chargeDate: '2026-08-10' }],
-      },
-    };
-
-    expect(projectBalanceAfterNextBills(5000, cycle)).toBe(2000);
-    expect(projectBalanceAfterNextBills(5000, cycle, false)).toBe(16700);
-  });
-
-  it('does not show the forward forecast on a completed cycle', () => {
-    expect(projectBalanceAfterNextBills(5000, {
-      window: { running: false },
-      nextCardForecast: { salaryAmount: 13000, estimatedTotal: 12000, bills: [{}] },
-    })).toBeNull();
   });
 });

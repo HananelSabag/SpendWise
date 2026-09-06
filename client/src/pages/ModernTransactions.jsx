@@ -66,6 +66,7 @@ const MobileTransactions = ({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <h1 className="sr-only">{t('title')}</h1>
       {/* ONE sticky glass control block — no separate page header (the
           bottom nav already tells you where you are; the old logo+title
           row was 48px of dead weight) */}
@@ -174,9 +175,7 @@ const DesktopTransactions = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 pt-6 pb-0">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('title') || 'Transactions'}</h1>
-      </div>
+      <h1 className="sr-only">{t('title')}</h1>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-5">
         {/* Stats */}

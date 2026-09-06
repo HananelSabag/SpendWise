@@ -10,7 +10,9 @@ const CARD_SOURCES = new Set(['max', 'visa_cal', 'isracard', 'amex']);
 export const PICKER_PAGE_SIZE = 24;
 
 export function filterRecurringTransactions(candidates, query, direction = 'all') {
-  const normalized = String(query || '').trim().toLocaleLowerCase();
+  const normalized = String(query || '')
+    .trim()
+    .toLocaleLowerCase();
   return candidates.filter((item) => {
     const amount = Number(item.amount);
     if (direction === 'income' && amount <= 0) return false;
@@ -23,7 +25,11 @@ export function filterRecurringTransactions(candidates, query, direction = 'all'
       item.processedDate,
       item.date,
       amount,
-    ].some((value) => String(value || '').toLocaleLowerCase().includes(normalized));
+    ].some((value) =>
+      String(value || '')
+        .toLocaleLowerCase()
+        .includes(normalized),
+    );
   });
 }
 
@@ -36,6 +42,7 @@ export default function RecurringTransactionPicker({
   language,
   t,
   title,
+  hint,
   lockedDirection = null,
 }) {
   const [query, setQuery] = useState('');
@@ -68,11 +75,13 @@ export default function RecurringTransactionPicker({
       drawerWidth={560}
     >
       <div className="space-y-4 pb-5">
+        {hint && <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{hint}</p>}
         <div className="sticky top-0 z-10 space-y-3 bg-white pb-2 dark:bg-slate-900">
           <label className="relative block">
             <Search className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-slate-400" />
             <input
               type="search"
+              aria-label={t('cycleV2.searchTransactions')}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('cycleV2.searchTransactions')}
@@ -81,12 +90,17 @@ export default function RecurringTransactionPicker({
           </label>
 
           {!lockedDirection && (
-            <div className="grid grid-cols-3 gap-2" role="group" aria-label={t('cycleV2.transactionDirection')}>
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="group"
+              aria-label={t('cycleV2.transactionDirection')}
+            >
               {['all', 'expense', 'income'].map((value) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setDirection(value)}
+                  aria-pressed={direction === value}
                   className={cn(
                     'rounded-xl px-3 py-2 text-xs font-black transition',
                     direction === value
@@ -122,12 +136,14 @@ export default function RecurringTransactionPicker({
                 }}
                 className="flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 text-start transition hover:border-indigo-300 hover:bg-indigo-50/40 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/20"
               >
-                <span className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                  income
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                )}>
+                <span
+                  className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                    income
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                  )}
+                >
                   <SourceIcon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -136,15 +152,28 @@ export default function RecurringTransactionPicker({
                   </span>
                   <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold text-slate-400">
                     <span>{formatCycleDay(item.processedDate || item.date, language)}</span>
-                    <span>{String(item.source || t('cycleV2.unknownSource')).toUpperCase()}{item.accountNumber ? ` ••••${String(item.accountNumber).slice(-4)}` : ''}</span>
+                    <span>
+                      {String(item.source || t('cycleV2.unknownSource')).toUpperCase()}
+                      {item.accountNumber ? ` ••••${String(item.accountNumber).slice(-4)}` : ''}
+                    </span>
                   </span>
                 </span>
-                <span className={cn(
-                  'flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-black tabular-nums',
-                  income ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white',
-                )}>
-                  {income ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
-                  {signedCurrency(amount, formatCurrency, { signPositive: true })}
+                <span
+                  className={cn(
+                    'flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-semibold tabular-nums',
+                    income
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-slate-900 dark:text-white',
+                  )}
+                >
+                  {income ? (
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  )}
+                  <bdi dir="ltr">
+                    {signedCurrency(amount, formatCurrency, { signPositive: true })}
+                  </bdi>
                 </span>
               </button>
             );

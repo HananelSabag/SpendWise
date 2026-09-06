@@ -21,6 +21,33 @@ function cardView({ mode = SETTLEMENT_MODES.AGGREGATED, futureTotal = -300 } = {
 }
 
 describe('next card-bill forecast', () => {
+  test('a net card refund remains a credit rather than becoming a charge', () => {
+    const result = estimateNextCardBills([cardView({ futureTotal: 100 })], {
+      afterDate: '2026-08-09', asOf: new Date('2026-07-17T12:00:00+03:00'),
+    });
+    expect(result).toMatchObject({ knownTotal: -100, estimatedTotal: -100 });
+    expect(result.bills[0].knownTxns.reduce((sum, txn) => sum + txn.amount, 0)).toBe(100);
+  });
+  test('includes only the next unpaid bill inside the displayed billing horizon', () => {
+    const early = cardView();
+    early.accountNumber = '2222';
+    early.view.statementDay.day = 2;
+    const result = estimateNextCardBills([cardView(), early], {
+      afterDate: '2026-08-06', throughDate: '2026-08-10',
+      asOf: new Date('2026-08-06T12:00:00+03:00'),
+    });
+    expect(result.bills.map((bill) => bill.accountNumber)).toEqual(['2254']);
+    expect(result.bills[0].chargeDate).toBe('2026-08-10');
+  });
+
+  test('does not subtract a bill that already posted today', () => {
+    const result = estimateNextCardBills([cardView()], {
+      afterDate: '2026-08-10', throughDate: '2026-08-20',
+      settledEvents: [{ source: 'max', accountNumber: '2254', chargeDate: '2026-08-10' }],
+      asOf: new Date('2026-08-10T12:00:00+03:00'),
+    });
+    expect(result.bills).toEqual([]);
+  });
   test('caps a two-statement estimate so one expensive month cannot dominate', () => {
     const result = estimateNextCardBills([cardView()], {
       afterDate: '2026-08-09',

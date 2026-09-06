@@ -25,9 +25,8 @@ export function computeBankBalance(sources) {
     (src.accounts || [])
       .filter((a) => a.enabled !== false)
       .map((a) => {
-        const numericBalance = a.balance === null || a.balance === undefined
-          ? null
-          : Number(a.balance);
+        const numericBalance =
+          a.balance === null || a.balance === undefined ? null : Number(a.balance);
         return {
           source: src.source,
           accountNumber: a.account_number || null,
@@ -50,39 +49,12 @@ export function computeBankBalance(sources) {
     accountsWithBalance,
     hasRealBalance: accountsWithBalance.length > 0,
     // True when a real total exists but at least one account could not report one.
-    someBalancesUnavailable: accountsWithBalance.length > 0 && accountsWithBalance.length < bankAccounts.length,
+    someBalancesUnavailable:
+      accountsWithBalance.length > 0 && accountsWithBalance.length < bankAccounts.length,
     totalRealBalance,
     multiAccount: bankAccounts.length > 1,
     lastSync,
   };
-}
-
-/**
- * Project today's real balance through the next salary and the card bills immediately after it.
- * `upcomingTotal` contains only movements that have not happened yet, so a statement that already
- * left the account is deliberately not subtracted a second time.
- */
-export function projectBalanceAfterNextBills(currentBalance, cycle, useHistoricalEstimate = true) {
-  const reset = cycle?.forwardReset;
-  const current = Number(currentBalance);
-  if (cycle?.window?.running && reset) {
-    // Historical estimates only control possible card-bill growth. Linked future income remains
-    // a visible forecast in both modes instead of disappearing when the card estimate is off.
-    const change = Number(useHistoricalEstimate
-      ? reset.estimatedNetChange
-      : (reset.expectedNetChange ?? reset.knownNetChange));
-    return [current, change].every(Number.isFinite) ? current + change : null;
-  }
-
-  const forecast = cycle?.nextCardForecast;
-  const untilSalary = Number(cycle?.projection?.upcomingTotal || 0);
-  const salary = Number(forecast?.salaryAmount);
-  const cards = Number(useHistoricalEstimate ? forecast?.estimatedTotal : forecast?.knownTotal);
-
-  if (!cycle?.window?.running || !forecast?.bills?.length) return null;
-  if (![current, untilSalary, salary, cards].every(Number.isFinite)) return null;
-
-  return current + untilSalary + salary - cards;
 }
 
 export default computeBankBalance;
