@@ -61,6 +61,11 @@ export const AdminUsers = createLazyComponent(
   'AdminUsers'
 );
 
+export const FamilyHubPage = createLazyComponent(
+  () => import('../pages/FamilyHubPage.jsx'),
+  'FamilyHubPage'
+);
+
 export const GroceryListPage = createLazyComponent(
   () => import('../pages/GroceryListPage.jsx'),
   'GroceryListPage'

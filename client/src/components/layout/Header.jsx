@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Accessibility,
   Building2,
+  Users,
   Wallet,
   Calculator,
   ChevronLeft,
@@ -142,8 +143,17 @@ const Header = () => {
       href: '/bank-sync',
       icon: Building2,
       active: location.pathname.startsWith('/bank-sync')
-    }
-  ]), [currentLanguage, location.pathname, t]);
+    },
+    // Only offered to the household. `user.familyHub` is computed by the server
+    // (`config/familyAccess.js`), so the allowlist itself never ships to the client.
+    ...(user?.familyHub ? [{
+      key: 'family',
+      label: t('family.title', { fallback: currentLanguage === 'he' ? 'מרכז המשפחה' : 'Family Hub' }),
+      href: '/family',
+      icon: Users,
+      active: location.pathname.startsWith('/family')
+    }] : [])
+  ]), [currentLanguage, location.pathname, t, user?.familyHub]);
 
   const accountItems = useMemo(() => ([
     {

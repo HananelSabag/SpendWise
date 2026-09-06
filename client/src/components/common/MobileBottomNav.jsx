@@ -18,7 +18,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Accessibility,
-  Home, CreditCard, User,
+  Home, CreditCard, User, Users,
   PlusCircle, MinusCircle, Calculator,
   Shield, HelpCircle, Sun, Moon, Globe, ShoppingCart, X, Building2, Wallet, ChevronRight,
 } from 'lucide-react';
@@ -213,6 +213,15 @@ const FullNav = () => {
   // ── Tool shortcuts ────────────────────────────────────────────────────────
 
   const toolActions = useMemo(() => [
+    // Household members only — the flag is server-computed, so the allowlist
+    // never reaches the client.
+    ...(user?.familyHub ? [{
+      key: 'family',
+      label: currentLanguage === 'he' ? 'מרכז המשפחה' : 'Family Hub',
+      icon: Users,
+      iconTint: 'text-violet-500 dark:text-violet-400',
+      action: () => closeAndGo('/family'),
+    }] : []),
     {
       key: 'exchange',
       label: currentLanguage === 'he' ? 'המרת מטבע' : 'Exchange',
@@ -246,7 +255,7 @@ const FullNav = () => {
       iconTint: 'text-yellow-600 dark:text-yellow-400',
       action: () => closeAndGo('/admin'),
     }] : []),
-  ], [t, currentLanguage, isAdmin, dispatch, handleClose, closeAndGo, loadedModulesCount]); // eslint-disable-line
+  ], [t, currentLanguage, isAdmin, user?.familyHub, dispatch, handleClose, closeAndGo, loadedModulesCount]); // eslint-disable-line
 
   // ─────────────────────────────────────────────────────────────────────────
   return (

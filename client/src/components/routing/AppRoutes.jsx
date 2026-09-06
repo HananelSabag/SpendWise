@@ -122,6 +122,19 @@ export const AppRoutes = ({ isAuthenticated }) => (
       </ProtectedRoute>
     } />
 
+    {/* Family Hub — the household's manual picture. The server decides who may
+        read it (`middleware/familyAccess.js`); a non-member sees the page's own
+        "this area is closed" state rather than a blank screen. */}
+    <Route path="/family" element={
+      <ProtectedRoute>
+        <RouteErrorBoundary routeName="FamilyHub">
+          <Suspense fallback={<RouteLoadingFallback route="family hub" />}>
+            <LazyComponents.FamilyHubPage />
+          </Suspense>
+        </RouteErrorBoundary>
+      </ProtectedRoute>
+    } />
+
     {/* ✅ Shared grocery list */}
     <Route path="/grocery" element={
       <ProtectedRoute>
