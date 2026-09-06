@@ -32,8 +32,6 @@ const INVITE_FAILURES = {
   [INVITE_RESULT.NOT_FOUND]:              [404, 'GROCERY_INVITE_NOT_FOUND'],
   [INVITE_RESULT.EXPIRED]:                [410, 'GROCERY_INVITE_EXPIRED'],
   [INVITE_RESULT.WRONG_RECIPIENT]:        [403, 'GROCERY_INVITE_WRONG_RECIPIENT'],
-  [INVITE_RESULT.ALREADY_IN_ANOTHER_LIST]:[409, 'GROCERY_ALREADY_IN_ANOTHER_LIST'],
-  [INVITE_RESULT.OWN_LIST_NOT_EMPTY]:     [409, 'GROCERY_OWN_LIST_NOT_EMPTY'],
 };
 
 const groceryShareController = {
@@ -236,6 +234,53 @@ const groceryShareController = {
     }
 
     res.json({ success: true });
+  }),
+
+  // ─── The lists this person can open ───────────────────────────────────────
+
+  /**
+   * GET /grocery/lists — every list this user belongs to.
+   *
+   * A list carries no user-facing name (nothing sets one), so it is identified
+   * by whose it is. `isActive` is the one the app opens by default; the client
+   * switches with the endpoint below.
+   */
+  getLists: asyncHandler(async (req, res) => {
+    const lists = await GroceryList.listsForUser(req.user.id);
+
+    res.json({
+      success: true,
+      data: lists.map((list, index) => ({
+        id: list.id,
+        role: list.role,
+        isOwn: list.role === 'owner',
+        ownerName: displayName({
+          first_name: list.owner_first_name,
+          username: list.owner_username,
+        }),
+        memberCount: list.member_count,
+        openItems: list.open_items,
+        // The query orders by "last opened", so the first row is the live one.
+        isActive: index === 0,
+      })),
+    });
+  }),
+
+  /** POST /grocery/lists/:id/open — switch to one of my lists. */
+  openList: asyncHandler(async (req, res) => {
+    const listId = Number(req.params.id);
+    if (!Number.isInteger(listId)) {
+      return fail(res, 400, 'GROCERY_LIST_ID_INVALID', 'Invalid list id');
+    }
+
+    // markOpened only touches a row this user actually has, so it is the
+    // membership check as well as the write.
+    const opened = await GroceryList.markOpened(listId, req.user.id);
+    if (!opened) {
+      return fail(res, 404, 'GROCERY_LIST_NOT_FOUND', 'No such list for this user');
+    }
+
+    res.json({ success: true, data: { listId } });
   }),
 
   /** GET /grocery/members */

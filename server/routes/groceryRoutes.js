@@ -1,8 +1,12 @@
 /**
  * Shared grocery list routes — /api/v1/grocery
  *
- * Layering, in order: authenticate → resolve the caller's list membership
+ * Layering, in order: authenticate → resolve WHICH list the request is about
  * (`attachList`) → owner check where the action needs one.
+ *
+ * A user can be on several lists (migration 44). A request names one with the
+ * `X-Grocery-List` header; `attachList` resolves it through membership and
+ * falls back to their current list, so the header is a hint and never a grant.
  *
  * There is no list-level lock: two shoppers adding or checking off different
  * items cannot conflict. A lost update on the SAME item is prevented by
@@ -20,6 +24,13 @@ const grocery = require('../controllers/groceryController');
 const share = require('../controllers/groceryShareController');
 
 router.use(auth);
+
+// ─── The user's lists ───────────────────────────────────────────────────────
+// About the person, not about one list, so they run before `attachList`: a
+// switch has to work while the list you are switching AWAY from is still the
+// one the resolver would pick.
+router.get('/lists',                                      share.getLists);
+router.post('/lists/:id/open',                            share.openList);
 
 // ─── Invitations ────────────────────────────────────────────────────────────
 // These come before `router.use(attachList)` because they must work for a user

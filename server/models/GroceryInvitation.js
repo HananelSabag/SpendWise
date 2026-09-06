@@ -19,8 +19,6 @@ const INVITE_RESULT = {
   EXPIRED: 'EXPIRED',
   WRONG_RECIPIENT: 'WRONG_RECIPIENT',
   ALREADY_MEMBER: 'ALREADY_MEMBER',
-  ALREADY_IN_ANOTHER_LIST: 'ALREADY_IN_ANOTHER_LIST',
-  OWN_LIST_NOT_EMPTY: 'OWN_LIST_NOT_EMPTY',
 };
 
 class GroceryInvitation {
@@ -265,12 +263,11 @@ class GroceryInvitation {
         [user.id]
       );
 
-      const joinedElsewhere = current.find((m) => m.role === 'member');
-      if (joinedElsewhere) {
-        await client.query('ROLLBACK');
-        return { result: INVITE_RESULT.ALREADY_IN_ANOTHER_LIST };
-      }
-
+      // Joining is no longer refused because you already have a list. It used
+      // to be, and that made a shared link a dead end for exactly the person
+      // most likely to be sent one — someone already running a household list,
+      // whose only offered remedy was to empty or close it first. Membership
+      // has always been a plain join table; since migration 44 the app agrees.
       const ownList = current.find((m) => m.role === 'owner');
       if (ownList) {
         const { rows: busy } = await client.query(
@@ -285,26 +282,39 @@ class GroceryInvitation {
           [ownList.list_id, user.id]
         );
         const b = busy[0];
-        if (Number(b.other_members) > 0 || Number(b.history) > 0 || Number(b.items) > 0) {
-          await client.query('ROLLBACK');
-          return { result: INVITE_RESULT.OWN_LIST_NOT_EMPTY };
-        }
+        const untouched = Number(b.other_members) === 0
+          && Number(b.history) === 0
+          && Number(b.items) === 0;
 
-        // Untouched auto-created list — archive it so the shared one takes over.
-        await client.query(
-          `UPDATE grocery_lists SET archived_at = NOW() WHERE id = $1`,
-          [ownList.list_id]
-        );
-        await client.query(
-          `DELETE FROM grocery_list_members WHERE list_id = $1`,
-          [ownList.list_id]
-        );
+        // An auto-created list nobody ever put anything in is noise, not data.
+        // This is the "I signed up in order to join you" path: retire the empty
+        // list rather than leaving them with a switcher full of nothing. Any
+        // list with members, items or history is kept and simply joined
+        // alongside.
+        if (untouched) {
+          await client.query(
+            `UPDATE grocery_lists SET archived_at = NOW() WHERE id = $1`,
+            [ownList.list_id]
+          );
+          await client.query(
+            `DELETE FROM grocery_list_members WHERE list_id = $1`,
+            [ownList.list_id]
+          );
+        }
       }
 
       await client.query(
         `INSERT INTO grocery_list_members (list_id, user_id, role)
          VALUES ($1, $2, 'member')
          ON CONFLICT (list_id, user_id) DO NOTHING`,
+        [inv.list_id, user.id]
+      );
+
+      // Land them on the list they just joined, not on whichever one they were
+      // looking at before.
+      await client.query(
+        `UPDATE grocery_list_members SET last_opened_at = NOW()
+          WHERE list_id = $1 AND user_id = $2`,
         [inv.list_id, user.id]
       );
 

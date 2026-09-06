@@ -128,7 +128,7 @@ describe('grocery invitation acceptance', () => {
     expect(ran(client, 'INSERT INTO grocery_list_members')).toBe(false);
   });
 
-  test('refuses rather than silently moving a user out of another shared list', async () => {
+  test('joins a second list instead of refusing someone already in a shared one', async () => {
     const client = makeClient([
       ['FROM grocery_list_invitations', { rows: [pendingInvitation()] }],
       ['SELECT 1 FROM grocery_list_members', { rows: [] }],
@@ -138,11 +138,14 @@ describe('grocery invitation acceptance', () => {
 
     const outcome = await GroceryInvitation.accept('tok', user);
 
-    expect(outcome.result).toBe(INVITE_RESULT.ALREADY_IN_ANOTHER_LIST);
-    expect(ran(client, '^ROLLBACK$')).toBe(true);
+    expect(outcome.result).toBe(INVITE_RESULT.OK);
+    expect(ran(client, 'INSERT INTO grocery_list_members')).toBe(true);
+    // The list they were already on is left exactly as it was.
+    expect(ran(client, 'SET archived_at')).toBe(false);
+    expect(ran(client, '^ROLLBACK$')).toBe(false);
   });
 
-  test('refuses when the user owns a list that still holds items or history', async () => {
+  test('keeps an owned list that holds items or history, and joins alongside it', async () => {
     const client = makeClient([
       ['FROM grocery_list_invitations', { rows: [pendingInvitation()] }],
       ['SELECT 1 FROM grocery_list_members', { rows: [] }],
@@ -153,8 +156,22 @@ describe('grocery invitation acceptance', () => {
 
     const outcome = await GroceryInvitation.accept('tok', user);
 
-    expect(outcome.result).toBe(INVITE_RESULT.OWN_LIST_NOT_EMPTY);
+    expect(outcome.result).toBe(INVITE_RESULT.OK);
     expect(ran(client, 'SET archived_at')).toBe(false);
+    expect(ran(client, 'INSERT INTO grocery_list_members')).toBe(true);
+  });
+
+  test('lands the user on the list they just joined', async () => {
+    const client = makeClient([
+      ['FROM grocery_list_invitations', { rows: [pendingInvitation()] }],
+      ['SELECT 1 FROM grocery_list_members', { rows: [] }],
+      ['FROM grocery_list_members m JOIN grocery_lists', { rows: [] }],
+    ]);
+    db.getClient.mockResolvedValue(client);
+
+    await GroceryInvitation.accept('tok', user);
+
+    expect(ran(client, 'SET last_opened_at = NOW')).toBe(true);
   });
 
   test('archives an untouched auto-created list instead of blocking the join', async () => {

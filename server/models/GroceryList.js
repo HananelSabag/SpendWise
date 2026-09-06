@@ -7,10 +7,15 @@
  * member can edit the owner's items and vice versa. Item authorship is history,
  * never permission.
  *
- * Active-list rule: a user works on exactly one list. If a list was shared with
- * them they use that one; otherwise they use (and lazily get) their own.
- * Accepting an invitation while already in someone else's list is refused
- * rather than silently resolved — see GroceryInvitation.accept.
+ * A user may belong to SEVERAL lists (migration 44) — their own household one
+ * and, say, the one a friend shared. Which of them they are looking at is
+ * `grocery_list_members.last_opened_at`: highest wins, per user and per list, so
+ * two people on the same list can each be somewhere different. They still own
+ * at most one list; extra lists arrive by invitation.
+ *
+ * Every request may name a list explicitly (see `middleware/groceryAccess`);
+ * membership is checked either way, so naming one is a convenience and never
+ * a grant of access.
  *
  * Concurrency: there is no list-level lock. `version` is a change stamp for
  * polling, nothing more.
@@ -20,8 +25,9 @@ const db = require('../config/db');
 
 class GroceryList {
   /**
-   * The one list this user works on. Creates it (plus the owner membership and
-   * an empty active trip) on first use, inside a single transaction.
+   * The list this user is on, creating their own (plus the owner membership and
+   * an empty active trip) on first use, inside a single transaction. Only ever
+   * creates when they belong to NO list — an invitation is the other way in.
    */
   static async resolveForUser(userId) {
     const existing = await this.findForUser(userId);
@@ -81,18 +87,85 @@ class GroceryList {
     return this.findForUser(userId);
   }
 
-  /** The user's active list + their role, or null. Prefers a shared-with-me list. */
+  /**
+   * The list this user is currently on, or null.
+   *
+   * Most-recently-opened wins. The old tie-breakers stay underneath it for
+   * memberships that predate `last_opened_at`: a list shared WITH you beats one
+   * you made yourself, which is what someone who joined a household expects.
+   */
   static async findForUser(userId) {
     const { rows } = await db.query(
       `SELECT l.*, m.role, m.joined_at
          FROM grocery_list_members m
          JOIN grocery_lists l ON l.id = m.list_id
         WHERE m.user_id = $1 AND l.archived_at IS NULL
-        ORDER BY (m.role = 'member') DESC, m.joined_at ASC
+        ORDER BY m.last_opened_at DESC NULLS LAST,
+                 (m.role = 'member') DESC,
+                 m.joined_at ASC
         LIMIT 1`,
       [userId]
     );
     return rows[0] || null;
+  }
+
+  /** One specific list, but only if this user is on it. Otherwise null. */
+  static async findForUserById(listId, userId) {
+    const { rows } = await db.query(
+      `SELECT l.*, m.role, m.joined_at
+         FROM grocery_list_members m
+         JOIN grocery_lists l ON l.id = m.list_id
+        WHERE m.list_id = $1 AND m.user_id = $2 AND l.archived_at IS NULL`,
+      [listId, userId]
+    );
+    return rows[0] || null;
+  }
+
+  /**
+   * Every list this user can open, newest-opened first — what the list switcher
+   * shows. A list has no user-facing name of its own, so the label is whose it
+   * is; `open_items` is the only number worth showing next to it.
+   */
+  static async listsForUser(userId) {
+    const { rows } = await db.query(
+      `SELECT l.id,
+              l.name,
+              l.owner_id,
+              m.role,
+              m.last_opened_at,
+              owner.first_name  AS owner_first_name,
+              owner.username    AS owner_username,
+              (SELECT COUNT(*)::int FROM grocery_list_members gm
+                WHERE gm.list_id = l.id)                          AS member_count,
+              (SELECT COUNT(*)::int FROM grocery_items i
+                 JOIN grocery_trips t ON t.id = i.trip_id
+                WHERE t.list_id = l.id
+                  AND t.status = 'active'
+                  AND i.is_purchased = false)                     AS open_items
+         FROM grocery_list_members m
+         JOIN grocery_lists l ON l.id = m.list_id
+         JOIN users owner     ON owner.id = l.owner_id
+        WHERE m.user_id = $1 AND l.archived_at IS NULL
+        ORDER BY m.last_opened_at DESC NULLS LAST,
+                 (m.role = 'member') DESC,
+                 m.joined_at ASC`,
+      [userId]
+    );
+    return rows;
+  }
+
+  /**
+   * Mark a list as the one this user is on. Membership-checked, so this doubles
+   * as the switch action's authorization. Returns false if they aren't a member.
+   */
+  static async markOpened(listId, userId) {
+    const { rowCount } = await db.query(
+      `UPDATE grocery_list_members
+          SET last_opened_at = NOW()
+        WHERE list_id = $1 AND user_id = $2`,
+      [listId, userId]
+    );
+    return rowCount > 0;
   }
 
   /** Membership row for (list, user), or null. The single authorization check. */

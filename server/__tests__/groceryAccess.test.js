@@ -34,6 +34,46 @@ describe('attachList', () => {
     expect(next).toHaveBeenCalledWith();
   });
 
+  // Since migration 44 a user can be on several lists, so a request may name
+  // the one it means. The id is resolved through membership, never trusted.
+  test('uses the list the request names when the caller is a member of it', async () => {
+    jest.spyOn(GroceryList, 'findForUserById').mockResolvedValue({ id: 9, role: 'member' });
+    const resolve = jest.spyOn(GroceryList, 'resolveForUser');
+    const req = makeReq({ 'x-grocery-list': '9' });
+    const next = jest.fn();
+
+    await attachList(req, makeRes(), next);
+
+    expect(GroceryList.findForUserById).toHaveBeenCalledWith('9', 7);
+    expect(req.groceryList).toEqual({ id: 9, role: 'member' });
+    expect(req.groceryRole).toBe('member');
+    expect(resolve).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('naming a list you are not on gets you your own, not theirs', async () => {
+    jest.spyOn(GroceryList, 'findForUserById').mockResolvedValue(null);
+    jest.spyOn(GroceryList, 'resolveForUser').mockResolvedValue({ id: 5, role: 'owner' });
+    const req = makeReq({ 'x-grocery-list': '404' });
+    const next = jest.fn();
+
+    await attachList(req, makeRes(), next);
+
+    expect(req.groceryList).toEqual({ id: 5, role: 'owner' });
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  test('ignores a non-numeric list id without hitting the database', async () => {
+    const byId = jest.spyOn(GroceryList, 'findForUserById');
+    jest.spyOn(GroceryList, 'resolveForUser').mockResolvedValue({ id: 5, role: 'owner' });
+    const req = makeReq({ 'x-grocery-list': '5; DROP TABLE grocery_lists' });
+
+    await attachList(req, makeRes(), jest.fn());
+
+    expect(byId).not.toHaveBeenCalled();
+    expect(req.groceryList).toEqual({ id: 5, role: 'owner' });
+  });
+
   test('refuses when the user has no list at all', async () => {
     jest.spyOn(GroceryList, 'resolveForUser').mockResolvedValue(null);
     const res = makeRes();
@@ -165,9 +205,9 @@ describe('CORS must allow the grocery headers', () => {
   // Custom request headers turn every list request into a preflighted one. When
   // they are missing from allowedHeaders the browser refuses before the request
   // is ever sent, which reads as a network failure with no server log at all.
-  test('X-Grocery-Session is allowed on requests', () => {
+  test.each(['X-Grocery-Session', 'X-Grocery-List'])('%s is allowed on requests', (header) => {
     const allowed = index.match(/allowedHeaders:\s*\[([\s\S]*?)\]/);
     expect(allowed).toBeTruthy();
-    expect(allowed[1]).toMatch(/'X-Grocery-Session'/);
+    expect(allowed[1]).toContain(`'${header}'`);
   });
 });
