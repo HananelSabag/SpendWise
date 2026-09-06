@@ -308,6 +308,10 @@ try {
   app.use(`${API_VERSION}/grocery`, require('./routes/groceryRoutes'));
   logger.debug('✅ Grocery list routes loaded');
 
+  logger.debug('Loading family hub routes...');
+  app.use(`${API_VERSION}/family`, require('./routes/familyRoutes'));
+  logger.debug('✅ Family hub routes loaded');
+
   app.use(`${API_VERSION}/notifications`, require('./routes/notificationRoutes'));
 
   // ✅ ADMIN ROUTES - Add missing admin routes

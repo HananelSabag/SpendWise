@@ -4,6 +4,8 @@
  * @module utils/userNormalizer
  */
 
+const { isFamilyMember } = require('../config/familyAccess');
+
 /**
  * Normalize user data for client consumption
  * Handles both snake_case (database) and camelCase (client) field naming
@@ -34,6 +36,12 @@ const normalizeUserData = (user) => {
     role: user.role || 'user',
     isAdmin: ['admin', 'super_admin'].includes(user.role || 'user'),
     isSuperAdmin: (user.role || 'user') === 'super_admin',
+
+    // Family Hub membership. Computed here so the client never carries its own
+    // copy of the household allowlist — it just reads a boolean and decides
+    // whether to show the entry point. The server is still the actual gate
+    // (`middleware/familyAccess.js`); this only controls what is offered.
+    familyHub: isFamilyMember(user),
     
     // ✅ Verification Status (both formats)
     email_verified: user.email_verified || false,
