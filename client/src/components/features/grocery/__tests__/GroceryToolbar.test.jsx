@@ -9,12 +9,11 @@ const t = (key) =>
   key.split(".").reduce((value, part) => value?.[part], translations) || key;
 const defaults = {
   t,
-  tab: "list",
   statusLine: "6 remaining · 1 purchased",
   progress: 100 / 7,
   showProgress: true,
   onShare: vi.fn(),
-  onTabChange: vi.fn(),
+  onHistory: vi.fn(),
 };
 
 describe("compact grocery toolbar", () => {
@@ -31,15 +30,15 @@ describe("compact grocery toolbar", () => {
     expect(screen.queryByRole("button", { name: /Switch to/ })).toBeNull();
   });
 
-  it("preserves sharing, invitations, tab changes and switching between lists", () => {
+  it("preserves sharing, invitations, history and switching between lists", () => {
     const onShare = vi.fn();
-    const onTabChange = vi.fn();
+    const onHistory = vi.fn();
     const onSwitchList = vi.fn();
     render(
       <GroceryToolbar
         {...defaults}
         onShare={onShare}
-        onTabChange={onTabChange}
+        onHistory={onHistory}
         onSwitchList={onSwitchList}
         activeListLabel="Alex's list"
         invitationCount={2}
@@ -48,26 +47,24 @@ describe("compact grocery toolbar", () => {
     const share = screen.getByRole("button", { name: t("share.title") });
     expect(share.textContent).toContain("2");
     fireEvent.click(share);
-    fireEvent.click(screen.getByRole("tab", { name: t("tabs.history") }));
+    fireEvent.click(screen.getByRole("button", { name: t("history.open") }));
     fireEvent.click(
       screen.getByRole("button", {
         name: `${t("lists.switchTo")}: Alex's list`,
       }),
     );
     expect(onShare).toHaveBeenCalledTimes(1);
-    expect(onTabChange).toHaveBeenCalledWith("history");
+    expect(onHistory).toHaveBeenCalledTimes(1);
     expect(onSwitchList).toHaveBeenCalledTimes(1);
   });
 
-  it("does not show current-shopping progress over the history tab", () => {
-    render(<GroceryToolbar {...defaults} tab="history" />);
-    expect(screen.queryByRole("progressbar")).toBeNull();
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(
-      screen
-        .getByRole("tab", { name: t("tabs.history") })
-        .getAttribute("aria-selected"),
-    ).toBe("true");
+  // History is a sheet behind one icon, not a tab: a full-width tab bar spent
+  // more than a third of this screen's chrome on a destination you visit about
+  // once a month, and the list is what the screen is for.
+  it("offers history as a single control rather than a tab bar", () => {
+    render(<GroceryToolbar {...defaults} />);
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.getByRole("button", { name: t("history.open") })).toBeTruthy();
   });
 
   it("keeps visual and accessible progress within the same bounds", () => {

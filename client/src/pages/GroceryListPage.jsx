@@ -26,7 +26,7 @@ import GroceryItemRow from '../components/features/grocery/GroceryItemRow';
 import GroceryItemSheet from '../components/features/grocery/GroceryItemSheet';
 import GroceryFinishSheet from '../components/features/grocery/GroceryFinishSheet';
 import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet';
-import GroceryHistoryPanel from '../components/features/grocery/GroceryHistoryPanel';
+import GroceryHistorySheet from '../components/features/grocery/GroceryHistorySheet';
 import GroceryListSwitcher, { listLabel } from '../components/features/grocery/GroceryListSwitcher';
 import { hasLearnedGesture, onGestureLearned } from '../components/features/grocery/gestureHint';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
@@ -60,7 +60,9 @@ const GroceryListPage = () => {
   const { invitations: myInvitations } = useMyGroceryInvitations();
   const { lists, hasMultiple } = useGroceryLists();
 
-  const [tab, setTab] = useState(searchParams.get('tab') === 'history' ? 'history' : 'list');
+  // `?tab=history` is kept as the way in, because notifications and older links
+  // point at it — it just opens the sheet now instead of switching a tab.
+  const [historyOpen, setHistoryOpen] = useState(searchParams.get('tab') === 'history');
   const [sheetItem, setSheetItem] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -83,10 +85,10 @@ const GroceryListPage = () => {
     if (switched) setListsOpen(false);
   }, [switchList]);
 
-  const changeTab = useCallback((next) => {
-    setTab(next);
+  const setHistory = useCallback((open) => {
+    setHistoryOpen(open);
     const params = new URLSearchParams(searchParams);
-    if (next === 'history') params.set('tab', 'history');
+    if (open) params.set('tab', 'history');
     else params.delete('tab');
     setSearchParams(params, { replace: true });
   }, [searchParams, setSearchParams]);
@@ -187,21 +189,15 @@ const GroceryListPage = () => {
           activeListLabel={activeList ? listLabel(activeList, t) : t('title')}
           onSwitchList={hasMultiple ? () => setListsOpen(true) : undefined}
           onShare={() => setShareOpen(true)}
+          onHistory={() => setHistory(true)}
           invitationCount={myInvitations.length}
-          tab={tab}
-          onTabChange={changeTab}
           statusLine={statusLine}
           progress={progress}
           showProgress={!isEmpty}
           t={t}
         />
 
-        {tab === 'history' ? (
-          <div className="pt-3">
-            <GroceryHistoryPanel active={tab === 'history'} />
-          </div>
-        ) : (
-          <div className="pt-3 lg:flex lg:items-start lg:gap-6">
+        <div className="pt-2 lg:flex lg:items-start lg:gap-6">
 
             {/* ── Main column ─────────────────────────────────────── */}
             <div className="min-w-0 flex-1">
@@ -230,39 +226,6 @@ const GroceryListPage = () => {
                     </button>
                   )}
                 </div>
-              )}
-
-              {/* Aisle jump strip — inline, so it scrolls out of the way once
-                  you are inside a section. */}
-              {sections.length > 1 && (
-                <nav
-                  aria-label={t('aisles.jumpTo')}
-                  className="-mx-3 mb-2 overflow-x-auto px-3 pb-1 sm:-mx-5 sm:px-5 lg:mx-0 lg:px-0"
-                >
-                  <ul className="flex gap-1.5">
-                    {sections.map(({ key, items }) => {
-                      const category = CATEGORY_BY_KEY[key] || CATEGORY_BY_KEY[DEFAULT_CATEGORY];
-                      const Icon = category.icon;
-                      return (
-                        <li key={key}>
-                          <button
-                            type="button"
-                            onClick={() => scrollToSection(key)}
-                            className={cn(
-                              'flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 text-xs font-semibold',
-                              'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
-                              'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                            )}
-                          >
-                            <Icon className={cn('h-3.5 w-3.5', category.tint)} />
-                            {t(`categories.${key}`)}
-                            <span className="tabular-nums text-gray-400">{items.length}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </nav>
               )}
 
               {isEmpty ? (
@@ -388,6 +351,44 @@ const GroceryListPage = () => {
 
             {/* ── Desktop rail ────────────────────────────────────── */}
             <aside className="hidden w-72 shrink-0 space-y-3 lg:block xl:w-80">
+              {/* Aisle jump chips live here and nowhere else.
+                  On a phone they were a horizontal scroller that hid half its
+                  own contents and fought the list's vertical scroll; wrapping
+                  them instead cost three rows of the screen the list needs. And
+                  they solve a problem the list already solved — items are sorted
+                  in aisle order, so you walk down them. In this rail the space
+                  is free, so they stay for the desktop case where the whole
+                  list does not fit one screen. */}
+              {sections.length > 1 && (
+                <nav
+                  aria-label={t('aisles.jumpTo')}
+                  className="rounded-2xl border border-gray-100 bg-white p-3 dark:border-gray-700 dark:bg-gray-800/60"
+                >
+                  <ul className="flex flex-wrap gap-1">
+                    {sections.map(({ key, items }) => {
+                      const category = CATEGORY_BY_KEY[key] || CATEGORY_BY_KEY[DEFAULT_CATEGORY];
+                      const Icon = category.icon;
+                      return (
+                        <li key={key}>
+                          <button
+                            type="button"
+                            onClick={() => scrollToSection(key)}
+                            className={cn(
+                              'flex h-7 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold',
+                              'border-gray-200 bg-white text-gray-600 hover:border-gray-300',
+                              'dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                            )}
+                          >
+                            <Icon className={cn('h-3 w-3 shrink-0', category.tint)} />
+                            {t(`categories.${key}`)}
+                            <span className="tabular-nums text-gray-400">{items.length}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
+              )}
               <button
                 type="button"
                 onClick={openAdd}
@@ -427,12 +428,11 @@ const GroceryListPage = () => {
                 </button>
               </div>
             </aside>
-          </div>
-        )}
+        </div>
       </div>
 
       {/* ── Add button — one floating control, mobile only ──────────── */}
-      {tab === 'list' && !isEmpty && (
+      {!isEmpty && (
         <motion.button
           type="button"
           initial={{ scale: 0, opacity: 0 }}
@@ -475,6 +475,11 @@ const GroceryListPage = () => {
         members={members}
         role={role}
         currentUserId={user?.id}
+      />
+
+      <GroceryHistorySheet
+        isOpen={historyOpen}
+        onClose={() => setHistory(false)}
       />
 
       <GroceryListSwitcher

@@ -56,6 +56,13 @@ const ITEMS = [
   item(7, 'לחם אחיד', 'bakery', {
     is_purchased: true, purchased_at: new Date().toISOString(), purchased_by: 44,
   }),
+  item(8, 'קוטג׳', 'dairy_eggs'),
+  item(9, 'שקיות אשפה', 'household'),
+  item(10, 'צלחות חד פעמי', 'disposables'),
+  item(11, 'במבה', 'snacks_sweets'),
+  item(12, 'קולה זירו', 'beverages'),
+  item(13, 'אורז בסמטי', 'pantry'),
+  item(14, 'שמפו', 'personal_care'),
 ];
 
 const STATE = {
@@ -118,7 +125,18 @@ api.grocery = {
   claimItem: () => okp({ editingUntil: new Date(Date.now() + 9e4).toISOString() }),
   releaseItem: () => okp({}),
   completeTrip: () => okp({ tripId: 3, carriedOver: 2 }),
-  getHistory: () => okp({ trips: [], pagination: { hasMore: false } }),
+  getHistory: () => okp({
+    trips: [
+      { id: 21, store_name: 'רמי לוי', completed_at: '2026-09-01T17:20:00Z', item_count: 23,
+        total_ils: '412.90', has_receipt: true, transaction_id: 881, completed_by_first_name: 'נופר' },
+      { id: 20, store_name: 'שופרסל דיל', completed_at: '2026-08-24T09:05:00Z', item_count: 14,
+        total_ils: '268.40', has_receipt: false, transaction_id: null, completed_by_first_name: 'חננאל' },
+      { id: 19, store_name: null, completed_at: '2026-08-17T18:41:00Z', item_count: 6,
+        total_ils: null, has_receipt: false, transaction_id: null, completed_by_first_name: 'חננאל' },
+    ],
+    total: 3,
+    pagination: { hasMore: false },
+  }),
   getTripDetail: () => okp({ trip: {}, items: [] }),
   getMyInvitations: () => okp(fixture.invitations
     ? [{ token: 'preview-token', inviter_first_name: 'משה', inviter_username: 'user_10059961', list_name: 'Household' }]
