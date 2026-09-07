@@ -182,6 +182,7 @@ import WelcomeOnboarding from '../components/common/WelcomeOnboarding';
 import MobileBottomNav from '../components/common/MobileBottomNav';
 import GroceryModeHeader from '../components/layout/GroceryModeHeader';
 import HomePickerScreen from '../components/common/HomePickerScreen';
+import Footer from '../components/layout/Footer';
 
 const SCREENS = ['list', 'invite', 'welcome', 'picker'];
 
@@ -265,14 +266,20 @@ function Preview() {
             ))}
           </div>
 
-          <div className="pt-20 sm:pt-10">
+          {/* Mirrors App.jsx's shell — background, <main>, footer — because the
+              seam between a page and the footer only exists in that arrangement,
+              and that is where a black band showed up on a phone. */}
+          <div className="flex min-h-screen flex-col bg-gray-50 pt-20 dark:bg-gray-950 sm:pt-10">
             {screen === 'picker' && <HomePickerScreen />}
             {screen === 'welcome' && <WelcomeOnboarding />}
             <GroceryModeHeader />
-            <Routes>
-              <Route path="/grocery" element={<GroceryListPage />} />
-              <Route path="/grocery/invite/:token" element={<GroceryInvitePage />} />
-            </Routes>
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/grocery" element={<GroceryListPage />} />
+                <Route path="/grocery/invite/:token" element={<GroceryInvitePage />} />
+              </Routes>
+            </main>
+            <Footer />
             <MobileBottomNav />
           </div>
           <Toaster position="top-center" />

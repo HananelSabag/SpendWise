@@ -28,6 +28,7 @@ import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet'
 import GroceryHistorySheet from '../components/features/grocery/GroceryHistorySheet';
 import GroceryListSwitcher, { listLabel } from '../components/features/grocery/GroceryListSwitcher';
 import GroceryQuickAdd from '../components/features/grocery/GroceryQuickAdd';
+import { useBottomInset } from '../hooks/useBottomInset';
 import { hasLearnedGesture, onGestureLearned } from '../components/features/grocery/gestureHint';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
@@ -39,6 +40,14 @@ import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocer
  * usual height and only applies before the first measurement lands.
  */
 const NAV_HEIGHT = 'var(--sw-bottom-nav-height, 74px)';
+
+/**
+ * The composer is fixed too, so the footer underneath the page has to clear it
+ * the same way it clears the nav — otherwise the bar lands on top of the
+ * copyright line. It publishes its own reach; `Footer` takes whichever is
+ * taller.
+ */
+const DOCK_HEIGHT_VAR = '--sw-bottom-dock-height';
 
 const GroceryListPage = () => {
   const { t, isRTL } = useTranslation('grocery');
@@ -71,10 +80,12 @@ const GroceryListPage = () => {
   const [switchingTo, setSwitchingTo] = useState(null);
   const [showGestureHint, setShowGestureHint] = useState(() => !hasLearnedGesture());
   const sectionRefs = useRef({});
+  const measureDock = useBottomInset(DOCK_HEIGHT_VAR);
   const quickAddRef = useRef(null);
   const desktopQuickAddRef = useRef(null);
 
   useEffect(() => onGestureLearned(() => setShowGestureHint(false)), []);
+
 
   const activeListId = list?.id ?? null;
   const activeList = lists.find((entry) => String(entry.id) === String(activeListId));
@@ -449,6 +460,7 @@ const GroceryListPage = () => {
           Where the floating "+" used to be, doing the job it only pointed at.
           Always present: the empty list's own call to action focuses it. */}
       <div
+        ref={measureDock}
         className="fixed inset-x-0 z-40 px-3 sm:px-5 lg:hidden"
         style={{ bottom: `calc(${NAV_HEIGHT} + 8px)` }}
       >

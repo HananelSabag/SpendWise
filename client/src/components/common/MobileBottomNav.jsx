@@ -14,7 +14,7 @@
  *   (admin row if applicable)
  */
 
-import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Accessibility,
@@ -32,56 +32,10 @@ import NotificationBell from '../layout/NotificationBell';
 import BrandMark from './BrandMark';
 import { openAccessibilityMenu } from './AccessibilityMenuHost';
 import { isGroceryMode } from '../../utils/appMode';
+import { useBottomInset } from '../../hooks/useBottomInset';
 
-/**
- * Publish how much of the bottom of the screen the navigation covers, as
- * `--sw-bottom-nav-height` on the root element.
- *
- * Anything docked above the nav — the grocery list's quick-add bar, and the
- * floating button before it — used to position itself off a hand-tuned constant
- * per mode (84px here, 112px there). Those numbers were guesses, they drifted
- * every time the bar's padding changed, and the safe-area inset moves them
- * again on a real phone. This one was 6px short and the composer sat on top of
- * the nav.
- *
- * The measurement is the union of the nav and its children, so it includes the
- * centre button that protrudes ABOVE the bar in full mode — which is the thing
- * a docked control actually collides with, and the reason the two modes needed
- * different constants in the first place.
- */
-const useBottomNavHeight = (ref) => {
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return undefined;
-
-    const publish = () => {
-      const rects = [node, ...node.querySelectorAll('*')]
-        .map((element) => element.getBoundingClientRect())
-        // A hidden element reports an all-zero rect, whose top of 0 would
-        // otherwise claim the nav covers the entire screen.
-        .filter((rect) => rect.width > 0 && rect.height > 0);
-
-      const height = rects.length === 0
-        ? 0
-        : Math.max(0, Math.round(window.innerHeight - Math.min(...rects.map((r) => r.top))));
-
-      document.documentElement.style.setProperty('--sw-bottom-nav-height', `${height}px`);
-    };
-
-    publish();
-    const observer = new ResizeObserver(publish);
-    observer.observe(node);
-    window.addEventListener('resize', publish);
-    window.addEventListener('orientationchange', publish);
-
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', publish);
-      window.removeEventListener('orientationchange', publish);
-      document.documentElement.style.removeProperty('--sw-bottom-nav-height');
-    };
-  }, [ref]);
-};
+/** How much of the bottom of the screen the navigation covers. */
+const NAV_HEIGHT_VAR = '--sw-bottom-nav-height';
 
 // ─── Grocery-only nav ────────────────────────────────────────────────────────
 
@@ -97,8 +51,7 @@ const GroceryModeNav = () => {
   const { t: tg } = useTranslation('grocery');
   const isAdmin   = useIsAdmin();
   const { unreadCount } = useNotifications();
-  const navRef    = useRef(null);
-  useBottomNavHeight(navRef);
+  const measureNav = useBottomInset(NAV_HEIGHT_VAR);
 
   // `mirror` marks glyphs that carry a direction. A shopping cart's handle is
   // drawn on the left; in Hebrew it has to face the other way.
@@ -110,7 +63,7 @@ const GroceryModeNav = () => {
 
   return (
     <nav
-      ref={navRef}
+      ref={measureNav}
       className={cn(
         'lg:hidden fixed bottom-0 left-0 right-0 z-[100]',
         'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',
@@ -180,8 +133,7 @@ const FullNav = () => {
   const initial = String(displayName).charAt(0).toUpperCase();
 
   const { unreadCount } = useNotifications();
-  const navRef = useRef(null);
-  useBottomNavHeight(navRef);
+  const measureNav = useBottomInset(NAV_HEIGHT_VAR);
 
   // Re-run memos when translations finish loading
   const loadedModulesCount = useTranslationStore((s) => Object.keys(s.loadedModules).length);
@@ -317,7 +269,7 @@ const FullNav = () => {
     <>
       {/* ── Tab bar ──────────────────────────────────────────────────────── */}
       <nav
-        ref={navRef}
+        ref={measureNav}
         className={cn(
           'lg:hidden fixed bottom-0 left-0 right-0 z-[100]',
           'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',

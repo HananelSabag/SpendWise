@@ -143,7 +143,11 @@ const AppContent = () => {
 
   return (
     <div
-      className={`flex flex-col min-h-screen ${showDesktopShell ? 'sw-desktop-shell' : ''}`}
+      /* The shell carries a background because it is what shows through any gap
+         between a page and the footer — `main`'s bottom padding, mostly. With no
+         background here that gap fell through to the body's neutral near-black,
+         which read as a black band under the page's own darker navy. */
+      className={`flex flex-col min-h-screen bg-gray-50 dark:bg-gray-950 ${showDesktopShell ? 'sw-desktop-shell' : ''}`}
       data-sidebar-side={showDesktopShell ? (isRTL ? 'right' : 'left') : undefined}
     >
       <TopProgressBar visible={isLoading} />
@@ -156,7 +160,10 @@ const AppContent = () => {
       {/* Bottom nav — always rendered (GroceryModeNav / FullNav); hidden only during home picker */}
       {isAuthenticated && !isQuickExpensePage && !isShowingPicker && <MobileBottomNav />}
 
-      <main className="flex-grow lg:pb-0 pb-20">
+      {/* No bottom padding for the nav here: the footer below is the last thing
+          in this column, so it is what has to clear it — off the nav's measured
+          height rather than a constant that stacked with this one. */}
+      <main className="flex-grow">
         <AppRoutes isAuthenticated={isAuthenticated} />
       </main>
 

@@ -34,7 +34,15 @@ const Footer = () => {
     <>
       <footer
         dir={isRTL ? 'rtl' : 'ltr'}
-        className="bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700/40 pb-20 md:pb-0"
+        className="bg-gray-50 dark:bg-gray-950 border-t border-gray-200 dark:border-gray-700/40"
+        /* Clears whatever is fixed to the bottom of the screen — the nav, and
+           on the grocery list the quick-add bar above it. Both measure and
+           publish their own reach (see `hooks/useBottomInset`); this takes the
+           taller. Both report 0 on lg, where neither is shown. */
+        style={{
+          paddingBottom:
+            'calc(max(var(--sw-bottom-nav-height, 0px), var(--sw-bottom-dock-height, 0px)) + 0.5rem)',
+        }}
       >
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
           {/* Single row: brand · legal links · contact */}
