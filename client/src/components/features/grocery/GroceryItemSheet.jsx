@@ -32,11 +32,17 @@ const emptyDraft = {
   product_url: '',
 };
 
-const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
+/**
+ * `prefill` carries what the one-line quick-add already had when the user asked
+ * for a photo or a link — the name they typed and the category that was guessed
+ * for it. Retyping it here would make the quick path a false economy.
+ */
+const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item, prefill }) => {
   const { t } = useTranslation('grocery');
   const { t: tc } = useTranslation('common');
   const toast = useToast();
   const fileRef = useRef(null);
+  const urlRef = useRef(null);
 
   const [draft, setDraft] = useState(emptyDraft);
   const [categoryPinned, setCategoryPinned] = useState(false);
@@ -63,11 +69,31 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
       });
       // An existing item already has its category decided.
       setCategoryPinned(true);
+    } else if (prefill) {
+      // `focusField` says how the sheet was opened, not what to store.
+      const fields = { ...prefill };
+      delete fields.focusField;
+      setDraft({
+        ...emptyDraft,
+        ...fields,
+        quantity: fields.quantity != null ? String(fields.quantity) : '',
+      });
+      // The guess arrived with the prefill; don't re-guess over it.
+      setCategoryPinned(true);
+
+      // Land on the control they asked for. The quick-add's photo and link
+      // buttons are only worth being two buttons if they arrive somewhere
+      // different — otherwise they are one button wearing two icons.
+      if (prefill.focusField === 'image') {
+        setTimeout(() => fileRef.current?.click(), 250);
+      } else if (prefill.focusField === 'link') {
+        setTimeout(() => urlRef.current?.focus(), 250);
+      }
     } else {
       setDraft(emptyDraft);
       setCategoryPinned(false);
     }
-  }, [isOpen, item]);
+  }, [isOpen, item, prefill]);
 
   const set = useCallback((key, value) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -275,6 +301,7 @@ const GroceryItemSheet = ({ isOpen, onClose, onSave, onDelete, item }) => {
           <input
             type="url"
             dir="ltr"
+            ref={urlRef}
             value={draft.product_url}
             onChange={(event) => set('product_url', event.target.value)}
             placeholder={t('fields.linkPlaceholder')}

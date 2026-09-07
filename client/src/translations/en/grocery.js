@@ -22,6 +22,9 @@ export default {
     details: "More details",
     categoryHint: "Category",
     aria: "Add a new item to the list",
+    quantity: "Quantity",
+    addPhoto: "Add a photo",
+    addLink: "Add a product link",
   },
 
   aisles: {

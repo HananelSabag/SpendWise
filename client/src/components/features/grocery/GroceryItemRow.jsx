@@ -116,7 +116,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, currentUserId }) => 
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.16 }}
       className={cn(
-        'group relative flex items-stretch rounded-2xl border transition-colors',
+        'group relative flex items-stretch rounded-xl border transition-colors',
         purchased
           ? 'border-transparent bg-gray-50/70 dark:bg-gray-800/40'
           : 'border-gray-100 bg-white hover:border-gray-200 dark:border-gray-700/70 dark:bg-gray-800/70 dark:hover:border-gray-600'
@@ -135,28 +135,28 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, currentUserId }) => 
         aria-pressed={purchased}
         aria-label={purchased ? t('item.markNotPurchased') : t('item.markPurchased')}
         className={cn(
-          'flex min-h-[56px] flex-1 select-none items-center gap-2 rounded-2xl py-2 pe-2 text-start',
+          'flex min-h-[46px] flex-1 select-none items-center gap-2 rounded-xl py-1.5 pe-2 text-start',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset',
           disabled && 'cursor-not-allowed opacity-60'
         )}
       >
-        <span className="flex w-14 shrink-0 items-center justify-center">
+        <span className="flex w-10 shrink-0 items-center justify-center">
           <span
             className={cn(
-              'flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all',
+              'flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all',
               purchased
                 ? 'border-emerald-500 bg-emerald-500 text-white'
                 : 'border-gray-300 text-transparent group-hover:border-blue-400 dark:border-gray-600'
             )}
           >
-            <Check className="h-4 w-4" strokeWidth={3} />
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
           </span>
         </span>
 
         <span className="min-w-0 flex-1">
           <span
             className={cn(
-              'block truncate text-[15px] font-medium leading-snug',
+              'block truncate text-sm font-medium leading-snug',
               purchased
                 ? 'text-gray-400 line-through dark:text-gray-500'
                 : 'text-gray-900 dark:text-gray-50'
@@ -166,7 +166,7 @@ const GroceryItemRow = ({ item, onToggle, onOpen, onDelete, currentUserId }) => 
           </span>
 
           {(item.note || quantityLabel) && (
-            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <span className="flex items-center gap-1.5 text-[11px] leading-tight text-gray-400 dark:text-gray-500">
               {quantityLabel && (
                 <span className="font-semibold tabular-nums text-gray-500 dark:text-gray-400">
                   {quantityLabel}

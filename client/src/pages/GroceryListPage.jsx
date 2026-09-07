@@ -28,17 +28,18 @@ import GroceryFinishSheet from '../components/features/grocery/GroceryFinishShee
 import GroceryShareSheet from '../components/features/grocery/GroceryShareSheet';
 import GroceryHistorySheet from '../components/features/grocery/GroceryHistorySheet';
 import GroceryListSwitcher, { listLabel } from '../components/features/grocery/GroceryListSwitcher';
+import GroceryQuickAdd from '../components/features/grocery/GroceryQuickAdd';
 import { hasLearnedGesture, onGestureLearned } from '../components/features/grocery/gestureHint';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
 /**
- * How high the add button floats above the bottom navigation. Grocery mode's
+ * How high the quick-add bar sits above the bottom navigation. Grocery mode's
  * bar is a flat row; full SpendWise mode's has a centre FAB that protrudes
- * about 28px above it and would collide with a button sitting any lower.
+ * about 28px above it and would collide with anything sitting lower.
  */
-const FAB_OFFSET = {
-  grocery: 'calc(84px + env(safe-area-inset-bottom, 0px))',
-  full: 'calc(112px + env(safe-area-inset-bottom, 0px))',
+const COMPOSER_OFFSET = {
+  grocery: 'calc(68px + env(safe-area-inset-bottom, 0px))',
+  full: 'calc(96px + env(safe-area-inset-bottom, 0px))',
 };
 
 const GroceryListPage = () => {
@@ -64,6 +65,7 @@ const GroceryListPage = () => {
   // point at it — it just opens the sheet now instead of switching a tab.
   const [historyOpen, setHistoryOpen] = useState(searchParams.get('tab') === 'history');
   const [sheetItem, setSheetItem] = useState(null);
+  const [sheetPrefill, setSheetPrefill] = useState(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -72,6 +74,8 @@ const GroceryListPage = () => {
   const [switchingTo, setSwitchingTo] = useState(null);
   const [showGestureHint, setShowGestureHint] = useState(() => !hasLearnedGesture());
   const sectionRefs = useRef({});
+  const quickAddRef = useRef(null);
+  const desktopQuickAddRef = useRef(null);
 
   useEffect(() => onGestureLearned(() => setShowGestureHint(false)), []);
 
@@ -93,7 +97,19 @@ const GroceryListPage = () => {
     setSearchParams(params, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const openAdd = useCallback(() => { setSheetItem(null); setSheetOpen(true); }, []);
+  /** One way to add an item, so this puts the cursor in it. */
+  const focusQuickAdd = useCallback(() => {
+    (desktopQuickAddRef.current || quickAddRef.current)?.focus();
+  }, []);
+
+  /** Quick-add hands the editor what it already had, rather than a blank form. */
+  const expandDraft = useCallback((draft) => {
+    setSheetItem(null);
+    setSheetPrefill(draft.name ? draft : null);
+    setSheetOpen(true);
+  }, []);
+
+  const quickAdd = useCallback(async (payload) => !!(await addItem(payload)), [addItem]);
 
   /** Editing one item claims it, so two people can't type into it at once. */
   const openItem = useCallback(async (item) => {
@@ -106,6 +122,7 @@ const GroceryListPage = () => {
     setSheetOpen(false);
     if (sheetItem) releaseItem(sheetItem.id);
     setSheetItem(null);
+    setSheetPrefill(null);
   }, [sheetItem, releaseItem]);
 
   const handleSaveItem = useCallback(async (payload) => {
@@ -181,7 +198,9 @@ const GroceryListPage = () => {
   return (
     <div
       dir={isRTL ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-gray-50 pb-36 dark:bg-gray-950 lg:pb-10"
+      /* Clears the docked quick-add bar and the nav under it — measured, not
+         guessed: the bar's top sits 112px above the viewport bottom. */
+      className="min-h-screen bg-gray-50 pb-32 dark:bg-gray-950 lg:pb-10"
     >
       <div className="mx-auto w-full max-w-6xl px-3 sm:px-5 lg:px-6">
 
@@ -241,7 +260,7 @@ const GroceryListPage = () => {
                   </p>
                   <button
                     type="button"
-                    onClick={openAdd}
+                    onClick={focusQuickAdd}
                     className="flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white"
                   >
                     <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -249,7 +268,7 @@ const GroceryListPage = () => {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Taught at the top, because a long-press is not a gesture
                       anyone discovers on their own — and retired the first time
                       they use it, because a permanent tip is just clutter on the
@@ -269,14 +288,14 @@ const GroceryListPage = () => {
                         ref={(node) => { sectionRefs.current[key] = node; }}
                         className="scroll-mt-3"
                       >
-                        <h2 className="mb-1.5 flex items-center gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                          <span className={cn('flex h-5 w-5 items-center justify-center rounded-md', category.chip)}>
-                            <Icon className={cn('h-3 w-3', category.tint)} />
-                          </span>
+                        {/* A section heading is a label, not a card: the tinted
+                            chip around the icon added height for decoration. */}
+                        <h2 className="mb-1 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                          <Icon className={cn('h-3.5 w-3.5', category.tint)} />
                           {t(`categories.${key}`)}
                           <span className="tabular-nums font-semibold">{items.length}</span>
                         </h2>
-                        <ul className="space-y-1.5">
+                        <ul className="space-y-1">
                           <AnimatePresence initial={false}>
                             {items.map((item) => (
                               <GroceryItemRow
@@ -328,7 +347,7 @@ const GroceryListPage = () => {
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="space-y-1.5 overflow-hidden pt-1"
+                            className="space-y-1 overflow-hidden pt-1"
                           >
                             {purchased.map((item) => (
                               <GroceryItemRow
@@ -389,14 +408,11 @@ const GroceryListPage = () => {
                   </ul>
                 </nav>
               )}
-              <button
-                type="button"
-                onClick={openAdd}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" strokeWidth={2.5} />
-                {t('quickAdd.add')}
-              </button>
+              <GroceryQuickAdd
+                ref={desktopQuickAddRef}
+                onAdd={quickAdd}
+                onExpand={expandDraft}
+              />
 
               <div className="rounded-2xl border border-gray-100 bg-white p-3.5 dark:border-gray-700 dark:bg-gray-800/60">
                 <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
@@ -431,27 +447,15 @@ const GroceryListPage = () => {
         </div>
       </div>
 
-      {/* ── Add button — one floating control, mobile only ──────────── */}
-      {!isEmpty && (
-        <motion.button
-          type="button"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-          whileTap={{ scale: 0.92 }}
-          onClick={openAdd}
-          aria-label={t('quickAdd.aria')}
-          className={cn(
-            'fixed z-40 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl lg:hidden',
-            isRTL ? 'start-4' : 'end-4',
-            'bg-blue-600 text-white shadow-xl shadow-blue-600/30',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2'
-          )}
-          style={{ bottom: FAB_OFFSET[groceryMode ? 'grocery' : 'full'] }}
-        >
-          <Plus className="h-6 w-6" strokeWidth={2.5} />
-        </motion.button>
-      )}
+      {/* ── Quick add — docked, mobile only ────────────────────────────
+          Where the floating "+" used to be, doing the job it only pointed at.
+          Always present: the empty list's own call to action focuses it. */}
+      <div
+        className="fixed inset-x-0 z-40 px-3 sm:px-5 lg:hidden"
+        style={{ bottom: COMPOSER_OFFSET[groceryMode ? 'grocery' : 'full'] }}
+      >
+        <GroceryQuickAdd ref={quickAddRef} onAdd={quickAdd} onExpand={expandDraft} />
+      </div>
 
       <GroceryItemSheet
         isOpen={sheetOpen}
@@ -459,6 +463,7 @@ const GroceryListPage = () => {
         onSave={handleSaveItem}
         onDelete={deleteItem}
         item={sheetItem}
+        prefill={sheetPrefill}
       />
 
       <GroceryFinishSheet

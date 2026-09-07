@@ -22,6 +22,9 @@ export default {
     details: "עוד פרטים",
     categoryHint: "קטגוריה",
     aria: "הוספת פריט חדש לרשימה",
+    quantity: "כמות",
+    addPhoto: "הוספת תמונה",
+    addLink: "הוספת קישור למוצר",
   },
 
   aisles: {
