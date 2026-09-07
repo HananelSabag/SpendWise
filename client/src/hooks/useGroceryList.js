@@ -31,7 +31,7 @@ import { api } from '../api';
 import useAuthStore from '../stores/authStore';
 import { useToast } from './useToast';
 import { useTranslation } from '../stores';
-import { categoryOrder } from '../components/features/grocery/groceryCategories';
+import { categoryOrder, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
 const POLL_INTERVAL_MS = 5000;
 
@@ -149,22 +149,61 @@ export function useGroceryList() {
 
   // ─── Item actions ─────────────────────────────────────────────────────────
 
+  /**
+   * Optimistic, like every other action on this screen.
+   *
+   * Adding was the one that waited for the server before showing anything, and
+   * it is the action people repeat fastest — you type three items in a row and
+   * each one stalls on a round trip to a free-tier dyno that may be waking up.
+   * The row appears immediately and is swapped for the server's copy when it
+   * arrives; a failure removes it again and says why.
+   */
   const addItem = useCallback(async (payload) => {
+    const tempId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const optimistic = {
+      id: tempId,
+      name: payload.name,
+      category_key: payload.category_key || DEFAULT_CATEGORY,
+      quantity: payload.quantity ?? null,
+      unit: payload.unit || null,
+      note: payload.note || null,
+      image_url: payload.image_url || null,
+      product_url: payload.product_url || null,
+      is_purchased: false,
+      purchased_at: null,
+      purchased_by: null,
+      added_by: userId,
+      version: 0,
+      editing_user_id: null,
+      editing_until: null,
+    };
+
+    patchCache((old) => ({ ...old, items: [...old.items, optimistic] }));
+
     const result = await api.grocery.addItem(payload);
-    if (!result.success) { reportFailure(result); return null; }
+
+    if (!result.success) {
+      // Surgical rather than a snapshot restore: someone may have checked off a
+      // different item while this was in flight, and that is not ours to undo.
+      reportFailure(result, () => patchCache((old) => ({
+        ...old,
+        items: old.items.filter((existing) => existing.id !== tempId),
+      })));
+      return null;
+    }
 
     const { item, version } = result.data;
     patchCache((old) => ({
       ...old,
       list: { ...old.list, version: version ?? old.list.version },
-      // A poll can land between the request and this patch and already carry
-      // the new row — appending blindly would show it twice.
-      items: old.items.some((existing) => existing.id === item.id)
-        ? old.items.map((existing) => (existing.id === item.id ? item : existing))
-        : [...old.items, item],
+      // Drop the placeholder, and any copy a poll landed in the meantime.
+      items: [
+        ...old.items.filter((existing) => existing.id !== tempId && existing.id !== item.id),
+        item,
+      ],
     }));
     return item;
-  }, [patchCache, reportFailure]);
+  }, [patchCache, reportFailure, userId]);
 
   /** Edits always send the item's version, so a lost update is refused. */
   const updateItem = useCallback(async (id, payload, version) => {

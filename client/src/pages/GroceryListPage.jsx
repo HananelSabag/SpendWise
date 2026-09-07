@@ -29,6 +29,7 @@ import GroceryHistorySheet from '../components/features/grocery/GroceryHistorySh
 import GroceryListSwitcher, { listLabel } from '../components/features/grocery/GroceryListSwitcher';
 import GroceryQuickAdd from '../components/features/grocery/GroceryQuickAdd';
 import { useBottomInset } from '../hooks/useBottomInset';
+import { useKeyboardInset } from '../hooks/useKeyboardInset';
 import { hasLearnedGesture, onGestureLearned } from '../components/features/grocery/gestureHint';
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
@@ -81,6 +82,7 @@ const GroceryListPage = () => {
   const [showGestureHint, setShowGestureHint] = useState(() => !hasLearnedGesture());
   const sectionRefs = useRef({});
   const measureDock = useBottomInset(DOCK_HEIGHT_VAR);
+  const keyboardInset = useKeyboardInset();
   const quickAddRef = useRef(null);
   const desktopQuickAddRef = useRef(null);
 
@@ -462,7 +464,13 @@ const GroceryListPage = () => {
       <div
         ref={measureDock}
         className="fixed inset-x-0 z-40 px-3 sm:px-5 lg:hidden"
-        style={{ bottom: `calc(${NAV_HEIGHT} + 8px)` }}
+        style={{
+          // With the keyboard up the nav is behind it and irrelevant; the bar
+          // sits on the keyboard instead. Without it, on the nav as usual.
+          bottom: keyboardInset > 0
+            ? `${keyboardInset + 8}px`
+            : `calc(${NAV_HEIGHT} + 8px)`,
+        }}
       >
         <GroceryQuickAdd ref={quickAddRef} onAdd={quickAdd} onExpand={expandDraft} />
       </div>

@@ -83,7 +83,8 @@ const FRESH_STATE = {
 };
 
 /** Which fixture the fake API answers with. Flipped by the toolbar. */
-const fixture = { state: STATE, invitations: true, linkFails: false, multiList: false };
+const fixture = { state: STATE, invitations: true, linkFails: false, multiList: false,
+  addDelayMs: 1500, addFails: false };
 
 const INVITATION = {
   token: 'preview-token',
@@ -118,7 +119,13 @@ const byId = (id) => ITEMS.find((row) => row.id === id);
 
 api.grocery = {
   getState: () => okp(fixture.state),
-  addItem: () => okp({ item: item(99, 'פריט חדש', 'other'), version: 98 }),
+  // Deliberately slow, to stand in for a Render dyno waking up: the row must
+  // appear long before this resolves.
+  addItem: async (payload) => {
+    await new Promise((resolve) => setTimeout(resolve, fixture.addDelayMs));
+    if (fixture.addFails) return { success: false, error: { code: 'GROCERY_NAME_REQUIRED' } };
+    return { success: true, data: { item: item(Date.now() % 100000, payload.name, payload.category_key), version: 98 } };
+  },
   updateItem: (id, payload) => okp({ item: { ...byId(id), ...payload }, version: 98 }),
   setPurchased: (id, purchased) => okp({ item: { ...byId(id), is_purchased: purchased }, version: 98 }),
   deleteItem: () => okp({ version: 98 }),
