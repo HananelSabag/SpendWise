@@ -15,7 +15,6 @@ import {
   AlertCircle, ChevronDown, Flag, Plus, ShoppingCart, Users,
 } from 'lucide-react';
 import { cn } from '../utils/helpers';
-import { isGroceryMode } from '../utils/appMode';
 import { useTranslation, useAuth } from '../stores';
 import { useToast } from '../hooks/useToast';
 import { useGroceryList } from '../hooks/useGroceryList';
@@ -33,20 +32,18 @@ import { hasLearnedGesture, onGestureLearned } from '../components/features/groc
 import { CATEGORY_BY_KEY, DEFAULT_CATEGORY } from '../components/features/grocery/groceryCategories';
 
 /**
- * How high the quick-add bar sits above the bottom navigation. Grocery mode's
- * bar is a flat row; full SpendWise mode's has a centre FAB that protrudes
- * about 28px above it and would collide with anything sitting lower.
+ * The quick-add bar sits on `--sw-bottom-nav-height`, which the bottom
+ * navigation measures and publishes (see `MobileBottomNav`). It used to be a
+ * hand-tuned constant per mode; those were guesses, and the grocery one was 6px
+ * short, so the bar sat on the nav. The fallback matches the grocery nav at its
+ * usual height and only applies before the first measurement lands.
  */
-const COMPOSER_OFFSET = {
-  grocery: 'calc(68px + env(safe-area-inset-bottom, 0px))',
-  full: 'calc(96px + env(safe-area-inset-bottom, 0px))',
-};
+const NAV_HEIGHT = 'var(--sw-bottom-nav-height, 74px)';
 
 const GroceryListPage = () => {
   const { t, isRTL } = useTranslation('grocery');
   const { t: tc } = useTranslation('common');
   const { user } = useAuth();
-  const groceryMode = isGroceryMode(user);
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -198,9 +195,10 @@ const GroceryListPage = () => {
   return (
     <div
       dir={isRTL ? 'rtl' : 'ltr'}
-      /* Clears the docked quick-add bar and the nav under it — measured, not
-         guessed: the bar's top sits 112px above the viewport bottom. */
-      className="min-h-screen bg-gray-50 pb-32 dark:bg-gray-950 lg:pb-10"
+      className="min-h-screen bg-gray-50 dark:bg-gray-950"
+      /* Room for the nav, the bar above it, and a gap — off the measured
+         height, so it stays right when either of them changes. */
+      style={{ paddingBottom: `calc(${NAV_HEIGHT} + 64px)` }}
     >
       <div className="mx-auto w-full max-w-6xl px-3 sm:px-5 lg:px-6">
 
@@ -452,7 +450,7 @@ const GroceryListPage = () => {
           Always present: the empty list's own call to action focuses it. */}
       <div
         className="fixed inset-x-0 z-40 px-3 sm:px-5 lg:hidden"
-        style={{ bottom: COMPOSER_OFFSET[groceryMode ? 'grocery' : 'full'] }}
+        style={{ bottom: `calc(${NAV_HEIGHT} + 8px)` }}
       >
         <GroceryQuickAdd ref={quickAddRef} onAdd={quickAdd} onExpand={expandDraft} />
       </div>
