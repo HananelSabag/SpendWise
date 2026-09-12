@@ -1,5 +1,39 @@
 # SpendWise — Roadmap & Decisions
 
+## 2026-09-09 — V9 history isolation and dashboard/cycle clarity
+
+- Separated automatic identifier families by bank/account; prevented reverse-flow refunds from
+  proving a loan. Recurring patterns with two monthly dates retain each date's own amount history.
+  Pending authorizations no longer alter confirmed recurring amounts. Raw banking data is unchanged.
+- Clarified Hebrew/English labels and dynamic fallback labels. Loans show source account, latest
+  repayment, paginated original payment evidence and explicit estimate caveats; no false zero-debt
+  headline for an empty detection result. Salary recurring groups are labelled as income.
+- Dashboard refresh includes bank balances; balance freshness is based on actual bank-account
+  balance timestamps, not the latest credit-card sync. Removed the error screen's second retry loop.
+- Dev preview now mounts the real dashboard as well as cycle tabs against synthetic data, blocking
+  unsupported network requests. Added full-view copy resolution tests and refresh/loan UI regressions.
+- Calculation/query version 9; no migration. Existing raw-data reconciliation checks pass.
+- Rechecked security advisories on September 9: updated Multer, Nodemailer and Vitest within their
+  existing major versions. Server audit is clear; two moderate React Router package alerts remain.
+  The transaction picker now displays and searches institution names in Hebrew and English.
+
+## 2026-09-07 — Request pipeline and Family Hub stabilization
+
+- Consolidated transaction mutations, financial invalidation and notifications; removed duplicate
+  refresh events, unused query presets/monitor wrappers and the redundant query-GC timer.
+- HTTP errors retain status and conflict context through API wrappers. Reads retry a bounded number
+  of times; writes are not automatically replayed after a lost response. Failed transaction reads
+  show a retry state instead of a misleading empty account. Delete dialogs guard double submission.
+- Bounded admin/dashboard caches; shared concurrent dashboard reads; invalidation protects against
+  late stale responses. Monitor all bank connection sync stamps. Fixed Israeli month/date filters.
+- Family Hub is now included with owner approval: quieter accessible header, usable touch targets,
+  account-scoped query cache, serialized local writes and last-plan retention on refresh errors.
+  Manual family data remains separate from bank balances and cycle accounting. No DB migration.
+- Audited source imports and removed unused Vite aliases, not whole directories without evidence.
+- Compatible dependency updates remove the locally reported high alerts; server audit is clear.
+  Client still has two moderate React Router findings requiring a separately verified major upgrade;
+  no forced router migration was included in this stabilization pass.
+
 ## 2026-09-07 — Clearer copy and quieter page headers
 
 - Financial-cycle and overdraft copy distinguishes recorded activity, unpaid known charges, and

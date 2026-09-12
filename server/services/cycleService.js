@@ -15,7 +15,7 @@ const CONTEXT_MONTHS = 26;
 const CACHE_TTL_MS = 60_000;
 const MAX_CACHE_ENTRIES = 200;
 // V8 bounds the running forecast to the billing window and fixes repeated payment inference.
-const CALCULATION_VERSION = 8;
+const CALCULATION_VERSION = 9;
 const resultCache = new Map();
 const cacheInvalidationEpochs = new Map();
 

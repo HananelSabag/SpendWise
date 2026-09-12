@@ -123,7 +123,7 @@ export default function CycleSummary({
               formatCurrency={formatCurrency}
             />
             <CalculationRow
-              label={t('cycleV2.cardsKnown')}
+              label={t(projection.knownCardOut < 0 ? 'cycleV2.cardsCredit' : 'cycleV2.cardsKnown')}
               value={-projection.knownCardOut}
               formatCurrency={formatCurrency}
             />

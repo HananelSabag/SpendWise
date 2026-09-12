@@ -195,6 +195,9 @@ export const DECISIONS = Array.from({ length: 180 }, (_, index) => ({
 export const LOANS = [
   {
     identifier: 'sample-loan',
+    identity: 'leumi|4444|id:sample-loan',
+    source: 'leumi',
+    accountNumber: '4444',
     description: 'הלוואה לדוגמה',
     principal: 12000,
     repaid: 2000,

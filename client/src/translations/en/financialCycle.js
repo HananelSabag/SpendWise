@@ -3,7 +3,8 @@ export default {
   dashboardEyebrow: "What will be left in your account?",
   balanceNow: "Balance now",
   cardsKnown: "Card charges still to be paid",
-  fixedOut: "Loan and recurring payments",
+  cardsCredit: "Card credit still expected in checking",
+  fixedOut: "Repayments and recurring checking payments",
   expectedIncome: "Income still expected",
   openDetails: "Open financial cycle",
   openSetup: "Set up cycle",
@@ -47,7 +48,7 @@ export default {
   noRecurring: "Your recurring transactions will appear here",
   ruleName: "Recurring transaction name",
   saveName: "Save name",
-  financing: "Money received as financing",
+  financing: "Money received from loans and financing",
   recurringExpense: "Recurring expense",
   estimateExtra: "Additional estimated expenses",
   balanceAfterForecast: "Balance based on the forecast",
@@ -55,12 +56,12 @@ export default {
   alreadyDirect: "Payments made directly from checking",
   cardsOverviewTitle: "Your cards",
   noCardTransactions: "No transactions to show for this charge.",
-  alreadyFromBalance: "Already left the balance",
+  alreadyFromBalance: "Already charged to checking",
   knownNextCharge: "Awaiting the next bill",
-  forecastExtra: "Forecast extra",
+  forecastExtra: "Additional estimate",
   transactionsCount: "Number of transactions",
   directSettingsHint:
-    "A debit card charges your checking account for each purchase. There is no extra monthly bill to add to the forecast.",
+    "Each debit-card purchase is charged directly to checking. There is no additional monthly bill. A payment already reflected in your balance is not deducted again from the projection.",
   cardSettingsHint:
     "Link the bank debit to this card’s purchases so future bills can be matched and counted once.",
   linkBankCharge: "Which bank-account charge belongs to this card?",
@@ -89,9 +90,9 @@ export default {
   linkAnother: "Link another transaction",
   linkToRule: "Which transaction belongs to “{{label}}”?",
   loadingLoans: "Loading loans…",
-  loansTitle: "Loans and repayments",
+  loansTitle: "Detected loan series",
   loansSourceHint:
-    "Possible loan series, identified by linked incoming and outgoing bank transactions. This pattern can also be a deposit or transfer; review the source payments before treating it as a loan.",
+    "An incoming amount followed by payments with the same identifier in the same account may be a loan. This is a detected pattern, not bank confirmation. Open a series to review its repayments.",
   paymentCount: "{{count}} recorded payments",
   engineSettingsNote:
     "This only changes the period being calculated and displayed. It does not change bank billing dates or original transactions.",
@@ -132,7 +133,7 @@ export default {
   incomeNotSeen: "Expected date has passed · not seen in the latest sync",
   estimateSource: "Estimated · not yet recorded by the bank",
   cardSource: "Purchases already assigned to this charge",
-  fixedSource: "Date and amount based on an earlier payment",
+  fixedSource: "Date and amount based on earlier payments",
   activityTitle: "Already in your balance",
   activityHint:
     "Open a row to see the recorded transactions. These amounts are not deducted again in the forecast.",
@@ -143,7 +144,7 @@ export default {
   installment: "Payment {{number}} of {{total}}",
   cardsOverviewHint:
     "For each card: what has been paid, what is still due and what is estimated.",
-  directCardLabel: "Immediate debit",
+  directCardLabel: "Debit card · immediate charges",
   monthlyCardLabel: "Monthly credit card",
   includeCard: "Include this card in the calculation",
   cardExcluded:
@@ -190,13 +191,15 @@ export default {
   shortMonthHint: "If the month is shorter, its last day is used.",
   currentWindow: "Current cycle",
   defaultScenario: "What to include in your expected balance",
-  loanRemainderEstimate: "Balance calculated from transactions",
+  loanRemainderEstimate: "Estimated loan balance",
   loanEstimateWarning:
     "Amount received minus repayments we can see. Payments may include interest and history may be incomplete; this is not a payoff balance supplied by the bank.",
   loadLoansError: "Could not load loan information",
   loanFirstSeen: "Amount received on {{date}}",
   loanReceived: "Amount received",
   loanPaid: "Repayments recorded",
+  loanLastPayment: "Last recorded repayment · {{date}}",
+  loanNextPayment: "Another repayment is expected on {{date}}, based on previous payments. The date and amount may change.",
   loanNoRemaining:
     "Recorded repayments cover the original amount. This does not confirm closure: payments can include interest and fees. Check the balance with your bank.",
   noDetectedLoans: "No loan series identified",

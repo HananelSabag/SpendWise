@@ -31,8 +31,6 @@ const ModernRecentTransactionsWidget = ({
   const shouldFetch = !preloadedTransactions;
   const ownQuery = useTransactions({
     pageSize: Math.max(maxItems + 4, 12),
-    enableAI: false,
-    context: 'dashboard',
     autoRefresh: true,
     enabled: shouldFetch,
   });
@@ -45,22 +43,13 @@ const ModernRecentTransactionsWidget = ({
   const [editMode, setEditMode] = useState('edit');
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  // These rows come from the dashboard payload, not this widget's own fetch, so after any
-  // mutation ask the dashboard query to refresh (useDashboard listens for this event).
-  const refreshDashboard = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('dashboard-refresh-requested'));
-  }, []);
-
   const onOpenDetail = useCallback((tx) => setDetailTransaction(tx), []);
   const onEdit = useCallback((tx, mode = 'edit') => { setEditTransaction(tx); setEditMode(mode); }, []);
   const onDuplicate = useCallback((tx) => { setEditTransaction(tx); setEditMode('duplicate'); }, []);
   const onDelete = useCallback((tx) => setDeleteTarget(tx), []);
   const handleDeleteSuccess = useCallback(async (id, options) => {
-    try {
-      await deleteTransaction(id, options);
-      refreshDashboard();
-    } catch (_) { /* the mutation shows its own error toast */ }
-  }, [deleteTransaction, refreshDashboard]);
+    await deleteTransaction(id, options);
+  }, [deleteTransaction]);
 
   const { recent, total } = useMemo(() => {
     if (!allTransactions || !Array.isArray(allTransactions)) return { recent: [], total: 0 };
@@ -172,7 +161,6 @@ const ModernRecentTransactionsWidget = ({
       <EditTransactionModal
         isOpen={!!editTransaction}
         onClose={() => setEditTransaction(null)}
-        onSuccess={refreshDashboard}
         onDelete={onDelete}
         onDuplicate={onDuplicate}
         transaction={editTransaction}

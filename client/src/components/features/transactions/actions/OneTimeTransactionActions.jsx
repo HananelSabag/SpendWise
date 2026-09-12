@@ -83,12 +83,11 @@ const OneTimeTransactionActions = ({
 
   // ✅ FIXED: Only handle actual deletion when parent handlers aren't available
   const handleActualDelete = async () => {
-    if (!confirm(t('transactions.delete.confirmDelete', { description: transaction.description }))) return;
-    
+    if (isLoading) return;
     setIsLoading(true);
     try {
       // Simple deletion for one-time transactions
-      await deleteTransaction(transaction.id, { deleteSingle: true });
+      await deleteTransaction(transaction.id, { transaction });
       onSuccess?.('deleted');
       setShowDeleteModal(false);
     } catch (error) {

@@ -48,9 +48,9 @@ const transactionAPI = {
    * @param {Object} params - Query parameters (filters, pagination)
    * @returns {Promise<Object>} Transactions list
    */
-  async getAll(params = {}) {
+  async getAll(params = {}, { signal } = {}) {
     try {
-      const response = await apiClient.client.get('/transactions', { params });
+      const response = await apiClient.client.get('/transactions', { params, signal });
       return { success: true, data: response.data };
     } catch (error) {
       return { success: false, error: apiClient.normalizeError ? apiClient.normalizeError(error) : error };

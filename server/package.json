@@ -42,6 +42,7 @@
     "xss": "^1.0.15"
   },
   "overrides": {
+    "qs": "^6.16.0",
     "jsonwebtoken": {
       "jwa": "^2.0.0"
     }

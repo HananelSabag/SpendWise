@@ -12,6 +12,7 @@ import { useTranslation, useCurrency, useNotifications } from '../stores';
 import { useDashboard } from '../hooks/useDashboard';
 import { useCurrentCycle, useCycleControls } from '../hooks/useCycles';
 import { useIsMobile } from '../hooks/useIsMobile';
+import { useBankBalance } from '../hooks/useBankBalance';
 import { cn } from '../utils/helpers';
 import { PageSkeleton } from '../components/ui';
 
@@ -29,6 +30,7 @@ export default function ModernDashboard() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const currentCycle = useCurrentCycle();
+  const bankBalance = useBankBalance();
   const cycleControls = useCycleControls();
 
   const {
@@ -40,16 +42,18 @@ export default function ModernDashboard() {
   } = useDashboard();
 
   const handleRefresh = useCallback(async () => {
-    const [result] = await Promise.all([refreshDashboard(), currentCycle.refetch()]);
-    if (!result.success) {
+    const [result, cycleResult, balanceResult] = await Promise.all([
+      refreshDashboard(), currentCycle.refetch(), bankBalance.refetch(),
+    ]);
+    if (!result.success || cycleResult.isError || balanceResult.isError) {
       addNotification({ type: 'error', message: t('refreshError'), duration: 4000 });
     }
-  }, [refreshDashboard, currentCycle, addNotification, t]);
+  }, [refreshDashboard, currentCycle.refetch, bankBalance.refetch, addNotification, t]);
 
   const { pull, refreshing } = usePullToRefresh(handleRefresh, isMobile);
 
   if (isLoading && !dashboardData) return <PageSkeleton page="dashboard" />;
-  if (isError && !dashboardData) return <DashboardError onRetry={handleRefresh} t={t} />;
+  if (isError && !dashboardData) return <DashboardError onRetry={handleRefresh} isRetrying={isRefetching} t={t} />;
 
   return (
     <>
@@ -70,6 +74,11 @@ export default function ModernDashboard() {
         <h1 className="sr-only">{t('title')}</h1>
 
         <main className="mx-auto max-w-7xl space-y-4 px-4 py-4 lg:space-y-6 lg:px-8 lg:py-6">
+          {(isError || bankBalance.isError) && (
+            <p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+              {t('staleDashboard')}
+            </p>
+          )}
           <ModernBalancePanel />
 
           {/* The current cycle and detail page share one scenario calculation and presentation. */}
@@ -101,7 +110,7 @@ export default function ModernDashboard() {
           <ModernRecentTransactionsWidget
             onViewAll={() => navigate('/transactions')}
             maxItems={isMobile ? 6 : 8}
-            preloadedTransactions={dashboardData.recentTransactions}
+            preloadedTransactions={dashboardData?.recentTransactions || []}
             preloadedLoading={isRefetching}
           />
         </main>

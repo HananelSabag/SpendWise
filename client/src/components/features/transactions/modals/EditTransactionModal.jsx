@@ -5,7 +5,7 @@
  * @version 3.0.0 - TRANSACTION REDESIGN
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle } from 'lucide-react';
 
@@ -36,6 +36,13 @@ const EditTransactionModal = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) { setShowSuccess(false); return; }
+    if (!showSuccess) return;
+    const timer = setTimeout(() => { setShowSuccess(false); onClose?.(); }, 1500);
+    return () => clearTimeout(timer);
+  }, [isOpen, showSuccess, onClose]);
 
   // ✅ Modal title based on mode
   const modalTitle = useMemo(() => {
@@ -69,12 +76,6 @@ const EditTransactionModal = ({
       // Show success state briefly (updateTransaction already toasts).
       setShowSuccess(true);
       onSuccess?.(result);
-
-      // Close modal after brief success display
-      setTimeout(() => {
-        setShowSuccess(false);
-        onClose?.();
-      }, 1500);
 
     } catch (error) {
       console.error('Failed to save transaction:', error);

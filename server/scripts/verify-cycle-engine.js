@@ -297,7 +297,7 @@ function main() {
     cards.flatMap((c) => engine.buildCardView(c.txns, { bankTxns, asOf }).events).filter((e) => !e.future),
   ).matched.map((m) => m.bankTxn);
   const recurring = engine.deriveRecurringCharges(bankTxns, {
-    knownLoanIds: loans.map((l) => l.identifier),
+    knownLoanIdentities: loans.map((l) => l.identity),
     excludeTxns: cardSettlementLines,
   });
   for (const r of recurring) {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const FINANCIAL_QUERY_ROOTS = [
@@ -6,6 +6,8 @@ export const FINANCIAL_QUERY_ROOTS = [
   'cycles',
   'bankSyncStats',
   'transactions',
+  'transactionMonths',
+  'merchantWatches',
 ];
 
 export async function invalidateFinancialQueries(queryClient) {
@@ -20,27 +22,17 @@ export function emitFinancialDataUpdated(detail = {}) {
   window.dispatchEvent(new CustomEvent('financial-data-updated', { detail }));
 }
 
-export function useFinancialDataRefresh() {
-  const queryClient = useQueryClient();
-  return useCallback(
-    () => invalidateFinancialQueries(queryClient),
-    [queryClient],
-  );
-}
-
 /** One app-level bridge keeps every money surface on the same cache lifecycle. */
 export function useFinancialDataSync() {
-  const refreshFinancialData = useFinancialDataRefresh();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const events = [
       'financial-data-updated',
-      'transaction-added',
-      'dashboard-refresh-requested',
       'server-woke',
     ];
-    const handleRefresh = () => { void refreshFinancialData(); };
+    const handleRefresh = () => { void invalidateFinancialQueries(queryClient); };
     events.forEach((event) => window.addEventListener(event, handleRefresh));
     return () => events.forEach((event) => window.removeEventListener(event, handleRefresh));
-  }, [refreshFinancialData]);
+  }, [queryClient]);
 }

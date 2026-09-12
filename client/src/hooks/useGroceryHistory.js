@@ -12,7 +12,7 @@ import { api } from '../api';
 import useAuthStore from '../stores/authStore';
 import { useToast } from './useToast';
 import { useTranslation } from '../stores';
-import { invalidateFinancialQueries, emitFinancialDataUpdated } from './useFinancialDataSync';
+import { invalidateFinancialQueries } from './useFinancialDataSync';
 
 export function useGroceryHistory({ enabled = true, limit = 20 } = {}) {
   const userId = useAuthStore((s) => s.user?.id);
@@ -108,7 +108,6 @@ export function useGroceryTripActions() {
       invalidate(tripId);
       // Exactly what a manual expense invalidates — the trip just created one.
       await invalidateFinancialQueries(queryClient);
-      emitFinancialDataUpdated({ source: 'grocery-trip' });
 
       toast.success(result.data.created ? t('history.addedToSpendWise') : t('history.alreadyLinked'));
       return result.data.transactionId;

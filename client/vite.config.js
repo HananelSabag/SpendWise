@@ -90,13 +90,9 @@ export default defineConfig(({ command, mode }) => {
       alias: {
         '@': path.resolve(__dirname, './src'),
         '@components': path.resolve(__dirname, './src/components'),
-        '@features': path.resolve(__dirname, './src/features'),
         '@hooks': path.resolve(__dirname, './src/hooks'),
         '@utils': path.resolve(__dirname, './src/utils'),
         '@config': path.resolve(__dirname, './src/config'),
-        '@assets': path.resolve(__dirname, './src/assets'),
-        '@admin': path.resolve(__dirname, './src/components/admin'),
-        '@analytics': path.resolve(__dirname, './src/components/analytics'),
         '@api': path.resolve(__dirname, './src/api'),
         '@stores': path.resolve(__dirname, './src/stores'),
         '@translations': path.resolve(__dirname, './src/translations'),

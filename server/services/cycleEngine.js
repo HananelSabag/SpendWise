@@ -637,7 +637,7 @@ function detectSalaryChange(bankTxns, signature, {
   // masquerades as a new employer (real false positive: ₪12,805.22 "פריסה לתשלומים").
   const skip = new Set(excludeTxns);
   deriveLoans(bankTxns).forEach((l) => bankTxns
-    .filter((t) => String(t.identifier) === l.identifier && Number(t.amount) > 0)
+    .filter((t) => recurringIdentity(t) === l.identity && Number(t.amount) > 0)
     .forEach((t) => skip.add(t)));
   if (cards.length) {
     const events = cards
@@ -749,7 +749,7 @@ function projectUpcoming({
     if (hasFinalLoanRepayment(loan)) continue;
     const date = nextOccurrence(loan.paymentDay, today);
     if (date && inWindow(date, window)) {
-      items.push({ kind: 'loan', date, amount: -Math.abs(loan.lastPaymentAmount), label: loan.description || 'loan', identifier: loan.identifier, certainty: 'proven' });
+      items.push({ kind: 'loan', date, amount: -Math.abs(loan.lastPaymentAmount), label: loan.description || 'loan', identifier: loan.identifier, seriesIdentity: loan.identity, source: loan.source, accountNumber: loan.accountNumber, certainty: 'proven' });
     }
   }
 
@@ -774,15 +774,26 @@ function projectUpcoming({
     for (const [day] of paymentDays) {
       const date = nextOccurrence(day, today);
       if (date && inWindow(date, window)) {
-        const amount = series.manuallyConfirmed && Number.isFinite(Number(series.signedAmount))
+        let amount = series.manuallyConfirmed && Number.isFinite(Number(series.signedAmount))
           ? Number(series.signedAmount)
           : -Math.abs(series.typicalAmount);
+        // Two payments in a month may have different prices. Learn each proven
+        // rhythm from its own recent evidence, not an average across both days.
+        const rhythmPayments = (series.payments || [])
+          .filter((payment) => Number(payment.date?.slice(8, 10)) === day)
+          .slice(-3);
+        if (paymentDays.length > 1 && rhythmPayments.length) {
+          amount = sumAmounts(rhythmPayments) / rhythmPayments.length;
+        }
         items.push({
           kind: amount > 0 ? 'income' : (series.channel === 'credit_card' ? 'card_recurring' : 'recurring'),
           date,
           amount: round2(amount),
           label: series.description,
           identifier: series.identifier,
+          source: series.source,
+          accountNumber: series.accountNumber,
+          recurrenceGroupId: series.recurrenceGroupId || null,
           recurrenceKind: series.recurrenceKind || null,
           certainty: amount > 0 ? 'estimated' : (series.manuallyConfirmed ? 'known' : 'estimated'),
         });
@@ -921,8 +932,10 @@ function estimateNextCardBills(cardViews, {
 function buildIdentifierFamilies(txns) {
   const families = new Map();
   for (const txn of txns) {
-    if (isPending(txn) || txn.identifier === undefined || txn.identifier === null) continue;
-    const key = String(txn.identifier);
+    if (isPending(txn) || txn.identifier == null || !String(txn.identifier).trim()
+      || !ilDate(txn.processedDate || txn.date)) continue;
+    // Provider identifiers are not globally unique, even within one user's banks.
+    const key = recurringIdentity(txn);
     if (!families.has(key)) families.set(key, []);
     families.get(key).push(txn);
   }
@@ -957,17 +970,24 @@ function hasFinalLoanRepayment(loan) {
  */
 function deriveLoans(bankTxns) {
   const loans = [];
-  for (const [identifier, family] of buildIdentifierFamilies(bankTxns)) {
+  for (const [identity, family] of buildIdentifierFamilies(bankTxns)) {
     const disbursements = family.filter((t) => Number(t.amount) > 0);
     const payments = family.filter((t) => Number(t.amount) < 0);
     if (!disbursements.length || !payments.length) continue;
+    // Money out followed by its return is not a loan draw followed by repayment.
+    const disbursedOn = ilDate(disbursements[0].processedDate || disbursements[0].date);
+    if (payments.some((txn) => ilDate(txn.processedDate || txn.date) < disbursedOn)) continue;
+    if (!payments.some((txn) => ilDate(txn.processedDate || txn.date) > disbursedOn)) continue;
 
     const principal = sumAmounts(disbursements);
     const repaid = Math.abs(sumAmounts(payments));
     loans.push({
-      identifier,
+      identifier: String(family[0].identifier),
+      identity,
+      source: family[0].source,
+      accountNumber: family[0].accountNumber,
       principal,
-      disbursedOn: ilDate(disbursements[0].processedDate || disbursements[0].date),
+      disbursedOn,
       payments: payments.map((t) => ({ date: ilDate(t.processedDate || t.date), amount: round2(t.amount), txn: t })),
       paymentCount: payments.length,
       repaid: round2(repaid),
@@ -987,12 +1007,14 @@ function deriveLoans(bankTxns) {
  * pay — so these are exactly the candidates to hand the user for a fixed-charge link
  * (SPEC §5 link 3): confirm what it is, and for a loan, how many payments remain.
  */
-function deriveRecurringCharges(bankTxns, { knownLoanIds = [], excludeTxns = [] } = {}) {
+function deriveRecurringCharges(bankTxns, { knownLoanIds = [], knownLoanIdentities = [], excludeTxns = [] } = {}) {
   const known = new Set(knownLoanIds.map(String));
+  const knownIdentities = new Set(knownLoanIdentities);
   const skip = excludeTxns instanceof Set ? excludeTxns : new Set(excludeTxns);
   const recurring = [];
-  for (const [identifier, family] of buildIdentifierFamilies(bankTxns)) {
-    if (known.has(identifier)) continue;
+  for (const [identity, family] of buildIdentifierFamilies(bankTxns)) {
+    const identifier = String(family[0].identifier);
+    if (knownIdentities.has(identity) || known.has(identifier)) continue;
     if (family.some((t) => Number(t.amount) > 0)) continue;
     if (family.length < 2) continue;
     // Never ask the user to label money the engine already explains — a card settlement or a
@@ -1003,9 +1025,13 @@ function deriveRecurringCharges(bankTxns, { knownLoanIds = [], excludeTxns = [] 
     const dates = family.map((t) => ilDate(t.processedDate || t.date));
     recurring.push({
       identifier,
+      identity,
+      source: family[0].source,
+      accountNumber: family[0].accountNumber,
       description: (family[0].description || '').trim(),
       occurrences: family.length,
       dates,
+      payments: family.map((txn, index) => ({ date: dates[index], amount: round2(txn.amount) })),
       typicalAmount: round2(amounts.reduce((s, a) => s + a, 0) / amounts.length),
       lastAmount: round2(amounts[amounts.length - 1]),
       lastDate: dates[dates.length - 1],
@@ -1060,6 +1086,7 @@ function deriveManualRecurring(txns, transactionOverrides = [], { excludeTxns = 
     // A loan disbursement may share an identifier with its repayments. Never
     // average that incoming principal into the user's recurring expense rule.
     const matches = txns.filter((txn) => !skip.has(txn)
+      && !isPending(txn) && ilDate(txn.processedDate || txn.date)
       && Math.sign(Number(txn.amount)) === direction
       && group.identities.has(recurringIdentity(txn)))
       .sort((a, b) => ilDate(a.processedDate || a.date).localeCompare(ilDate(b.processedDate || b.date)));
@@ -1082,6 +1109,7 @@ function deriveManualRecurring(txns, transactionOverrides = [], { excludeTxns = 
       description: override.recurrenceLabel || override.description || last.description || '',
       occurrences: Math.max(1, matches.length),
       dates,
+      payments: matches.map((txn) => ({ date: ilDate(txn.processedDate || txn.date), amount: round2(txn.amount) })),
       typicalAmount: round2(Math.abs(signedAmount)),
       signedAmount: round2(signedAmount),
       lastAmount: round2(Math.abs(signedAmount)),
@@ -1144,7 +1172,7 @@ function prepareCycleData({
   const direct = bankTxns.filter((txn) => !suppressed.has(txn) && !isPending(txn));
   const loans = deriveLoans(bankTxns);
   const provenFinancing = new Set(loans.flatMap((loan) => bankTxns.filter(
-    (txn) => String(txn.identifier) === loan.identifier && Number(txn.amount) > 0,
+    (txn) => recurringIdentity(txn) === loan.identity && Number(txn.amount) > 0,
   )));
   const classOf = (txn) => {
     const override = recurringOverrideFor(txn, transactionOverrides);
@@ -1210,14 +1238,9 @@ function prepareCycleData({
   const projectedLoans = loans.filter((loan) => !(loan.payments || [])
     .some((payment) => manualIdentities.has(recurringIdentity(payment.txn))));
   const automaticRecurring = deriveRecurringCharges(bankTxns, {
-    knownLoanIds: loans.map((loan) => loan.identifier),
+    knownLoanIdentities: loans.map((loan) => loan.identity),
     excludeTxns: suppressed,
-  }).filter((series) => !manualIdentities.has(recurringIdentity({
-    source: bankTxns.find((txn) => String(txn.identifier) === String(series.identifier))?.source,
-    accountNumber: bankTxns.find((txn) => String(txn.identifier) === String(series.identifier))?.accountNumber,
-    identifier: series.identifier,
-    description: series.description,
-  })));
+  }).filter((series) => !manualIdentities.has(series.identity));
 
   return {
     cardViews,
@@ -1836,6 +1859,8 @@ function buildCycle({
         date: bill.chargeDate,
         amount: -bill.knownAmount,
         estimatedAmount: -bill.estimatedAmount,
+        source: bill.source,
+        accountNumber: bill.accountNumber,
         label: `${bill.source} ••••${String(bill.accountNumber || '').slice(-4)}`,
         status: 'expected',
         certainty: bill.certainty,

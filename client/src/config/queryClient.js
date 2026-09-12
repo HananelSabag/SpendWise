@@ -1,304 +1,44 @@
-// Removed noisy query client logs
-
-/**
- * React Query Configuration - Production Optimized
- * Smart caching, deduplication, and performance monitoring
- * NOW WITH UNIFIED API INTEGRATION! 🚀
- * @version 2.0.0
- */
-
 import { QueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { shouldRetryQuery } from '../api/errors';
 
-// Environment config
-const isDevelopment = process.env.NODE_ENV === 'development';
-const enableQueryLogging = isDevelopment && localStorage.getItem('debug_queries') === 'true';
-
-// Cache time configurations for different data types
-export const cacheConfigs = {
-  // Static data - very long cache
-  static: {
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    gcTime: 48 * 60 * 60 * 1000, // 48 hours
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false
-  },
-  
-  // User data - medium cache
-  user: {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: true
-  },
-  
-  // Dynamic data - short cache
-  dynamic: {
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: true
-  },
-  
-  // Real-time data - minimal cache
-  realtime: {
-    staleTime: 0,
-    gcTime: 1 * 60 * 1000, // 1 minute
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true
-  }
-};
-
-// Query-specific configurations
+// Domain hooks override freshness only; TanStack Query owns deduplication,
+// bounded retries and garbage collection. No second cleanup timer or cache.
 export const queryConfigs = {
-  // Dashboard - frequently accessed
   dashboard: {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     refetchOnMount: false,
-    refetchOnWindowFocus: false
+    refetchOnWindowFocus: false,
   },
-  
-  // Profile - important but stable
-  profile: {
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 60 * 60 * 1000, // 1 hour
-    refetchOnMount: false,
-    refetchOnWindowFocus: false
-  },
-  
-  // Transaction lists
-  transactions: {
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnMount: false,
-    refetchOnWindowFocus: false
-  },
-  
-  // Templates
-  templates: {
-    staleTime: 30 * 60 * 1000, // 30 minutes
-    gcTime: 2 * 60 * 60 * 1000, // 2 hours
-    refetchOnMount: false,
-    refetchOnWindowFocus: false
-  },
-  
-  // Exchange rates
-  exchangeRates: {
-    staleTime: 4 * 60 * 60 * 1000, // 4 hours
-    gcTime: 12 * 60 * 60 * 1000, // 12 hours
-    refetchOnMount: false,
-    refetchOnWindowFocus: false
-  }
 };
 
-// Performance monitoring
-class QueryPerformanceMonitor {
-  constructor() {
-    this.queryTimes = new Map();
-    this.slowQueryThreshold = 1000; // 1 second
-  }
-  
-  startQuery(queryKey) {
-    const key = JSON.stringify(queryKey);
-    this.queryTimes.set(key, Date.now());
-  }
-  
-  endQuery(queryKey, status) {
-    const key = JSON.stringify(queryKey);
-    const startTime = this.queryTimes.get(key);
-    
-    if (startTime) {
-      const duration = Date.now() - startTime;
-      this.queryTimes.delete(key);
-      
-      if (enableQueryLogging) {
-        const emoji = status === 'success' ? '✅' : '❌';
-        console.log(`${emoji} [Query] ${key} - ${duration}ms`);
-      }
-      
-      if (duration > this.slowQueryThreshold && isDevelopment) {
-        console.warn(`⚠️ Slow query detected: ${key} took ${duration}ms`);
-      }
-    }
-  }
-  
-  getStats() {
-    return {
-      activeQueries: this.queryTimes.size,
-      slowQueryThreshold: this.slowQueryThreshold
-    };
-  }
-}
-
-const performanceMonitor = new QueryPerformanceMonitor();
-
-// Create optimized query client
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // staleTime: 30s — prevents loading-state flicker when navigating between pages.
-      // Cross-user leakage is handled at the source (not staleTime):
-      //   • All query keys include user?.id → different users never share cache slots
-      //   • clearAllCaches() is called on both logout AND login (wipes TanStack, SW, axios)
-      //   • Server sends Cache-Control: no-store on every /api/ response
-      // Individual hooks can override with longer staleTime where safe (categories, etc.)
-      // or shorter / 0 for real-time data.
-      staleTime: 30 * 1000, // 30 s
+      staleTime: 30 * 1000,
+      gcTime: 30 * 60 * 1000,
       refetchOnMount: true,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      
-      // Retry configuration
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error?.response?.status && error.response.status >= 400 && error.response.status < 500) {
-          return false;
-        }
-        
-        // Retry up to 2 times for other errors
-        return failureCount < 2;
-      },
-      
-      retryDelay: (attemptIndex) => {
-        // Exponential backoff: 1s, 2s, 4s
-        return Math.min(1000 * 2 ** attemptIndex, 4000);
-      },
-      
-      // Network mode
-      networkMode: 'offlineFirst', // Use cache first, then network
-      
-      // Structural sharing for performance
+      retry: shouldRetryQuery,
+      retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
+      networkMode: 'offlineFirst',
       structuralSharing: true,
-      
-      // Garbage collection
-      gcTime: 30 * 60 * 1000, // 30 minutes default
     },
-    
     mutations: {
-      // Retry configuration for mutations
-      retry: 1,
-      retryDelay: 1000,
-      
-      // Network mode
-      networkMode: 'online', // Mutations require network
-      
-      // Global error handler
+      // A lost response is not proof a write failed. Never replay a write
+      // automatically without a server-side idempotency contract.
+      retry: false,
+      networkMode: 'online',
       onError: (error) => {
-        // Don't show toast for validation errors (handled by components)
-        if (error?.response?.data?.error?.code === 'VALIDATION_ERROR') {
-          return;
-        }
-        
-        // Show user-friendly error message
-        const _t = (window?.getTranslation) ? window.getTranslation : (k)=>k;
-        const message = error?.response?.data?.error?.message || _t('common.operation_failed');
-        toast.error(message);
-        
-        if (isDevelopment) {
-          console.error('❌ [Mutation Error]', error);
-        }
-      }
-    }
-  }
+        if (error?.code === 'VALIDATION_ERROR') return;
+        const t = window.getTranslation || ((key) => key);
+        toast.error(t('common.operation_failed'));
+      },
+    },
+  },
 });
 
-// ✅ FIX: Global query client event listeners - Remove incorrect subscribe usage
-if (isDevelopment && enableQueryLogging) {
-  // Use the correct event listener approach
-  const originalQuery = queryClient.fetchQuery;
-  
-  // Wrap fetchQuery to monitor performance
-  queryClient.fetchQuery = function(...args) {
-    const queryKey = args[0]?.queryKey || args[0];
-    performanceMonitor.startQuery(queryKey);
-    
-    return originalQuery.apply(this, args).then(
-      (result) => {
-        performanceMonitor.endQuery(queryKey, 'success');
-        return result;
-      },
-      (error) => {
-        performanceMonitor.endQuery(queryKey, 'error');
-        throw error;
-      }
-    );
-  };
-}
-
-// Utility functions for cache management
-export const cacheUtils = {
-  // Invalidate all queries matching a pattern
-  invalidatePattern: (pattern) => {
-    queryClient.invalidateQueries({
-      predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' && key.includes(pattern);
-      }
-    });
-  },
-  
-  // Clear all cache
-  clearAllCache: () => {
-    queryClient.clear();
-    const _t = (window?.getTranslation) ? window.getTranslation : (k)=>k;
-    toast.success(_t('common.cache_cleared'));
-  },
-  
-  // Get cache statistics
-  getCacheStats: () => {
-    const cache = queryClient.getQueryCache();
-    const queries = cache.getAll();
-    
-    const stats = {
-      totalQueries: queries.length,
-      activeQueries: queries.filter(q => q.state.fetchStatus === 'fetching').length,
-      staleQueries: queries.filter(q => q.isStale()).length,
-      freshQueries: queries.filter(q => !q.isStale()).length,
-      errorQueries: queries.filter(q => q.state.error).length
-    };
-    
-    if (isDevelopment) {
-      console.table(stats);
-    }
-    
-    return stats;
-  },
-  
-  // Monitor performance
-  getPerformanceStats: () => performanceMonitor.getStats()
-};
-
-// Auto garbage collection
-if (!isDevelopment) {
-  // In production, be more aggressive with garbage collection
-  setInterval(() => {
-    const cache = queryClient.getQueryCache();
-    const queries = cache.getAll();
-    
-    // Remove very old queries
-    queries.forEach(query => {
-      const lastUpdated = query.state.dataUpdatedAt;
-      const now = Date.now();
-      const age = now - lastUpdated;
-      
-      // Remove queries older than 2 hours that aren't being observed
-      if (age > 2 * 60 * 60 * 1000 && query.getObserversCount() === 0) {
-        queryClient.removeQueries({ queryKey: query.queryKey });
-      }
-    });
-  }, 30 * 60 * 1000); // Every 30 minutes
-}
-
-// Export for development tools
-if (isDevelopment) {
-  window.queryClient = queryClient;
-  window.cacheUtils = cacheUtils;
-  window.queryConfigs = queryConfigs;
-}
-
+if (import.meta.env.DEV) window.queryClient = queryClient;
 export default queryClient;

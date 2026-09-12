@@ -30,7 +30,7 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
   const { currency } = useCurrency();
   
   // ✅ Hooks for transaction creation
-  const { createTransaction } = useTransactionActions('quickActions');
+  const { createTransaction } = useTransactionActions();
 
   // ✅ State management
   const [activeType, setActiveType] = useState('expense');
@@ -68,7 +68,7 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
         notes: '',
       };
 
-      // createTransaction (useTransactions) shows the success/error toast.
+      // The mutation owns the success/error toast and cache refresh.
       await createTransaction(transactionData);
 
       // Reset form

@@ -6,6 +6,26 @@
 > read this before touching any cycle/accounting/reconciliation code. Keep the fixture numbers as the
 > regression oracle.
 
+## V9 history isolation and presentation (2026-09-09)
+
+V9 keeps the V8 billing/manual windows and known/forecast distinction below. It changes no raw
+transactions or schema. Calculation and client query versions are 9 so old derived snapshots are
+not reused as current results.
+
+- Identifier families are scoped by bank source + account + provider identifier. Equal identifiers
+  in separate accounts never combine principal, repayments, recurring charges or financing status.
+- A debit followed by a credit is not evidence of a loan draw followed by repayment. Automatic loan
+  detection requires the incoming principal before repayments; same-day reversals alone do not qualify.
+- When repeated evidence establishes two monthly payment days, each day uses its own last three
+  observed payment amounts instead of a shared average. Pending authorizations do not teach a
+  confirmed recurring amount. Future income remains forecast-only.
+- Loan cards identify the source account, last observed payment and source descriptions. No detected
+  series does not mean zero debt. All derived loan balances remain explicitly approximate.
+- The checking balance's freshness comes from included bank-account balance timestamps, never from
+  a newer card sync. A dashboard refresh reloads balance, cycle and recent transactions together.
+- The legacy raw-data reconciliation checks still pass exactly. Their forward estimate changes from
+  8,032.63 to 8,035.97 because the insurance payment on the 1st now uses its own amount history.
+
 ## V8 BILLING-CYCLE CONTRACT (supersedes salary-anchor rules below)
 
 - Automatic windows run from the **latest included aggregated card statement day** to the same day

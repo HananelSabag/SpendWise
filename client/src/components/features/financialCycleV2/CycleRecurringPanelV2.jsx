@@ -2,7 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, Link2, Loader2, Plus, Repeat2, Save, Search, Trash2 } from 'lucide-react';
 import { useCycles } from '../../../hooks/useCycles';
 import { formatCycleDay } from '../../../utils/cycleDate';
-import { cardShortName, signedCurrency } from '../../../utils/cycleFormat';
+import { signedCurrency } from '../../../utils/cycleFormat';
+import { institutionLabel } from '../bankSync/bankSyncMeta';
 import { cn } from '../../../utils/helpers';
 import { CycleEmpty, CycleMoney, cycleButton, cycleSurface } from './CyclePrimitives';
 import RecurringTransactionPicker from './RecurringTransactionPicker';
@@ -37,7 +38,7 @@ function RecurringRule({ group, onUpdate, onLink, isSaving, formatCurrency, lang
   const [confirmRemove, setConfirmRemove] = useState(false);
   const label = draft ?? group.label;
   const changed = label?.trim() && label.trim() !== group.label;
-  const income = group.recurrenceKind === 'recurring_income';
+  const income = ['recurring_income', 'salary'].includes(group.recurrenceKind);
   const included = group.includeInEstimate !== false;
   return (
     <article className={cn(cycleSurface, 'p-4 sm:p-5')}>
@@ -110,7 +111,7 @@ function RecurringRule({ group, onUpdate, onLink, isSaving, formatCurrency, lang
               <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <span>
                   <bdi>
-                    {cardShortName(matcher.source)} · {matcher.accountLast4}
+                    {institutionLabel(matcher.source, language)} · {matcher.accountLast4}
                   </bdi>
                   {matcher.date && ` · ${formatCycleDay(matcher.date, language)}`}
                 </span>

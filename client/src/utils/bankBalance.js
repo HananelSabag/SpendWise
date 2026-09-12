@@ -33,12 +33,17 @@ export function computeBankBalance(sources) {
           // A malformed provider value must behave like an unavailable balance, never poison
           // the shared total with NaN.
           balance: Number.isFinite(numericBalance) ? numericBalance : null,
+          lastSyncedAt: a.last_synced_at || null,
         };
       }),
   );
 
   const accountsWithBalance = bankAccounts.filter((a) => a.balance !== null);
   const totalRealBalance = accountsWithBalance.reduce((sum, a) => sum + a.balance, 0);
+  const balanceDates = accountsWithBalance.map(account => new Date(account.lastSyncedAt || ''));
+  // A newer card sync or another bank must not make an old balance look fresh.
+  const balanceAsOf = balanceDates.length && balanceDates.every(date => Number.isFinite(date.getTime()))
+    ? new Date(Math.min(...balanceDates.map(date => date.getTime()))) : null;
 
   return {
     sources: list,
@@ -54,6 +59,7 @@ export function computeBankBalance(sources) {
     totalRealBalance,
     multiAccount: bankAccounts.length > 1,
     lastSync,
+    balanceAsOf,
   };
 }
 

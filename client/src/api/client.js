@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 import { getAccessToken } from '../auth/tokenStorage.js';
 import { ensureFreshToken } from '../auth/refreshManager.js';
 import { markWarm, isRecentlyWarm } from '../auth/serverHealth.js';
+import { normalizeApiError } from './errors.js';
 
 // ✅ API Configuration
 const rawApiUrl = import.meta.env.VITE_API_URL || 'https://spendwise-dx8g.onrender.com/api/v1';
@@ -64,10 +65,18 @@ class CacheManager {
   constructor() {
     this.cache = new Map();
     this.defaultTTL = 5 * 60 * 1000; // 5 minutes
+    this.maxEntries = 100;
+    this.generation = 0;
   }
 
   set(key, data, ttl = this.defaultTTL) {
-    const expiresAt = Date.now() + ttl;
+    const now = Date.now();
+    for (const [entryKey, entry] of this.cache) {
+      if (entry.expiresAt <= now) this.cache.delete(entryKey);
+    }
+    this.cache.delete(key);
+    while (this.cache.size >= this.maxEntries) this.cache.delete(this.cache.keys().next().value);
+    const expiresAt = now + (ttl ?? this.defaultTTL);
     this.cache.set(key, { data, expiresAt });
   }
 
@@ -75,15 +84,18 @@ class CacheManager {
     const cached = this.cache.get(key);
     if (!cached) return null;
     
-    if (Date.now() > cached.expiresAt) {
+    if (Date.now() >= cached.expiresAt) {
       this.cache.delete(key);
       return null;
     }
     
+    this.cache.delete(key);
+    this.cache.set(key, cached);
     return cached.data;
   }
 
   clear(pattern) {
+    this.generation++;
     if (pattern) {
       for (const [key] of this.cache) {
         if (key.includes(pattern)) {
@@ -115,7 +127,7 @@ class RequestDeduplicator {
     }
 
     const promise = requestFn().finally(() => {
-      this.pendingRequests.delete(key);
+      if (this.pendingRequests.get(key) === promise) this.pendingRequests.delete(key);
     });
 
     this.pendingRequests.set(key, promise);
@@ -232,6 +244,9 @@ class SpendWiseAPIClient {
       }
     } catch (_) {}
 
+    // Cancellation is navigation/control flow, not a server outage.
+    if (axios.isCancel(error) || error?.code === 'ERR_CANCELED') return Promise.reject(error);
+
     // Update server state
     this.serverState.updateFailure();
 
@@ -315,6 +330,7 @@ class SpendWiseAPIClient {
       // ~30–60s; a single transparent retry recovers most of the time without
       // ever yanking the user off their current screen.
       const canRetry = !!requestConfig
+        && ['get', 'head', 'options'].includes((requestConfig.method || 'get').toLowerCase())
         && !requestConfig._coldStartRetried
         && (requestConfig.retryCount || 0) < config.RETRY_ATTEMPTS;
 
@@ -382,47 +398,13 @@ class SpendWiseAPIClient {
 
   // ✅ Normalize API Errors
   normalizeError(error) {
-    if (error.response) {
-      // Server error responses use two shapes across the codebase:
-      //   nested: { error: { code, message, details } }   (most routes)
-      //   flat:   { error: "human message", code: "X" }   (some newer routes)
-      // Handle both so `code` (used for toast/UI branching, e.g. SYNC_QUOTA,
-      // SYNC_TOO_SOON) is never silently lost to the flat shape — previously
-      // any flat-shape error fell through to a generic SERVER_ERROR/"Server
-      // error occurred", which is why sync rate-limit rejections showed no
-      // meaningful feedback.
-      const data = error.response.data || {};
-      const nested = (data.error && typeof data.error === 'object') ? data.error : null;
-      const flatMessage = typeof data.error === 'string' ? data.error : null;
-
-      return {
-        status: error.response.status,
-        message: nested?.message || flatMessage || data.message || 'Server error occurred',
-        code: nested?.code || data.code || 'SERVER_ERROR',
-        details: nested?.details || data.details
-      };
-    }
-    
-    if (error.request) {
-      // Request made but no response
-      return {
-        status: 0,
-        message: 'Unable to connect to server. Please check your internet connection.',
-        code: 'NETWORK_ERROR'
-      };
-    }
-    
-    // Something else happened
-    return {
-      status: 0,
-      message: error.message || 'An unexpected error occurred',
-      code: 'UNKNOWN_ERROR'
-    };
+    return normalizeApiError(error);
   }
 
   // ✅ Cached Request Method
   async cachedRequest(endpoint, options = {}, cacheKey = null, ttl = null) {
     const key = cacheKey || `${endpoint}-${JSON.stringify(options)}`;
+    const generation = this.cache.generation;
     
     // Check cache first
     const cached = this.cache.get(key);
@@ -436,7 +418,7 @@ class SpendWiseAPIClient {
     );
 
     // Cache successful responses
-    if (response.data) {
+    if (response.data && generation === this.cache.generation) {
       this.cache.set(key, response.data, ttl);
     }
 
@@ -459,6 +441,8 @@ class SpendWiseAPIClient {
   // ✅ Manual Cache Management
   clearCache(pattern) {
     this.cache.clear(pattern);
+    // A new user or invalidated admin view must not join an older request.
+    this.deduplicator.pendingRequests.clear();
     // ✅ FIX: Dismiss all loading-related toasts when clearing cache
     try { 
       toast.dismiss('cold-start');

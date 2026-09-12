@@ -23,10 +23,27 @@ describe('computeBankBalance', () => {
     ]);
 
     expect(result.bankAccounts).toEqual([
-      { source: 'leumi', accountNumber: '111', balance: 1250.5 },
+      { source: 'leumi', accountNumber: '111', balance: 1250.5, lastSyncedAt: null },
     ]);
     expect(result.totalRealBalance).toBe(1250.5);
     expect(result.lastSync.toISOString()).toBe('2026-07-17T09:00:00.000Z');
+  });
+
+  it('dates the balance by the oldest included bank balance, never by a newer card sync', () => {
+    const result = computeBankBalance([
+      { kind: 'bank', source: 'leumi', last_sync: '2026-09-09T10:00:00Z', accounts: [
+        { balance: 100, last_synced_at: '2026-09-07T10:00:00Z' },
+        { balance: 200, last_synced_at: '2026-09-08T10:00:00Z' },
+        { balance: 300, enabled: false, last_synced_at: '2026-08-01T10:00:00Z' },
+      ] },
+      { kind: 'credit_card', source: 'max', last_sync: '2026-09-09T11:00:00Z', accounts: [] },
+    ]);
+    expect(result.balanceAsOf.toISOString()).toBe('2026-09-07T10:00:00.000Z');
+    expect(result.totalRealBalance).toBe(300);
+  });
+
+  it('does not invent a balance update time from transaction sync metadata', () => {
+    expect(computeBankBalance([{ kind: 'bank', last_sync: '2026-09-09', accounts: [{ balance: 100 }] }]).balanceAsOf).toBeNull();
   });
 
   it('keeps unavailable and malformed balances out of the total', () => {

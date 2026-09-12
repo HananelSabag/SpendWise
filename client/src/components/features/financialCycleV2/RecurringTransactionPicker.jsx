@@ -1,32 +1,39 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, CreditCard, Landmark, Search } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, CreditCard, Landmark, Search } from "lucide-react";
 
-import { Modal } from '../../ui';
-import { cn } from '../../../utils/helpers';
-import { formatCycleDay } from '../../../utils/cycleDate';
-import { signedCurrency } from '../../../utils/cycleFormat';
+import { Modal } from "../../ui";
+import { cn } from "../../../utils/helpers";
+import { formatCycleDay } from "../../../utils/cycleDate";
+import { signedCurrency } from "../../../utils/cycleFormat";
+import { institutionLabel } from "../bankSync/bankSyncMeta";
 
-const CARD_SOURCES = new Set(['max', 'visa_cal', 'isracard', 'amex']);
+const CARD_SOURCES = new Set(["max", "visa_cal", "isracard", "amex"]);
 export const PICKER_PAGE_SIZE = 24;
 
-export function filterRecurringTransactions(candidates, query, direction = 'all') {
-  const normalized = String(query || '')
+export function filterRecurringTransactions(
+  candidates,
+  query,
+  direction = "all",
+) {
+  const normalized = String(query || "")
     .trim()
     .toLocaleLowerCase();
   return candidates.filter((item) => {
     const amount = Number(item.amount);
-    if (direction === 'income' && amount <= 0) return false;
-    if (direction === 'expense' && amount >= 0) return false;
+    if (direction === "income" && amount <= 0) return false;
+    if (direction === "expense" && amount >= 0) return false;
     if (!normalized) return true;
     return [
       item.description,
       item.source,
+      institutionLabel(item.source, "he"),
+      institutionLabel(item.source, "en"),
       item.accountNumber,
       item.processedDate,
       item.date,
       amount,
     ].some((value) =>
-      String(value || '')
+      String(value || "")
         .toLocaleLowerCase()
         .includes(normalized),
     );
@@ -45,8 +52,8 @@ export default function RecurringTransactionPicker({
   hint,
   lockedDirection = null,
 }) {
-  const [query, setQuery] = useState('');
-  const [direction, setDirection] = useState(lockedDirection || 'all');
+  const [query, setQuery] = useState("");
+  const [direction, setDirection] = useState(lockedDirection || "all");
   const [visibleCount, setVisibleCount] = useState(PICKER_PAGE_SIZE);
   const activeDirection = lockedDirection || direction;
   const filtered = useMemo(
@@ -61,8 +68,8 @@ export default function RecurringTransactionPicker({
   }, [activeDirection, isOpen, query]);
 
   const close = () => {
-    setQuery('');
-    setDirection(lockedDirection || 'all');
+    setQuery("");
+    setDirection(lockedDirection || "all");
     onClose();
   };
 
@@ -70,21 +77,25 @@ export default function RecurringTransactionPicker({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={title || t('cycleV2.chooseRecurringTransaction')}
+      title={title || t("cycleV2.chooseRecurringTransaction")}
       sheet
       drawerWidth={560}
     >
       <div className="space-y-4 pb-5">
-        {hint && <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">{hint}</p>}
+        {hint && (
+          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+            {hint}
+          </p>
+        )}
         <div className="sticky top-0 z-10 space-y-3 bg-white pb-2 dark:bg-slate-900">
           <label className="relative block">
             <Search className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-slate-400" />
             <input
               type="search"
-              aria-label={t('cycleV2.searchTransactions')}
+              aria-label={t("cycleV2.searchTransactions")}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={t('cycleV2.searchTransactions')}
+              placeholder={t("cycleV2.searchTransactions")}
               className="h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 pe-3 ps-10 text-sm font-semibold text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-indigo-950"
             />
           </label>
@@ -93,19 +104,19 @@ export default function RecurringTransactionPicker({
             <div
               className="grid grid-cols-3 gap-2"
               role="group"
-              aria-label={t('cycleV2.transactionDirection')}
+              aria-label={t("cycleV2.transactionDirection")}
             >
-              {['all', 'expense', 'income'].map((value) => (
+              {["all", "expense", "income"].map((value) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setDirection(value)}
                   aria-pressed={direction === value}
                   className={cn(
-                    'rounded-xl px-3 py-2 text-xs font-black transition',
+                    "rounded-xl px-3 py-2 text-xs font-black transition",
                     direction === value
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                      ? "bg-indigo-600 text-white"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
                   )}
                 >
                   {t(`cycleV2.picker_${value}`)}
@@ -115,7 +126,7 @@ export default function RecurringTransactionPicker({
           )}
 
           <p className="text-[11px] font-semibold text-slate-400">
-            {t('cycleV2.transactionsFound', { count: filtered.length })}
+            {t("cycleV2.transactionsFound", { count: filtered.length })}
           </p>
         </div>
 
@@ -123,7 +134,9 @@ export default function RecurringTransactionPicker({
           {visible.map((item) => {
             const amount = Number(item.amount);
             const income = amount > 0;
-            const card = CARD_SOURCES.has(String(item.source || '').toLowerCase());
+            const card = CARD_SOURCES.has(
+              String(item.source || "").toLowerCase(),
+            );
             const SourceIcon = card ? CreditCard : Landmark;
             const id = item.overrideTransactionId || item.transactionId;
             return (
@@ -138,32 +151,40 @@ export default function RecurringTransactionPicker({
               >
                 <span
                   className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
                     income
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
                   )}
                 >
                   <SourceIcon className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-black text-slate-950 dark:text-white">
-                    {item.description || t('cycleV2.unnamedTransaction')}
+                    {item.description || t("cycleV2.unnamedTransaction")}
                   </span>
                   <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] font-semibold text-slate-400">
-                    <span>{formatCycleDay(item.processedDate || item.date, language)}</span>
                     <span>
-                      {String(item.source || t('cycleV2.unknownSource')).toUpperCase()}
-                      {item.accountNumber ? ` ••••${String(item.accountNumber).slice(-4)}` : ''}
+                      {formatCycleDay(
+                        item.processedDate || item.date,
+                        language,
+                      )}
                     </span>
+                    <bdi>
+                      {institutionLabel(item.source, language) ||
+                        t("cycleV2.unknownSource")}
+                      {item.accountNumber
+                        ? ` ••••${String(item.accountNumber).slice(-4)}`
+                        : ""}
+                    </bdi>
                   </span>
                 </span>
                 <span
                   className={cn(
-                    'flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-semibold tabular-nums',
+                    "flex shrink-0 items-center gap-1 whitespace-nowrap text-sm font-semibold tabular-nums",
                     income
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-slate-900 dark:text-white',
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-slate-900 dark:text-white",
                   )}
                 >
                   {income ? (
@@ -172,7 +193,9 @@ export default function RecurringTransactionPicker({
                     <ArrowDown className="h-3.5 w-3.5" />
                   )}
                   <bdi dir="ltr">
-                    {signedCurrency(amount, formatCurrency, { signPositive: true })}
+                    {signedCurrency(amount, formatCurrency, {
+                      signPositive: true,
+                    })}
                   </bdi>
                 </span>
               </button>
@@ -180,16 +203,18 @@ export default function RecurringTransactionPicker({
           })}
           {!filtered.length && (
             <div className="rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm font-bold text-slate-400 dark:border-slate-700">
-              {t('cycleV2.noPickerResults')}
+              {t("cycleV2.noPickerResults")}
             </div>
           )}
           {remaining > 0 && (
             <button
               type="button"
-              onClick={() => setVisibleCount((count) => count + PICKER_PAGE_SIZE)}
+              onClick={() =>
+                setVisibleCount((count) => count + PICKER_PAGE_SIZE)
+              }
               className="w-full rounded-2xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-black text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/30 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
             >
-              {t('cycleV2.showMoreTransactions', {
+              {t("cycleV2.showMoreTransactions", {
                 count: Math.min(PICKER_PAGE_SIZE, remaining),
               })}
             </button>

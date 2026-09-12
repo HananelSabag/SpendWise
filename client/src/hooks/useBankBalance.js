@@ -20,7 +20,6 @@ export function useBankBalance() {
     queryFn: () => apiClient.get('/bank-sync/stats').then((r) => r.data.sources || []),
     enabled: Boolean(user?.id),
     staleTime: 5 * 60_000,
-    retry: 1,
   });
 
   const computed = useMemo(() => computeBankBalance(query.data), [query.data]);

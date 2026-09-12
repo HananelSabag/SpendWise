@@ -2,7 +2,7 @@
  * 🗑️ DELETE TRANSACTION — Confirmation dialog (centered modal, intentional)
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Trash2, AlertTriangle, Landmark } from 'lucide-react';
 
 import { useTranslation, useCurrency } from '../../../stores';
@@ -19,6 +19,10 @@ const DeleteTransaction = ({
 }) => {
   const { t, isRTL, currentLanguage } = useTranslation('transactions');
   const { formatCurrency }   = useCurrency();
+  const inFlight = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const busy = isDeleting || isSubmitting;
+  const handleClose = () => { if (!inFlight.current && !isDeleting) onClose(); };
 
   const transactionData = useMemo(() => {
     if (!transaction) return null;
@@ -34,22 +38,27 @@ const DeleteTransaction = ({
   }, [transaction, t, currentLanguage]);
 
   const handleDelete = useCallback(async () => {
-    if (!transaction) return;
+    if (!transaction || inFlight.current || isDeleting) return;
+    inFlight.current = true;
+    setIsSubmitting(true);
     try {
       // onSuccess runs the delete mutation, which shows its own toast.
       await onSuccess(transaction.id, { transaction });
       onClose();
     } catch (error) {
       // mutation error toast is handled by the mutation itself
+    } finally {
+      inFlight.current = false;
+      setIsSubmitting(false);
     }
-  }, [transaction, onSuccess, onClose]);
+  }, [transaction, onSuccess, onClose, isDeleting]);
 
   if (!transaction || !transactionData) return null;
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={t('delete.title', 'Delete Transaction')}
       size="md"
     >
@@ -88,18 +97,18 @@ const DeleteTransaction = ({
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">
-          <Button variant="outline" onClick={onClose} disabled={isDeleting} className="flex-1 h-10 text-sm">
+          <Button variant="outline" onClick={handleClose} disabled={busy} className="flex-1 h-10 text-sm">
             {t('actions.cancel', 'Cancel')}
           </Button>
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={isDeleting}
-            loading={isDeleting}
+            disabled={busy}
+            loading={busy}
             className="flex-1 h-10 text-sm bg-red-600 hover:bg-red-700 text-white"
           >
             <Trash2 className="w-4 h-4 me-1.5" />
-            {isDeleting ? t('loading.deleting', 'Deleting...') : t('delete.confirm', 'Delete')}
+            {busy ? t('loading.deleting', 'Deleting...') : t('delete.confirm', 'Delete')}
           </Button>
         </div>
       </div>

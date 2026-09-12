@@ -12,6 +12,7 @@
  */
 
 import apiClient from './client.js';
+import { normalizeApiError } from './errors.js';
 
 const SESSION_HEADER = 'X-Grocery-Session';
 const LIST_HEADER = 'X-Grocery-List';
@@ -86,28 +87,8 @@ const ok = (response) => ({
  * status instead, and keep timeouts distinct from being offline.
  */
 const failed = (error) => {
-  const response = error?.response;
-
-  if (response) {
-    return {
-      success: false,
-      status: response.status,
-      error: response.data?.error
-        || { code: `HTTP_${response.status}`, message: error.message },
-    };
-  }
-
-  const timedOut = error?.code === 'ECONNABORTED'
-    || /timeout/i.test(error?.message || '');
-
-  return {
-    success: false,
-    status: 0,
-    error: {
-      code: timedOut ? 'TIMEOUT' : 'NETWORK_ERROR',
-      message: error?.message,
-    },
-  };
+  const normalized = normalizeApiError(error);
+  return { success: false, status: normalized.status, error: normalized };
 };
 
 const call = async (fn) => {

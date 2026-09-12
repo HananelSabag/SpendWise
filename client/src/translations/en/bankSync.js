@@ -16,7 +16,7 @@ export default {
   totalBankBalance: 'Total bank balance',
   totalExcludesUnavailable: 'Total excludes accounts that don\'t share a balance',
   unavailable: 'Not available',
-  unavailableNote: '{{bank}} does not expose account balance yet',
+  unavailableNote: 'No account balance has been received from {{bank}} yet',
   balanceNeedsBank: 'Connect a bank account to see your balance — credit companies show synced card activity without a balance',
   mainAccount: 'Main account',
   balanceUnavailableNote: 'This bank does not expose account balance yet — check your bank\'s website directly',
@@ -30,12 +30,14 @@ export default {
   hoursAgo: '{{n}}h ago',
   daysAgo: '{{n}}d ago',
   updatedAt: 'Updated {{time}}',
+  oldestBalanceUpdatedAt: 'Oldest balance updated {{time}}',
+  balanceDateUnavailable: 'Balance update time unavailable',
   syncedDaily: 'Synced automatically · twice a day',
 
   // Errors
   loadError: 'Could not load sync data',
   saveError: 'Could not save — try again',
-  statsLoadError: "Couldn't load your balance — your data is safe, this is a connection issue",
+  statsLoadError: "We couldn't load your balance. Please try again.",
   connectionsLoadError: "Couldn't load your bank connections — try again",
   retry: 'Retry',
 

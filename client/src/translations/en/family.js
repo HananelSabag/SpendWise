@@ -5,6 +5,8 @@ export default {
   back: "Back",
   refresh: "Refresh",
   saving: "Saving...",
+  manualPlanHint: "A plan based on your entries, separate from the bank balance",
+  staleData: "Refresh failed. Your last plan is still shown; try refreshing again.",
 
   forbidden: {
     title: "This area is closed",

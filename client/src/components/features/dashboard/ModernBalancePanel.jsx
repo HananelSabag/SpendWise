@@ -97,7 +97,7 @@ const ModernBalancePanel = ({ className = '' }) => {
   // two screens can never disagree on how much is in the account. Only the labels stay here —
   // they are language-specific. Presentation below is unchanged.
   const {
-    hasSynced, lastSync, bankSources, hasBankSource,
+    hasSynced, balanceAsOf, bankSources, hasBankSource,
     bankAccounts: rawBankAccounts, accountsWithBalance,
     hasRealBalance, totalRealBalance, multiAccount,
     isLoading, isError, refetch, isFetching,
@@ -170,11 +170,11 @@ const ModernBalancePanel = ({ className = '' }) => {
     );
   }
 
-  const timeLabel = relativeTime(lastSync, t);
+  const timeLabel = relativeTime(balanceAsOf, t);
   const unavailableLabel = t('unavailable');
   // The balance is only as trustworthy as its timestamp — a day-old figure must not look as
   // authoritative as a live one, so its freshness label escalates from a whisper to amber.
-  const isStale = lastSync && (Date.now() - new Date(lastSync).getTime()) > 86_400_000;
+  const isStale = balanceAsOf && (Date.now() - new Date(balanceAsOf).getTime()) > 86_400_000;
 
   // ── Synced — balance hero ────────────────────────────────────────────────────
   return (
@@ -182,7 +182,7 @@ const ModernBalancePanel = ({ className = '' }) => {
       <div className="p-4">
 
         {/* Top row — title + freshness + refresh */}
-        <div className="flex items-center justify-between mb-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 opacity-90">
             <Building2 className="w-4 h-4" />
             <span className="text-sm font-semibold">{t('balanceHeroTitle')}</span>
@@ -190,9 +190,10 @@ const ModernBalancePanel = ({ className = '' }) => {
           <div className="flex items-center gap-2">
             {timeLabel && (
               <span className={cn('text-[11px]', isStale ? 'font-semibold text-amber-200' : 'opacity-60')}>
-                {t('updatedAt', { time: timeLabel })}
+                {t(multiAccount ? 'oldestBalanceUpdatedAt' : 'updatedAt', { time: timeLabel })}
               </span>
             )}
+            {!timeLabel && hasRealBalance && <span className="text-[11px] text-white/70">{t('balanceDateUnavailable')}</span>}
           </div>
         </div>
 

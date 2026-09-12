@@ -55,6 +55,7 @@ const MobileTransactions = ({
   filters, onFilterChange, clearFilters,
   availableMonths,
   transactions, syncedSources, transactionsLoading,
+  errorNotice, showResults,
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
   onEdit, onDelete, onDuplicate, onOpenDetail,
   includeCreditCardTotals,
@@ -119,7 +120,8 @@ const MobileTransactions = ({
       {/* Content */}
       <div className="px-3 py-3 pb-28">
         <div className="space-y-3">
-          <TransactionList
+          {errorNotice}
+          {showResults && <TransactionList
             transactions={transactions}
             loading={transactionsLoading}
             onEdit={onEdit}
@@ -127,7 +129,7 @@ const MobileTransactions = ({
             onDuplicate={onDuplicate}
             onOpenDetail={onOpenDetail}
             includeCreditCardTotals={includeCreditCardTotals}
-          />
+          />}
 
           <LoadMoreSection
             loadMoreRef={loadMoreRef}
@@ -160,6 +162,7 @@ const DesktopTransactions = ({
   showFilters, setShowFilters,
   availableMonths,
   transactions, syncedSources, transactionsLoading,
+  errorNotice, showResults,
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
   summary,
   formatCurrency,
@@ -179,7 +182,8 @@ const DesktopTransactions = ({
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-5">
         {/* Stats */}
-        <StatsRow summary={summary} formatCurrency={formatCurrency} />
+        {errorNotice}
+        {showResults && <StatsRow summary={summary} formatCurrency={formatCurrency} />}
 
         <div className="space-y-4">
           {/* Search + controls bar */}
@@ -278,7 +282,7 @@ const DesktopTransactions = ({
           )}
 
           {/* Transaction list */}
-          <Card className="overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+          {showResults && <Card className="overflow-hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="p-6">
               <TransactionList
                 transactions={transactions}
@@ -300,7 +304,7 @@ const DesktopTransactions = ({
                 onLoadMore={loadMore}
               />
             </div>
-          </Card>
+          </Card>}
         </div>
       </div>
     </div>
@@ -310,7 +314,7 @@ const DesktopTransactions = ({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const ModernTransactions = () => {
-  const { isRTL, currentLanguage } = useTranslation('transactions');
+  const { t, isRTL, currentLanguage } = useTranslation('transactions');
   const { formatCurrency } = useCurrency();
   const user = useAuthUser();
   const isMobile = useIsMobile();
@@ -349,10 +353,12 @@ const ModernTransactions = () => {
     transactions,
     summary: serverSummary,
     loading: transactionsLoading,
-    refetch: refetchTransactions,
     hasNextPage: hasMore,
     fetchNextPage: loadMore,
     isFetchingNextPage,
+    error: transactionsError,
+    isFetching,
+    refetch,
   } = useTransactions({
     search: debouncedSearch,
     filters: {
@@ -378,25 +384,27 @@ const ModernTransactions = () => {
     staleTime: 5 * 60_000,
   });
   const { data: merchantWatchData } = useQuery({
-    queryKey: ['merchantWatches'],
+    queryKey: ['merchantWatches', user?.id],
     queryFn: async () => {
       const result = await api.transactions.getMerchantWatches();
       if (!result.success) throw result.error;
       return result.data;
     },
     staleTime: 30_000,
+    enabled: Boolean(user?.id),
   });
 
   // ── Derived data ──
   // Month options from the server (all months with data), not from whichever
   // pages happen to be loaded.
   const { data: monthKeys = [] } = useQuery({
-    queryKey: ['transactionMonths'],
+    queryKey: ['transactionMonths', user?.id],
     queryFn: async () => {
       const res = await api.transactions.getMonths();
       return res.success ? res.data?.months || [] : [];
     },
     staleTime: 5 * 60_000,
+    enabled: Boolean(user?.id),
   });
   const availableMonths = useMemo(() => {
     const locale = isRTL ? 'he-IL' : 'en-US';
@@ -445,20 +453,10 @@ const ModernTransactions = () => {
   }, [transactions, merchantWatchData]);
 
   // ── Handlers ──
-  // Create/update/delete mutations (useTransactions) show their own toasts,
-  // so these just refetch the list.
-  const handleTransactionSuccess = useCallback(() => {
-    refetchTransactions();
-  }, [refetchTransactions]);
-
+  // Cache refresh and toasts belong to the mutation, never to the dialog.
   const handleDeleteSuccess = useCallback(async (transactionId, options) => {
-    try {
-      await deleteTransaction(transactionId, options);
-      refetchTransactions();
-    } catch (err) {
-      // mutation error toast is handled by the mutation itself
-    }
-  }, [deleteTransaction, refetchTransactions]);
+    await deleteTransaction(transactionId, options);
+  }, [deleteTransaction]);
 
   const onEdit = useCallback((transaction, mode = 'edit') => {
     setSelectedTransaction(transaction);
@@ -501,23 +499,14 @@ const ModernTransactions = () => {
   // ── IntersectionObserver for auto load-more ──
   useEffect(() => {
     observerRef.current?.disconnect();
-    if (!hasMore || !loadMoreRef.current) return;
+    if (transactionsError || !hasMore || !loadMoreRef.current) return;
     observerRef.current = new IntersectionObserver(
       ([entry]) => { if (entry.isIntersecting && hasMore && !isFetchingNextPage) loadMore(); },
       { threshold: 0.1, rootMargin: '100px' },
     );
     observerRef.current.observe(loadMoreRef.current);
     return () => observerRef.current?.disconnect();
-  }, [hasMore, isFetchingNextPage, loadMore]);
-
-  // ── 'transaction:add' on mobile is handled globally by UnifiedTransactionActions.
-  // Desktop FAB below uses direct onClick. After UnifiedTransactionActions closes its
-  // modal it dispatches 'transactions:refetch' so we stay in sync.
-  useEffect(() => {
-    const onRefetch = () => refetchTransactions();
-    window.addEventListener('transactions:refetch', onRefetch);
-    return () => window.removeEventListener('transactions:refetch', onRefetch);
-  }, [refetchTransactions]);
+  }, [hasMore, isFetchingNextPage, loadMore, transactionsError]);
 
   // ── Shared props ──
   const sharedProps = {
@@ -527,6 +516,13 @@ const ModernTransactions = () => {
     showFilters, setShowFilters,
     availableMonths,
     transactions: transactionsWithWatchLabels, syncedSources, transactionsLoading,
+    showResults: !transactionsError || transactions.length > 0,
+    errorNotice: transactionsError ? (
+      <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+        <p>{t(transactions.length ? 'readError.stale' : 'readError.failed')}</p>
+        <Button variant="outline" disabled={isFetching} onClick={() => refetch()}>{t('readError.retry')}</Button>
+      </div>
+    ) : null,
     loadMoreRef, isFetchingNextPage, hasMore, loadMore,
     summary, formatCurrency,
     onEdit, onDelete, onDuplicate, onOpenDetail,
@@ -563,7 +559,6 @@ const ModernTransactions = () => {
       <EditTransactionModal
         isOpen={showEditModal}
         onClose={() => { setShowEditModal(false); setSelectedTransaction(null); }}
-        onSuccess={handleTransactionSuccess}
         onDelete={onDelete}
         onDuplicate={onDuplicate}
         transaction={selectedTransaction}

@@ -2,8 +2,18 @@ import React from 'react';
 import { ArrowDownLeft, ArrowUpRight, CalendarDays, CreditCard, Landmark } from 'lucide-react';
 import { getCycleUpcoming } from '../../../utils/cycleProjection';
 import { formatCycleDay } from '../../../utils/cycleDate';
+import { cardShortName, last4 } from '../../../utils/cycleFormat';
 import { cn } from '../../../utils/helpers';
 import { CycleMoney, cycleSurface } from './CyclePrimitives';
+
+export function movementLabel(item, t) {
+  if (item.kind === 'card' && item.source) return `${cardShortName(item.source)} · ${last4(item.accountNumber)}`;
+  if (item.label && !['salary', 'loan'].includes(item.label)) return item.label;
+  if (item.kind === 'loan') return t('cycleV2.loanPayment');
+  if (item.kind === 'salary' || item.kind === 'income') return t('cycleV2.expectedIncome');
+  if (item.kind === 'card_recurring') return t('cycleV2.cardRecurringExtra');
+  return t('cycleV2.recurringExpense');
+}
 
 export default function CycleKnownExpensesPanelV2({
   cycle,
@@ -55,7 +65,7 @@ export default function CycleKnownExpensesPanelV2({
                     />
                     <div className="min-w-0 flex-1">
                       <p className="break-words text-sm font-medium text-slate-900 dark:text-white">
-                        {item.label || t('cycleV2.cardRecurringExtra')}
+                        {movementLabel(item, t)}
                         {item.growth && (
                           <span className="ms-1 text-xs text-slate-500">
                             · {t('cycleV2.forecastExtra')}

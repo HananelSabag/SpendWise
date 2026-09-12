@@ -14,9 +14,9 @@ export default {
   accountBalance: 'יתרת חשבון',
   accountsListTitle: 'חשבונות בנק',
   totalBankBalance: 'סך יתרת הבנק',
-  totalExcludesUnavailable: 'הסכום אינו כולל חשבונות שלא חושפים יתרה',
+  totalExcludesUnavailable: 'הסכום אינו כולל חשבונות שטרם התקבלה מהם יתרה',
   unavailable: 'לא זמין',
-  unavailableNote: '{{bank}} עדיין לא חושף יתרת חשבון',
+  unavailableNote: 'עדיין לא התקבלה יתרת חשבון מ{{bank}}',
   balanceNeedsBank: 'חבר חשבון בנק כדי לראות יתרה — חברות אשראי מציגות פעילות מסונכרנת בלי יתרה',
   mainAccount: 'חשבון ראשי',
   balanceUnavailableNote: 'הבנק עדיין לא חושף יתרה — בדוק ישירות באתר הבנק',
@@ -30,12 +30,14 @@ export default {
   hoursAgo: 'לפני {{n}} שע\'',
   daysAgo: 'לפני {{n}} ימ\'',
   updatedAt: 'עודכן {{time}}',
+  oldestBalanceUpdatedAt: 'היתרה הוותיקה ביותר עודכנה {{time}}',
+  balanceDateUnavailable: 'מועד עדכון היתרה אינו זמין',
   syncedDaily: 'מסונכרן אוטומטית · פעמיים ביום',
 
   // Errors
   loadError: 'לא ניתן לטעון נתוני סנכרון',
   saveError: 'השמירה נכשלה — נסה שוב',
-  statsLoadError: 'לא הצלחנו לטעון את היתרה — הנתונים שלך בטוחים, זו בעיית תקשורת',
+  statsLoadError: 'לא הצלחנו לטעון את היתרה. אפשר לנסות שוב.',
   connectionsLoadError: 'לא הצלחנו לטעון את חיבורי הבנק — נסה שוב',
   retry: 'נסה שוב',
 

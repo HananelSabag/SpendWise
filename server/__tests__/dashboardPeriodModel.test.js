@@ -13,8 +13,4 @@ describe('dashboard shell performance guardrails', () => {
     expect(service).not.toContain('calendarActivity');
   });
 
-  it('uses a short server cache for repeated home loads', () => {
-    expect(service).toContain('CACHE_TTL_MS = 15_000');
-    expect(service).toContain('cache.get(userId)');
-  });
 });

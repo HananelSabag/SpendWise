@@ -1,23 +1,25 @@
 // Dev-only visual and interaction harness. Never loads an authenticated account.
-import React, { useEffect, useState } from 'react';
-import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import '../index.css';
-import en from '../translations/en/dashboard';
-import he from '../translations/he/dashboard';
-import { useTranslationStore } from '../stores/translationStore';
+import React, { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
+import "../index.css";
+import en from "../translations/en/dashboard";
+import he from "../translations/he/dashboard";
+import enBankSync from "../translations/en/bankSync";
+import heBankSync from "../translations/he/bankSync";
+import { useTranslationStore } from "../stores/translationStore";
 import {
   currentCycleQueryKey,
   CYCLE_QUERY_VERSION,
   useCurrentCycleWorkspace,
-} from '../hooks/useCycles';
-import cyclesApi from '../api/cycles';
-import apiClient from '../api/client';
-import useAuthStore from '../stores/authStore';
-import { FinancialCycleWorkspaceView } from '../pages/FinancialCyclePageV2';
-import FinancialCycleSnapshotV2 from '../components/features/dashboard/FinancialCycleSnapshotV2';
-import OverdraftRunwayCard from '../components/features/dashboard/OverdraftRunwayCard';
-import { CYCLE, SETTINGS, GROUPS, DECISIONS, LOANS } from './cycleFixture';
+} from "../hooks/useCycles";
+import cyclesApi from "../api/cycles";
+import apiClient from "../api/client";
+import useAuthStore from "../stores/authStore";
+import { FinancialCycleWorkspaceView } from "../pages/FinancialCyclePageV2";
+import ModernDashboard from "../pages/ModernDashboard";
+import { CYCLE, SETTINGS, GROUPS, DECISIONS, LOANS } from "./cycleFixture";
 
 const client = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -25,22 +27,40 @@ const client = new QueryClient({
 // Match the paint-cache identity without changing login state or loading its data.
 const previewUserId = useAuthStore.getState().user?.id;
 const currentKey = currentCycleQueryKey(previewUserId);
-const controlKey = ['cycles', previewUserId, 'control', CYCLE_QUERY_VERSION];
+const controlKey = ["cycles", previewUserId, "control", CYCLE_QUERY_VERSION];
 const bankSources = [
   {
-    source: 'leumi',
-    kind: 'bank',
-    accounts: [{ account_number: '4444', enabled: true, balance: 3400 }],
+    source: "leumi",
+    kind: "bank",
+    accounts: [
+      {
+        account_number: "4444",
+        enabled: true,
+        balance: 3400,
+        last_synced_at: "2026-09-09T07:00:00Z",
+      },
+    ],
   },
 ];
-client.setQueryData(['bankSyncStats', previewUserId], bankSources);
+client.setQueryData(["bankSyncStats", previewUserId], bankSources);
+const dashboardSnapshot = { recent_transactions: [] };
+client.setQueryData(["dashboard", previewUserId], dashboardSnapshot);
 // Even a manual refresh or stale balance query must remain entirely synthetic.
 apiClient.client.defaults.adapter = async (config) => {
-  if (config.url === '/bank-sync/stats') {
+  if (config.url === "/bank-sync/stats") {
     return {
       data: { sources: bankSources },
       status: 200,
-      statusText: 'OK',
+      statusText: "OK",
+      headers: {},
+      config,
+    };
+  }
+  if (config.url?.includes("dashboard")) {
+    return {
+      data: { success: true, data: dashboardSnapshot },
+      status: 200,
+      statusText: "OK",
       headers: {},
       config,
     };
@@ -51,7 +71,7 @@ apiClient.client.defaults.adapter = async (config) => {
 };
 client.setQueryData(currentKey, {
   data: {
-    status: 'ok',
+    status: "ok",
     cycle: CYCLE,
     settings: SETTINGS,
     recurringGroups: GROUPS,
@@ -59,7 +79,7 @@ client.setQueryData(currentKey, {
 });
 client.setQueryData(controlKey, {
   data: {
-    status: 'ok',
+    status: "ok",
     decisions: DECISIONS,
     loans: LOANS,
     recurring: [],
@@ -70,7 +90,7 @@ client.setQueryData(controlKey, {
 });
 const pause = () => new Promise((resolve) => setTimeout(resolve, 250));
 const update = (fn) =>
-  client.setQueriesData({ queryKey: ['cycles', previewUserId] }, (cached) =>
+  client.setQueriesData({ queryKey: ["cycles", previewUserId] }, (cached) =>
     cached?.data ? { data: fn(cached.data) } : cached,
   );
 cyclesApi.updateSettings = async (patch) => {
@@ -137,32 +157,39 @@ cyclesApi.classifyTransaction = async (transactionId, payload) => {
 cyclesApi.current = async () => client.getQueryData(currentKey);
 cyclesApi.control = async () => client.getQueryData(controlKey);
 const formatCurrency = (value) =>
-  `₪${Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `₪${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const makeT =
   (dict) =>
   (key, values = {}) => {
-    const value = key.split('.').reduce((node, part) => node?.[part], dict);
-    return typeof value === 'string'
-      ? value.replace(/\{\{(\w+)\}\}/g, (_, name) => values[name] ?? '')
+    const value = key.split(".").reduce((node, part) => node?.[part], dict);
+    return typeof value === "string"
+      ? value.replace(/\{\{(\w+)\}\}/g, (_, name) => values[name] ?? "")
       : key;
   };
 
 function Preview() {
-  const [lang, setLang] = useState('he');
+  const [lang, setLang] = useState("he");
   const [dark, setDark] = useState(false);
-  const [page, setPage] = useState('dashboard');
-  const [tab, setTab] = useState('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [tab, setTab] = useState("overview");
   const workspace = useCurrentCycleWorkspace();
-  const t = makeT(lang === 'he' ? he : en);
+  const t = makeT(lang === "he" ? he : en);
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
-    document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
     document.documentElement.lang = lang;
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = dark ? "dark" : "light";
     useTranslationStore.setState({
       currentLanguage: lang,
-      isRTL: lang === 'he',
-      loadedModules: { 'he.dashboard': he, 'en.dashboard': en },
+      isRTL: lang === "he",
+      loadedModules: {
+        ...useTranslationStore.getState().loadedModules,
+        "he.dashboard": he,
+        "en.dashboard": en,
+        "he.bankSync": heBankSync,
+        "en.bankSync": enBankSync,
+      },
     });
   }, [dark, lang]);
   return (
@@ -171,47 +198,25 @@ function Preview() {
         <span className="me-auto">Synthetic preview · no live account</span>
         <button
           className="rounded-lg bg-slate-200 p-2 dark:bg-slate-800"
-          onClick={() => setLang(lang === 'he' ? 'en' : 'he')}
+          onClick={() => setLang(lang === "he" ? "en" : "he")}
         >
-          {lang === 'he' ? 'English' : 'עברית'}
+          {lang === "he" ? "English" : "עברית"}
         </button>
         <button
           className="rounded-lg bg-slate-200 p-2 dark:bg-slate-800"
           onClick={() => setDark(!dark)}
         >
-          {dark ? 'Light' : 'Dark'}
+          {dark ? "Light" : "Dark"}
         </button>
       </div>
-      {page === 'dashboard' ? (
-        <div className="mx-auto max-w-6xl space-y-4 px-4 py-4">
-          <FinancialCycleSnapshotV2
-            {...workspace}
-            language={lang}
-            formatCurrency={formatCurrency}
-            t={t}
-            onOpen={() => setPage('cycle')}
-            onEstimateChange={(useEstimates) =>
-              workspace.updateCycleSettings({ useEstimates })
-            }
-            isSaving={workspace.isUpdatingSettings}
-          />
-          <OverdraftRunwayCard
-            cycle={workspace.cycle}
-            settings={workspace.settings}
-            formatCurrency={formatCurrency}
-            t={t}
-            onSaveLimit={(overdraftLimit) =>
-              workspace.updateCycleSettingsAsync({ overdraftLimit })
-            }
-            isSaving={workspace.isUpdatingSettings}
-          />
-        </div>
+      {location.pathname === "/" ? (
+        <ModernDashboard />
       ) : (
         <FinancialCycleWorkspaceView
           workspace={workspace}
           tab={tab}
           onTabChange={setTab}
-          onBack={() => setPage('dashboard')}
+          onBack={() => navigate("/")}
           onConnect={() => {}}
           formatCurrency={formatCurrency}
           language={lang}
@@ -224,10 +229,12 @@ function Preview() {
 
 const root =
   globalThis.__spendWiseCyclePreviewRoot ||
-  createRoot(document.getElementById('preview-root'));
+  createRoot(document.getElementById("preview-root"));
 globalThis.__spendWiseCyclePreviewRoot = root;
 root.render(
   <QueryClientProvider client={client}>
-    <Preview />
+    <MemoryRouter>
+      <Preview />
+    </MemoryRouter>
   </QueryClientProvider>,
 );

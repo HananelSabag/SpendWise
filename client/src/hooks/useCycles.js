@@ -6,7 +6,7 @@ import { useTranslation } from '../stores';
 import { useToast } from './useToast';
 import { queryConfigs } from '../config/queryClient';
 
-export const CYCLE_QUERY_VERSION = 8;
+export const CYCLE_QUERY_VERSION = 9;
 export const currentCycleQueryKey = (userId) => ['cycles', userId, 'current', CYCLE_QUERY_VERSION];
 const DEFAULT_SETTINGS = {
   engineMode: 'automatic',

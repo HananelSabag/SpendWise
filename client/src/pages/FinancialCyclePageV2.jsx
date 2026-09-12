@@ -236,6 +236,7 @@ export function FinancialCycleWorkspaceView({
                 )}
                 {tab === 'loans' && (
                   <CycleLoansPanelV2
+                    cycle={cycle}
                     formatCurrency={formatCurrency}
                     language={language}
                     t={t}

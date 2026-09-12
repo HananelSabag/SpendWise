@@ -18,25 +18,30 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api';
 import { useTranslation } from '../stores';
 import { useToast } from './useToast';
+import { useAuthUser } from '../stores/authStore';
+import { apiResultError } from '../api/errors';
 
 export const FAMILY_QUERY_KEY = ['family', 'overview'];
+export const familyOverviewQueryKey = (userId) => [...FAMILY_QUERY_KEY, userId];
+const WRITE_OPTIONS = { scope: { id: 'family-writes' }, retry: false };
 
 export function useFamilyBudget({ enabled = true } = {}) {
   const queryClient = useQueryClient();
   const toast = useToast();
   const { t } = useTranslation('family');
+  const user = useAuthUser();
+  const queryKey = useMemo(() => familyOverviewQueryKey(user?.id), [user?.id]);
 
   const query = useQuery({
-    queryKey: FAMILY_QUERY_KEY,
+    queryKey,
     queryFn: async () => {
       const result = await api.family.getOverview();
-      if (!result.success) throw Object.assign(new Error('family_overview'), { info: result });
+      if (!result.success) throw apiResultError(result, 'family_overview');
       return result.data;
     },
-    enabled,
+    enabled: enabled && !!user?.id,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
-    retry: 1,
   });
 
   const reportError = useCallback((result) => {
@@ -49,33 +54,42 @@ export function useFamilyBudget({ enabled = true } = {}) {
    * overview with the payload the server just recomputed.
    */
   const runMutation = useCallback(async (fn, successKey) => {
+    await queryClient.cancelQueries({ queryKey });
     const result = await fn();
     if (!result.success) {
       reportError(result);
       return result;
     }
     const { item, balance, ...overview } = result.data || {};
-    if (overview?.summary) queryClient.setQueryData(FAMILY_QUERY_KEY, overview);
+    // Ignore any older focus refresh that completed while this save was running.
+    await queryClient.cancelQueries({ queryKey });
+    if (overview?.summary) queryClient.setQueryData(queryKey, overview);
     if (successKey) toast.success(t(successKey));
     return result;
-  }, [queryClient, reportError, t, toast]);
+  }, [queryClient, queryKey, reportError, t, toast]);
 
   const addItem = useMutation({
+    ...WRITE_OPTIONS,
     mutationFn: (payload) => runMutation(() => api.family.addItem(payload), 'toast.added'),
   });
   const updateItem = useMutation({
+    ...WRITE_OPTIONS,
     mutationFn: ({ id, ...payload }) => runMutation(() => api.family.updateItem(id, payload), 'toast.saved'),
   });
   const deleteItem = useMutation({
+    ...WRITE_OPTIONS,
     mutationFn: (id) => runMutation(() => api.family.deleteItem(id), 'toast.deleted'),
   });
   const addBalance = useMutation({
+    ...WRITE_OPTIONS,
     mutationFn: (payload) => runMutation(() => api.family.addBalance(payload), 'toast.added'),
   });
   const updateBalance = useMutation({
+    ...WRITE_OPTIONS,
     mutationFn: ({ id, ...payload }) => runMutation(() => api.family.updateBalance(id, payload), 'toast.saved'),
   });
   const deleteBalance = useMutation({
+    ...WRITE_OPTIONS,
     mutationFn: (id) => runMutation(() => api.family.deleteBalance(id), 'toast.deleted'),
   });
 
@@ -83,8 +97,7 @@ export function useFamilyBudget({ enabled = true } = {}) {
 
   // A 403 means this account is not in the household. It is not an error state
   // to retry — the page should simply say so.
-  const forbidden = query.error?.info?.status === 403
-    || query.error?.info?.error?.code === 'FAMILY_FORBIDDEN';
+  const forbidden = query.error?.status === 403 || query.error?.code === 'FAMILY_FORBIDDEN';
 
   return useMemo(() => ({
     members: data?.members || [],

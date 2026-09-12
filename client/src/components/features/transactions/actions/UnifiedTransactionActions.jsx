@@ -72,28 +72,18 @@ const UnifiedTransactionActions = () => {
     };
   }, [handleAdd, handleEdit, handleDuplicate, handleDelete]);
 
-  // Success handler: close modals and broadcast so pages can refresh their data
+  // The mutation owns cache updates. The dialog only owns its open/closed state.
   const handleSuccess = React.useCallback(() => {
     setShowAdd(false);
     setShowEdit(false);
     setShowDelete(false);
     setSelectedTx(null);
-    // Notify Dashboard (useDashboard listens to 'transaction-added')
-    // and Transactions page (listens to 'transactions:refetch')
-    try {
-      window.dispatchEvent(new CustomEvent('transaction-added'));
-      window.dispatchEvent(new CustomEvent('transactions:refetch'));
-    } catch (_) {}
   }, []);
 
   // ✅ Handle delete success with actual API call (deleteTransaction toasts)
   const handleDeleteSuccess = React.useCallback(async (transactionId, options) => {
-    try {
-      await deleteTransaction(transactionId, options);
-      handleSuccess(); // Close modal and cleanup
-    } catch (error) {
-      console.error('Failed to delete transaction:', error);
-    }
+    await deleteTransaction(transactionId, options);
+    handleSuccess();
   }, [deleteTransaction, handleSuccess]);
 
   return (
@@ -137,5 +127,4 @@ const UnifiedTransactionActions = () => {
 };
 
 export default UnifiedTransactionActions;
-
 

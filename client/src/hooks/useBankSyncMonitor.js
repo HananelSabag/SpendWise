@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import bankConnectionsApi from '../api/bankConnections';
 import { getAccessToken } from '../auth/tokenStorage';
-import { useAuthStore } from '../stores/authStore';
+import { useAuthUser, useIsAuthenticated } from '../stores/authStore';
 import { emitFinancialDataUpdated } from './useFinancialDataSync';
 
 /**
@@ -12,7 +12,8 @@ import { emitFinancialDataUpdated } from './useFinancialDataSync';
  * surface as soon as a connection's last_sync_at advances.
  */
 export function useBankSyncMonitor() {
-  const { isAuthenticated, user } = useAuthStore();
+  const isAuthenticated = useIsAuthenticated();
+  const user = useAuthUser();
   const previousSyncStamp = useRef(null);
 
   const query = useQuery({
@@ -33,22 +34,24 @@ export function useBankSyncMonitor() {
 
   const latestSyncStamp = useMemo(
     () => (query.data || [])
-      .map((connection) => connection.last_sync_at || '')
+      .filter((connection) => connection.last_sync_at)
+      .map((connection) => `${connection.id ?? connection.bank_source}:${connection.last_sync_at}`)
       .sort()
-      .slice(-1)[0] || '',
+      .join('|'),
     [query.data],
   );
 
   useEffect(() => {
     if (
       latestSyncStamp &&
-      previousSyncStamp.current &&
-      latestSyncStamp !== previousSyncStamp.current
+      previousSyncStamp.current?.userId === user?.id &&
+      previousSyncStamp.current?.stamp &&
+      latestSyncStamp !== previousSyncStamp.current.stamp
     ) {
       emitFinancialDataUpdated({ source: 'bank-sync', syncedAt: latestSyncStamp });
     }
-    if (latestSyncStamp) previousSyncStamp.current = latestSyncStamp;
-  }, [latestSyncStamp]);
+    previousSyncStamp.current = { userId: user?.id, stamp: latestSyncStamp };
+  }, [latestSyncStamp, user?.id]);
 
   return query;
 }

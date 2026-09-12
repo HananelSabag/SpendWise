@@ -16,7 +16,6 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Lock, RefreshCw } from 'lucide-react';
 
-import BrandMark from '../components/common/BrandMark';
 import { ConfirmModal, LiquidTabs, PageSkeleton } from '../components/ui';
 import { useCurrency, useTranslation } from '../stores';
 import useFamilyBudget from '../hooks/useFamilyBudget';
@@ -100,8 +99,8 @@ export default function FamilyHubPage() {
     const result = type === 'item'
       ? await family.deleteItem(row.id)
       : await family.deleteBalance(row.id);
-    setPendingDelete(null);
     if (result?.success) {
+      setPendingDelete(null);
       setItemModal(null);
       setBalanceModal(null);
     }
@@ -116,14 +115,13 @@ export default function FamilyHubPage() {
               type="button"
               onClick={() => navigate('/')}
               aria-label={t('back')}
-              className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
             </button>
-            <BrandMark size="sm" />
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-black text-slate-950 dark:text-white">{t('title')}</h1>
-              <p className="truncate text-[11px] font-semibold text-slate-400">{t('subtitle')}</p>
+              <h1 className="sr-only">{t('title')}</h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('manualPlanHint')}</p>
             </div>
             {family.isSaving && (
               <span className="hidden text-[10px] font-bold text-indigo-500 sm:inline">{t('saving')}</span>
@@ -131,8 +129,9 @@ export default function FamilyHubPage() {
             <button
               type="button"
               onClick={() => family.refetch()}
+              disabled={family.isFetching || family.isSaving}
               aria-label={t('refresh')}
-              className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
             >
               <RefreshCw className={`h-4 w-4 ${family.isFetching ? 'animate-spin' : ''}`} />
             </button>
@@ -141,7 +140,12 @@ export default function FamilyHubPage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-4 lg:px-8 lg:py-6">
-        {family.isError ? (
+        {family.isError && family.summary && (
+          <p role="status" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm leading-6 text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+            {t('staleData')}
+          </p>
+        )}
+        {family.isError && !family.summary ? (
           <div className="rounded-3xl border border-rose-200 bg-rose-50 p-8 text-center dark:border-rose-900 dark:bg-rose-950/20">
             <p className="font-black text-rose-700 dark:text-rose-300">{t('loadError.title')}</p>
             <p className="mt-1 text-sm text-rose-600/80 dark:text-rose-300/80">{t('loadError.body')}</p>
@@ -162,7 +166,7 @@ export default function FamilyHubPage() {
               fill
               size="sm"
               mobileCompact
-              className="mb-4"
+              className="mb-4 [&>button]:min-h-11 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-indigo-500"
             />
 
             {tab === 'overview' && (

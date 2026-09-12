@@ -8,6 +8,11 @@ export default {
   title: "Transactions",
   subtitle: "Manage your financial transactions",
   total: "total",
+  readError: {
+    failed: "Transactions couldn't be loaded. This doesn't mean your account is empty.",
+    stale: "Couldn't refresh transactions. The last loaded data is still shown.",
+    retry: "Try again"
+  },
   watchBadge: "Watched",
   types: {
     income: "Income",

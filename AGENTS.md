@@ -23,10 +23,10 @@ and insights. ILS-only. Bilingual EN/HE (RTL). Two git repos:
 - **proxy**: `cloudflare-worker/worker.js` optional scraper egress proxy (header `X-Proxy-Key` ↔ server `SCRAPER_PROXY_KEY` / CF `PROXY_KEY`).
 
 ## 2. RUN / BUILD / TEST  (Windows; PowerShell primary, Bash tool available)
-- server: `cd server && npm run dev` (nodemon) | prod `npm start`. Tests = jest — **jest is NOT installed in the agent/CI sandbox**; verify with `node --check <file>` instead.
-- client: `cd client && npm run dev` (vite) | build `npm run build` | tests `npm test` (vitest, ~72 passing).
+- server: `cd server && npm run dev` (nodemon) | prod `npm start`. Tests: `npm test -- --runInBand` (Jest is a dev dependency; install dev dependencies before testing).
+- client: `cd client && npm run dev` (vite) | build `npm run build` | tests `npx vitest run`.
 - agent: `cd ../spendwise-agent && npm run agent` | `npm run standalone` | keygen `npm run keys`.
-- Cannot drive the authenticated UI headless (Google login) → verify UI via build + vitest + screenshots from Hananel.
+- Google login requires the user's session. Dev-only cycle/grocery/family preview harnesses provide synthetic UI verification without credentials; they do not replace authenticated end-to-end checks.
 
 ## 3. DOMAIN MODEL  (⚠ current model — supersedes older "billing_cycle_day" notes)
 - **Bank account ≠ credit-card company.** Source of truth = `server/config/institutions.js` (14 sources; `kind` = `bank` | `credit_card`). Banks: yahav, hapoalim, leumi, mizrahi, discount, mercantile, otsar_hahayal, beinleumi, massad, pagi. Cards: isracard, amex, visa_cal, max. **A credit_card NEVER has a balance** — only charges (enforced at ingest, dashboard, hero). Client + agent keep mirror registries.
@@ -62,7 +62,7 @@ Notation: `table(rows@2026-07-16): key columns [notes]`. FKs mostly → `users.i
 - **Triggers**: `grocery_lists` and `grocery_items` BEFORE UPDATE → `set_grocery_updated_at()` (migration 40 dropped the old `update_shopping_items_updated_at`).
 - **Migrations**: `server/DB Migrations/01..44_*.sql` (44 = several grocery lists per user, see §11; 43 = Family Hub tables, see §12; 42 = alcohol/disposables aisles + per-item edit claim, retires the list-level lease; 41 = open link invitations for the grocery list; 40 = shared grocery list, replaces the wishlist — see §11; 39 = agent failover + credentials_sealed_to; 38 = server-only RLS for merchant watch rules; 37 = user-entered checking overdraft limit; 36 = foreign-key indexes; 35 = billing-cycle recurring groups/per-card controls/aggregate v6; 34 = recurring override metadata/shared estimate preference/aggregate v5; 33 = forward-reset settings/manual anchor and aggregate v4; 32 = cycle Control overrides, deduplicated action alerts, signed-refund aggregate v3; 31 = closing-salary attribution; 30 = clear obsolete plaintext verification tokens; 29 = revocable auth sessions/token version; 28 = durable financial-cycle aggregates and safe retention gate). Apply new ones transactionally and verify the live schema afterward.
 
-**Current cycle contract (2026-09-06):** migrations 28–38 are applied to production. V8 retains the latest included card statement day as the automatic boundary, not a salary. Dashboard/detail share `CycleSummary` and `getCycleProjection`: known-only excludes unreceived income; forecast adds expected income and uncertain outflows. Forecasts stop at the displayed billing/manual boundary; already-paid bills, final lump-sum repayments, and paused recurring rules are not repeated. Loan amounts are transaction-derived estimates, not bank payoff balances. `FINANCIAL_CYCLE_SPEC.md` documents the rules and tests. Migration 35 stores recurring groups/card links, 37 the checking overdraft limit, and 38 server-only merchant-watch access. Calculation/query version 8 requires no schema migration. Management data stays lazy; cycle writes invalidate inactive caches too.
+**Current cycle contract (2026-09-09):** migrations 28–38 are applied to production. V9 retains the V8 latest included card statement day as the automatic boundary, not a salary. Dashboard/detail share `CycleSummary` and `getCycleProjection`: known-only excludes unreceived income; forecast adds expected income and uncertain outflows. Forecasts stop at the displayed billing/manual boundary; already-paid bills, final lump-sum repayments, and paused recurring rules are not repeated. Identifier families are scoped by source/account; each proven monthly payment day uses its own amount history. Loan amounts are transaction-derived estimates, not bank payoff balances; reverse-flow refunds do not prove a loan. Balance freshness comes from included bank-account timestamps, never a newer card sync. `FINANCIAL_CYCLE_SPEC.md` documents the rules and tests. Migration 35 stores recurring groups/card links, 37 the checking overdraft limit, and 38 server-only merchant-watch access. Calculation/query version 9 requires no schema migration. Management data stays lazy; cycle writes invalidate inactive caches too.
 
 ## 5. SERVER CODE MAP  (`server/`)
 - entry `index.js`; DB pool `config/db.js` (idleTimeout 15min + pre-warm — fixes Supabase TLS-handshake slow-query); `config/institutions.js` (bank/card registry).
@@ -94,8 +94,8 @@ Notation: `table(rows@2026-07-16): key columns [notes]`. FKs mostly → `users.i
 - **ILS only** — currency picker removed; don't reintroduce multi-currency UI.
 - **i18n**: add EN+HE together, always. **RTL** logical props.
 - **`.gitignore` blanket-ignores `**/*.md`** with a whitelist — this `AGENTS.md`, `README.md`, and a few audit docs are explicitly un-ignored. New scratch `.md` files won't be tracked unless whitelisted. `ROADMAP.md` and `CLAUDE_*.md` are force-added.
-- **RLS is off on `public.merchant_watch_rules`** (Supabase advisory, critical). It does NOT expose the server (server connects as owner, not via anon key), and no client uses the anon key directly — but if the Supabase anon key is ever used client-side, this table is world-read/write. Remediation (do NOT auto-apply; needs policies first): `ALTER TABLE public.merchant_watch_rules ENABLE ROW LEVEL SECURITY;` + add per-user policies.
-- **Verify without jest**: `node --check` server files + `cd client && npm run build` + `npm test` (vitest).
+- **Merchant-watch RLS**: migration 38 enabled deny-by-default RLS for server-only access (see current contract above). The older warning that RLS was off is historical; do not create anonymous client policies to "fix" it.
+- **Verification**: run client Vitest, server Jest, client production build and scoped ESLint. `node --check` alone does not verify behavior.
 - **Timezone**: derive `date` from `transaction_datetime` in **Asia/Jerusalem** (a UTC truncation bug once shifted salary a day early). ingest stamps Asia/Jerusalem.
 - **Password policy**: registration ≥8 chars + letter + number; login untouched.
 - **Global singletons**: ONE `AddTransactionModal` (FAB dispatches `transaction:add`); help via `open-help` event; onboarding via `open-onboarding` (replays `WelcomeOnboarding`; it otherwise shows itself once per app mode).
@@ -122,7 +122,24 @@ Notation: `table(rows@2026-07-16): key columns [notes]`. FKs mostly → `users.i
   linked salary is labelled salary without becoming the main boundary. Unresolved salary/card/
   credit decisions create one deduplicated internal notification linking to `?tab=control`.
 - `/cycles/yearly/:year` powers the yearly review. Closed complete cycles are stored durably; current-year data can fall back to live raw calculations.
-- Old unused calendar/runway dashboard components, hooks, routes, and services were removed. Do not recreate them; the salary-cycle engine is the financial source of truth.
+- Old unused calendar/runway dashboard components, hooks, routes, and services were removed. Do not recreate them; the current V8 billing/manual-boundary cycle contract supersedes the old salary-boundary model.
+
+## 9c. 2026-09-07 request/cache stabilization
+
+- Transaction reads belong to `useTransactions`; CRUD/bulk writes belong to `useTransactionActions`.
+  Each successful write awaits `invalidateFinancialQueries` once. Dialogs close after success and
+  must not dispatch another transaction refresh or mount a hidden list query.
+- `api/errors.js` preserves HTTP status, stable codes and conflict details across transport/API
+  envelopes. Failed responses must throw in query hooks, not masquerade as empty accounts.
+- Reads have bounded retries; no automatic write replay without server idempotency. TanStack Query
+  owns client data GC (no second interval). Admin's still-used transport cache is capped at 100;
+  dashboard's 15-second server cache is capped at 200 and shares concurrent reads. Invalidating a
+  cache must also prevent an earlier in-flight response from repopulating it.
+- Bank-sync monitoring compares every connection's sync timestamp, not only the latest overall.
+  Transaction month filters are Israeli calendar dates; never UTC-format local midnight.
+- Family overview keys include the signed-in user. Family writes serialize locally and cancel stale
+  reads before applying the recomputed server overview. A failed refresh retains the last plan.
+  This remains manual household planning, completely separate from banking/cycle totals.
 
 ## 10. ACTIVE WORK / KNOWN OPEN  (as of 2026-07-16; verify against git/ROADMAP before assuming)
 - Financial-model phases in progress: salary-identity + income classification (loan/securities exclusion), card reconciliation accuracy, projection/runway for the running cycle, previous-cycle row (blocked on longer backfill + income classification).
