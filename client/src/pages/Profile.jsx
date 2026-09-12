@@ -8,7 +8,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingCart, LogOut, Download } from 'lucide-react';
+import { LogOut, Download } from 'lucide-react';
 
 import { useAuth, useTranslation } from '../stores';
 import { useAuthToasts } from '../hooks/useAuthToasts';
@@ -86,14 +86,6 @@ const Profile = () => {
               title={t('tabs.export', 'Export')}
             >
               <Download className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => navigate('/grocery')}
-              className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-emerald-600 dark:hover:bg-gray-800"
-              aria-label={t('groceryEntry.title', 'Grocery List')}
-              title={t('groceryEntry.title', 'Grocery List')}
-            >
-              <ShoppingCart className="h-5 w-5 rtl:-scale-x-100" />
             </button>
             <button
               onClick={() => logout(true)}

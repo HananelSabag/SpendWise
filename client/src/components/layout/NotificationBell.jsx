@@ -1,22 +1,19 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, CheckCheck, ShoppingCart, Trash2, Wallet } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, Wallet } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/helpers';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useTranslation, useAuth } from '../../stores';
-import { APP_MODE, resolveAppMode } from '../../utils/appMode';
+import { useTranslation } from '../../stores';
 import BottomSheet from '../common/BottomSheet';
-import { isGroceryNotification, presentNotification } from './notificationPresentation';
+import { presentNotification } from './notificationPresentation';
 
 /**
  * NotificationBell — the app's one notification centre.
  *
- * Everything lands here, grocery invitations included — they used to be filtered
- * out, which made an invitation invisible to anyone in full SpendWise, the exact
- * case where you most need to be told. The two apps are shown as labelled
- * groups, current app first, because a supermarket invitation sitting between
- * two bank-sync alerts made both harder to read.
+ * It used to split into labelled groups, because the grocery list ran here as
+ * a second app and its invitations sitting between two bank-sync alerts made
+ * both harder to read. One app, one list.
  *
  * Opening the panel does NOT mark anything read: only tapping a notification
  * marks that one, and "mark all read" is an explicit button.
@@ -26,41 +23,20 @@ const NotificationBell = () => {
   const navigate = useNavigate();
   const { notifications, markAllRead, markRead, clearRead } = useNotifications();
   const { t, isRTL } = useTranslation('common');
-  const { t: tGrocery } = useTranslation('grocery');
-  const { user } = useAuth();
 
   const unread = notifications.filter((notification) => !notification.is_read).length;
   const readCount = notifications.length - unread;
 
-  /**
-   * Two apps, two groups. A supermarket invitation sitting between two bank-sync
-   * alerts made both harder to read, so they are labelled and separated, with
-   * whichever app you are currently in on top. Nothing is hidden: an invitation
-   * still has to be findable from either mode.
-   */
-  const groups = useMemo(() => {
-    const grocery = notifications.filter((n) => isGroceryNotification(n.type));
-    const spendwise = notifications.filter((n) => !isGroceryNotification(n.type));
-
-    const groceryFirst = resolveAppMode(user) === APP_MODE.GROCERY;
-    const groceryGroup = { key: 'grocery', icon: ShoppingCart, items: grocery };
-    const spendwiseGroup = { key: 'spendwise', icon: Wallet, items: spendwise };
-
-    return (groceryFirst
-      ? [groceryGroup, spendwiseGroup]
-      : [spendwiseGroup, groceryGroup]
-    ).filter((group) => group.items.length > 0);
-  }, [notifications, user]);
 
   const handleNotification = useCallback((notification) => {
     if (!notification.is_read) markRead(notification.id);
 
-    const { link } = presentNotification(notification, tGrocery);
+    const { link } = presentNotification(notification);
     if (link) {
       setOpen(false);
       navigate(link);
     }
-  }, [markRead, navigate, tGrocery]);
+  }, [markRead, navigate]);
 
   return (
     <>
@@ -99,59 +75,38 @@ const NotificationBell = () => {
       >
         <div className="flex flex-col gap-1 pb-6" dir={isRTL ? 'rtl' : 'ltr'}>
 
-          {groups.map((group) => {
-            const GroupIcon = group.icon;
-            const grocery = group.key === 'grocery';
+          <div className="flex flex-col gap-1.5">
+            {notifications.map((notification) => {
+              const { title, body } = presentNotification(notification);
 
-            return (
-              <section key={group.key} className="mb-3">
-                <p className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                  <GroupIcon className={cn('h-3.5 w-3.5', grocery && 'rtl:-scale-x-100')} />
-                  {t('notifications.groups.' + group.key, {
-                    fallback: grocery ? 'Grocery List' : 'SpendWise',
-                  })}
-                </p>
-
-                <div className="flex flex-col gap-1.5">
-                  {group.items.map((notification) => {
-                    const { title, body } = presentNotification(notification, tGrocery);
-
-                    return (
-                      <button
-                        type="button"
-                        key={notification.id}
-                        onClick={() => handleNotification(notification)}
-                        className={cn(
-                          'flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-start transition-colors',
-                          notification.is_read
-                            ? 'bg-gray-50 dark:bg-gray-800/40'
-                            : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm'
-                        )}
-                      >
-                        <div className={cn(
-                          'w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5',
-                          grocery
-                            ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500'
-                        )}>
-                          <GroupIcon className={cn('w-4 h-4', grocery && 'rtl:-scale-x-100')} strokeWidth={2} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 dark:text-white">{title}</p>
-                          {body && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{body}</p>
-                          )}
-                        </div>
-                        {!notification.is_read && (
-                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })}
+              return (
+                <button
+                  type="button"
+                  key={notification.id}
+                  onClick={() => handleNotification(notification)}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-2xl px-3 py-3 text-start transition-colors',
+                    notification.is_read
+                      ? 'bg-gray-50 dark:bg-gray-800/40'
+                      : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm'
+                  )}
+                >
+                  <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-900/20">
+                    <Wallet className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-800 dark:text-white">{title}</p>
+                    {body && (
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{body}</p>
+                    )}
+                  </div>
+                  {!notification.is_read && (
+                    <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
           {(unread > 0 || readCount > 0) && (
             <div className="mt-1 flex gap-2">

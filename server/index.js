@@ -159,21 +159,13 @@ try {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    // Every X-Grocery-* header the client can send has to be listed here. A
-    // custom header makes the request preflighted, and a header missing from
-    // this list fails that preflight — the browser then reports status 0 with
-    // no server log at all, which looks exactly like the app hanging on its
-    // skeleton. That has bitten this feature twice.
-    //   X-Grocery-Session — de-duplicates a client's own echoed changes
-    //   X-Grocery-List    — which of the user's lists a request is about
-    //   X-Grocery-Lease   — retired with the list-level lock (migration 42);
-    //                       still accepted so a cached older bundle keeps working
-    allowedHeaders: [
-      'Content-Type', 'Authorization', 'X-Request-ID',
-      'X-Grocery-Session', 'X-Grocery-List', 'X-Grocery-Lease',
-    ],
+    // A custom header makes the request preflighted, and one missing from this
+    // list fails that preflight — the browser then reports status 0 with no
+    // server log at all, which looks exactly like the app hanging. The three
+    // X-Grocery-* headers that used to live here went with the grocery list.
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
     maxAge: 86400,
-    exposedHeaders: ['Content-Disposition', 'X-Grocery-Lease']
+    exposedHeaders: ['Content-Disposition']
   }));
 } catch (error) {
   logger.error(`❌ CORS setup failed: ${error.message}`);
@@ -308,10 +300,6 @@ try {
   logger.debug('Loading export routes...');
   app.use(`${API_VERSION}/export`, require('./routes/exportRoutes'));
   logger.debug('✅ Export routes loaded');
-
-  logger.debug('Loading grocery list routes...');
-  app.use(`${API_VERSION}/grocery`, require('./routes/groceryRoutes'));
-  logger.debug('✅ Grocery list routes loaded');
 
   logger.debug('Loading family hub routes...');
   app.use(`${API_VERSION}/family`, require('./routes/familyRoutes'));

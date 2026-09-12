@@ -1,280 +1,179 @@
-# SpendWise - Smart Expense Tracking Application
+# SpendWise
 
-A modern, full-stack expense tracking application built with React and Node.js, featuring real-time data synchronization, multi-language support, and intelligent financial insights.
+**A personal finance app for Israeli bank and card accounts.**
 
-## Authors & Collaborators
+Transactions arrive on their own from the banks and credit-card issuers, the
+month runs salary to salary rather than 1st to 31st, and the card bill is not
+counted twice. Hebrew and English, RTL throughout, installable as a PWA.
 
 | Name | GitHub | Role |
 |------|--------|------|
 | **Hananel Sabag** | [@HananelSabag](https://github.com/HananelSabag) | Lead developer |
 | **Yuda Sabag** | yudasabag@gmail.com | Collaborator — bank-scraper integration |
 
-> **Portfolio Project** — full-stack personal finance PWA with Israeli bank sync, built with React, Node.js, and PostgreSQL.
-
-## ⚠️ **Important Notice - Portfolio Project**
-
-This repository is shared for **educational and portfolio demonstration purposes only**.
-
-### 📋 **Viewing & Learning**
-- ✅ **Clone and explore** the codebase to see implementation patterns
-- ✅ **Study the architecture** and coding techniques used
-- ✅ **Review the documentation** and project structure
-- ✅ **Use as reference** for learning full-stack development
-
-### 🚫 **Deployment Restrictions**
-- ❌ **Do NOT deploy** this project as your own website
-- ❌ **Do NOT use** for commercial purposes
-- ❌ **Do NOT claim** as your own work
-- ❌ **Critical configuration files** are excluded for security
-
-### 🔒 **Security & Privacy**
-For security reasons, sensitive configuration files and production secrets are not included in this repository. The project is designed to showcase code quality and architecture while protecting the live production environment.
-
-## 🌟 Overview
-
-SpendWise is a comprehensive personal finance management tool that helps users track expenses, manage budgets, and gain insights into their spending patterns. The application features a clean, responsive interface with support for both English and Hebrew languages, dark/light themes, and offline capabilities through Progressive Web App (PWA) technology.
-
-## Bank Sync Integration ("Bank Connect")
-
-SpendWise connects to [spendwise-agent](https://github.com/HananelSabag/spendwise-agent) — a security-first companion that pulls real transactions from Israeli banks (Yahav, Leumi, Isracard, Max, Discount) into SpendWise automatically.
-
-Users connect a bank from the app; credentials are **encrypted in the browser** (X25519) with the agent's public key, so the server stores only ciphertext it can never read. The local agent — the only holder of the private key — claims sync jobs, decrypts them in memory, scrapes, and reports back.
-
-```
-Browser (seal X25519)  ──►  bank_connections (ciphertext only)  ──►  local agent decrypts in RAM
-                            bank_sync_jobs queue (cron 2×/day)        scrapes → POST results
-                                                                      • hard dedup (UNIQUE bank_sync_id)
-                                                                      • per-account tracking + sync toggle
-```
-
-New in SpendWise:
-- **`/bank-connections`** — self-service connect/manage (JWT); credentials arrive as browser-sealed ciphertext
-- **`/bank-agent`** — machine-to-machine job queue for the agent (X-Agent-Key)
-- **`GET /api/v1/bank-sync/stats`** — per-bank stats for the dashboard (JWT)
-- **`/bank-sync` page** — connection hub: connect banks, per-account balances + toggles, live job status
-- **`bank_accounts` table** — real per-account balance; **`bank_connections` / `bank_sync_jobs`** — encrypted creds + queue
-
-### Key Features
-
-- **Smart Transaction Management** - Add, edit, and categorize transactions with intelligent suggestions
-- **Real-time Dashboard** - Visual insights with charts and spending analytics
-- **Multi-language Support** - Full Hebrew and English localization with RTL support
-- **Responsive Design** - Optimized for desktop, tablet, and mobile devices
-- **Offline Capabilities** - PWA with offline data synchronization
-- **Secure Authentication** - JWT-based authentication with email verification
-- **Data Export** - Export transactions in CSV, JSON, and PDF formats
-- **Category Management** - Custom categories with icons and descriptions
-- **Dark/Light Themes** - User preference-based theme switching
-- **Automated Testing** - Unit and integration test suite (Vitest for frontend, Jest for backend)
-- **CI/CD Pipeline** - GitHub Actions for automated testing and linting on every push
-- **Row-Level Security (RLS)** - Supabase RLS policies for data isolation per user
-
-## 🛠 Tech Stack
-
-### Frontend
-- **Framework**: React 18 with Vite
-- **Styling**: Tailwind CSS with custom components
-- **State Management**: TanStack Query (React Query) + Zustand
-- **Routing**: React Router v6
-- **Forms**: React Hook Form with Zod validation
-- **Charts**: Recharts for data visualization
-- **Icons**: Lucide React + Heroicons
-- **PWA**: Vite PWA plugin with Workbox
-- **Testing**: Vitest + React Testing Library
-
-### Backend
-- **Runtime**: Node.js 18+
-- **Framework**: Express.js
-- **Database**: PostgreSQL with native pg driver
-- **Authentication**: JWT with bcrypt password hashing
-- **Email**: Nodemailer with Gmail SMTP
-- **File Upload**: Multer for profile images
-- **Security**: Helmet, CORS, XSS protection, rate limiting
-- **Logging**: Winston with daily log rotation
-- **Scheduling**: Node-cron for automated tasks
-- **Testing**: Jest with supertest
-
-### Database & Hosting
-- **Database**: Supabase (PostgreSQL)
-- **Backend Hosting**: Render
-- **Frontend Hosting**: Vercel
-- **File Storage**: Server-based uploads with CORS support
-
-### CI/CD
-- GitHub Actions
-
-## 📁 Project Structure
-
-```
-SpendWise/
-├── .github/                # CI/CD workflows (GitHub Actions)
-├── client/                 # Frontend React application
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Main application pages
-│   │   ├── hooks/          # Custom React hooks
-│   │   ├── context/        # React context providers
-│   │   ├── utils/          # Utility functions
-│   │   └── config/         # Configuration files
-│   ├── public/             # Static assets
-│   └── dist/               # Production build output
-├── server/                 # Backend Node.js application
-│   ├── routes/             # API route definitions
-│   ├── controllers/        # Business logic controllers
-│   ├── middleware/          # Express middleware
-│   ├── config/             # Database and app configuration
-│   ├── utils/              # Server utilities
-│   ├── __tests__/          # Backend test suite (Jest)
-│   └── uploads/            # File upload storage
-└── mcp-tools/              # MCP server for AI-powered database queries
-```
-
-## 🚀 Quick Start (For Learning & Development)
-
-### Prerequisites
-
-- Node.js 18+ and npm 8+
-- PostgreSQL database (or Supabase account)
-- Gmail account for email services (optional)
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/HananelSabag/SpendWise.git
-cd SpendWise
-```
-
-### 2. Install Dependencies
-
-```bash
-# Install client dependencies
-cd client
-npm install
-
-# Install server dependencies
-cd ../server
-npm install
-```
-
-### 3. Environment Configuration
-
-**Note**: You'll need to create your own environment files as they're not included in the repository for security reasons.
-
-**Server (.env in server/ directory):**
-```env
-# Database
-DATABASE_URL=postgresql://username:password@host:port/database
-
-# JWT
-JWT_SECRET=your-super-secret-jwt-key
-JWT_REFRESH_SECRET=your-refresh-secret-key
-
-# Email (optional)
-GMAIL_USER=your-email@gmail.com
-GMAIL_APP_PASSWORD=your-app-password
-
-# Server
-PORT=5000
-NODE_ENV=development
-ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
-```
-
-**Client (.env in client/ directory):**
-```env
-# API Configuration
-VITE_API_URL=http://localhost:5000
-VITE_CLIENT_URL=http://localhost:5173
-VITE_ENVIRONMENT=development
-VITE_DEBUG_MODE=true
-```
-
-### 4. Database Setup
-
-Run the database migrations (if using local PostgreSQL):
-```bash
-cd server
-npm run migrate
-```
-
-For Supabase, import the provided SQL schema file.
-
-### 5. Start Development Servers
-
-**Terminal 1 - Backend:**
-```bash
-cd server
-npm run dev
-```
-
-**Terminal 2 - Frontend:**
-```bash
-cd client
-npm run dev
-```
-
-The application will be available at:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:5000
-
-## 📱 Mobile Development
-
-The application supports mobile development with network access:
-
-```bash
-# Start with network access for mobile testing
-cd client
-npm run dev:mobile
-
-# Your mobile device can access the app at:
-# http://YOUR_LOCAL_IP:5173
-```
-
-## 🧪 Testing
-
-```bash
-# Run frontend tests (Vitest)
-cd client
-npm run test
-
-# Run frontend tests with coverage
-cd client
-npm run test:coverage
-
-# Run backend tests (Jest)
-cd server
-npm test
-
-# Lint frontend code
-cd client
-npm run lint
-```
-
-## 🔄 CI/CD Pipeline
-
-Every push to `main` triggers the GitHub Actions pipeline which:
-- Runs all frontend tests (Vitest)
-- Runs all backend tests (Jest)
-- Lints the frontend codebase (ESLint)
-
-## 📄 License
-
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing
-
-This is a portfolio project, but feedback and suggestions are welcome:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/suggestion`)
-3. Commit your changes (`git commit -m 'Add suggestion'`)
-4. Push to the branch (`git push origin feature/suggestion`)
-5. Open a Pull Request
-
-## Contact
-
-**Hananel Sabag** — [@HananelSabag](https://github.com/HananelSabag)  
-Support: spendwise.verifiction@gmail.com
+> **Portfolio project.** Clone it, read it, learn from it. Please don't deploy it
+> as your own or use it commercially. Production secrets are not in this repo.
 
 ---
 
-**SpendWise** — full-stack personal finance PWA with Israeli bank sync.
+## What it actually does
+
+### Bank sync, without handing anyone your credentials
+
+Israeli banks have no consumer API, so the data has to be scraped from a real
+browser session. That means bank credentials exist somewhere — and the design
+question is where.
+
+Here, not on the server. The browser seals them with **X25519** against the
+agent's public key, so the server stores ciphertext it has no key for. A local
+agent — [spendwise-agent](https://github.com/HananelSabag/spendwise-agent), a
+.NET 8 desktop app on your own machine — is the only holder of the private key.
+It claims a job, decrypts in memory, scrapes, and posts results back.
+
+```
+Browser (seals, X25519)  ──►  bank_connections (ciphertext only)
+                              bank_sync_jobs   (queue)
+                                     │
+                              local agent decrypts in RAM, scrapes,
+                              POSTs transactions back
+```
+
+Supported: Yahav, Leumi, Discount, Isracard, Max.
+
+**A detail worth knowing:** the scheduler does not run on a timer. Render's free
+tier sleeps a dyno, and a sleeping dyno runs no cron — so scheduling is driven
+by the agent's own poll. The agent asking for work *is* the tick. That is why
+syncs still happen on a plan that has no always-on process.
+
+### A month that matches your life
+
+Most finance apps bill you a calendar month. Salaries do not arrive on the 1st,
+so `cycleEngine.js` (~2,000 lines, the largest single file here) computes a
+salary-to-salary cycle instead, and reconciles:
+
+- **Credit-card bills against their own charges**, so a ₪4,000 card statement and
+  the ₪4,000 of purchases behind it are one event, not two.
+- **Recurring patterns** per bank and account, with each monthly date keeping its
+  own amount history — a pattern that charges on the 5th and the 20th is two
+  series, not one average.
+- **Pending authorizations** separately from confirmed amounts, so a hold at a
+  petrol station does not rewrite a confirmed recurring charge.
+
+### The rest
+
+- **Family Hub** — a shared monthly plan, kept deliberately apart from bank data
+  and cycle accounting. Manual by design: it is what a household agreed to, not
+  what the bank observed.
+- **Admin** — users, activity and system settings, behind a role check.
+- **Export** — CSV, JSON and PDF.
+- **Offline** — the client hydrates from a persisted TanStack Query cache, so a
+  sleeping free-tier dyno shows last-known data instead of a spinner.
+
+---
+
+## Architecture
+
+A classic three-tier deployment, with a fourth piece that is unusual: a desktop
+agent on the user's own machine, because that is the only place bank credentials
+may be decrypted.
+
+```
+  React + Vite (Vercel)
+        │  JWT
+  Express (Render, free tier)          ← 90 endpoints across 14 route groups
+        │  pg
+  Postgres (Supabase, eu-north-1)      ← 27 tables, 46 numbered migrations
+        ▲
+        │  X-Agent-Key, claims jobs
+  spendwise-agent (.NET 8, the user's PC)
+```
+
+| | |
+|---|---|
+| Client | React 18, Vite, Tailwind, Zustand, TanStack Query — 409 files, ~52k lines |
+| Server | Express, raw SQL over `pg` — 127 files, ~26k lines |
+| Tests | 39 client suites (Vitest), 47 server suites (Jest) |
+| Auth | JWT issued by the server; Google OAuth handled in the client |
+
+### Layering, honestly
+
+The server has `routes/ → controllers/ → services/ → models/`, and most requests
+follow it. But the boundary is a convention rather than something enforced:
+`config/db` is a module any file can require, and a good share of the SQL lives
+outside `models/`.
+
+Worth knowing before assuming the model layer is the data-access layer. Closing
+that gap means a `repositories/` layer and an ESLint rule restricting who may
+import `db` — not a rewrite, but not done yet either.
+
+### There is no ORM
+
+248 hand-written SQL queries, by choice. It costs boilerplate and buys exact
+control over what runs — which matters when the free tier gives you one small
+instance and a cold start.
+
+### RLS is not the gate here
+
+Row Level Security is enabled on most tables but carries few policies, and the
+server connects as the table owner, so it bypasses RLS regardless. **The real
+gate is the JWT and the middleware chain** — `auth`, `validate`, `security`,
+`rateLimiter`, `requestId`, `maintenance`. Read it that way rather than assuming
+the database is enforcing per-user isolation.
+
+---
+
+## Project layout
+
+```
+client/src/
+  api/            one module per resource, all through a shared error contract
+  components/     common · features · layout · routing · ui
+  hooks/          data access and app behaviour
+  stores/         auth, app, translation  (zustand)
+  translations/   he / en, per feature module
+server/
+  routes/         14 groups, 90 endpoints
+  controllers/    request handling
+  services/       the real work — cycleEngine, bank sync, classification
+  models/         SQL for the core entities
+  middleware/     auth, validation, security, rate limiting, logging
+  DB Migrations/  46 numbered files, applied in order
+```
+
+## Running it
+
+```bash
+npm install --prefix client && npm install --prefix server
+
+cp server/.env.example server/.env     # DATABASE_URL, JWT_SECRET, …
+cp client/.env.example client/.env     # VITE_API_URL, VITE_GOOGLE_CLIENT_ID
+
+npm run dev --prefix server            # :5000
+npm run dev --prefix client            # :5173
+```
+
+Testing: `npm test --prefix client` · `npm test --prefix server`
+Mobile on your LAN: `npm run dev:mobile --prefix client`
+
+CI runs lint and both suites on every push (`.github/workflows`).
+
+---
+
+## History
+
+The **shared grocery list** used to live here, as a second app inside this one —
+its own routes, its own bottom navigation, its own first-run picker asking which
+of the two you wanted to open.
+
+It moved out in September 2026 to [grocery](https://github.com/HananelSabag/grocery),
+where it has no server at all: the browser talks to Supabase directly and Row
+Level Security carries the authorization.
+
+The number that settled it: the bridge between the two — turning a finished shop
+into a SpendWise expense — had been built, shipped, and used **zero times**
+across every shopping trip ever completed. Two apps that shared a login, and
+nothing else.
+
+## Contact
+
+hananel12345@gmail.com

@@ -5,7 +5,7 @@
  *   import PageSkeleton from '@components/ui/PageSkeleton';
  *   if (isLoading && !data) return <PageSkeleton page="dashboard" />;
  *
- * Supported pages: dashboard | transactions | analytics | profile | grocery | admin
+ * Supported pages: dashboard | transactions | analytics | profile | admin
  *
  * Design rules:
  *  • Pure Tailwind — no custom CSS class dependencies
@@ -269,42 +269,6 @@ const ProfileSkeleton = () => (
   </Shell>
 );
 
-// ─── Grocery list ─────────────────────────────────────────────────────────────
-
-// Mirrors the real screen: header, tabs, progress, then dense category rows —
-// so the layout doesn't visibly jump when the data lands.
-const GrocerySkeleton = () => (
-  <Shell>
-    <div className="mx-auto w-full max-w-6xl px-3 pb-32 pt-3 sm:px-5 lg:px-6">
-      <div className="flex items-center gap-3">
-        <S className="h-10 w-10 shrink-0 rounded-2xl" />
-        <div className="flex-1 space-y-1.5">
-          <T className="h-4 w-32" />
-          <T className="h-3 w-24" />
-        </div>
-        <S className="h-10 w-10 shrink-0 rounded-2xl" />
-      </div>
-
-      <S className="mt-2.5 h-10 rounded-2xl" />
-      <S className="mt-3 h-12 rounded-2xl" />
-
-      <div className="mt-4 space-y-5">
-        {[0, 1].map(section => (
-          <div key={section} className="space-y-1.5">
-            <T className="h-3 w-28" />
-            {[0, 1, 2].map(row => (
-              <Card key={row} className="flex items-center gap-3 p-3">
-                <S className="h-7 w-7 shrink-0 rounded-full" />
-                <T className="h-4 flex-1" />
-              </Card>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  </Shell>
-);
-
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
 const AdminSkeleton = () => (
@@ -361,13 +325,12 @@ const SKELETONS = {
   transactions: TransactionsSkeleton,
   analytics:    AnalyticsSkeleton,
   profile:      ProfileSkeleton,
-  grocery:      GrocerySkeleton,
   admin:        AdminSkeleton,
 };
 
 /**
  * PageSkeleton
- * @param {'dashboard'|'financial-cycle'|'transactions'|'analytics'|'profile'|'grocery'|'admin'} page
+ * @param {'dashboard'|'financial-cycle'|'transactions'|'analytics'|'profile'|'admin'} page
  */
 const PageSkeleton = ({ page = 'dashboard' }) => {
   const Comp = SKELETONS[page] ?? DashboardSkeleton;

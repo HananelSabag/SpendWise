@@ -5,7 +5,7 @@
  * the household shares one dataset, so "may this person read/write it at all" is
  * the whole question, and it is answered here from the allowlist in
  * `config/familyAccess.js`. Do not add a second, slightly-different rule in a
- * controller or a query — that is exactly how the grocery list nearly grew two
+ * controller or a query — that is exactly how a shared feature grows two
  * conflicting permission models.
  */
 

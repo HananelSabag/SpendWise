@@ -43,7 +43,6 @@ const fileFilter = (req, file, cb) => {
       cb(new Error('Invalid file type. Only images and PDFs are allowed for receipts'), false);
     }
   } else if (file.fieldname === 'itemImage') {
-    // Grocery item product photos — images only, never PDFs
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
     if (allowedTypes.includes(file.mimetype)) {
@@ -138,14 +137,6 @@ const uploadToSupabase = async (req, res, next) => {
 // a safety net rather than the real limit — generous enough for a multi-page PDF
 // receipt or an image the browser could not re-encode, tight enough that a stray
 // video can't tie up a Render dyno's memory on the free tier.
-const GROCERY_UPLOAD_LIMIT = 20 * 1024 * 1024;
-
-const groceryUpload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: GROCERY_UPLOAD_LIMIT, files: 1 },
-});
-
 module.exports = {
   uploadProfilePicture: [
     upload.single('profilePicture'),
@@ -153,7 +144,5 @@ module.exports = {
     uploadToSupabase
   ],
   uploadReceipt: upload.single('receipt'),
-  uploadGroceryReceipt: groceryUpload.single('receipt'),
-  uploadGroceryItemImage: groceryUpload.single('itemImage'),
   upload // Raw multer instance if needed
 };

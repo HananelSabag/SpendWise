@@ -4,9 +4,9 @@ import { apiResultError, normalizeApiError, shouldRetryQuery } from '../errors';
 describe('one API error contract', () => {
   it('preserves status, error code and conflict context through repeated normalization', () => {
     const normalized = normalizeApiError({ response: {
-      status: 409, data: { error: { code: 'GROCERY_ITEM_BUSY', editingBy: 'Alex' } },
+      status: 409, data: { error: { code: 'RESOURCE_BUSY', lockedBy: 'Alex' } },
     } });
-    expect(normalized).toMatchObject({ status: 409, code: 'GROCERY_ITEM_BUSY', editingBy: 'Alex' });
+    expect(normalized).toMatchObject({ status: 409, code: 'RESOURCE_BUSY', lockedBy: 'Alex' });
     expect(normalizeApiError(normalized)).toBe(normalized);
     expect(apiResultError({ success: false, error: normalized })).toMatchObject(normalized);
   });

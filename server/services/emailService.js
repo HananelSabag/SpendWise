@@ -145,31 +145,6 @@ class EmailService {
     });
   }
 
-  /**
-   * Shared grocery list invitation.
-   *
-   * The link opens a *preview* — it never joins anything on its own. When the
-   * recipient has no account yet the copy says so, and the same link works after
-   * they sign up with that address.
-   *
-   * Returns false (never throws) when delivery fails, so the caller can tell the
-   * inviter the truth and fall back to the shareable link.
-   */
-  async sendGroceryInvite(inviterName, inviteeEmail, token, { isRegistered = true } = {}) {
-    const inviteUrl = `${process.env.CLIENT_URL}/grocery/invite/${token}`;
-    const name = escapeHtml(inviterName);
-    return this._send({
-      to: inviteeEmail,
-      subject: `${inviterName} הזמין אותך לרשימת קניות משותפת ב-SpendWise`,
-      html: this._groceryInviteHtml(name, inviteUrl, isRegistered),
-      text: `${inviterName} הזמין אותך לרשימת קניות משותפת ב-SpendWise.\n\n`
-        + (isRegistered
-            ? `לצפייה ולאישור: ${inviteUrl}\n\n`
-            : `כדי להצטרף, הירשם ל-SpendWise עם כתובת המייל הזו ואז פתח: ${inviteUrl}\n\n`)
-        + `ההזמנה תפוג תוך 14 ימים.`,
-    });
-  }
-
   // ─── HTML templates ──────────────────────────────────────────────────────
 
   _wrap(headerColor, headerHtml, bodyHtml) {
@@ -236,23 +211,6 @@ class EmailService {
     );
   }
 
-  _groceryInviteHtml(inviterName, inviteUrl, isRegistered) {
-    const callToAction = isRegistered
-      ? '<p class="msg">הקישור פותח מסך אישור — ההצטרפות מתבצעת רק אחרי שתאשר.</p>'
-      : '<p class="msg">עדיין אין לך חשבון SpendWise? הירשם עם כתובת המייל הזו, ואז פתח שוב את הקישור כדי להצטרף.</p>';
-
-    return this._wrap(
-      'linear-gradient(135deg,#4F46E5,#3B82F6)',
-      '<h1>הזמנה לרשימת קניות משותפת</h1><p>SpendWise</p>',
-      `<p class="msg">היי!</p>
-       <p class="msg"><strong>${inviterName}</strong> הזמין אותך לרשימת קניות משותפת ב-SpendWise.</p>
-       ${callToAction}
-       <div class="btn-wrap"><a href="${inviteUrl}" class="btn">לצפייה בהזמנה</a></div>
-       <p class="msg">או העתק קישור:</p>
-       <div class="url">${inviteUrl}</div>
-       <p class="note">ההזמנה תפוג תוך 14 ימים. אם לא ציפית להזמנה זו, התעלם מהמייל.</p>`
-    );
-  }
 }
 
 module.exports = new EmailService();

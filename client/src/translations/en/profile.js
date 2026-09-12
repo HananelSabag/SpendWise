@@ -7,10 +7,6 @@ export default {
     title: "Profile",
     subtitle: "Manage your account and preferences"
   },
-  groceryEntry: {
-    title: "Grocery List",
-    subtitle: "Your shared household list"
-  },
   tabs: {
     personal: "Personal Info",
     personalDesc: "Name, avatar, contact info",
@@ -97,13 +93,6 @@ export default {
       subtitle: "The day your financial month starts — usually your salary day. Dashboard totals are calculated for this fixed period, not the last 30 days.",
       dayLabel: "Cycle day",
       selected: "Your month starts on day {{day}} and ends the day before day {{day}} of the next month"
-    },
-    defaultHome: "Default App",
-    defaultHomeHint: "What SpendWise opens as. Grocery mode shows only the shared list — you can still switch over at any time.",
-    homeOptions: {
-      dashboard: "SpendWise",
-      transactions: "Expenses",
-      grocery: "Grocery List"
     },
     themeOptions: {
       system: "System",

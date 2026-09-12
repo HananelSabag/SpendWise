@@ -66,16 +66,6 @@ export const FamilyHubPage = createLazyComponent(
   'FamilyHubPage'
 );
 
-export const GroceryListPage = createLazyComponent(
-  () => import('../pages/GroceryListPage.jsx'),
-  'GroceryListPage'
-);
-
-export const GroceryInvitePage = createLazyComponent(
-  () => import('../pages/GroceryInvitePage.jsx'),
-  'GroceryInvitePage'
-);
-
 export const AdminSettings = createLazyComponent(
   () => import('../pages/admin/AdminSettings.jsx'),
   'AdminSettings'

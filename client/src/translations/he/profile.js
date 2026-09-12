@@ -8,10 +8,6 @@ export default {
     title: "פרופיל",
     subtitle: "נהל את החשבון וההעדפות שלך"
   },
-  groceryEntry: {
-    title: "רשימת קניות",
-    subtitle: "הרשימה המשותפת של הבית"
-  },
   tabs: {
     personal: "מידע אישי",
     personalDesc: "שם, תמונה, פרטי קשר",
@@ -92,13 +88,6 @@ export default {
       subtitle: "היום שבו מתחיל החודש הפיננסי שלך — בדרך כלל יום המשכורת. סכומי הדשבורד מחושבים לתקופה קבועה זו, ולא ל-30 הימים האחרונים.",
       dayLabel: "יום המחזור",
       selected: "החודש שלך מתחיל ביום {{day}} ומסתיים יום לפני יום {{day}} בחודש הבא"
-    },
-    defaultHome: "אפליקציית ברירת מחדל",
-    defaultHomeHint: "מה נפתח כשנכנסים ל-SpendWise. מצב רשימת קניות מציג רק את הרשימה המשותפת — תמיד אפשר לעבור בין המצבים.",
-    homeOptions: {
-      dashboard: "SpendWise",
-      transactions: "הוצאות",
-      grocery: "רשימת קניות"
     },
     themeOptions: {
       system: "אוטומטי",

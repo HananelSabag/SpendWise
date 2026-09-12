@@ -1,53 +1,52 @@
 /**
- * WelcomeOnboarding — one screen, once per mode, then never again.
+ * WelcomeOnboarding — one screen, once, then never again.
  *
  * It replaces a three-step modal that walked every new account through profile
- * setup and a bank-connection wizard before they had seen anything. That flow
- * predated the grocery list, never mentioned it, and was long enough that the
- * fastest way through it was to dismiss it.
+ * setup and a bank-connection wizard before they had seen anything, and was
+ * long enough that the fastest way through it was to dismiss it.
  *
- * This says what the app you just chose is for, in four lines, and gets out of
- * the way. Because the two modes are separate apps, "seen" is tracked per mode:
- * someone who starts in the grocery list and later switches to full SpendWise
- * gets SpendWise's intro at that point rather than never.
+ * This says what SpendWise is for in four lines and gets out of the way.
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Building2, Check, ListChecks, Loader2, Repeat, ShoppingCart,
-  Sparkles, Users, Wallet,
+  Building2, Check, Loader2, Repeat, Sparkles, Wallet,
 } from 'lucide-react';
 import { cn } from '../../utils/helpers';
 import { useAuth, useTranslation } from '../../stores';
-import {
-  APP_MODE, hasSeenOnboarding, preferencesWithOnboardingSeen, resolveAppMode,
-} from '../../utils/appMode';
-
-/** What each mode actually is, in three points. */
+/**
+ * What the app is, in three points.
+ *
+ * This used to be a map keyed by app mode, because the grocery list ran here
+ * as a second app with a welcome of its own. One app, one welcome.
+ */
 const CONTENT = {
-  [APP_MODE.GROCERY]: {
-    icon: ShoppingCart,
-    // A cart glyph is drawn handle-left; mirror it in Hebrew.
-    mirrorIcon: true,
-    accent: 'bg-blue-600',
-    points: [
-      { icon: ListChecks, key: 'grocery.aisles' },
-      { icon: Users, key: 'grocery.shared' },
-      { icon: Repeat, key: 'grocery.trips' },
-    ],
-  },
-  [APP_MODE.FULL]: {
-    icon: Wallet,
-    accent: 'bg-indigo-600',
-    points: [
-      { icon: Building2, key: 'full.sync' },
-      { icon: Repeat, key: 'full.cycle' },
-      { icon: Sparkles, key: 'full.insights' },
-    ],
-  },
+  icon: Wallet,
+  accent: 'bg-indigo-600',
+  points: [
+    { icon: Building2, key: 'full.sync' },
+    { icon: Repeat, key: 'full.cycle' },
+    { icon: Sparkles, key: 'full.insights' },
+  ],
 };
+
+const SEEN_KEY = 'onboarding_seen';
+
+/**
+ * Accounts from the two-app era carry `{ full: true, grocery: true }` here
+ * rather than a boolean, so the old shape is still read as "seen".
+ */
+const hasSeenOnboarding = (user) => {
+  const seen = user?.preferences?.[SEEN_KEY];
+  return seen === true || (!!seen && typeof seen === 'object' && seen.full === true);
+};
+
+const preferencesWithOnboardingSeen = (existing) => ({
+  ...(existing || {}),
+  [SEEN_KEY]: true,
+});
 
 const WelcomeOnboarding = () => {
   const { user, updateProfile } = useAuth();
@@ -57,8 +56,7 @@ const WelcomeOnboarding = () => {
   const [dismissed, setDismissed] = useState(false);
   const [replaying, setReplaying] = useState(false);
 
-  const mode = resolveAppMode(user);
-  const alreadySeen = hasSeenOnboarding(user, mode);
+  const alreadySeen = hasSeenOnboarding(user);
 
   // The Help Center offers "show me this again". Same screen, forced open.
   useEffect(() => {
@@ -75,7 +73,7 @@ const WelcomeOnboarding = () => {
     setSaving(true);
     try {
       await updateProfile({
-        preferences: preferencesWithOnboardingSeen(user?.preferences, mode),
+        preferences: preferencesWithOnboardingSeen(user?.preferences),
       });
     } catch {
       // Non-fatal: worst case they see this screen once more.
@@ -83,11 +81,11 @@ const WelcomeOnboarding = () => {
       setSaving(false);
       if (thenGoTo) navigate(thenGoTo);
     }
-  }, [mode, navigate, updateProfile, user?.preferences]);
+  }, [navigate, updateProfile, user?.preferences]);
 
   if (!user || dismissed || (alreadySeen && !replaying)) return null;
 
-  const { icon: Icon, accent, points, mirrorIcon } = CONTENT[mode];
+  const { icon: Icon, accent, points, mirrorIcon } = CONTENT;
 
   return (
     <motion.div
@@ -117,10 +115,10 @@ const WelcomeOnboarding = () => {
           id="welcome-title"
           className="text-center text-lg font-extrabold text-gray-900 dark:text-gray-50"
         >
-          {t(`${mode}.title`)}
+          {t('full.title')}
         </h1>
         <p className="mt-1 text-center text-sm text-gray-500 dark:text-gray-400">
-          {t(`${mode}.subtitle`)}
+          {t('full.subtitle')}
         </p>
 
         <ul className="mt-5 space-y-3">
@@ -151,20 +149,14 @@ const WelcomeOnboarding = () => {
 
         {/* The one genuinely useful thing the old wizard did: SpendWise is empty
             until a bank is connected, so offer that as the next step. */}
-        {mode === APP_MODE.FULL && (
-          <button
-            type="button"
-            onClick={() => finish('/bank-sync')}
-            disabled={saving}
-            className="mt-2 h-11 w-full rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 disabled:opacity-70 dark:border-gray-700 dark:text-gray-300"
-          >
-            {t('full.connect')}
-          </button>
-        )}
-
-        <p className="mt-3 text-center text-[11px] text-gray-400 dark:text-gray-500">
-          {t('switchHint')}
-        </p>
+        <button
+          type="button"
+          onClick={() => finish('/bank-sync')}
+          disabled={saving}
+          className="mt-2 h-11 w-full rounded-2xl border border-gray-200 text-sm font-semibold text-gray-600 disabled:opacity-70 dark:border-gray-700 dark:text-gray-300"
+        >
+          {t('full.connect')}
+        </button>
       </motion.div>
     </motion.div>
   );

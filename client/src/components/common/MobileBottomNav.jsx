@@ -31,90 +31,10 @@ import BottomSheet from './BottomSheet';
 import NotificationBell from '../layout/NotificationBell';
 import BrandMark from './BrandMark';
 import { openAccessibilityMenu } from './AccessibilityMenuHost';
-import { isGroceryMode } from '../../utils/appMode';
 import { useBottomInset } from '../../hooks/useBottomInset';
 
 /** How much of the bottom of the screen the navigation covers. */
 const NAV_HEIGHT_VAR = '--sw-bottom-nav-height';
-
-// ─── Grocery-only nav ────────────────────────────────────────────────────────
-
-/**
- * The whole bottom bar in grocery mode. It carries its own notification bell —
- * a grocery invitation must be reachable here, not only from the full-app shell —
- * and an explicit way back to SpendWise, so this mode is never a dead end.
- */
-const GroceryModeNav = () => {
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const { t }     = useTranslation();
-  const { t: tg } = useTranslation('grocery');
-  const isAdmin   = useIsAdmin();
-  const { unreadCount } = useNotifications();
-  const measureNav = useBottomInset(NAV_HEIGHT_VAR);
-
-  // `mirror` marks glyphs that carry a direction. A shopping cart's handle is
-  // drawn on the left; in Hebrew it has to face the other way.
-  const tabs = [
-    { key: 'grocery', icon: ShoppingCart, mirror: true, label: tg('title'), href: '/grocery' },
-    { key: 'profile', icon: User,         label: t('nav.profile') || 'Profile', href: '/profile' },
-    ...(isAdmin ? [{ key: 'admin', icon: Shield, label: t('nav.admin') || 'Admin', href: '/admin' }] : []),
-  ];
-
-  return (
-    <nav
-      ref={measureNav}
-      className={cn(
-        'lg:hidden fixed bottom-0 left-0 right-0 z-[100]',
-        'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',
-        'border-t border-gray-200/80 dark:border-gray-700/80',
-        'flex items-end justify-around px-4',
-      )}
-      style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}
-    >
-      {tabs.map(tab => {
-        const Icon   = tab.icon;
-        const active = location.pathname.startsWith(tab.href);
-        return (
-          <button
-            key={tab.key}
-            onClick={() => navigate(tab.href)}
-            className="flex flex-col items-center justify-end py-2 flex-1 min-w-0 focus:outline-none transition-colors"
-          >
-            <div className="relative flex items-center justify-center w-10 h-8">
-              {active && (
-                <motion.div
-                  layoutId="grocery-tab-indicator"
-                  className="absolute inset-x-1 top-0 h-0.5 rounded-full bg-blue-600"
-                />
-              )}
-              <Icon className={cn(
-                'w-5 h-5 transition-colors',
-                tab.mirror && 'rtl:-scale-x-100',
-                active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500',
-              )} />
-            </div>
-            <span className={cn('text-[10px] font-medium mt-0.5 truncate max-w-full px-1', active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500')}>
-              {tab.label}
-            </span>
-          </button>
-        );
-      })}
-
-      {/* Notifications — grocery invitations have to be reachable from here. */}
-      <div className="flex flex-col items-center justify-end py-2 flex-1 min-w-0">
-        <div className="relative flex items-center justify-center w-10 h-8">
-          <NotificationBell />
-        </div>
-        <span className="text-[10px] font-medium mt-0.5 truncate max-w-full px-1 text-gray-400 dark:text-gray-500">
-          {t('common.notifications.title', { fallback: 'Alerts' })}
-          {unreadCount > 0 ? ` (${unreadCount})` : ''}
-        </span>
-      </div>
-
-    </nav>
-  );
-};
 
 // ─── Tab bar ─────────────────────────────────────────────────────────────────
 
@@ -492,11 +412,8 @@ const FullNav = () => {
   );
 };
 
-const MobileBottomNav = () => {
-  const { user } = useAuth();
-  // One resolver for the whole app (see utils/appMode) — a per-tab override
-  // wins over the saved preference, and nothing else gets a vote.
-  return isGroceryMode(user) ? <GroceryModeNav /> : <FullNav />;
-};
+// There used to be two bars here and a resolver picking between them, because
+// the grocery list ran as a second app inside this one. It has its own now.
+const MobileBottomNav = () => <FullNav />;
 
 export default MobileBottomNav;

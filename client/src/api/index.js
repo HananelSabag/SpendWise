@@ -10,7 +10,6 @@ import { authStatusAPI } from './authStatus.js'; // 🔐 NEW: Bulletproof auth d
 import adminAPI from './admin.js';
 import onboardingAPI from './onboarding.js'; // ✅ ADD: Import onboarding API
 import transactionAPI from './transactions.js'; // ✅ ADD: Import transaction API
-import groceryAPI from './grocery.js';
 import familyAPI from './family.js';
 import notificationsAPI from './notifications.js';
 
@@ -71,8 +70,6 @@ export const api = {
   // ✅ ADD: Onboarding Management
   onboarding: onboardingAPI,
 
-  // Shared grocery list
-  grocery: groceryAPI,
 
   // Family Hub — the household's manual monthly picture
   family: familyAPI,

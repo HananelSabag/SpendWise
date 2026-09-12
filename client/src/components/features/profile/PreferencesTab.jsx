@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { useAuth, useTranslation, useTranslationStore } from '../../../stores';
 import { cn } from '../../../utils/helpers';
-import { APP_MODE, landingPathForMode, preferencesForMode, preferredAppMode, setModeOverride } from '../../../utils/appMode';
 import queryClient from '../../../config/queryClient';
 
 const Row = ({ label, value, onChange, options }) => (
@@ -25,13 +23,7 @@ const Row = ({ label, value, onChange, options }) => (
 export const PreferencesTab = ({ user, authToasts }) => {
   const { updateProfile } = useAuth();
   const { t }             = useTranslation('profile');
-  const navigate          = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-
-  // The saved account default, independent of any one-time switch the user made
-  // in this tab — changing it here is the deliberate, persistent choice.
-  const resolveDefaultHome = (u) =>
-    (preferredAppMode(u) === APP_MODE.GROCERY ? 'grocery' : 'dashboard');
 
   // Currency is deliberately NOT a preference: all synced bank data is ILS,
   // and a display-currency picker that only swaps the symbol shows wrong
@@ -39,7 +31,6 @@ export const PreferencesTab = ({ user, authToasts }) => {
   const buildPrefs = (u) => ({
     language_preference: u?.language_preference  || 'en',
     theme_preference:    u?.theme_preference      || 'system',
-    default_home:        resolveDefaultHome(u),
   });
 
   const [prefs, setPrefs]       = useState(() => buildPrefs(user));
@@ -49,7 +40,7 @@ export const PreferencesTab = ({ user, authToasts }) => {
     const p = buildPrefs(user);
     setPrefs(p);
     setOriginal(p);
-  }, [user?.language_preference, user?.theme_preference, user?.preferences?.default_home, user?.preferences?.shopping_list_as_default_page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.language_preference, user?.theme_preference]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDirty = Object.keys(prefs).some(k => prefs[k] !== original[k]);
 
@@ -57,16 +48,7 @@ export const PreferencesTab = ({ user, authToasts }) => {
     if (!isDirty) return;
     setIsLoading(true);
     try {
-      const { default_home, ...flatPrefs } = prefs;
-      const mode = default_home === 'grocery' ? APP_MODE.GROCERY : APP_MODE.FULL;
-      const result = await updateProfile({
-        ...flatPrefs,
-        preferences: preferencesForMode(user?.preferences, mode),
-      });
-      // Point this tab at the mode that was just saved. The profile cache is
-      // still stale for a moment, so leaving it to the preference alone would
-      // leave the shell showing the previous mode.
-      setModeOverride(mode);
+      const result = await updateProfile({ ...prefs });
       if (!result.success) throw new Error(result.error?.message);
 
       if (prefs.theme_preference === 'dark')      document.documentElement.classList.add('dark');
@@ -76,24 +58,9 @@ export const PreferencesTab = ({ user, authToasts }) => {
       if (prefs.language_preference !== user?.language_preference)
         useTranslationStore.getState().actions?.setLanguage?.(prefs.language_preference);
 
-      // Let the once-per-session home redirect run again for the new choice.
-      try {
-        sessionStorage.removeItem('sw_home_redirect');
-        sessionStorage.setItem('sw_picker_done', '1');
-      } catch (_) {}
-
       await queryClient.invalidateQueries({ queryKey: ['profile'] });
-      const previousHome = original.default_home;
       setOriginal(prefs);
       authToasts.preferencesUpdated?.();
-
-      // Full SpendWise and the grocery list are separate apps with separate
-      // navigation, and this screen is the only place you move between them —
-      // so changing the mode has to actually take you there. Every other
-      // preference still saves in place without yanking the user off the page.
-      if (default_home !== previousHome) {
-        navigate(landingPathForMode(mode), { replace: true });
-      }
     } catch {
       authToasts.profileUpdateFailed?.();
     } finally {
@@ -123,41 +90,6 @@ export const PreferencesTab = ({ user, authToasts }) => {
             { value: 'dark',   label: t('preferences.themeOptions.dark')   || 'Dark'   },
           ]}
         />
-        {/* Default home picker */}
-        <div className="py-3 border-t border-gray-100 dark:border-gray-700 mt-1">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('preferences.defaultHome') || 'Open the app on'}
-          </p>
-          <p className="text-xs leading-relaxed text-gray-400 dark:text-gray-500 mb-2.5">
-            {t('preferences.defaultHomeHint')}
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { id: 'dashboard', emoji: '📊', label: t('preferences.homeOptions.dashboard') || 'Dashboard' },
-              { id: 'grocery',   emoji: '🛒', label: t('preferences.homeOptions.grocery')   || 'Grocery List' },
-            ].map(opt => {
-              const active = prefs.default_home === opt.id
-                || (opt.id === 'dashboard' && prefs.default_home !== 'grocery');
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setPrefs(p => ({ ...p, default_home: opt.id }))}
-                  className={cn(
-                    'flex flex-col items-center gap-1 py-3 px-2 rounded-xl border-2 text-xs font-bold transition-all duration-150',
-                    active
-                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                      : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-gray-300'
-                  )}
-                >
-                  <span className="text-xl">{opt.emoji}</span>
-                  <span>{opt.label}</span>
-                  {active && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
       </div>
 
       <button

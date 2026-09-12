@@ -21,7 +21,6 @@ import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persist
 // Core UI components
 import TopProgressBar from './components/common/TopProgressBar.jsx';
 import Header from './components/layout/Header';
-import GroceryModeHeader from './components/layout/GroceryModeHeader';
 import Footer from './components/layout/Footer';
 import AccessibilityMenuHost from './components/common/AccessibilityMenuHost.jsx';
 import WelcomeOnboarding from './components/common/WelcomeOnboarding';
@@ -52,7 +51,6 @@ import { AppRoutes } from './components/routing/AppRoutes';
 import queryClient from './config/queryClient';
 import { shouldPersistQuery } from './config/queryPersistence';
 import { getSessionFlag } from './utils/sessionFlags';
-import { hasChosenHome, isGroceryMode } from './utils/appMode';
 
 // 🟢 Persister for offline-survives-reload. localStorage is fine here:
 // - It's already used for auth tokens, so the user has implicit consent.
@@ -130,16 +128,10 @@ const AppContent = () => {
     }
   }, [location.pathname, isAuthenticated, isLoading, navigate]);
 
-  // Which shell to render. `resolveAppMode` is the single source of truth for
-  // full-vs-grocery (a per-tab override beats the saved preference); the picker
-  // flag only suppresses chrome while the first-run choice is on screen.
-  const pickerDone      = !!getSessionFlag('sw_picker_done');
-  const groceryMode     = isGroceryMode(user);
-  const isShowingPicker = isAuthenticated && !isLoading && user &&
-    !hasChosenHome(user) && !user?.isAdmin && !pickerDone;
-  const showDesktopShell = isAuthenticated && !isQuickExpensePage && !groceryMode && !isShowingPicker;
-  // Grocery mode gets its own slim desktop header rather than no header at all.
-  const showGroceryShell = isAuthenticated && !isQuickExpensePage && groceryMode && !isShowingPicker;
+  // One shell now. This used to also resolve full-vs-grocery and suppress
+  // itself while the first-run "which app is this?" picker was on screen —
+  // both of which existed only because the grocery list lived here too.
+  const showDesktopShell = isAuthenticated && !isQuickExpensePage;
 
   return (
     <div
@@ -151,14 +143,11 @@ const AppContent = () => {
       data-sidebar-side={showDesktopShell ? (isRTL ? 'right' : 'left') : undefined}
     >
       <TopProgressBar visible={isLoading} />
-      {isAuthenticated && !isShowingPicker && <WelcomeOnboarding />}
+      {isAuthenticated && <WelcomeOnboarding />}
 
-      {/* Header — the full shell, or grocery mode's slim desktop bar */}
       {showDesktopShell && <Header />}
-      {showGroceryShell && <GroceryModeHeader />}
 
-      {/* Bottom nav — always rendered (GroceryModeNav / FullNav); hidden only during home picker */}
-      {isAuthenticated && !isQuickExpensePage && !isShowingPicker && <MobileBottomNav />}
+      {isAuthenticated && !isQuickExpensePage && <MobileBottomNav />}
 
       {/* No bottom padding for the nav here: the footer below is the last thing
           in this column, so it is what has to clear it — off the nav's measured

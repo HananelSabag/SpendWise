@@ -77,7 +77,6 @@ import terms from './terms.js';
 import timeAgo from './timeAgo.js';
 import validation from './validation.js';
 import viewModes from './viewModes.js';
-import grocery from './grocery.js';
 import family from './family.js';
 
 export default {
@@ -154,6 +153,5 @@ export default {
   timeAgo,
   validation,
   viewModes,
-  grocery,
   family,
 };
