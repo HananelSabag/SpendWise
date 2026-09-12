@@ -94,12 +94,19 @@ const deleteOldProfilePicture = async (req, res, next) => {
         const fileName = supabaseStorage.extractFileNameFromUrl(currentProfilePicture);
         
         if (fileName) {
-          await supabaseStorage.deleteProfilePicture(fileName);
-          logger.info(`✅ [SUPABASE STORAGE] Deleted old profile picture: ${fileName}`);
+          // Not fatal — the new picture still uploads and the account still
+          // works. But a silent failure here leaves the previous file behind
+          // forever, which is exactly how this bucket filled with 40 orphans.
+          const removed = await supabaseStorage.deleteProfilePicture(fileName);
+          if (!removed) {
+            logger.error('[SUPABASE STORAGE] Previous profile picture was left behind', {
+              userId: req.user.id, fileName,
+            });
+          }
         }
       }
     } catch (error) {
-      logger.error('[SUPABASE STORAGE] Error in deleteOldProfilePicture middleware:', error.message);
+      logger.error('[SUPABASE STORAGE] deleteOldProfilePicture failed', { reason: error.message });
     }
   }
   next();

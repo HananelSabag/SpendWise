@@ -97,20 +97,48 @@ const uploadProfilePicture = async (file, userId) => {
  * @param {string} fileName - File name to delete
  * @returns {Promise<void>}
  */
+/**
+ * Remove one stored picture. Answers whether it actually went.
+ *
+ * It used to swallow every failure as a warning and tell the caller nothing,
+ * which is how 40 orphaned files accumulated in this bucket over a year
+ * without anyone noticing: each replaced picture quietly stayed. A failure
+ * here is not fatal to the request — the new upload still succeeds — but it
+ * has to be visible, and `remove()` reporting zero removed paths has to count
+ * as a failure rather than as success.
+ *
+ * The second argument to a winston call is metadata, not a format value: the
+ * old `logger.info(msg, fileName)` spread the string into {"0":"p","1":"r",…},
+ * which is a large part of why these log lines were never read.
+ */
 const deleteProfilePicture = async (fileName) => {
   try {
     const supabaseClient = getSupabaseClient();
-    const { error } = await supabaseClient.storage
+    const { data, error } = await supabaseClient.storage
       .from('profiles')
       .remove([fileName]);
 
     if (error) {
-      logger.warn('⚠️ [SUPABASE STORAGE] Delete failed:', error.message);
-    } else {
-      logger.info('✅ [SUPABASE STORAGE] File deleted:', fileName);
+      logger.error('[SUPABASE STORAGE] Profile picture delete failed', {
+        fileName, reason: error.message,
+      });
+      return false;
     }
+
+    // A remove() that matched nothing returns an empty array and no error,
+    // which is indistinguishable from success unless it is checked.
+    if (!data || data.length === 0) {
+      logger.error('[SUPABASE STORAGE] Profile picture delete matched no object', { fileName });
+      return false;
+    }
+
+    logger.info('[SUPABASE STORAGE] Profile picture deleted', { fileName });
+    return true;
   } catch (error) {
-    logger.warn('⚠️ [SUPABASE STORAGE] Delete error:', error.message);
+    logger.error('[SUPABASE STORAGE] Profile picture delete threw', {
+      fileName, reason: error.message,
+    });
+    return false;
   }
 };
 
