@@ -21,6 +21,7 @@ import { useTransactionActions } from '../hooks/useTransactionActions';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { Button, Input, Card, PageSkeleton } from '../components/ui';
 import { cn } from '../utils/helpers';
+import { summarizeTransactionCashFlow } from '../utils/transactionCashFlow';
 import apiClient from '../api/client';
 import { api } from '../api';
 
@@ -37,6 +38,7 @@ import TransactionList from '../components/features/transactions/list/Transactio
 import StatsRow from '../components/features/transactions/list/StatsRow';
 import BulkDeleteModal from '../components/features/transactions/list/BulkDeleteModal';
 import LoadMoreSection from '../components/features/transactions/list/LoadMoreSection';
+import { institutionKind } from '../components/features/bankSync/bankSyncMeta';
 
 const normalizeMerchant = (value) => String(value || '')
   .replace(/[‎‏]/g, '')
@@ -55,6 +57,7 @@ const MobileTransactions = ({
   transactions, syncedSources, transactionsLoading,
   loadMoreRef, isFetchingNextPage, hasMore, loadMore,
   onEdit, onDelete, onDuplicate, onOpenDetail,
+  includeCreditCardTotals,
   lang,
 }) => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
@@ -122,6 +125,7 @@ const MobileTransactions = ({
             onDelete={onDelete}
             onDuplicate={onDuplicate}
             onOpenDetail={onOpenDetail}
+            includeCreditCardTotals={includeCreditCardTotals}
           />
 
           <LoadMoreSection
@@ -159,6 +163,7 @@ const DesktopTransactions = ({
   summary,
   formatCurrency,
   onEdit, onDelete, onDuplicate, onOpenDetail,
+  includeCreditCardTotals,
   selectedIds, onSelect, multiSelectMode, setMultiSelectMode, setSelectedIds,
   setShowBulkDeleteModal,
   lang,
@@ -283,6 +288,7 @@ const DesktopTransactions = ({
                 onDelete={onDelete}
                 onDuplicate={onDuplicate}
                 onOpenDetail={onOpenDetail}
+                includeCreditCardTotals={includeCreditCardTotals}
                 selectedIds={selectedIds}
                 onSelect={onSelect}
                 multiSelectMode={multiSelectMode}
@@ -336,6 +342,7 @@ const ModernTransactions = () => {
   const debouncedAmountMax = useDebounce(filters.amountMax, 400);
 
   const [selectedSource, selectedAccount] = sourceFilter.split('::');
+  const includeCreditCardTotals = institutionKind(selectedSource) === 'credit_card';
 
   // ── Data hooks ── (source/account/amount are server-side filters now, so
   // the list, the stats tiles and pagination all describe the same set)
@@ -416,10 +423,11 @@ const ModernTransactions = () => {
     }
     // Fallback (older server / offline cache): compute from loaded rows.
     const txs = transactions || [];
-    const totalIncome = txs.filter((t) => t.type === 'income').reduce((s, t) => s + Math.abs(t.amount), 0);
-    const totalExpenses = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + Math.abs(t.amount), 0);
+    const { totalIncome, totalExpenses } = summarizeTransactionCashFlow(txs, {
+      includeCreditCardActivity: includeCreditCardTotals,
+    });
     return { count: txs.length, totalIncome, totalExpenses, net: totalIncome - totalExpenses };
-  }, [serverSummary, transactions]);
+  }, [serverSummary, transactions, includeCreditCardTotals]);
 
   const transactionsWithWatchLabels = useMemo(() => {
     const rules = merchantWatchData?.rules || [];
@@ -523,6 +531,7 @@ const ModernTransactions = () => {
     loadMoreRef, isFetchingNextPage, hasMore, loadMore,
     summary, formatCurrency,
     onEdit, onDelete, onDuplicate, onOpenDetail,
+    includeCreditCardTotals,
     selectedIds, onSelect,
     multiSelectMode, setMultiSelectMode, setSelectedIds,
     setShowBulkDeleteModal,
