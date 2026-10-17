@@ -174,7 +174,7 @@ const Alert = ({
         <div className={cn("flex items-start", sizeConf.gap)}>
           {/* Icon */}
           <div className={cn(
-            "flex-shrink-0 mt-0.5",
+            "shrink-0 mt-0.5",
             priorityConf.pulse && "animate-pulse"
           )}>
             <IconComponent className={cn(sizeConf.iconSize, config.iconColor)} />
@@ -237,7 +237,7 @@ const Alert = ({
               size="sm"
               onClick={handleClose}
               className={cn(
-                "flex-shrink-0 p-1 -mt-1",
+                "shrink-0 p-1 -mt-1",
                 isRTL ? "-ml-1" : "-mr-1",
                 config.iconColor,
                 "hover:bg-black/5 dark:hover:bg-white/5"

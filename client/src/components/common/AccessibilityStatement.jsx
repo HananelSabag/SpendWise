@@ -190,7 +190,7 @@ const AccessibilityStatement = ({
           <div className="space-y-4">
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
               <div className="flex items-start space-x-3">
-                <Heart className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-1 flex-shrink-0" />
+                <Heart className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-1 shrink-0" />
                 <div>
                   <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
                     {t('statement.overview.commitment.title')}
@@ -240,7 +240,7 @@ const AccessibilityStatement = ({
               return (
                 <Card key={feature.id} className="p-4">
                   <div className="flex items-start space-x-4">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center shrink-0">
                       <FeatureIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                     </div>
                     
@@ -268,7 +268,7 @@ const AccessibilityStatement = ({
                       <div className="space-y-1">
                         {feature.details.map((detail, index) => (
                           <div key={index} className="flex items-start space-x-2 text-sm">
-                            <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                            <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 shrink-0" />
                             <span className="text-gray-700 dark:text-gray-300">{detail}</span>
                           </div>
                         ))}
@@ -329,7 +329,7 @@ const AccessibilityStatement = ({
           <div className="space-y-4">
             <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
               <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+                <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
                 <div>
                   <h3 className="font-semibold text-orange-900 dark:text-orange-100 mb-1">
                     {t('statement.limitations.title')}
@@ -462,7 +462,7 @@ const AccessibilityStatement = ({
         style={{ direction: isRTL ? 'rtl' : 'ltr' }}
       >
         {/* Navigation sidebar */}
-        <div className="lg:w-64 flex-shrink-0">
+        <div className="lg:w-64 shrink-0">
           <div className="space-y-2">
             {sections.map((section) => {
               const SectionIcon = section.icon;

@@ -299,13 +299,13 @@ const ConnectBankModal = ({
                           key={source}
                           onClick={() => { setBank(source); setCreds({}); setStep(1); }}
                           className={cn(
-                            'relative rounded-xl p-4 text-white text-start bg-gradient-to-br shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]',
+                            'relative rounded-xl p-4 text-white text-start bg-linear-to-br shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]',
                             bankBrand(source).gradient,
                             bank === source && 'ring-2 ring-offset-2 ring-indigo-500',
                           )}
                         >
                           {!PROVEN_SOURCES.has(source) && (
-                            <span className="absolute top-2 end-2 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/25">
+                            <span className="absolute top-2 inset-e-2 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-white/25">
                               {t('betaBadge')}
                             </span>
                           )}
@@ -359,7 +359,7 @@ const ConnectBankModal = ({
                       <button
                         type="button"
                         onClick={() => setShowPassword((v) => !v)}
-                        className="absolute inset-y-0 end-3 flex items-center text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 inset-e-3 flex items-center text-gray-400 hover:text-gray-600"
                         tabIndex={-1}
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

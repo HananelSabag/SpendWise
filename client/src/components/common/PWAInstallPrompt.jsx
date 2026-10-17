@@ -87,9 +87,9 @@ const PWAInstallPrompt = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-20 lg:bottom-4 inset-x-4 lg:inset-x-auto lg:right-4 z-[9990] max-w-sm mx-auto lg:mx-0 pointer-events-auto">
+    <div className="fixed bottom-20 lg:bottom-4 inset-x-4 lg:inset-x-auto lg:right-4 z-9990 max-w-sm mx-auto lg:mx-0 pointer-events-auto">
       <div className="rounded-2xl border border-blue-200 dark:border-blue-800 bg-white dark:bg-gray-900 shadow-2xl p-4 flex items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+        <div className="shrink-0 w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
           <Download className="w-5 h-5 text-white" />
         </div>
 
@@ -119,7 +119,7 @@ const PWAInstallPrompt = () => {
         <button
           onClick={handleDismiss}
           aria-label="Dismiss"
-          className="flex-shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          className="shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
         >
           <X className="w-4 h-4" />
         </button>

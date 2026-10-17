@@ -25,8 +25,8 @@ const TopProgressBar = ({ visible = false, minVisibleMs = 350 }) => {
   if (!shouldRender) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[9999] pointer-events-none transition-opacity duration-200">
-      <div className="h-1 bg-gradient-to-r from-primary-500 via-indigo-500 to-primary-500 relative overflow-hidden">
+    <div className="fixed top-0 left-0 right-0 z-9999 pointer-events-none transition-opacity duration-200">
+      <div className="h-1 bg-linear-to-r from-primary-500 via-indigo-500 to-primary-500 relative overflow-hidden">
         <div className="absolute inset-y-0 left-0 w-1/3 bg-white/50 sw-indeterminate" />
       </div>
     </div>

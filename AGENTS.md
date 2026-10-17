@@ -29,7 +29,7 @@ tables here. If you find a reference to it anywhere in this repo, that reference
 - **proxy**: `cloudflare-worker/worker.js` optional scraper egress proxy (header `X-Proxy-Key` ↔ server `SCRAPER_PROXY_KEY` / CF `PROXY_KEY`).
 
 ## 2. RUN / BUILD / TEST  (Windows; PowerShell primary, Bash tool available)
-- server: `cd server && npm run dev` (nodemon) | prod `npm start`. Tests: `npm test -- --runInBand` (Jest is a dev dependency; install dev dependencies before testing).
+- server: `cd server && npm run dev` (native Node.js watch mode) | prod `npm start`. Tests: `npm test -- --runInBand` (Jest is a dev dependency; install dev dependencies before testing).
 - client: `cd client && npm run dev` (vite) | build `npm run build` | tests `npx vitest run`.
 - agent: `cd ../spendwise-agent && npm run agent` | `npm run standalone` | keygen `npm run keys`.
 - Google login requires the user's session. Dev-only cycle/family preview harnesses provide synthetic UI verification without credentials; they do not replace authenticated end-to-end checks.

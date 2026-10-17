@@ -161,7 +161,7 @@ const PasswordReset = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-red-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Guest Settings */}
       <GuestSettings />
 
@@ -177,7 +177,7 @@ const PasswordReset = () => {
             repeat: Infinity, 
             ease: "easeInOut" 
           }}
-          className="w-96 h-96 bg-gradient-to-br from-red-400 to-orange-600 rounded-full absolute -top-48 -right-48 opacity-20"
+          className="w-96 h-96 bg-linear-to-br from-red-400 to-orange-600 rounded-full absolute -top-48 -right-48 opacity-20"
         />
         <motion.div
           animate={{ 
@@ -189,7 +189,7 @@ const PasswordReset = () => {
             repeat: Infinity, 
             ease: "easeInOut" 
           }}
-          className="w-80 h-80 bg-gradient-to-br from-pink-400 to-red-600 rounded-full absolute -bottom-40 -left-40 opacity-20"
+          className="w-80 h-80 bg-linear-to-br from-pink-400 to-red-600 rounded-full absolute -bottom-40 -left-40 opacity-20"
         />
       </div>
 
@@ -204,7 +204,7 @@ const PasswordReset = () => {
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
+            className="w-16 h-16 bg-linear-to-br from-red-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
           >
             <Key className="w-8 h-8 text-white" />
           </motion.div>

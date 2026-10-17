@@ -40,7 +40,7 @@ const Toggle = ({ checked, onChange, variant = 'default' }) => (
       'bg-gray-200 dark:bg-gray-700',
       'peer-checked:bg-blue-600',
       variant === 'warning' && 'peer-checked:bg-yellow-500',
-      'after:content-[""] after:absolute after:top-0.5 after:start-0.5',
+      'after:content-[""] after:absolute after:top-0.5 after:inset-s-0.5',
       'after:bg-white after:rounded-full after:h-5 after:w-5',
       'after:transition-all ltr:peer-checked:after:translate-x-5 rtl:peer-checked:after:-translate-x-5',
     )} />
@@ -160,7 +160,7 @@ const AdminSettings = () => {
             >
               {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
             </Link>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
               <Settings className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">

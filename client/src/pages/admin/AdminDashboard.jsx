@@ -121,7 +121,7 @@ const AdminDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
 
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
               <LayoutDashboard className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">
@@ -158,7 +158,7 @@ const AdminDashboard = () => {
             <Link key={to} to={to}>
               <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-700 transition-all group">
                 <div className="flex items-start gap-3">
-                  <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0', gradient)}>
+                  <div className={cn('w-10 h-10 rounded-xl bg-linear-to-br flex items-center justify-center shrink-0', gradient)}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">

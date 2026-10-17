@@ -146,12 +146,12 @@ const AccessibilityMenu = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleCancel}
-            className="fixed inset-0 z-[190] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-190 bg-black/60 backdrop-blur-sm"
           />
 
           {/* A layout wrapper owns centering so Framer Motion transforms cannot
               override the responsive positioning. It also sits above the mobile nav. */}
-          <div className="pointer-events-none fixed inset-0 z-[200] flex items-end justify-center sm:items-center sm:p-4">
+          <div className="pointer-events-none fixed inset-0 z-200 flex items-end justify-center sm:items-center sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 24 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -359,7 +359,7 @@ const AccessibilityMenu = ({
               <Button
                 variant="secondary"
                 onClick={handleReset}
-                className="w-full mb-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-md"
+                className="w-full mb-3 bg-linear-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white border-0 shadow-md"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 {t('accessibility.settings.reset')}
@@ -378,7 +378,7 @@ const AccessibilityMenu = ({
                   variant="primary"
                   onClick={handleSave}
                   disabled={!hasChanges}
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
+                  className="flex-1 bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {t('accessibility.settings.save')}

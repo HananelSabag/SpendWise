@@ -87,7 +87,7 @@ export default function CycleLoansPanelV2({
               key={loan.identity || `${loan.identifier}-${index}`}
               className={`${cycleSurface} p-4 sm:p-5`}
             >
-              <h3 className="break-words text-base font-semibold text-slate-950 dark:text-white">
+              <h3 className="wrap-break-word text-base font-semibold text-slate-950 dark:text-white">
                 {loan.description || t("cycle.loan")}
               </h3>
               {loan.source && (

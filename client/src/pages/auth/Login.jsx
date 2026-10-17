@@ -290,7 +290,7 @@ const Login = () => {
   }, [googleLogin, authToasts, t, location, navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center p-4 relative overflow-hidden">
       <GuestSettings />
 
       {/* Google auth loading overlay — stays visible until component unmounts */}
@@ -298,7 +298,7 @@ const Login = () => {
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-2xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-2xl">S</span>
               </div>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white dark:bg-gray-900 rounded-full flex items-center justify-center shadow">
@@ -319,14 +319,14 @@ const Login = () => {
 
       {/* Static decorative blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div className="w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full absolute -top-48 -right-48 opacity-10" />
-        <div className="w-80 h-80 bg-gradient-to-br from-indigo-400 to-cyan-500 rounded-full absolute -bottom-40 -left-40 opacity-10" />
+        <div className="w-96 h-96 bg-linear-to-br from-blue-400 to-purple-500 rounded-full absolute -top-48 -right-48 opacity-10" />
+        <div className="w-80 h-80 bg-linear-to-br from-indigo-400 to-cyan-500 rounded-full absolute -bottom-40 -left-40 opacity-10" />
       </div>
 
       <div className="relative z-10 w-full max-w-md" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
+          <div className="w-14 h-14 bg-linear-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg">
             <span className="text-white font-bold text-2xl">S</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">

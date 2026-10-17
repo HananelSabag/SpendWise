@@ -269,7 +269,7 @@ const Dropdown = ({
         {/* Icon */}
         {icon && (
           <span className={cn(
-            'flex-shrink-0',
+            'shrink-0',
             isRTL ? 'ml-2' : 'mr-2'
           )}>
             {React.isValidElement(icon) ? React.cloneElement(icon, {
@@ -311,7 +311,7 @@ const Dropdown = ({
             animate={{ rotate: isOpen ? 180 : 0 }}
             transition={{ duration: 0.2 }}
             className={cn(
-              'flex-shrink-0',
+              'shrink-0',
               clearable && value ? (isRTL ? 'mr-1' : 'ml-1') : ''
             )}
           >
@@ -404,7 +404,7 @@ const Dropdown = ({
                       {/* Option icon */}
                       {optionIcon && (
                         <span className={cn(
-                          'flex-shrink-0',
+                          'shrink-0',
                           isRTL ? 'ml-3' : 'mr-3'
                         )}>
                           {React.isValidElement(optionIcon) ? React.cloneElement(optionIcon, {
@@ -424,7 +424,7 @@ const Dropdown = ({
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
                           className={cn(
-                            'flex-shrink-0',
+                            'shrink-0',
                             isRTL ? 'mr-2' : 'ml-2'
                           )}
                         >

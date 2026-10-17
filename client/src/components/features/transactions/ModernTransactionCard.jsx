@@ -111,7 +111,7 @@ const ModernTransactionCard = ({
           <div className={cn(
             'w-9 h-9 rounded-lg flex items-center justify-center',
             isBankSynced
-              ? `bg-gradient-to-br ${bankBrand(transaction.bank_source).gradient} text-white`
+              ? `bg-linear-to-br ${bankBrand(transaction.bank_source).gradient} text-white`
               : 'bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400'
           )}>
             <Icon className="w-[18px] h-[18px]" />

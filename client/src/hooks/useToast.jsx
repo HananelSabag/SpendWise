@@ -173,7 +173,7 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
 		<div
       className={`
         relative flex items-center p-4 rounded-xl backdrop-blur-md
-        bg-gradient-to-r ${typeStyles.bg}
+        bg-linear-to-r ${typeStyles.bg}
         border ${typeStyles.border}
         ${typeStyles.shadow}
         max-w-md w-full
@@ -193,7 +193,7 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
 			onTouchStart={(e) => { e.stopPropagation(); }}
     >
       {/* Icon */}
-      <div className={`flex-shrink-0 ${isRTL ? 'ml-3' : 'mr-3'}`}>
+      <div className={`shrink-0 ${isRTL ? 'ml-3' : 'mr-3'}`}>
         {customIcon || <ToastIcon type={type} />}
       </div>
 
@@ -241,7 +241,7 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
           }
         }}
         className={`
-          flex-shrink-0 ${isRTL ? 'mr-2' : 'ml-2'} 
+          shrink-0 ${isRTL ? 'mr-2' : 'ml-2'}
           p-1 rounded-lg transition-all duration-200
           hover:bg-black/10 dark:hover:bg-white/10
           focus:outline-none focus:ring-2 focus:ring-current focus:ring-opacity-50
@@ -266,7 +266,7 @@ const ToastNotification = ({ message, type, icon: customIcon, toastId, onClose }
 
       {/* Gradient border effect */}
       <div 
-        className="absolute inset-0 rounded-xl bg-gradient-to-r from-white/20 to-transparent pointer-events-none"
+        className="absolute inset-0 rounded-xl bg-linear-to-r from-white/20 to-transparent pointer-events-none"
         style={{ 
           background: isRTL 
             ? 'linear-gradient(to left, rgba(255,255,255,0.1), transparent)'

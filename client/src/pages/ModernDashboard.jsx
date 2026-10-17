@@ -57,7 +57,7 @@ export default function ModernDashboard() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-24 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 lg:pb-8">
+      <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50 pb-24 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 lg:pb-8">
         <div
           className="flex items-center justify-center overflow-hidden transition-[height] duration-150 lg:hidden"
           style={{ height: `${pull}px` }}

@@ -81,7 +81,7 @@ const TransactionForm = ({
       {/* Header */}
       <div className="flex items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shrink-0">
             <CreditCard className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -130,7 +130,7 @@ const TransactionForm = ({
           type="submit"
           variant="primary"
           disabled={!isValid || isSubmitting || isLoading}
-          className="px-5 py-2 h-auto text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+          className="px-5 py-2 h-auto text-sm bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
         >
           {isSubmitting || isLoading
             ? <LoadingSpinner size="sm" className="me-1.5" />

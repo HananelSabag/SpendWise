@@ -219,7 +219,7 @@ const GoogleProfileCompletion = ({
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="w-16 h-16 bg-gradient-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          className="w-16 h-16 bg-linear-to-br from-green-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4"
         >
           <Settings className="w-8 h-8 text-white" />
         </motion.div>

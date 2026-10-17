@@ -191,7 +191,7 @@ const FullNav = () => {
       <nav
         ref={measureNav}
         className={cn(
-          'lg:hidden fixed bottom-0 left-0 right-0 z-[100]',
+          'lg:hidden fixed bottom-0 left-0 right-0 z-100',
           'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md',
           'border-t border-gray-200/80 dark:border-gray-700/80',
           'flex items-end justify-around px-2',
@@ -209,7 +209,7 @@ const FullNav = () => {
                   aria-label={menuOpen ? (t('common.closeMenu') || 'Close') : (t('common.openMenu') || 'Menu')}
                   className={cn(
                     'relative w-16 h-16 rounded-full',
-                    'bg-gradient-to-br from-blue-600 to-indigo-600',
+                    'bg-linear-to-br from-blue-600 to-indigo-600',
                     'shadow-xl shadow-blue-500/50',
                     'flex items-center justify-center',
                     'focus:outline-none transition-all',
@@ -334,7 +334,7 @@ const FullNav = () => {
             onClick={() => closeAndGo('/profile')}
             className="flex w-full items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-3 py-2.5 text-start active:scale-[0.98] transition-all dark:border-gray-700 dark:bg-gray-800"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 text-base font-bold text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-blue-600 to-indigo-600 text-base font-bold text-white">
               {avatarUrl
                 ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
                 : (initial || <User className="h-5 w-5" />)}
@@ -364,7 +364,7 @@ const FullNav = () => {
                   )}
                 >
                   <div className={cn(
-                    'w-9 h-9 rounded-xl bg-gradient-to-br flex items-center justify-center shrink-0 shadow-sm',
+                    'w-9 h-9 rounded-xl bg-linear-to-br flex items-center justify-center shrink-0 shadow-sm',
                     action.gradient,
                   )}>
                     <Icon className="w-5 h-5 text-white" strokeWidth={1.75} />

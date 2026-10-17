@@ -59,7 +59,7 @@ export default function InfoHint({ title, children, className = '', align = 'end
               'fixed inset-x-4 top-1/2 z-50 max-h-[70vh] w-auto -translate-y-1/2 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-3 text-start shadow-xl',
               'sm:absolute sm:inset-x-auto sm:top-6 sm:max-h-none sm:w-64 sm:translate-y-0 sm:overflow-visible',
               'dark:border-gray-700 dark:bg-gray-900',
-              align === 'end' ? 'sm:end-0' : 'sm:start-0',
+              align === 'end' ? 'sm:inset-e-0' : 'sm:inset-s-0',
             )}
           >
             <span className="mb-1 flex items-start justify-between gap-2">

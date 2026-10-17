@@ -37,6 +37,9 @@ jobs:
           JWT_SECRET: ci_test_jwt_secret_not_for_production
           JWT_REFRESH_SECRET: ci_test_refresh_secret_not_for_production
 
+      - name: Audit server dependencies
+        run: npm audit --audit-level=low
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         if: always()
@@ -71,6 +74,9 @@ jobs:
       - name: Type check
         run: npm run type-check
         continue-on-error: true   # warn but don't block on type errors
+
+      - name: Audit client dependencies
+        run: npm audit --audit-level=low
 
       - name: Lint
         run: npm run lint

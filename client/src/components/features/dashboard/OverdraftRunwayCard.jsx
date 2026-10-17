@@ -138,7 +138,7 @@ export default function OverdraftRunwayCard({
 
   if (!configured || editing) {
     return (
-      <section className="rounded-[1.75rem] border border-indigo-200 bg-gradient-to-br from-white via-indigo-50/70 to-violet-50 p-5 shadow-sm dark:border-indigo-900/60 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/70 sm:p-6">
+      <section className="rounded-[1.75rem] border border-indigo-200 bg-linear-to-br from-white via-indigo-50/70 to-violet-50 p-5 shadow-sm dark:border-indigo-900/60 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/70 sm:p-6">
         <div className="flex items-start gap-3">
           <span className="rounded-2xl bg-indigo-100 p-2.5 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
             <Gauge className="h-5 w-5" />
@@ -167,7 +167,7 @@ export default function OverdraftRunwayCard({
               placeholder={t('overdraft.limitPlaceholder')}
               className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 pe-10 text-base font-black tabular-nums text-slate-950 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
-            <span className="pointer-events-none absolute end-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
+            <span className="pointer-events-none absolute inset-e-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
               ₪
             </span>
           </label>

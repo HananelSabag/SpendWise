@@ -108,8 +108,8 @@ const ModernQuickActionsBar = ({ className = '', onSuccess }) => {
         <div className={cn(
           "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-all duration-300",
           activeType === 'expense' 
-            ? "bg-gradient-to-br from-red-500 to-red-600" 
-            : "bg-gradient-to-br from-green-500 to-green-600"
+            ? "bg-linear-to-br from-red-500 to-red-600"
+            : "bg-linear-to-br from-green-500 to-green-600"
         )}>
           <Zap className="w-5 h-5 text-white" />
         </div>

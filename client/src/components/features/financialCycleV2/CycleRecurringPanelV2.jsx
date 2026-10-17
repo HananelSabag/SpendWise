@@ -53,7 +53,7 @@ function RecurringRule({ group, onUpdate, onLink, isSaving, formatCurrency, lang
                   : 'cycleV2.recurringExpense',
             )}
           </p>
-          <h3 className="mt-1 break-words text-base font-semibold text-slate-950 dark:text-white">
+          <h3 className="mt-1 wrap-break-word text-base font-semibold text-slate-950 dark:text-white">
             {group.label}
           </h3>
         </div>
@@ -105,7 +105,7 @@ function RecurringRule({ group, onUpdate, onLink, isSaving, formatCurrency, lang
               key={matcher.transactionId}
               className="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/50"
             >
-              <p className="break-words text-sm text-slate-700 dark:text-slate-200">
+              <p className="wrap-break-word text-sm text-slate-700 dark:text-slate-200">
                 {matcher.description}
               </p>
               <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
@@ -295,7 +295,7 @@ export default function CycleRecurringPanelV2({
             className={`${cycleButton} mt-3 flex w-full items-start gap-2 bg-white text-start text-slate-700 dark:bg-slate-900 dark:text-slate-200`}
           >
             <Search className="mt-1 h-4 w-4 shrink-0 text-indigo-500" />
-            <span className="min-w-0 flex-1 break-words">{selected.description}</span>
+            <span className="min-w-0 flex-1 wrap-break-word">{selected.description}</span>
             <bdi dir="ltr" className="shrink-0 text-sm">
               {signedCurrency(Number(selected.amount), formatCurrency, { signPositive: true })}
             </bdi>

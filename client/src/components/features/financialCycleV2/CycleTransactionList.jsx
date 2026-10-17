@@ -18,7 +18,7 @@ export default function CycleTransactionList({ transactions = [], formatCurrency
         {transactions.slice(0, visibleCount).map((transaction, index) => (
           <div key={transaction.id || index} className="flex items-start gap-3 py-3">
             <div className="min-w-0 flex-1">
-              <p className="break-words text-sm font-medium text-slate-800 dark:text-slate-100">
+              <p className="wrap-break-word text-sm font-medium text-slate-800 dark:text-slate-100">
                 {transaction.description || '—'}
               </p>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

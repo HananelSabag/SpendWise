@@ -44,7 +44,7 @@ const VerificationSuccess = ({
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ duration: 2, ease: "easeInOut" }}
-            className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center"
+            className="w-20 h-20 bg-linear-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center"
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </motion.div>
@@ -110,7 +110,7 @@ const VerificationError = ({
         }}
         className="mb-6"
       >
-        <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto">
+        <div className="w-20 h-20 bg-linear-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center mx-auto">
           <XCircle className="w-10 h-10 text-white" />
         </div>
       </motion.div>
@@ -166,7 +166,7 @@ const VerificationInProgress = ({
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto"
+          className="w-20 h-20 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto"
         >
           <Mail className="w-10 h-10 text-white" />
         </motion.div>
@@ -212,7 +212,7 @@ const VerificationInstructions = ({
         }}
         className="mb-6"
       >
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
+        <div className="w-20 h-20 bg-linear-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
           <Mail className="w-10 h-10 text-white" />
         </div>
       </motion.div>

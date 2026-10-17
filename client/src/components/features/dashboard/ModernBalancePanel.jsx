@@ -26,7 +26,7 @@ import { institutionLabel } from '../bankSync/bankSyncMeta';
 import { useBankBalance } from '../../../hooks/useBankBalance';
 
 // Brand gradient — feels like the SpendWise financial home, not a status panel.
-const HERO_GRADIENT = 'bg-gradient-to-br from-indigo-600 to-purple-700';
+const HERO_GRADIENT = 'bg-linear-to-br from-indigo-600 to-purple-700';
 
 // ── Relative time (uses translation keys) ────────────────────────────────────
 function relativeTime(dateStr, t) {

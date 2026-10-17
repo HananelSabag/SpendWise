@@ -76,7 +76,7 @@ export default function FamilyOverviewPanel({
   return (
     <div className="space-y-4">
       {/* ── The number ───────────────────────────────────────────────────── */}
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-purple-700 p-5 text-white shadow-sm">
+      <section className="overflow-hidden rounded-3xl bg-linear-to-br from-indigo-600 to-purple-700 p-5 text-white shadow-sm">
         <p className="text-xs font-bold uppercase tracking-wide text-white/80">
           {negative ? t('overview.deficit') : t('overview.headline')}
         </p>

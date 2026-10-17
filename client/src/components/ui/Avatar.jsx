@@ -51,7 +51,7 @@ const Avatar = ({
     <div
       className={cn(
         'inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden',
-        'flex-shrink-0 select-none',
+        'shrink-0 select-none',
         sizes[size],
         className
       )}

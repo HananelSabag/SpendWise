@@ -68,7 +68,7 @@ const ResetSuccess = ({
           <motion.div
             animate={{ rotate: [0, 360] }}
             transition={{ duration: 2, ease: "easeInOut" }}
-            className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center"
+            className="w-20 h-20 bg-linear-to-br from-green-500 to-blue-600 rounded-full flex items-center justify-center"
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </motion.div>

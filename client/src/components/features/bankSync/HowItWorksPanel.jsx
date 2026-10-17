@@ -35,7 +35,7 @@ export default function HowItWorksPanel({ t, defaultOpen = false }) {
             <div className="space-y-2.5">
               {steps.map((text, i) => (
                 <div key={i} className="flex gap-3">
-                  <span className="shrink-0 w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center">
+                  <span className="shrink-0 w-5 h-5 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 text-white text-xs font-bold flex items-center justify-center">
                     {i + 1}
                   </span>
                   <span className="text-sm text-gray-600 dark:text-gray-400">{text}</span>

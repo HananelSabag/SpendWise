@@ -64,7 +64,7 @@ export default function CycleKnownExpensesPanelV2({
                       )}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-sm font-medium text-slate-900 dark:text-white">
+                      <p className="wrap-break-word text-sm font-medium text-slate-900 dark:text-white">
                         {movementLabel(item, t)}
                         {item.growth && (
                           <span className="ms-1 text-xs text-slate-500">

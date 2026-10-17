@@ -129,7 +129,7 @@ const ServerWaking = () => {
   };
 
   return (
-    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 ${isRTL ? 'rtl' : 'ltr'}`}>
+    <div className={`min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 ${isRTL ? 'rtl' : 'ltr'}`}>
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -142,7 +142,7 @@ const ServerWaking = () => {
             repeat: Infinity, 
             ease: "easeInOut" 
           }}
-          className="w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-600 rounded-full absolute -top-48 -right-48 opacity-10"
+          className="w-96 h-96 bg-linear-to-br from-blue-400 to-purple-600 rounded-full absolute -top-48 -right-48 opacity-10"
         />
         <motion.div
           animate={{ 
@@ -154,7 +154,7 @@ const ServerWaking = () => {
             repeat: Infinity, 
             ease: "easeInOut" 
           }}
-          className="w-80 h-80 bg-gradient-to-br from-green-400 to-cyan-600 rounded-full absolute -bottom-40 -left-40 opacity-10"
+          className="w-80 h-80 bg-linear-to-br from-green-400 to-cyan-600 rounded-full absolute -bottom-40 -left-40 opacity-10"
         />
       </div>
 
@@ -169,7 +169,7 @@ const ServerWaking = () => {
           <motion.div
             variants={pulseVariants}
             animate="pulse"
-            className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
+            className="w-20 h-20 bg-linear-to-br from-primary-500 to-primary-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg"
           >
             <Server className="w-10 h-10 text-white" />
           </motion.div>
@@ -205,7 +205,7 @@ const ServerWaking = () => {
               {/* Progress Bar */}
               <div className="w-full h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-primary-500 via-purple-500 to-primary-600 rounded-full"
+                  className="h-full bg-linear-to-r from-primary-500 via-purple-500 to-primary-600 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3, ease: "easeOut" }}

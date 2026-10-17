@@ -92,7 +92,7 @@ const WelcomeOnboarding = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       dir={isRTL ? 'rtl' : 'ltr'}
-      className="fixed inset-0 z-[200] flex items-end justify-center bg-gray-900/60 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-200 flex items-end justify-center bg-gray-900/60 backdrop-blur-sm sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="welcome-title"

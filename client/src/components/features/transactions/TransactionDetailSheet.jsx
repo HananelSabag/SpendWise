@@ -38,7 +38,7 @@ const Field = ({ label, value, mono = false }) => {
         className={cn(
           'min-w-0 text-end text-sm font-medium text-gray-900 dark:text-gray-100',
           mono && 'font-mono text-xs text-gray-500 dark:text-gray-400',
-          'break-words',
+          'wrap-break-word',
         )}
       >
         {value}
@@ -141,7 +141,7 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         <div className={cn(
           'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
           isBankSynced
-            ? `bg-gradient-to-br ${bankBrand(transaction.bank_source).gradient} text-white`
+            ? `bg-linear-to-br ${bankBrand(transaction.bank_source).gradient} text-white`
             : 'bg-gray-100 text-gray-500 dark:bg-gray-700/60 dark:text-gray-400',
         )}>
           <Icon className="h-6 w-6" />
@@ -175,7 +175,7 @@ const DetailBody = ({ transaction, t, currentLanguage, formatCurrency, onEdit, o
         <p className="text-xs font-medium text-gray-400 dark:text-gray-500">
           {t('detail.description', { fallback: 'Description' })}
         </p>
-        <p className="mt-1 text-sm font-semibold leading-relaxed text-gray-900 dark:text-white break-words">
+        <p className="mt-1 text-sm font-semibold leading-relaxed text-gray-900 dark:text-white wrap-break-word">
           {transaction.description || t('noDescription', { fallback: 'No description' })}
         </p>
       </div>
@@ -268,7 +268,7 @@ const TransactionDetailSheet = ({ transaction, isOpen, onClose, onEdit, onDelete
   return createPortal(
     <AnimatePresence>
       {isOpen && transaction && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+        <div className="fixed inset-0 z-200 flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

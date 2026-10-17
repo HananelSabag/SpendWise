@@ -117,12 +117,12 @@ const ConnectionStatusOverlay = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-0 z-[9998] pointer-events-none">
+    <div className="fixed inset-0 z-9998 pointer-events-none">
       {/* Offline Banner */}
       {isOffline && (
-        <div className="absolute top-0 left-0 right-0 mx-auto mt-4 max-w-md px-4 py-3 rounded-2xl bg-gradient-to-r from-orange-100 via-orange-50 to-orange-100 dark:from-orange-900/30 dark:via-orange-800/20 dark:to-orange-900/30 border border-orange-200 dark:border-orange-700/50 shadow-lg backdrop-blur-sm pointer-events-auto">
+        <div className="absolute top-0 left-0 right-0 mx-auto mt-4 max-w-md px-4 py-3 rounded-2xl bg-linear-to-r from-orange-100 via-orange-50 to-orange-100 dark:from-orange-900/30 dark:via-orange-800/20 dark:to-orange-900/30 border border-orange-200 dark:border-orange-700/50 shadow-lg backdrop-blur-sm pointer-events-auto">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 rounded-lg bg-orange-200 dark:bg-orange-800/50">
+            <div className="shrink-0 p-2 rounded-lg bg-orange-200 dark:bg-orange-800/50">
               <WifiOff className="w-5 h-5 text-orange-700 dark:text-orange-300" />
             </div>
             
@@ -158,9 +158,9 @@ const ConnectionStatusOverlay = () => {
 
       {/* Server Waking Banner */}
       {serverWaking && !isOffline && (
-        <div className="absolute top-0 left-0 right-0 mx-auto mt-4 max-w-md px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-100 via-purple-50 to-purple-100 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-purple-900/30 border border-purple-200 dark:border-purple-700/50 shadow-lg backdrop-blur-sm pointer-events-auto">
+        <div className="absolute top-0 left-0 right-0 mx-auto mt-4 max-w-md px-4 py-3 rounded-2xl bg-linear-to-r from-purple-100 via-purple-50 to-purple-100 dark:from-purple-900/30 dark:via-purple-800/20 dark:to-purple-900/30 border border-purple-200 dark:border-purple-700/50 shadow-lg backdrop-blur-sm pointer-events-auto">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 rounded-lg bg-purple-200 dark:bg-purple-800/50">
+            <div className="shrink-0 p-2 rounded-lg bg-purple-200 dark:bg-purple-800/50">
               <Server className="w-5 h-5 text-purple-700 dark:text-purple-300 animate-pulse" />
             </div>
             
@@ -187,9 +187,9 @@ const ConnectionStatusOverlay = () => {
 
       {/* Connection Issues Banner (not offline, but having trouble) */}
       {!isOffline && !serverWaking && retryCount > 0 && (
-        <div className="absolute top-0 left-0 right-0 mx-auto mt-4 max-w-md px-4 py-3 rounded-2xl bg-gradient-to-r from-yellow-100 via-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-yellow-900/30 border border-yellow-200 dark:border-yellow-700/50 shadow-lg backdrop-blur-sm pointer-events-auto">
+        <div className="absolute top-0 left-0 right-0 mx-auto mt-4 max-w-md px-4 py-3 rounded-2xl bg-linear-to-r from-yellow-100 via-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:via-yellow-800/20 dark:to-yellow-900/30 border border-yellow-200 dark:border-yellow-700/50 shadow-lg backdrop-blur-sm pointer-events-auto">
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 p-2 rounded-lg bg-yellow-200 dark:bg-yellow-800/50">
+            <div className="shrink-0 p-2 rounded-lg bg-yellow-200 dark:bg-yellow-800/50">
               <Wifi className="w-5 h-5 text-yellow-700 dark:text-yellow-300" />
             </div>
             

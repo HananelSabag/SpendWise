@@ -19,7 +19,7 @@ export function BankIcon({ source, size = 'md' }) {
   const Icon = institutionKind(source) === 'credit_card' ? CreditCard : Landmark;
   return (
     <div className={cn(
-      'shrink-0 rounded-xl flex items-center justify-center shadow-sm bg-gradient-to-br',
+      'shrink-0 rounded-xl flex items-center justify-center shadow-sm bg-linear-to-br',
       dims, gradient,
     )}>
       <Icon className={cn('text-white', icon)} />

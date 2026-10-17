@@ -149,7 +149,7 @@ export const AvatarSection = ({ user, authToasts }) => {
 
       {/* Preview dialog */}
       {preview && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleCancelPreview} />
           <div className="relative z-10 w-full sm:max-w-sm bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl shadow-2xl px-6 pb-8 pt-5">
             <div className="sm:hidden absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-700" />
@@ -187,7 +187,7 @@ export const AvatarSection = ({ user, authToasts }) => {
               <button onClick={handleCancelPreview} className="flex items-center justify-center gap-2 h-12 rounded-2xl border-2 border-gray-200 dark:border-gray-700 font-semibold text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
                 <X className="w-4 h-4" />{t('actions.cancel') || 'Cancel'}
               </button>
-              <button onClick={handleConfirmUpload} className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/30 transition-all cursor-pointer active:scale-95">
+              <button onClick={handleConfirmUpload} className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/30 transition-all cursor-pointer active:scale-95">
                 <Check className="w-4 h-4" />{t('personal.setPhoto') || 'Set Photo'}
               </button>
             </div>
@@ -197,7 +197,7 @@ export const AvatarSection = ({ user, authToasts }) => {
 
       {/* View photo dialog */}
       {viewOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-9999 flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setViewOpen(false)} />
           <div className={cn(
             'relative z-10 w-full bg-white dark:bg-gray-900 shadow-2xl',
@@ -218,7 +218,7 @@ export const AvatarSection = ({ user, authToasts }) => {
             <p className="text-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-6">
               {user?.name || user?.email?.split('@')[0]}
             </p>
-            <label className="flex items-center justify-center gap-2 h-12 rounded-2xl cursor-pointer bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/30 transition-all active:scale-95">
+            <label className="flex items-center justify-center gap-2 h-12 rounded-2xl cursor-pointer bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold text-sm shadow-lg shadow-indigo-500/30 transition-all active:scale-95">
               <Camera className="w-4 h-4" />
               {t('personal.changePhoto') || 'Change Photo'}
               <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={busy}

@@ -203,7 +203,7 @@ const Tooltip = ({
               initial="hidden"
               animate="visible"
               exit="hidden"
-              className="fixed z-[9999] pointer-events-none"
+              className="fixed z-9999 pointer-events-none"
               style={tooltipStyles}
             >
               <div

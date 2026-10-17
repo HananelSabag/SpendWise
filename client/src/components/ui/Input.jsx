@@ -230,9 +230,9 @@ const Input = forwardRef(({
             )}
           >
             {/* Message icon */}
-            {error && <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />}
-            {success && !error && <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />}
-            {hint && !error && !success && <Info className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />}
+            {error && <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />}
+            {success && !error && <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />}
+            {hint && !error && !success && <Info className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />}
 
             {/* Message text */}
             <span className={cn(

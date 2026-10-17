@@ -25,7 +25,7 @@ const NotFound = () => {
   return (
     <div className={cn(
       'min-h-screen flex items-center justify-center px-4 py-12',
-      'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800',
+      'bg-linear-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800',
       isRTL && 'rtl'
     )}>
       <div className="max-w-md w-full text-center space-y-8">

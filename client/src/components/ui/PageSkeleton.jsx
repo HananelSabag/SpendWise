@@ -32,7 +32,7 @@ const Shell = ({ children, className }) => (
   <div
     className={cn(
       'min-h-screen',
-      'bg-gradient-to-br from-blue-50 via-white to-indigo-50',
+      'bg-linear-to-br from-blue-50 via-white to-indigo-50',
       'dark:from-gray-950 dark:via-gray-900 dark:to-gray-950',
       className,
     )}
@@ -68,10 +68,10 @@ const DashboardSkeleton = () => (
       </div>
 
       {/* Balance card — same place and footprint as the real hero */}
-      <S className="h-44 rounded-3xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700" />
+      <S className="h-44 rounded-3xl bg-linear-to-br from-gray-200 to-gray-300 dark:from-gray-800 dark:to-gray-700" />
 
       {/* Financial cycle — reserve the card that used to arrive late and open a gap */}
-      <Card className="min-h-[28rem] p-4">
+      <Card className="min-h-112 p-4">
         <T className="h-4 w-36" />
         <S className="mt-2 h-5 w-28 rounded-full" />
         <div className="mt-5 space-y-3">
@@ -125,7 +125,7 @@ const FinancialCycleSkeleton = () => (
       </div>
     </div>
     <div className="mx-auto max-w-5xl space-y-4 px-4 py-4 lg:px-8">
-      <Card className="min-h-[8.75rem] p-4">
+      <Card className="min-h-35 p-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <T className="h-3 w-28" />

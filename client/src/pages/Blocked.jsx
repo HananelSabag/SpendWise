@@ -111,7 +111,7 @@ const Blocked = () => {
             <p className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-1">
               {t('pages.blocked.reasonTitle', { fallback: currentLanguage === 'he' ? 'סיבה' : 'Reason' })}
             </p>
-            <p className="text-sm text-orange-700 dark:text-orange-300 break-words">{reason}</p>
+            <p className="text-sm text-orange-700 dark:text-orange-300 wrap-break-word">{reason}</p>
             {expiresAt && (
               <p className="text-xs text-orange-600 dark:text-orange-300 mt-2">
                 {t('pages.blocked.expiresAt', { date: new Date(expiresAt).toLocaleString(), fallback: currentLanguage === 'he' ? `תוקף החסימה עד: ${new Date(expiresAt).toLocaleString()}` : `Block active until: ${new Date(expiresAt).toLocaleString()}` })}

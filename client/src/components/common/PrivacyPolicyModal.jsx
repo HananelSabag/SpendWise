@@ -115,7 +115,7 @@ const PrivacyPolicyModal = ({ isOpen, onClose, onAccept }) => {
         {/* Header */}
         <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
           <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center shrink-0">
               <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
             </div>
             <div>
@@ -202,7 +202,7 @@ const PrivacyPolicyModal = ({ isOpen, onClose, onAccept }) => {
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     {section.importance === 'high' && (
                       <AlertCircle className="w-4 h-4 text-orange-500" />
                     )}
@@ -231,7 +231,7 @@ const PrivacyPolicyModal = ({ isOpen, onClose, onAccept }) => {
           <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
               <div className="flex items-start space-x-3">
-                <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
                     {t('privacy.contact.title')}

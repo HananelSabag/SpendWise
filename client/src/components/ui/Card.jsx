@@ -32,7 +32,7 @@ const Card = React.forwardRef(({
     outlined: 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600',
     filled: 'bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600',
     glass: 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-lg',
-    gradient: 'bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm'
+    gradient: 'bg-linear-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm'
   };
 
   // ✅ Padding configurations

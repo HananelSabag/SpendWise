@@ -439,7 +439,7 @@ ENABLE_SECURITY_LOGGING=true
 ### **Available Scripts**
 ```bash
 # Development
-npm run dev          # Start with nodemon (enhanced logging)
+npm run dev          # Restart automatically using Node.js watch mode
 npm start           # Production server with monitoring
 
 # Database Operations

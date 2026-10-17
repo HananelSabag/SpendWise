@@ -63,7 +63,7 @@ const Badge = ({
       {/* Icon */}
       {icon && (
         <span className={cn(
-          'flex-shrink-0',
+          'shrink-0',
           children && (isRTL ? 'ml-1' : 'mr-1'),
           size === 'xs' ? 'w-3 h-3' :
           size === 'sm' ? 'w-3 h-3' :
@@ -87,7 +87,7 @@ const Badge = ({
         <button
           onClick={onRemove}
           className={cn(
-            'flex-shrink-0 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors',
+            'shrink-0 rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors',
             children && (isRTL ? 'mr-1' : 'ml-1')
           )}
           aria-label={t('common.remove')}

@@ -98,7 +98,7 @@ const AdminSync = () => {
             <Link to="/admin" className="p-1.5 -ms-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors shrink-0">
               {isRTL ? <ArrowRight className="w-5 h-5" /> : <ArrowLeft className="w-5 h-5" />}
             </Link>
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
               <RefreshCw className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white flex-1 truncate">

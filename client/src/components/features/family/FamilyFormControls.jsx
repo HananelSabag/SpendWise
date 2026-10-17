@@ -65,7 +65,7 @@ export function Segmented({ options, value, onChange, ariaLabel }) {
 export function AmountInput({ id, value, onChange, placeholder = '0', autoFocus = false }) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-base font-black text-slate-400">
+      <span className="pointer-events-none absolute inset-y-0 inset-s-3 flex items-center text-base font-black text-slate-400">
         ₪
       </span>
       <input

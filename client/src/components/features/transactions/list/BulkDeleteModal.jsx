@@ -19,7 +19,7 @@ const BulkDeleteModal = ({ isOpen, count, onClose, onConfirm }) => {
         </p>
         <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700">
           <div className="flex items-center text-red-800 dark:text-red-200 gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 shrink-0" />
             <p className="text-sm">{t('bulkDelete.cannotUndo') || 'This action cannot be undone.'}</p>
           </div>
         </div>

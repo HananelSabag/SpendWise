@@ -116,7 +116,7 @@ const Button = React.forwardRef(({
       {/* ✅ Left icon (respects RTL) */}
       {!loading && showIconLeft && (
         <span className={cn(
-          'flex-shrink-0',
+          'shrink-0',
           children && 'mr-2',
           size === 'xs' ? 'w-3 h-3' : 
           size === 'sm' ? 'w-4 h-4' : 
@@ -150,7 +150,7 @@ const Button = React.forwardRef(({
       {/* ✅ Right icon (respects RTL) */}
       {!loading && showIconRight && (
         <span className={cn(
-          'flex-shrink-0',
+          'shrink-0',
           children && 'ml-2',
           size === 'xs' ? 'w-3 h-3' : 
           size === 'sm' ? 'w-4 h-4' : 

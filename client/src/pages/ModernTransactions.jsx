@@ -75,7 +75,7 @@ const MobileTransactions = ({
         {/* Search + filter + month */}
         <div className="px-3 pt-3 flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute inset-s-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
               placeholder={t('actions.search') || 'Search...'}
@@ -93,7 +93,7 @@ const MobileTransactions = ({
           >
             <Filter className="w-4 h-4" />
             {activeCount > 0 && (
-              <span className="absolute -top-1 -end-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -inset-e-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
                 {activeCount}
               </span>
             )}
@@ -177,7 +177,7 @@ const DesktopTransactions = ({
   const hasActiveSearch = Boolean(searchQuery) || activeCount > 0 || filters.month !== 'all' || sourceFilter !== 'all';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <h1 className="sr-only">{t('title')}</h1>
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 space-y-5">
@@ -190,7 +190,7 @@ const DesktopTransactions = ({
           <Card className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
             <div className="flex flex-col lg:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute inset-s-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   type="text"
                   placeholder={t('search.placeholder') || 'Search transactions...'}
@@ -213,7 +213,7 @@ const DesktopTransactions = ({
                   <Filter className="w-4 h-4 me-2" />
                   {t('actions.filter') || 'Filters'}
                   {activeCount > 0 && (
-                    <span className="absolute -top-1.5 -end-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1.5 -inset-e-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {activeCount}
                     </span>
                   )}

@@ -89,9 +89,9 @@ const HelpCenter = ({ isOpen, onClose }) => {
           <div className="space-y-2.5">
             {steps.map(({ icon: Icon, title, desc }, i) => (
               <div key={title} className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 text-white">
                   <Icon className="h-4.5 w-[18px]" />
-                  <span className="absolute -top-1.5 -end-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-black text-indigo-600 shadow dark:bg-gray-900">
+                  <span className="absolute -top-1.5 -inset-e-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-black text-indigo-600 shadow dark:bg-gray-900">
                     {i + 1}
                   </span>
                 </div>
@@ -108,7 +108,7 @@ const HelpCenter = ({ isOpen, onClose }) => {
           <div className="space-y-2.5">
             {models.map(({ icon: Icon, tint, title, desc }) => (
               <div key={title} className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white ${tint}`}>
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br text-white ${tint}`}>
                   <Icon className="h-4.5 w-[18px]" />
                 </div>
                 <div className="min-w-0 flex-1">

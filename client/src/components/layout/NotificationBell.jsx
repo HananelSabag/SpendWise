@@ -59,7 +59,7 @@ const NotificationBell = () => {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
-              className="absolute top-1 end-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none"
+              className="absolute top-1 inset-e-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none"
             >
               {unread > 99 ? '99+' : unread}
             </motion.span>
@@ -91,7 +91,7 @@ const NotificationBell = () => {
                       : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm'
                   )}
                 >
-                  <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-900/20">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-900/20">
                     <Wallet className="h-4 w-4" strokeWidth={2} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -101,7 +101,7 @@ const NotificationBell = () => {
                     )}
                   </div>
                   {!notification.is_read && (
-                    <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-blue-500" />
+                    <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />
                   )}
                 </button>
               );

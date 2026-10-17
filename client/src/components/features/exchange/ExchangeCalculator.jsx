@@ -157,7 +157,7 @@ const ExchangeCalculator = ({
       >
 
         {/* ── HERO RESULT CARD ─────────────────────────────────── */}
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 p-5 shadow-xl shadow-indigo-500/20">
+        <div className="relative rounded-2xl overflow-hidden bg-linear-to-br from-blue-600 via-indigo-600 to-purple-700 p-5 shadow-xl shadow-indigo-500/20">
           {/* subtle grid pattern overlay */}
           <div
             className="absolute inset-0 opacity-10"
@@ -340,7 +340,7 @@ const ExchangeCalculator = ({
             <button
               type="button"
               onClick={handleAddToTransaction}
-              className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold shadow-md shadow-indigo-500/25 transition-all duration-150 cursor-pointer"
+              className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-sm font-semibold shadow-md shadow-indigo-500/25 transition-all duration-150 cursor-pointer"
             >
               <Zap className="w-4 h-4" />
               {t('exchange.addToTransaction', 'Add to Transaction')}

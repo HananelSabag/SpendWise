@@ -152,7 +152,7 @@ const AppContent = () => {
       {/* No bottom padding for the nav here: the footer below is the last thing
           in this column, so it is what has to clear it — off the nav's measured
           height rather than a constant that stacked with this one. */}
-      <main className="flex-grow">
+      <main className="grow">
         <AppRoutes isAuthenticated={isAuthenticated} />
       </main>
 
@@ -234,12 +234,7 @@ function App() {
     : null;
 
   const Tree = (
-    <Router
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true
-      }}
-    >
+    <Router>
       <StoreProvider>
         <ToastProvider>
           <AuthToastProvider>

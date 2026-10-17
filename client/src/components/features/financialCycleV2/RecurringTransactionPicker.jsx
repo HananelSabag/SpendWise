@@ -89,7 +89,7 @@ export default function RecurringTransactionPicker({
         )}
         <div className="sticky top-0 z-10 space-y-3 bg-white pb-2 dark:bg-slate-900">
           <label className="relative block">
-            <Search className="pointer-events-none absolute start-3 top-3 h-4 w-4 text-slate-400" />
+            <Search className="pointer-events-none absolute inset-s-3 top-3 h-4 w-4 text-slate-400" />
             <input
               type="search"
               aria-label={t("cycleV2.searchTransactions")}

@@ -106,7 +106,7 @@ const LoginForm = ({
               autoComplete="email"
               className={cn(fieldBase, 'ps-11 pe-4', errors.email && 'border-red-400 focus:ring-red-400/30 focus:border-red-400', 'border-gray-300 dark:border-gray-600')}
             />
-            <Mail className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 w-[18px] h-[18px] text-gray-400 pointer-events-none" />
+            <Mail className="absolute inset-s-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 w-[18px] h-[18px] text-gray-400 pointer-events-none" />
           </div>
           {errors.email && <p className="mt-1.5 text-xs text-red-500">{errors.email}</p>}
         </div>
@@ -127,11 +127,11 @@ const LoginForm = ({
               autoComplete="current-password"
               className={cn(fieldBase, 'ps-11 pe-11', errors.password && 'border-red-400 focus:ring-red-400/30 focus:border-red-400', 'border-gray-300 dark:border-gray-600')}
             />
-            <Lock className="absolute start-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400 pointer-events-none" />
+            <Lock className="absolute inset-s-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-gray-400 pointer-events-none" />
             <button
               type="button"
               onClick={() => setShowPassword(v => !v)}
-              className="absolute end-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="absolute inset-e-3 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               aria-label={showPassword ? t('hidePassword') : t('showPassword')}
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -165,7 +165,7 @@ const LoginForm = ({
           disabled={isSubmitting}
           className={cn(
             'w-full h-12 rounded-xl font-bold text-white text-sm',
-            'bg-gradient-to-l from-blue-600 to-indigo-600',
+            'bg-linear-to-l from-blue-600 to-indigo-600',
             'shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30',
             'flex items-center justify-center gap-2 transition-all duration-200',
             isSubmitting && 'opacity-70 cursor-not-allowed',

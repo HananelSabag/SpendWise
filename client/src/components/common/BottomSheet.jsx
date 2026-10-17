@@ -91,7 +91,7 @@ const BottomSheet = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={handleBackdropClick}
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-200 bg-black/60 backdrop-blur-sm"
           />
 
           {/* Sheet */}
@@ -114,7 +114,7 @@ const BottomSheet = ({
             aria-labelledby={title ? titleId : undefined}
             aria-label={title ? undefined : t('dialog', { fallback: 'Dialog' })}
             className={cn(
-              'fixed bottom-0 left-0 right-0 z-[201]',
+              'fixed bottom-0 left-0 right-0 z-201',
               'bg-white dark:bg-gray-900',
               'rounded-t-2xl shadow-2xl',
               'flex flex-col',
@@ -125,7 +125,7 @@ const BottomSheet = ({
             {/* Drag handle area — only this element initiates drag */}
             <div
               onPointerDown={(e) => dragControls.start(e)}
-              className="flex-shrink-0 flex flex-col items-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+              className="shrink-0 flex flex-col items-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
               style={{ touchAction: 'none' }}
             >
               <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
@@ -133,7 +133,7 @@ const BottomSheet = ({
 
             {/* Header row (title + close) */}
             {(title || true) && (
-              <div className="flex-shrink-0 flex items-center justify-between px-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+              <div className="shrink-0 flex items-center justify-between px-4 pb-3 border-b border-gray-100 dark:border-gray-800">
                 {title ? (
                   <h2 id={titleId} className="text-base font-semibold text-gray-900 dark:text-white">
                     {title}

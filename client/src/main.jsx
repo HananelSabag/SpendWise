@@ -28,7 +28,7 @@ window.addEventListener('vite:preloadError', () => {
  */
 function ErrorFallback({ error, resetErrorBoundary }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20">
       <div className="max-w-md w-full mx-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-red-200 dark:border-red-800">
         <div className="text-center">
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 mb-4">
